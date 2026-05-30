@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ContentView: View {
 
@@ -31,7 +32,7 @@ struct ContentView: View {
         VStack(spacing: 16) {
             Image(systemName: "doc.badge.arrow.up")
                 .font(.system(size: 56))
-                .foregroundStyle(isTargeted ? .accent : .secondary)
+                .foregroundStyle(isTargeted ? Color.accentColor : Color.secondary)
 
             Text("Drop a document here")
                 .font(.title2)
@@ -49,7 +50,7 @@ struct ContentView: View {
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(
-                    isTargeted ? Color.accentColor : Color.secondary.opacity(0.3),
+                    isTargeted ? Color.accentColor : Color.secondary.opacity(0.3) as Color,
                     style: StrokeStyle(lineWidth: 2, dash: [8])
                 )
                 .padding(24)
@@ -104,7 +105,7 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
-                    Button("Try Another File") { conversion.result = nil }
+                    Button("Try Another File") { conversion.reset() }
                         .buttonStyle(.borderedProminent)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -133,7 +134,7 @@ struct ContentView: View {
             Button("Save…") { saveMarkdown(output) }
                 .buttonStyle(.borderedProminent)
 
-            Button("Convert Another") { conversion.result = nil }
+            Button("Convert Another") { conversion.reset() }
                 .buttonStyle(.bordered)
         }
         .padding(.horizontal)
@@ -144,7 +145,10 @@ struct ContentView: View {
 
     private func openFilePicker() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.pdf, .init(filenameExtension: "docx")!, .init(filenameExtension: "pptx")!, .init(filenameExtension: "xlsx")!, .html, .png, .jpeg]
+        panel.allowedContentTypes = [.pdf, .html, .png, .jpeg,
+            UTType(filenameExtension: "docx") ?? .data,
+            UTType(filenameExtension: "pptx") ?? .data,
+            UTType(filenameExtension: "xlsx") ?? .data]
         panel.allowsMultipleSelection = false
         if panel.runModal() == .OK, let url = panel.url {
             conversion.convert(fileURL: url)
@@ -163,7 +167,7 @@ struct ContentView: View {
 
     private func saveMarkdown(_ output: ConversionOutput) {
         let panel = NSSavePanel()
-        panel.allowedContentTypes = [.init(filenameExtension: "md")!]
+        panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
         panel.nameFieldStringValue = output.title + ".md"
         if panel.runModal() == .OK, let url = panel.url {
             try? output.markdown.write(to: url, atomically: true, encoding: .utf8)

@@ -18,6 +18,10 @@ final class ConversionService: ObservableObject {
 
     private init() {}
 
+    func reset() {
+        result = nil
+    }
+
     func convert(fileURL: URL) {
         guard !isConverting else { return }
         isConverting = true
