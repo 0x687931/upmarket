@@ -41,9 +41,10 @@ final class PythonBridge: ObservableObject {
 
         let pythonHome = "\(frameworkPath)/Python.framework/Versions/3.12"
         let stdlibPath = "\(pythonHome)/lib/python3.12"
+        let sitePackages = "\(stdlibPath)/site-packages"
 
         setenv("PYTHONHOME", pythonHome, 1)
-        setenv("PYTHONPATH", stdlibPath, 1)
+        setenv("PYTHONPATH", "\(stdlibPath):\(sitePackages)", 1)
         setenv("HF_HUB_OFFLINE", "0", 1)
 
         let appSupport = FileManager.default
