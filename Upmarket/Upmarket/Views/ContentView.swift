@@ -43,7 +43,7 @@ struct ContentView: View {
                 showModelDownload = true
             }
         }
-        .onChange(of: modelManager.allRequiredDownloaded) { _, ready in
+        .onChange(of: modelManager.allRequiredDownloaded) { ready in
             if ready { showModelDownload = false }
         }
     }

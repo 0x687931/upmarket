@@ -59,8 +59,9 @@ final class ModelManager: ObservableObject {
         let pyStatus = manager.check_models()
 
         var result: [ModelStatus] = []
-        for (key, info) in pyStatus.items() {
-            guard let key = String(key) else { continue }
+        for item in pyStatus.items() {
+            guard let key = String(item[0]) else { continue }
+            let info = item[1]
             result.append(ModelStatus(
                 key: key,
                 name: String(info["name"]) ?? key,
