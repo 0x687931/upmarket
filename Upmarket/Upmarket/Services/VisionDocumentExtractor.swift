@@ -3,59 +3,46 @@ import Vision
 import PDFKit
 
 /// Structured document extraction using Vision's RecognizeDocumentsRequest (macOS 26+).
-/// Extracts text WITH layout: paragraphs, tables with cells, lists, reading order.
-/// On Apple Silicon this runs on the Neural Engine — faster than Docling Enhanced pipeline
-/// for many document types, with zero download required.
-///
-/// On macOS < 26, falls back to VisionOCR (VNRecognizeTextRequest).
+/// Extracts text WITH structure: paragraphs, tables (rows/columns/cells), lists.
+/// Falls back to VisionOCR (VNRecognizeTextRequest) on macOS < 26.
 struct VisionDocumentExtractor {
-
-    // MARK: - Availability
 
     static var isAvailable: Bool {
         if #available(macOS 26, *) { return true }
         return false
     }
 
-    // MARK: - Output
-
     struct Result {
         let markdown: String
         let pageCount: Int
         let tablesFound: Int
-        let usedNewAPI: Bool     // true = RecognizeDocumentsRequest, false = VNRecognizeTextRequest fallback
+        let listsFound: Int
+        let usedStructuredAPI: Bool
     }
 
-    // MARK: - Public API
-
-    /// Extract structured Markdown from a PDF using Vision.
-    /// Uses RecognizeDocumentsRequest on macOS 26+, falls back to VNRecognizeTextRequest.
     static func extract(pdfURL: URL, password: String? = nil) async throws -> Result {
         if #available(macOS 26, *) {
-            return try await extractWithNewAPI(pdfURL: pdfURL, password: password)
-        } else {
-            return try await extractWithLegacyOCR(pdfURL: pdfURL, password: password)
+            return try await extractStructured(pdfURL: pdfURL, password: password)
         }
+        let ocr = try await VisionOCR.recognise(pdfURL: pdfURL, password: password)
+        return Result(markdown: ocr.text, pageCount: ocr.pageCount,
+                     tablesFound: 0, listsFound: 0, usedStructuredAPI: false)
     }
 
-    /// Extract structured Markdown from a single image.
     static func extract(imageURL: URL) async throws -> Result {
         if #available(macOS 26, *) {
-            return try await extractImageWithNewAPI(imageURL: imageURL)
-        } else {
-            let ocrResult = try await VisionOCR.recognise(imageURL: imageURL)
-            return Result(markdown: ocrResult.text, pageCount: 1, tablesFound: 0, usedNewAPI: false)
+            return try await extractImageStructured(imageURL: imageURL)
         }
+        let ocr = try await VisionOCR.recognise(imageURL: imageURL)
+        return Result(markdown: ocr.text, pageCount: 1,
+                     tablesFound: 0, listsFound: 0, usedStructuredAPI: false)
     }
 
-    // MARK: - macOS 26 Implementation
+    // MARK: - macOS 26 structured extraction
 
     @available(macOS 26, *)
-    private static func extractWithNewAPI(pdfURL: URL, password: String? = nil) async throws -> Result {
-        guard let document = PDFDocument(url: pdfURL) else {
-            throw ExtractionError.cannotOpenPDF
-        }
-
+    private static func extractStructured(pdfURL: URL, password: String?) async throws -> Result {
+        guard let document = PDFDocument(url: pdfURL) else { throw ExtractionError.cannotOpenPDF }
         if document.isLocked {
             guard let pwd = password, document.unlock(withPassword: pwd) else {
                 throw ExtractionError.passwordRequired
@@ -63,104 +50,125 @@ struct VisionDocumentExtractor {
         }
 
         let pageCount = document.pageCount
-        var pageMarkdowns: [String] = []
-        var totalTables = 0
+        var pages: [String] = []
+        var totalTables = 0; var totalLists = 0
 
         for i in 0..<pageCount {
-            guard let page = document.page(at: i) else { continue }
-            let bounds = page.bounds(for: .mediaBox)
-            let scale: CGFloat = 150.0 / 72.0
-            let renderer = PDFPageImageRenderer(
-                page: page,
-                width: Int(bounds.width * scale),
-                height: Int(bounds.height * scale)
-            )
-            guard let cgImage = renderer.render() else { continue }
-
-            let (pageMarkdown, tableCount) = try await recognisePageWithNewAPI(cgImage)
-            pageMarkdowns.append(pageMarkdown)
-            totalTables += tableCount
+            guard let page = document.page(at: i),
+                  let cgImage = renderPage(page) else { continue }
+            let (md, t, l) = try await processImage(cgImage)
+            pages.append(md); totalTables += t; totalLists += l
         }
 
-        let markdown = pageMarkdowns
-            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-            .joined(separator: "\n\n---\n\n")
-
-        return Result(markdown: markdown, pageCount: pageCount,
-                     tablesFound: totalTables, usedNewAPI: true)
-    }
-
-    @available(macOS 26, *)
-    private static func recognisePageWithNewAPI(_ cgImage: CGImage) async throws -> (String, Int) {
-        // RecognizeDocumentsRequest — new in macOS 26 / WWDC25 session 272
-        // Returns structured document with paragraphs, tables, lists
-        //
-        // API reference (macOS 26 SDK required to compile):
-        //   let request = RecognizeDocumentsRequest()
-        //   request.recognitionLanguages = ["en-US"]
-        //   let handler = VNImageRequestHandler(cgImage: cgImage)
-        //   let results = try await request.perform(on: cgImage)
-        //   for doc in results {
-        //       for table in doc.tables { ... }  // VNDetectedDocument.Table
-        //       let text = doc.recognizedText
-        //   }
-        //
-        // Currently using VNRecognizeTextRequest as placeholder until Xcode 26 SDK
-        // ships and we can import the new Vision APIs.
-        //
-        // See: WWDC2025 Session 272 "Read documents using the Vision framework"
-
-        return try await withCheckedThrowingContinuation { continuation in
-            let request = VNRecognizeTextRequest { req, error in
-                if let error { continuation.resume(throwing: error); return }
-                let observations = req.results as? [VNRecognizedTextObservation] ?? []
-                let lines = observations
-                    .compactMap { $0.topCandidates(1).first }
-                    .filter { $0.confidence > 0.3 }
-                    .map(\.string)
-                continuation.resume(returning: (lines.joined(separator: "\n"), 0))
-            }
-            request.recognitionLevel = .accurate
-            request.usesLanguageCorrection = true
-            request.automaticallyDetectsLanguage = true
-
-            do {
-                try VNImageRequestHandler(cgImage: cgImage).perform([request])
-            } catch {
-                continuation.resume(throwing: error)
-            }
-        }
-    }
-
-    @available(macOS 26, *)
-    private static func extractImageWithNewAPI(imageURL: URL) async throws -> Result {
-        guard let cgImageSource = CGImageSourceCreateWithURL(imageURL as CFURL, nil),
-              let cgImage = CGImageSourceCreateImageAtIndex(cgImageSource, 0, nil) else {
-            throw ExtractionError.cannotReadImage
-        }
-        let (markdown, tables) = try await recognisePageWithNewAPI(cgImage)
-        return Result(markdown: markdown, pageCount: 1, tablesFound: tables, usedNewAPI: true)
-    }
-
-    // MARK: - Legacy Fallback (macOS 13.3 – 15.x)
-
-    private static func extractWithLegacyOCR(pdfURL: URL, password: String? = nil) async throws -> Result {
-        let ocrResult = try await VisionOCR.recognise(pdfURL: pdfURL, password: password)
         return Result(
-            markdown: ocrResult.text,
-            pageCount: ocrResult.pageCount,
-            tablesFound: 0,
-            usedNewAPI: false
+            markdown: pages.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                          .joined(separator: "\n\n---\n\n"),
+            pageCount: pageCount, tablesFound: totalTables,
+            listsFound: totalLists, usedStructuredAPI: true
         )
     }
 
-    // MARK: - Errors
+    @available(macOS 26, *)
+    private static func extractImageStructured(imageURL: URL) async throws -> Result {
+        guard let src = CGImageSourceCreateWithURL(imageURL as CFURL, nil),
+              let cg = CGImageSourceCreateImageAtIndex(src, 0, nil) else {
+            throw ExtractionError.cannotReadImage
+        }
+        let (md, t, l) = try await processImage(cg)
+        return Result(markdown: md, pageCount: 1, tablesFound: t, listsFound: l, usedStructuredAPI: true)
+    }
+
+    @available(macOS 26, *)
+    private static func processImage(_ cgImage: CGImage) async throws -> (String, Int, Int) {
+        let request = RecognizeDocumentsRequest()
+        let handler = ImageRequestHandler(cgImage)
+        let observations = try await handler.perform(request)
+
+        var parts: [String] = []
+        var tables = 0; var lists = 0
+
+        for obs in observations {
+            let doc = obs.document
+            // Title
+            if let title = doc.title {
+                let t = textFromContainer(title).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !t.isEmpty { parts.append("## \(t)") }
+            }
+            // Body text
+            let body = textFromContainer(doc.text).trimmingCharacters(in: .whitespacesAndNewlines)
+            if !body.isEmpty { parts.append(body) }
+            // Tables
+            for table in doc.tables {
+                parts.append(tableToMarkdown(table))
+                tables += 1
+            }
+            // Lists
+            for list in doc.lists {
+                parts.append(listToMarkdown(list))
+                lists += 1
+            }
+        }
+
+        return (parts.joined(separator: "\n\n"), tables, lists)
+    }
+
+    // MARK: - Container → Markdown converters
+
+    /// Extract plain text from a Container.Text by joining all recognised lines.
+    @available(macOS 26, *)
+    private static func textFromContainer(_ text: DocumentObservation.Container.Text) -> String {
+        text.lines
+            .compactMap { $0.topCandidates(1).first?.string }
+            .joined(separator: "\n")
+    }
+
+    @available(macOS 26, *)
+    private static func textFromContainerBox(_ container: DocumentObservation.Container) -> String {
+        textFromContainer(container.text)
+    }
+
+    @available(macOS 26, *)
+    private static func tableToMarkdown(_ table: DocumentObservation.Container.Table) -> String {
+        guard !table.rows.isEmpty else { return "" }
+        var lines: [String] = []
+        for (i, row) in table.rows.enumerated() {
+            let cells = row.map { textFromContainerBox($0.content).replacingOccurrences(of: "\n", with: " ") }
+            lines.append("| " + cells.joined(separator: " | ") + " |")
+            if i == 0 { lines.append("| " + cells.map { _ in "---" }.joined(separator: " | ") + " |") }
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    @available(macOS 26, *)
+    private static func listToMarkdown(_ list: DocumentObservation.Container.List) -> String {
+        list.items.map { item in
+            "- \(textFromContainerBox(item.content))"
+        }.joined(separator: "\n")
+    }
+
+    // MARK: - PDF page renderer
+
+    private static func renderPage(_ page: PDFPage) -> CGImage? {
+        let bounds = page.bounds(for: .mediaBox)
+        let scale: CGFloat = 150.0 / 72.0
+        let w = Int(bounds.width * scale); let h = Int(bounds.height * scale)
+        guard let ctx = CGContext(
+            data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+        ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
+        ctx.scaleBy(x: CGFloat(w) / bounds.width, y: CGFloat(h) / bounds.height)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: false)
+        page.draw(with: .mediaBox, to: ctx)
+        NSGraphicsContext.restoreGraphicsState()
+        return ctx.makeImage()
+    }
 
     enum ExtractionError: LocalizedError {
-        case cannotOpenPDF
-        case passwordRequired
-        case cannotReadImage
-
+        case cannotOpenPDF, passwordRequired, cannotReadImage
         var errorDescription: String? {
             switch self {
             case .cannotOpenPDF:    return "Upmarket couldn't open this document."
@@ -168,35 +176,5 @@ struct VisionDocumentExtractor {
             case .cannotReadImage:  return "Upmarket couldn't read this image."
             }
         }
-    }
-}
-
-// MARK: - PDF Page Renderer (shared with VisionOCR)
-
-private struct PDFPageImageRenderer {
-    let page: PDFPage
-    let width: Int
-    let height: Int
-
-    func render() -> CGImage? {
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        guard let ctx = CGContext(
-            data: nil, width: width, height: height,
-            bitsPerComponent: 8, bytesPerRow: 0, space: colorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return nil }
-
-        ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
-        ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
-
-        let bounds = page.bounds(for: .mediaBox)
-        ctx.scaleBy(x: CGFloat(width) / bounds.width, y: CGFloat(height) / bounds.height)
-
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: false)
-        page.draw(with: .mediaBox, to: ctx)
-        NSGraphicsContext.restoreGraphicsState()
-
-        return ctx.makeImage()
     }
 }
