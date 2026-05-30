@@ -36,16 +36,16 @@
     {
       "displayPrice" : "0.99",
       "familySharable" : false,
-      "internalID" : "com.upmarket.app.ai_credit",
+      "internalID" : "com.upmarket.app.doc_pack",
       "localizations" : [
         {
-          "description" : "Use Upmarket AI on one document. Perfect for trying AI on a complex file before upgrading.",
-          "displayName" : "Upmarket AI — One Document",
+          "description" : "5 document conversions. Perfect if you convert occasionally.",
+          "displayName" : "5 Documents",
           "locale" : "en_US"
         }
       ],
-      "productID" : "com.upmarket.app.ai_credit",
-      "referenceName" : "AI Credit",
+      "productID" : "com.upmarket.app.doc_pack",
+      "referenceName" : "Doc Pack",
       "type" : "Consumable"
     }
   ],

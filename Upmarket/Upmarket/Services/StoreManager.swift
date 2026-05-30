@@ -9,20 +9,30 @@ final class StoreManager: ObservableObject {
     // Product IDs — never expose these strings in UI
     static let basicID    = "com.upmarket.app.basic"
     static let proID      = "com.upmarket.app.pro"
-    static let aiCreditID = "com.upmarket.app.ai_credit"
+    static let packID     = "com.upmarket.app.doc_pack"  // 5-doc pack at $0.99
 
     let objectWillChange = PassthroughSubject<Void, Never>()
 
-    private(set) var basicProduct:    Product?
-    private(set) var proProduct:      Product?
-    private(set) var aiCreditProduct: Product?
+    private(set) var basicProduct: Product?
+    private(set) var proProduct:   Product?
+    private(set) var packProduct:  Product?
 
     private(set) var entitlement: Entitlement = .none {
         willSet { objectWillChange.send() }
     }
 
-    // Remaining single-doc AI credits (consumable)
-    private(set) var aiCredits: Int = 0 {
+    // Free trial: 3 docs, counted down
+    private(set) var freeDocsRemaining: Int = 3 {
+        willSet { objectWillChange.send() }
+    }
+
+    // Purchased doc pack credits
+    private(set) var packCredits: Int = 0 {
+        willSet { objectWillChange.send() }
+    }
+
+    // How many packs the user has ever bought — drives nudge intensity
+    private(set) var packsEverPurchased: Int = 0 {
         willSet { objectWillChange.send() }
     }
 
@@ -32,73 +42,105 @@ final class StoreManager: ObservableObject {
         transactionListener = listenForTransactions()
         Task { await loadProducts() }
         Task { await refreshEntitlement() }
-        aiCredits = UserDefaults.standard.integer(forKey: "upmarket.aiCredits")
+        freeDocsRemaining  = UserDefaults.standard.object(forKey: "upmarket.freeDocsRemaining") as? Int ?? 3
+        packCredits        = UserDefaults.standard.integer(forKey: "upmarket.packCredits")
+        packsEverPurchased = UserDefaults.standard.integer(forKey: "upmarket.packsEverPurchased")
     }
 
-    deinit {
-        transactionListener?.cancel()
-    }
+    deinit { transactionListener?.cancel() }
 
-    // MARK: - Public
-
-    var isTrialActive: Bool {
-        if case .trial = entitlement { return true }
-        return false
-    }
+    // MARK: - Entitlement checks
 
     var hasBasicOrAbove: Bool {
         switch entitlement {
         case .none: return false
-        case .trial, .basic, .pro: return true
+        case .basic, .pro: return true
         }
     }
 
     var hasProOrAbove: Bool {
-        switch entitlement {
-        case .pro, .trial: return true
-        default: return false
+        entitlement == .pro
+    }
+
+    /// Can convert right now — has unlimited access, free docs, or pack credits
+    var canConvert: Bool {
+        hasBasicOrAbove || freeDocsRemaining > 0 || packCredits > 0
+    }
+
+    /// Nudge level based on pack purchase history
+    var upgradeNudge: UpgradeNudge {
+        guard !hasBasicOrAbove else { return .none }
+
+        if packCredits <= 2 && packsEverPurchased >= 1 {
+            // Running low on a pack they bought
+            if packsEverPurchased >= 3 {
+                return .mathsNudge  // "You've spent $X, unlimited is just $Y more"
+            } else if packsEverPurchased >= 2 {
+                return .strongNudge  // "You've bought 2 packs — unlimited is better value"
+            } else {
+                return .softNudge    // "Running low — unlimited for $4.99"
+            }
+        }
+        return .none
+    }
+
+    /// Human-readable nudge message
+    var nudgeMessage: String? {
+        let spent = String(format: "$%.2f", Double(packsEverPurchased) * 0.99)
+        switch upgradeNudge {
+        case .none: return nil
+        case .softNudge:
+            return "Running low — unlimited conversions for just $4.99."
+        case .strongNudge:
+            return "You've bought 2 packs — unlimited is better value at $4.99."
+        case .mathsNudge:
+            return "You've spent \(spent) on doc packs. Unlimited is $4.99 — just \(remainingToUnlimited(spent: Double(packsEverPurchased) * 0.99)) more."
         }
     }
 
-    /// Can use Upmarket AI — either Pro, trial, or has a credit
-    var canUseAI: Bool {
-        hasProOrAbove || aiCredits > 0
+    // MARK: - Consuming docs
+
+    /// Call before each conversion. Returns false if user has no access.
+    @discardableResult
+    func consumeConversion() -> Bool {
+        if hasBasicOrAbove { return true }  // unlimited — nothing to consume
+
+        if freeDocsRemaining > 0 {
+            freeDocsRemaining -= 1
+            UserDefaults.standard.set(freeDocsRemaining, forKey: "upmarket.freeDocsRemaining")
+            return true
+        }
+
+        if packCredits > 0 {
+            packCredits -= 1
+            UserDefaults.standard.set(packCredits, forKey: "upmarket.packCredits")
+            return true
+        }
+
+        return false
     }
 
-    var trialDaysRemaining: Int? {
-        if case .trial(let days) = entitlement { return days }
-        return nil
-    }
+    // MARK: - Purchasing
 
     func purchase(_ product: Product) async throws {
         let result = try await product.purchase()
         switch result {
         case .success(let verification):
             let transaction = try checkVerified(verification)
-            if transaction.productID == Self.aiCreditID {
-                // Consumable — add credit, finish immediately
+            if transaction.productID == Self.packID {
                 await MainActor.run {
-                    self.aiCredits += 1
-                    UserDefaults.standard.set(self.aiCredits, forKey: "upmarket.aiCredits")
+                    self.packCredits += 5
+                    self.packsEverPurchased += 1
+                    UserDefaults.standard.set(self.packCredits, forKey: "upmarket.packCredits")
+                    UserDefaults.standard.set(self.packsEverPurchased, forKey: "upmarket.packsEverPurchased")
                 }
             } else {
                 await refreshEntitlement()
             }
             await transaction.finish()
-        case .userCancelled:
-            break
-        case .pending:
-            break
-        @unknown default:
-            break
+        case .userCancelled, .pending: break
+        @unknown default: break
         }
-    }
-
-    /// Consume one AI credit. Call before running an AI conversion.
-    func consumeAICredit() {
-        guard aiCredits > 0 else { return }
-        aiCredits -= 1
-        UserDefaults.standard.set(aiCredits, forKey: "upmarket.aiCredits")
     }
 
     func restorePurchases() async {
@@ -110,11 +152,11 @@ final class StoreManager: ObservableObject {
 
     private func loadProducts() async {
         do {
-            let products = try await Product.products(for: [Self.basicID, Self.proID, Self.aiCreditID])
+            let products = try await Product.products(for: [Self.basicID, Self.proID, Self.packID])
             await MainActor.run {
-                self.basicProduct    = products.first { $0.id == Self.basicID }
-                self.proProduct      = products.first { $0.id == Self.proID }
-                self.aiCreditProduct = products.first { $0.id == Self.aiCreditID }
+                self.basicProduct = products.first { $0.id == Self.basicID }
+                self.proProduct   = products.first { $0.id == Self.proID }
+                self.packProduct  = products.first { $0.id == Self.packID }
             }
         } catch {
             print("[StoreManager] Failed to load products: \(error)")
@@ -124,7 +166,6 @@ final class StoreManager: ObservableObject {
     private func refreshEntitlement() async {
         for await result in Transaction.currentEntitlements {
             guard let transaction = try? checkVerified(result) else { continue }
-
             if transaction.productID == Self.proID {
                 await MainActor.run { self.entitlement = .pro }
                 return
@@ -134,34 +175,25 @@ final class StoreManager: ObservableObject {
                 return
             }
         }
-
-        let days = trialDaysRemainingFromFirstLaunch()
-        if days > 0 {
-            await MainActor.run { self.entitlement = .trial(daysRemaining: days) }
-        } else {
-            await MainActor.run { self.entitlement = .none }
-        }
+        // No paid plan — free tier
+        await MainActor.run { self.entitlement = .none }
     }
 
-    private func trialDaysRemainingFromFirstLaunch() -> Int {
-        let key = "upmarket.firstLaunchDate"
-        let now = Date()
-        if UserDefaults.standard.object(forKey: key) == nil {
-            UserDefaults.standard.set(now, forKey: key)
-        }
-        let firstLaunch = UserDefaults.standard.object(forKey: key) as? Date ?? now
-        let elapsed = Calendar.current.dateComponents([.day], from: firstLaunch, to: now).day ?? 0
-        return max(0, 7 - elapsed)
+    private func remainingToUnlimited(spent: Double) -> String {
+        let remaining = max(0, 4.99 - spent)
+        return String(format: "$%.2f", remaining)
     }
 
     private func listenForTransactions() -> Task<Void, Error> {
         Task.detached {
             for await result in Transaction.updates {
                 guard let transaction = try? self.checkVerified(result) else { continue }
-                if transaction.productID == Self.aiCreditID {
+                if transaction.productID == Self.packID {
                     await MainActor.run {
-                        self.aiCredits += 1
-                        UserDefaults.standard.set(self.aiCredits, forKey: "upmarket.aiCredits")
+                        self.packCredits += 5
+                        self.packsEverPurchased += 1
+                        UserDefaults.standard.set(self.packCredits, forKey: "upmarket.packCredits")
+                        UserDefaults.standard.set(self.packsEverPurchased, forKey: "upmarket.packsEverPurchased")
                     }
                 } else {
                     await self.refreshEntitlement()
@@ -173,10 +205,8 @@ final class StoreManager: ObservableObject {
 
     private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
         switch result {
-        case .unverified:
-            throw StoreError.failedVerification
-        case .verified(let value):
-            return value
+        case .unverified: throw StoreError.failedVerification
+        case .verified(let value): return value
         }
     }
 }
@@ -185,9 +215,16 @@ final class StoreManager: ObservableObject {
 
 enum Entitlement: Equatable {
     case none
-    case trial(daysRemaining: Int)
     case basic
     case pro
+    // Note: trial is now doc-count based (freeDocsRemaining), not time-based
+}
+
+enum UpgradeNudge {
+    case none
+    case softNudge     // 1 pack bought, running low
+    case strongNudge   // 2 packs bought
+    case mathsNudge    // 3+ packs, show the maths
 }
 
 enum StoreError: Error {

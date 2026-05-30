@@ -52,11 +52,13 @@ struct ContentView: View {
 
     @ViewBuilder
     private var trialBanner: some View {
-        switch store.entitlement {
-        case .trial(let days):
+        if store.hasBasicOrAbove {
+            EmptyView()
+        } else if store.freeDocsRemaining > 0 {
             HStack(spacing: 8) {
-                Image(systemName: "clock")
-                Text(days == 1 ? "1 day left in your free trial" : "\(days) days left in your free trial")
+                Image(systemName: "doc.text")
+                let docs = store.freeDocsRemaining
+                Text(docs == 1 ? "1 free conversion remaining" : "\(docs) free conversions remaining")
                     .fontWeight(.medium)
                 Spacer()
                 Button("Upgrade") { showPaywall = true }
@@ -67,13 +69,29 @@ struct ContentView: View {
             .padding(.vertical, 8)
             .background(Color.accentColor.opacity(0.1))
             .font(.subheadline)
-        case .none:
+        } else if let nudge = store.nudgeMessage {
             HStack(spacing: 8) {
-                Image(systemName: "lock.fill")
-                Text("Your free trial has expired")
+                Image(systemName: "arrow.up.circle")
+                Text(nudge)
                     .fontWeight(.medium)
                 Spacer()
-                Button("Unlock Upmarket") { showPaywall = true }
+                Button("Upgrade") { showPaywall = true }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color.accentColor.opacity(0.1))
+            .font(.subheadline)
+        } else if store.packCredits > 0 {
+            EmptyView()
+        } else {
+            HStack(spacing: 8) {
+                Image(systemName: "lock.fill")
+                Text("You've used your free conversions")
+                    .fontWeight(.medium)
+                Spacer()
+                Button("Unlock") { showPaywall = true }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
             }
@@ -81,8 +99,6 @@ struct ContentView: View {
             .padding(.vertical, 8)
             .background(Color.red.opacity(0.1))
             .font(.subheadline)
-        default:
-            EmptyView()
         }
     }
 
@@ -204,7 +220,7 @@ struct ContentView: View {
     // MARK: - Actions
 
     private func openFilePicker() {
-        guard store.hasBasicOrAbove else { showPaywall = true; return }
+        guard store.canConvert else { showPaywall = true; return }
         guard modelManager.allRequiredDownloaded else { showModelDownload = true; return }
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.pdf, .html, .png, .jpeg,
@@ -218,7 +234,7 @@ struct ContentView: View {
     }
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
-        guard store.hasBasicOrAbove else { showPaywall = true; return false }
+        guard store.canConvert else { showPaywall = true; return false }
         guard modelManager.allRequiredDownloaded else { showModelDownload = true; return false }
         guard let provider = providers.first else { return false }
         provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
