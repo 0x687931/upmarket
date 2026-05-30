@@ -95,10 +95,9 @@ struct ContentView: View {
             }
         }
         .onAppear {
+            // Check model status silently — don't prompt on first launch
+            // Download is triggered when user first tries to convert
             modelManager.checkModels()
-            if !modelManager.allRequiredDownloaded {
-                showModelDownload = true
-            }
         }
         .onChange(of: modelManager.allRequiredDownloaded) { ready in
             if ready { showModelDownload = false }

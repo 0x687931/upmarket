@@ -33,11 +33,11 @@ struct ModelDownloadView: View {
                 .font(.system(size: 48, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.accentColor)
 
-            Text("Set Up Upmarket")
+            Text("One-time download required")
                 .font(.title2)
                 .fontWeight(.bold)
 
-            Text("Upmarket uses on-device AI — your documents never leave your Mac. Download once, work offline forever.")
+            Text("Upmarket runs entirely on your Mac — no cloud, no subscriptions. Download the AI models once (~\(modelManager.requiredSizeMB) MB) and convert documents offline forever.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

@@ -40,8 +40,11 @@ final class ModelManager: ObservableObject {
 
     private init() {}
 
-    var allRequiredDownloaded: Bool {
-        models.filter(\.isRequired).allSatisfy(\.isDownloaded)
+    // Fast path (PyMuPDF4LLM) always works — no download required
+    var allRequiredDownloaded: Bool { true }
+
+    var enhancedDownloaded: Bool {
+        models.first { $0.tier == "enhanced" }?.isDownloaded ?? false
     }
 
     var requiredSizeMB: Int {

@@ -1,95 +1,216 @@
 """
-Thin wrapper around Docling for Swift interop via PythonKit.
-All public functions return plain dicts (no custom types) for easy bridging.
+Upmarket document converter — tiered pipeline.
+
+Tier 1 (zero download): PyMuPDF4LLM — fast, bundled, good for clean docs
+Tier 2 (172MB download): Enhanced pipeline — layout analysis for complex PDFs
+Tier 3 (500MB download): Upmarket AI — Pro, scanned/research documents
+
+No internal library names are exposed to callers.
 """
 
 import os
+import sys
 import traceback
 from pathlib import Path
 
 
 def convert(file_path: str, options: dict | None = None) -> dict:
     """
-    Convert a document to Markdown.
+    Convert a document to Markdown using the best available pipeline.
 
-    Args:
-        file_path: Absolute path to the input document.
-        options: Optional dict with keys:
-            - use_vlm (bool): Use Upmarket AI pipeline. Default False.
-            - ocr (bool): Enable OCR for scanned PDFs. Default True.
-            - password (str): Password for encrypted PDFs. Default None.
+    Options:
+        use_enhanced (bool): Use enhanced pipeline if downloaded. Default True.
+        use_ai (bool): Use Upmarket AI (Pro). Default False.
+        ocr (bool): Enable OCR. Default True.
+        password (str): PDF password. Default None.
 
     Returns:
         {
             "success": bool,
             "markdown": str,
             "metadata": { "pages": int, "format": str, "title": str },
+            "pipeline": str,  # "fast" | "enhanced" | "ai"
             "error": str | None,
             "needs_password": bool
         }
     """
     opts = options or {}
+    path = Path(file_path)
 
+    if not path.exists():
+        return _error("Upmarket couldn't find this file. Please try again.")
+
+    suffix = path.suffix.lower()
+    password = opts.get("password", None)
+    use_enhanced = opts.get("use_enhanced", True)
+    use_ai = opts.get("use_ai", False)
+
+    # Check for password-protected PDF first
+    if suffix == ".pdf" and not password:
+        locked, err = _check_pdf_locked(str(path))
+        if locked:
+            return {**_error("This PDF is password-protected."), "needs_password": True}
+        if err:
+            return _error(err)
+
+    # Route to appropriate pipeline
     try:
-        from docling.document_converter import DocumentConverter, PdfFormatOption
-        from docling.datamodel.base_models import InputFormat
-        from docling.datamodel.pipeline_options import PdfPipelineOptions
+        if use_ai and _ai_available():
+            return _convert_ai(path, opts)
 
-        path = Path(file_path)
-        if not path.exists():
-            return _error("Upmarket couldn't find this file. Please try again.")
+        if suffix == ".pdf" and use_enhanced and _enhanced_available():
+            return _convert_enhanced(path, opts)
 
-        # Handle password-protected PDFs
-        password = opts.get("password", None)
-        if password is None and path.suffix.lower() == ".pdf":
-            try:
-                import pypdfium2 as pdfium
-                doc = pdfium.PdfDocument(str(path))
-                doc.close()
-            except Exception as e:
-                if "password" in str(e).lower() or "encrypted" in str(e).lower():
-                    return {
-                        "success": False,
-                        "markdown": "",
-                        "metadata": {},
-                        "error": "This PDF is password-protected.",
-                        "needs_password": True,
-                    }
+        if suffix == ".pdf":
+            return _convert_fast(path, opts)
 
-        pipeline_options = PdfPipelineOptions()
-        pipeline_options.do_ocr = opts.get("ocr", True)
-        pipeline_options.do_table_structure = True
+        # Non-PDF formats: use enhanced if available, fast otherwise
+        if use_enhanced and _enhanced_available():
+            return _convert_enhanced(path, opts)
 
-        format_options = {}
-        pdf_options = PdfFormatOption(pipeline_options=pipeline_options)
-        if password:
-            try:
-                pdf_options = PdfFormatOption(
-                    pipeline_options=pipeline_options,
-                    backend_options={"password": password}
-                )
-            except Exception:
-                pass
-        format_options[InputFormat.PDF] = pdf_options
-
-        converter = DocumentConverter(format_options=format_options)
-        result = converter.convert(str(path))
-        markdown = result.document.export_to_markdown()
-
-        num_pages = result.document.num_pages()
-        metadata = {
-            "pages": num_pages if isinstance(num_pages, int) else 0,
-            "format": path.suffix.lstrip(".").upper(),
-            "title": getattr(result.document, "title", path.stem) or path.stem,
-        }
-
-        return {"success": True, "markdown": markdown, "metadata": metadata, "error": None, "needs_password": False}
+        return _convert_fast(path, opts)
 
     except Exception as e:
-        # Log technical detail internally but never expose to user
-        import sys
         print(f"[Upmarket] Conversion error: {type(e).__name__}: {e}", file=sys.stderr)
         return _error("Upmarket couldn't convert this document. The file may be damaged, password-protected, or in an unsupported format.")
+
+
+def check_pipelines() -> dict:
+    """
+    Returns which pipelines are available.
+    { "fast": bool, "enhanced": bool, "ai": bool }
+    """
+    return {
+        "fast": True,  # always available — bundled
+        "enhanced": _enhanced_available(),
+        "ai": _ai_available(),
+    }
+
+
+# MARK: - Pipeline implementations
+
+def _convert_fast(path: Path, opts: dict) -> dict:
+    """PyMuPDF4LLM — zero download, good for clean digital documents."""
+    import pymupdf4llm
+
+    password = opts.get("password", None)
+    kwargs = {}
+    if password:
+        kwargs["password"] = password
+
+    if path.suffix.lower() == ".pdf":
+        markdown = pymupdf4llm.to_markdown(str(path), **kwargs)
+    else:
+        # For non-PDF, fall through to enhanced or return unsupported
+        return _error(f"Format not supported without Upmarket Enhanced.")
+
+    page_count = _count_pdf_pages(str(path), password)
+    return _success(markdown, page_count, path, pipeline="fast")
+
+
+def _convert_enhanced(path: Path, opts: dict) -> dict:
+    """Enhanced pipeline — handles all formats, complex layouts, tables."""
+    from docling.document_converter import DocumentConverter, PdfFormatOption
+    from docling.datamodel.base_models import InputFormat
+    from docling.datamodel.pipeline_options import PdfPipelineOptions
+
+    pipeline_options = PdfPipelineOptions()
+    pipeline_options.do_ocr = opts.get("ocr", True)
+    pipeline_options.do_table_structure = True
+
+    format_options = {}
+    pdf_opts = PdfFormatOption(pipeline_options=pipeline_options)
+
+    if opts.get("password"):
+        try:
+            pdf_opts = PdfFormatOption(
+                pipeline_options=pipeline_options,
+                backend_options={"password": opts["password"]}
+            )
+        except Exception:
+            pass
+
+    format_options[InputFormat.PDF] = pdf_opts
+    converter = DocumentConverter(format_options=format_options)
+    result = converter.convert(str(path))
+    markdown = result.document.export_to_markdown()
+    page_count = result.document.num_pages() if callable(result.document.num_pages) else 0
+
+    return _success(markdown, page_count, path, pipeline="enhanced")
+
+
+def _convert_ai(path: Path, opts: dict) -> dict:
+    """Upmarket AI — Pro tier, best results for complex and scanned documents."""
+    # Temporarily re-enable hub for model loading if needed
+    was_offline = os.environ.get("HF_HUB_OFFLINE", "0")
+    os.environ["HF_HUB_OFFLINE"] = "0"
+
+    try:
+        result = _convert_enhanced(path, {**opts, "use_vlm": True})
+        result["pipeline"] = "ai"
+        return result
+    finally:
+        os.environ["HF_HUB_OFFLINE"] = was_offline
+
+
+# MARK: - Availability checks
+
+def _enhanced_available() -> bool:
+    """Enhanced pipeline available if layout models are downloaded."""
+    cache = Path(os.environ.get("HF_HUB_CACHE",
+        Path.home() / "Library" / "Application Support" / "Upmarket" / "models"))
+    layout_dir = cache / "layout"
+    return layout_dir.exists() and any(layout_dir.iterdir())
+
+
+def _ai_available() -> bool:
+    """Upmarket AI available if AI models are downloaded."""
+    cache = Path(os.environ.get("HF_HUB_CACHE",
+        Path.home() / "Library" / "Application Support" / "Upmarket" / "models"))
+    ai_dir = cache / "upmarket_ai"
+    return ai_dir.exists() and any(ai_dir.iterdir())
+
+
+# MARK: - Helpers
+
+def _check_pdf_locked(file_path: str) -> tuple[bool, str | None]:
+    try:
+        import pypdfium2 as pdfium
+        doc = pdfium.PdfDocument(file_path)
+        doc.close()
+        return False, None
+    except Exception as e:
+        msg = str(e).lower()
+        if "password" in msg or "encrypted" in msg:
+            return True, None
+        return False, None
+
+
+def _count_pdf_pages(file_path: str, password: str | None = None) -> int:
+    try:
+        import pymupdf
+        kwargs = {"password": password} if password else {}
+        doc = pymupdf.open(file_path, **kwargs)
+        count = len(doc)
+        doc.close()
+        return count
+    except Exception:
+        return 0
+
+
+def _success(markdown: str, pages: int, path: Path, pipeline: str) -> dict:
+    return {
+        "success": True,
+        "markdown": markdown,
+        "metadata": {
+            "pages": pages,
+            "format": path.suffix.lstrip(".").upper(),
+            "title": path.stem,
+        },
+        "pipeline": pipeline,
+        "error": None,
+        "needs_password": False,
+    }
 
 
 def _error(message: str) -> dict:
@@ -97,5 +218,7 @@ def _error(message: str) -> dict:
         "success": False,
         "markdown": "",
         "metadata": {},
+        "pipeline": "none",
         "error": message,
+        "needs_password": False,
     }

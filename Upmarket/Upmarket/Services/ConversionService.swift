@@ -126,7 +126,8 @@ final class ConversionService: ObservableObject {
         let converter = Python.import("docling_bridge.converter")
 
         var opts: [String: PythonObject] = [
-            "use_vlm": PythonObject(useAI),
+            "use_ai": PythonObject(useAI),
+            "use_enhanced": PythonObject(true),
             "ocr": PythonObject(true)
         ]
         if let password {
@@ -144,17 +145,19 @@ final class ConversionService: ObservableObject {
         }
 
         if success {
-            let markdown = String(pyResult["markdown"]) ?? ""
-            let meta     = pyResult["metadata"]
-            let pages    = Int(meta["pages"]) ?? 0
-            let format   = String(meta["format"]) ?? ""
-            let title    = String(meta["title"]) ?? originalURL.deletingPathExtension().lastPathComponent
+            let markdown     = String(pyResult["markdown"]) ?? ""
+            let meta         = pyResult["metadata"]
+            let pages        = Int(meta["pages"]) ?? 0
+            let format       = String(meta["format"]) ?? ""
+            let title        = String(meta["title"]) ?? originalURL.deletingPathExtension().lastPathComponent
+            let pipelineStr  = String(pyResult["pipeline"]) ?? "fast"
+            let pipeline     = Pipeline(rawValue: pipelineStr) ?? .fast
             return .success(ConversionOutput(
                 markdown: markdown,
                 pages: pages,
                 format: format,
                 title: title,
-                usedAI: useAI
+                pipeline: pipeline
             ))
         } else {
             let error = String(pyResult["error"]) ?? "Upmarket couldn't convert this document."
@@ -170,12 +173,29 @@ enum ConversionResult {
     case failure(String)
 }
 
+enum Pipeline: String {
+    case fast     = "fast"      // PyMuPDF4LLM — zero download
+    case enhanced = "enhanced"  // Layout models — 172MB
+    case ai       = "ai"        // Upmarket AI — 500MB Pro
+    case none     = "none"
+
+    var displayName: String {
+        switch self {
+        case .fast:     return ""
+        case .enhanced: return "Enhanced"
+        case .ai:       return "AI"
+        case .none:     return ""
+        }
+    }
+}
+
 struct ConversionOutput {
     let markdown: String
     let pages: Int
     let format: String
     let title: String
-    let usedAI: Bool
+    let pipeline: Pipeline
+    var usedAI: Bool { pipeline == .ai }
 }
 
 struct ComplexityAdvice {
