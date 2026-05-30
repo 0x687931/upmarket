@@ -7,6 +7,7 @@ struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
 
     private let device = DeviceCapability.shared
+    private let flags = FeatureFlags.shared
 
     @State private var isPurchasing: String? = nil  // product ID currently purchasing
     @State private var errorMessage: String?
@@ -18,7 +19,7 @@ struct PaywallView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     proCard
-                    if device.supportsUpmarketAI {
+                    if flags.aiAvailable {
                         basicCard
                     }
                     packCard
@@ -95,12 +96,12 @@ struct PaywallView: View {
                 featureRow("Upmarket AI for scanned, complex and research documents", isHighlight: true)
                 featureRow("Tables, figures, dense layouts", isHighlight: false)
                 featureRow("100% on-device — nothing sent to the cloud", isHighlight: false)
-                if !device.supportsUpmarketAI {
+                if let reason = flags.aiUnavailableReason {
                     HStack(spacing: 6) {
                         Image(systemName: "xmark.circle")
                             .foregroundStyle(.secondary)
                             .font(.caption)
-                        Text("Upmarket AI requires Apple Silicon")
+                        Text(reason)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

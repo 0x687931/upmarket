@@ -1,0 +1,11 @@
+{
+  "ai_supported_locales": [
+    "en", "fr", "de", "es", "it", "pt", "nl",
+    "pl", "sv", "da", "no", "fi", "ru", "cs",
+    "sk", "hu", "ro", "hr", "bg", "uk"
+  ],
+  "ai_experimental_locales": [
+    "zh", "ja", "ko", "ar", "he", "hi", "th", "vi"
+  ],
+  "version": 1
+}

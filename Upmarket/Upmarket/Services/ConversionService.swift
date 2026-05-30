@@ -69,10 +69,13 @@ final class ConversionService: ObservableObject {
                 if let s = String(item) { reasons.append(s) }
             }
 
+            let detectedLanguage = String(pyResult["signals"]["detected_language"]) ?? nil
+
             let advice = ComplexityAdvice(
                 recommendation: ComplexityAdvice.Recommendation(rawValue: recommendation) ?? .basic,
                 score: score,
-                reasons: reasons
+                reasons: reasons,
+                detectedLanguage: detectedLanguage == "None" ? nil : detectedLanguage
             )
 
             await MainActor.run {
@@ -182,22 +185,31 @@ struct ComplexityAdvice {
         case aiRequired = "ai_required"
     }
 
+    // Languages where Docling quality may be reduced
+    private static let lowQualityLanguages: Set<String> = ["ja", "zh", "ko", "ar", "he", "hi", "th"]
+
     let recommendation: Recommendation
     let score: Int
     let reasons: [String]
+    let detectedLanguage: String?
 
     var suggestAI: Bool {
         recommendation == .aiRecommended || recommendation == .aiRequired
     }
 
+    /// Warning shown for languages with known quality limitations
+    var languageQualityWarning: String? {
+        guard let lang = detectedLanguage,
+              Self.lowQualityLanguages.contains(lang) else { return nil }
+        let name = Locale.current.localizedString(forLanguageCode: lang) ?? lang.uppercased()
+        return "This looks like a \(name) document. We're working on improving quality for \(name) — results may vary."
+    }
+
     var userMessage: String {
         switch recommendation {
-        case .basic:
-            return ""
-        case .aiRecommended:
-            return "Upmarket AI may give better results for this document."
-        case .aiRequired:
-            return "This document looks complex. Upmarket AI is recommended."
+        case .basic: return ""
+        case .aiRecommended: return "Upmarket AI may give better results for this document."
+        case .aiRequired: return "This document looks complex. Upmarket AI is recommended."
         }
     }
 }

@@ -16,6 +16,7 @@ struct ContentView: View {
     @State private var pendingFileURL: URL?
     @State private var showAISuggestion = false
     @State private var pendingAdvice: ComplexityAdvice?
+    @State private var languageWarning: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -33,6 +34,28 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .overlay(alignment: .bottom) {
+            if let warning = languageWarning {
+                HStack(spacing: 8) {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(.orange)
+                    Text(warning)
+                        .font(.caption)
+                    Spacer()
+                    Button { languageWarning = nil } label: {
+                        Image(systemName: "xmark")
+                            .font(.caption2)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(.regularMaterial)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: languageWarning)
         .frame(
             minWidth: conversion.result != nil ? 560 : 400,
             idealWidth: conversion.result != nil ? 600 : 400,
@@ -419,11 +442,17 @@ struct ContentView: View {
     private func handleFile(_ url: URL) {
         store.consumeConversion()
         pendingFileURL = url
+        languageWarning = nil
 
-        // Analyse complexity first — show AI suggestion if warranted
         conversion.analyse(fileURL: url) { advice in
+            // Show language quality warning if applicable
+            if let warning = advice?.languageQualityWarning {
+                self.languageWarning = warning
+            }
+
+            // Show AI suggestion if warranted and available
             if let advice, advice.suggestAI, !self.store.hasProOrAbove,
-               DeviceCapability.shared.supportsUpmarketAI {
+               FeatureFlags.shared.aiAvailable {
                 self.pendingAdvice = advice
                 self.showAISuggestion = true
             } else {

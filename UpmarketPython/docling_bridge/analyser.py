@@ -104,6 +104,10 @@ def _analyse_pdf(path: Path) -> dict:
     has_figures = len(pictures) > 2
     is_multicolumn = _detect_multicolumn(texts, page_count)
 
+    # Detect document language from extracted text
+    sample_text = " ".join(t.text for t in texts[:20] if hasattr(t, "text") and t.text)
+    detected_language = detect_language(sample_text)
+
     # Score signals
     score = 0
     reasons = []
@@ -145,6 +149,7 @@ def _analyse_pdf(path: Path) -> dict:
             "has_complex_tables": has_complex_tables,
             "has_figures": has_figures,
             "text_coverage": round(text_coverage, 2),
+            "detected_language": detected_language,
         }
     )
 
@@ -177,8 +182,51 @@ def _simple(suffix: str) -> dict:
         reasons=[],
         signals={"is_scanned": False, "page_count": 0,
                  "has_complex_tables": False, "has_figures": False,
-                 "text_coverage": 1.0}
+                 "text_coverage": 1.0, "detected_language": None}
     )
+
+
+def detect_language(text_sample: str) -> str | None:
+    """
+    Detect the primary language of a text sample.
+    Returns ISO 639-1 code (e.g. 'en', 'ja', 'ar') or None if undetectable.
+    Uses simple Unicode block detection — no external dependency needed.
+    """
+    if not text_sample or len(text_sample) < 20:
+        return None
+
+    sample = text_sample[:500]
+    counts = {"ja": 0, "zh": 0, "ko": 0, "ar": 0, "he": 0, "hi": 0, "th": 0, "ru": 0}
+
+    for char in sample:
+        cp = ord(char)
+        if 0x3040 <= cp <= 0x30FF or 0x31F0 <= cp <= 0x31FF:
+            counts["ja"] += 1
+        elif 0x4E00 <= cp <= 0x9FFF:
+            counts["zh"] += 1  # Also CJK used in Japanese
+        elif 0xAC00 <= cp <= 0xD7A3 or 0x1100 <= cp <= 0x11FF:
+            counts["ko"] += 1
+        elif 0x0600 <= cp <= 0x06FF:
+            counts["ar"] += 1
+        elif 0x0590 <= cp <= 0x05FF:
+            counts["he"] += 1
+        elif 0x0900 <= cp <= 0x097F:
+            counts["hi"] += 1
+        elif 0x0E00 <= cp <= 0x0E7F:
+            counts["th"] += 1
+        elif 0x0400 <= cp <= 0x04FF:
+            counts["ru"] += 1
+
+    # If Japanese kana found, it's Japanese (not just CJK)
+    if counts["ja"] > 3:
+        return "ja"
+
+    # Find dominant non-Latin script
+    dominant = max(counts, key=lambda k: counts[k])
+    if counts[dominant] > 5:
+        return dominant
+
+    return "en"  # Default — Latin script
 
 
 def _result(score: int, recommendation: str, reasons: list, signals: dict) -> dict:

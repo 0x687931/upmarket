@@ -14,6 +14,7 @@ struct UpmarketApp: App {
     @StateObject private var conversionService = ConversionService.shared
     @StateObject private var storeManager = StoreManager.shared
     @StateObject private var modelManager = ModelManager.shared
+    @StateObject private var featureFlags = FeatureFlags.shared
 
     var body: some Scene {
         WindowGroup {
@@ -48,5 +49,6 @@ struct UpmarketApp: App {
         Task { @MainActor in
             PythonBridge.shared.setup()
         }
+        FeatureFlags.shared.fetchFlags()
     }
 }
