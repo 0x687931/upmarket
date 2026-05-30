@@ -1,0 +1,50 @@
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+build/
+DerivedData/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivep
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+.Python
+
+# ML Models (large files — downloaded at runtime)
+UpmarketPython/models/*.bin
+UpmarketPython/models/*.safetensors
+UpmarketPython/models/*.gguf
+*.mlpackage/
+*.mlmodel
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# Environment
+.env
+.env.local
+
+# Dependencies
+Upmarket/Python/python-stdlib/
+Upmarket/Python/Python.xcframework/
+
+# Archives
+*.xcarchive

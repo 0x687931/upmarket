@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-14  # Apple Silicon runner
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -project Upmarket.xcodeproj \
+            -scheme Upmarket \
+            -destination "platform=macOS" \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Test
+        run: |
+          xcodebuild test \
+            -project Upmarket.xcodeproj \
+            -scheme Upmarket \
+            -destination "platform=macOS" \
+            CODE_SIGNING_ALLOWED=NO
