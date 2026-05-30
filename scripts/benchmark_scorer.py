@@ -40,14 +40,18 @@ class DocScore:
         return sum(score * weight for score, weight in w)
 
 
-def score_document(output_md: str, meta: dict) -> DocScore:
+def score_document(output_md: str, meta: dict, ground_truth_md: str | None = None) -> DocScore:
     doc_id = meta.get("id", "unknown")
     category = meta.get("category", "unknown")
     score = DocScore(doc_id=doc_id, category=category)
 
+    # If ground truth is available, use it as the source of truth
+    if ground_truth_md:
+        return score_against_ground_truth(output_md, ground_truth_md, doc_id, category)
+
+    # Fallback: score against expected_features metadata
     features = meta.get("expected_features", {})
 
-    # Heading recall
     expected_headings = features.get("headings", [])
     if expected_headings:
         found = extract_headings(output_md)
@@ -57,9 +61,8 @@ def score_document(output_md: str, meta: dict) -> DocScore:
         )
         score.heading_recall = matched / len(expected_headings)
     else:
-        score.heading_recall = 1.0  # N/A
+        score.heading_recall = 1.0
 
-    # Table accuracy
     expected_tables = features.get("tables", 0)
     found_tables = count_md_tables(output_md)
     if expected_tables == 0:
@@ -68,27 +71,80 @@ def score_document(output_md: str, meta: dict) -> DocScore:
         ratio = found_tables / expected_tables
         score.table_accuracy = min(1.0, ratio) if ratio <= 1.5 else max(0.0, 2.0 - ratio)
 
-    # Content completeness (word count ±20%)
     expected_words = features.get("estimated_words", 0)
     if expected_words > 0:
         actual_words = len(output_md.split())
         ratio = actual_words / expected_words
-        if 0.8 <= ratio <= 1.2:
-            score.content_completeness = 1.0
-        elif 0.6 <= ratio <= 1.4:
-            score.content_completeness = 0.7
-        else:
-            score.content_completeness = max(0.0, 1.0 - abs(ratio - 1.0))
+        score.content_completeness = 1.0 if 0.8 <= ratio <= 1.2 else (
+            0.7 if 0.6 <= ratio <= 1.4 else max(0.0, 1.0 - abs(ratio - 1.0))
+        )
     else:
         score.content_completeness = 1.0 if len(output_md) > 100 else 0.0
 
-    # Markdown validity
     score.markdown_valid = validate_markdown(output_md)
-
-    # Artifact detection (PDF noise)
     score.artifacts_found = count_artifacts(output_md)
-
     return score
+
+
+def score_against_ground_truth(output_md: str, ground_truth_md: str, doc_id: str, category: str) -> DocScore:
+    """Score output against a known-good ground truth Markdown file."""
+    score = DocScore(doc_id=doc_id, category=category)
+
+    gt_headings = extract_headings(ground_truth_md)
+    out_headings = extract_headings(output_md)
+
+    # Heading recall: what fraction of GT headings appear in output
+    if gt_headings:
+        matched = sum(
+            1 for h in gt_headings
+            if any(h.lower()[:30] in f.lower() for f in out_headings)
+        )
+        score.heading_recall = matched / len(gt_headings)
+    else:
+        score.heading_recall = 1.0 if not out_headings else 0.8
+
+    # Table accuracy
+    gt_tables = count_md_tables(ground_truth_md)
+    out_tables = count_md_tables(output_md)
+    if gt_tables == 0:
+        score.table_accuracy = 1.0 if out_tables == 0 else 0.7
+    else:
+        ratio = out_tables / gt_tables
+        score.table_accuracy = min(1.0, ratio) if ratio <= 1.3 else max(0.0, 2.0 - ratio)
+
+    # Content completeness: word count vs ground truth
+    gt_words = len(ground_truth_md.split())
+    out_words = len(output_md.split())
+    if gt_words > 0:
+        ratio = out_words / gt_words
+        score.content_completeness = 1.0 if 0.75 <= ratio <= 1.3 else (
+            0.7 if 0.5 <= ratio <= 1.5 else max(0.0, 1.0 - abs(ratio - 1.0))
+        )
+    else:
+        score.content_completeness = 1.0
+
+    # Character-level similarity for key sections (BLEU-like)
+    score.content_completeness = min(
+        score.content_completeness,
+        text_similarity(output_md[:2000], ground_truth_md[:2000])
+    )
+
+    score.markdown_valid = validate_markdown(output_md)
+    score.artifacts_found = count_artifacts(output_md)
+    return score
+
+
+def text_similarity(a: str, b: str, n: int = 3) -> float:
+    """Character n-gram overlap (simplified BLEU) between two texts."""
+    def ngrams(text, n):
+        text = re.sub(r'\s+', ' ', text.lower())
+        return {text[i:i+n] for i in range(len(text) - n + 1)}
+    if not a or not b:
+        return 0.0
+    a_ng, b_ng = ngrams(a, n), ngrams(b, n)
+    if not a_ng:
+        return 0.0
+    return len(a_ng & b_ng) / len(a_ng)
 
 
 def extract_headings(md: str) -> list[str]:
@@ -194,17 +250,26 @@ def run_benchmark(corpus_dir: Path, pipeline: str, category_filter: str, fail_be
 
         print(f"  {doc_id:<40}", end="", flush=True)
 
+        # Load ground truth if available
+        ground_truth_md = None
+        gt_key = doc_meta.get("ground_truth")
+        if gt_key:
+            gt_path = corpus_dir / gt_key
+            if gt_path.exists():
+                ground_truth_md = gt_path.read_text(encoding="utf-8", errors="replace")
+
         try:
             markdown, elapsed = convert_document(file_path, pipeline or "fast")
-            score = score_document(markdown, doc_meta)
+            score = score_document(markdown, doc_meta, ground_truth_md)
             score.elapsed_seconds = elapsed
             scores.append(score)
+            gt_indicator = "GT" if ground_truth_md else "  "
             status = "✓" if score.overall >= 0.8 else "⚠" if score.overall >= 0.6 else "✗"
-            print(f"{status}  {score.overall*100:.0f}%  ({elapsed:.1f}s)")
+            print(f"[{gt_indicator}] {status}  {score.overall*100:.0f}%  ({elapsed:.1f}s)")
         except Exception as e:
             score = DocScore(doc_id=doc_id, category=category, error=str(e))
             scores.append(score)
-            print(f"✗  ERROR: {e}")
+            print(f"[  ] ✗  ERROR: {e}")
 
     # Summary table
     print("\n" + "═" * 65)

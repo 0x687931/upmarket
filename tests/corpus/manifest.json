@@ -3,40 +3,158 @@
   "description": "Upmarket conversion quality test corpus",
   "documents": [
     {
-      "id": "pdf_academic_001",
-      "file": "pdf_digital/academic/docling_technical_report.pdf",
+      "id": "docling_2203.01017v2",
+      "file": "docling/docling/tests/data/pdf/2203.01017v2.pdf",
+      "ground_truth": "docling/docling/tests/data/groundtruth/docling_v2/2203.01017v2.md",
       "category": "pdf_digital/academic",
       "language": "en",
       "format": "pdf",
-      "expected_features": {
-        "headings": ["Abstract", "Introduction", "Related Work", "Conclusion"],
-        "tables": 2,
-        "estimated_words": 6000,
-        "has_equations": false,
-        "has_figures": true
-      },
-      "known_challenges": ["multi-column", "figure captions"],
-      "source": "arxiv.org",
-      "license": "CC BY 4.0",
-      "notes": "Docling paper itself — good irony to test it on"
+      "source": "docling-project/docling (MIT)",
+      "license": "MIT",
+      "expected_features": {}
     },
     {
-      "id": "pdf_academic_002",
-      "file": "pdf_digital/academic/algebra_rings_fields.pdf",
+      "id": "docling_2206.01062",
+      "file": "docling/docling/tests/data/pdf/2206.01062.pdf",
+      "ground_truth": "docling/docling/tests/data/groundtruth/docling_v2/2206.01062.md",
       "category": "pdf_digital/academic",
       "language": "en",
       "format": "pdf",
-      "expected_features": {
-        "headings": ["Abstract", "Contents", "Preface", "Rings and ideals", "Fields and integral domains"],
-        "tables": 0,
-        "estimated_words": 120000,
-        "has_equations": true,
-        "has_figures": false
-      },
-      "known_challenges": ["math equations", "501 pages", "running headers"],
-      "source": "drexel.edu",
-      "license": "public",
-      "notes": "23wa.pdf — our existing test document"
+      "source": "docling-project/docling (MIT)",
+      "license": "MIT",
+      "expected_features": {}
+    },
+    {
+      "id": "docling_2305.03393v1-pg9",
+      "file": "docling/docling/tests/data/pdf/2305.03393v1-pg9.pdf",
+      "ground_truth": "docling/docling/tests/data/groundtruth/docling_v2/2305.03393v1-pg9.md",
+      "category": "pdf_digital/academic",
+      "language": "en",
+      "format": "pdf",
+      "source": "docling-project/docling (MIT)",
+      "license": "MIT",
+      "expected_features": {}
+    },
+    {
+      "id": "docling_2305.03393v1",
+      "file": "docling/docling/tests/data/pdf/2305.03393v1.pdf",
+      "ground_truth": "docling/docling/tests/data/groundtruth/docling_v2/2305.03393v1.md",
+      "category": "pdf_digital/academic",
+      "language": "en",
+      "format": "pdf",
+      "source": "docling-project/docling (MIT)",
+      "license": "MIT",
+      "expected_features": {}
+    },
+    {
+      "id": "docling_amt_handbook_sample",
+      "file": "docling/docling/tests/data/pdf/amt_handbook_sample.pdf",
+      "ground_truth": "docling/docling/tests/data/groundtruth/docling_v2/amt_handbook_sample.md",
+      "category": "pdf_digital/business",
+      "language": "en",
+      "format": "pdf",
+      "source": "docling-project/docling (MIT)",
+      "license": "MIT",
+      "expected_features": {}
+    },
+    {
+      "id": "docling_code_and_formula",
+      "file": "docling/docling/tests/data/pdf/code_and_formula.pdf",
+      "ground_truth": "docling/docling/tests/data/groundtruth/docling_v2/code_and_formula.md",
+      "category": "edge_cases/math",
+      "language": "en",
+      "format": "pdf",
+      "source": "docling-project/docling (MIT)",
+      "license": "MIT",
+      "expected_features": {}
+    },
+    {
+      "id": "docling_multi_page",
+      "file": "docling/docling/tests/data/pdf/multi_page.pdf",
+      "ground_truth": "docling/docling/tests/data/groundtruth/docling_v2/multi_page.md",
+      "category": "pdf_digital/business",
+      "language": "en",
+      "format": "pdf",
+      "source": "docling-project/docling (MIT)",
+      "license": "MIT",
+      "expected_features": {}
+    },
+    {
+      "id": "docling_normal_4pages",
+      "file": "docling/docling/tests/data/pdf/normal_4pages.pdf",
+      "ground_truth": "docling/docling/tests/data/groundtruth/docling_v2/normal_4pages.md",
+      "category": "pdf_digital/business",
+      "language": "en",
+      "format": "pdf",
+      "source": "docling-project/docling (MIT)",
+      "license": "MIT",
+      "expected_features": {}
+    },
+    {
+      "id": "docling_picture_classification",
+      "file": "docling/docling/tests/data/pdf/picture_classification.pdf",
+      "ground_truth": "docling/docling/tests/data/groundtruth/docling_v2/picture_classification.md",
+      "category": "pdf_digital/business",
+      "language": "en",
+      "format": "pdf",
+      "source": "docling-project/docling (MIT)",
+      "license": "MIT",
+      "expected_features": {}
+    },
+    {
+      "id": "docling_redp5110_sampled",
+      "file": "docling/docling/tests/data/pdf/redp5110_sampled.pdf",
+      "ground_truth": "docling/docling/tests/data/groundtruth/docling_v2/redp5110_sampled.md",
+      "category": "pdf_digital/business",
+      "language": "en",
+      "format": "pdf",
+      "source": "docling-project/docling (MIT)",
+      "license": "MIT",
+      "expected_features": {}
+    },
+    {
+      "id": "docling_right_to_left_01",
+      "file": "docling/docling/tests/data/pdf/right_to_left_01.pdf",
+      "ground_truth": "docling/docling/tests/data/groundtruth/docling_v2/right_to_left_01.md",
+      "category": "edge_cases/rtl",
+      "language": "he",
+      "format": "pdf",
+      "source": "docling-project/docling (MIT)",
+      "license": "MIT",
+      "expected_features": {}
+    },
+    {
+      "id": "docling_right_to_left_02",
+      "file": "docling/docling/tests/data/pdf/right_to_left_02.pdf",
+      "ground_truth": "docling/docling/tests/data/groundtruth/docling_v2/right_to_left_02.md",
+      "category": "edge_cases/rtl",
+      "language": "he",
+      "format": "pdf",
+      "source": "docling-project/docling (MIT)",
+      "license": "MIT",
+      "expected_features": {}
+    },
+    {
+      "id": "docling_right_to_left_03",
+      "file": "docling/docling/tests/data/pdf/right_to_left_03.pdf",
+      "ground_truth": "docling/docling/tests/data/groundtruth/docling_v2/right_to_left_03.md",
+      "category": "edge_cases/rtl",
+      "language": "he",
+      "format": "pdf",
+      "source": "docling-project/docling (MIT)",
+      "license": "MIT",
+      "expected_features": {}
+    },
+    {
+      "id": "docling_word_sample",
+      "file": "docling/docling/tests/data/docx/word_sample.docx",
+      "ground_truth": "docling/docling/tests/data/groundtruth/docling_v2/word_sample.md",
+      "category": "office/docx",
+      "language": "en",
+      "format": "docx",
+      "source": "docling-project/docling (MIT)",
+      "license": "MIT",
+      "expected_features": {}
     }
   ],
   "categories": {
@@ -66,11 +184,20 @@
   "scoring": {
     "pass_threshold": 0.85,
     "weights": {
-      "heading_recall": 0.30,
+      "heading_recall": 0.3,
       "table_accuracy": 0.25,
-      "content_completeness": 0.30,
-      "markdown_valid": 0.10,
+      "content_completeness": 0.3,
+      "markdown_valid": 0.1,
       "artifact_free": 0.05
+    }
+  },
+  "sources": {
+    "docling": {
+      "repo": "https://github.com/docling-project/docling",
+      "path": "tests/data",
+      "license": "MIT",
+      "ground_truth_format": "markdown (.md)",
+      "notes": "Official Docling test corpus \u2014 MIT licensed, ground truth included"
     }
   }
 }
