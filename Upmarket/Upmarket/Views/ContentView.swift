@@ -148,7 +148,7 @@ struct ContentView: View {
 
                 // Format chips — no text label needed
                 HStack(spacing: 6) {
-                    ForEach(["PDF", "DOCX", "PPTX", "XLSX", "HTML"], id: \.self) { fmt in
+                    ForEach(["PDF", "DOCX", "PPTX", "XLSX", "HTML", "EPUB", "CSV", "Images", "Audio"], id: \.self) { fmt in
                         Text(fmt)
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(.secondary)
@@ -157,6 +157,8 @@ struct ContentView: View {
                             .background(Color.secondary.opacity(0.08), in: Capsule())
                     }
                 }
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
                 .opacity(isTargeted ? 0 : 1)
                 .animation(.easeInOut(duration: 0.15), value: isTargeted)
 
@@ -501,10 +503,18 @@ struct ContentView: View {
         guard store.canConvert else { showPaywall = true; return }
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [
-            .pdf, .html, .png, .jpeg,
+            .pdf, .html, .png, .jpeg, .gif, .tiff,
             UTType(filenameExtension: "docx") ?? .data,
             UTType(filenameExtension: "pptx") ?? .data,
-            UTType(filenameExtension: "xlsx") ?? .data
+            UTType(filenameExtension: "xlsx") ?? .data,
+            UTType(filenameExtension: "epub") ?? .data,
+            UTType(filenameExtension: "csv")  ?? .data,
+            UTType(filenameExtension: "json") ?? .data,
+            UTType(filenameExtension: "xml")  ?? .data,
+            UTType(filenameExtension: "zip")  ?? .data,
+            UTType(filenameExtension: "mp3")  ?? .data,
+            UTType(filenameExtension: "m4a")  ?? .data,
+            UTType(filenameExtension: "wav")  ?? .data,
         ]
         panel.allowsMultipleSelection = false
         if panel.runModal() == .OK, let url = panel.url {
