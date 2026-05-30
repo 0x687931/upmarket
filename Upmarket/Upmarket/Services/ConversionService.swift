@@ -126,22 +126,49 @@ final class ConversionService: ObservableObject {
         let ext = originalURL.pathExtension.lowercased()
         let title = originalURL.deletingPathExtension().lastPathComponent
 
-        // PDFs: use native PDFKit — zero download, zero Python, built into macOS
-        // Only route to Python if Enhanced or AI pipeline is requested and available
+        // Step 1: Extract raw content
+        let raw: ConversionResult
         if ext == "pdf" && !useAI {
-            return runPDFKitConversion(fileURL: fileURL, title: title, password: password)
+            raw = runPDFKitConversion(fileURL: fileURL, title: title, password: password)
+        } else {
+            raw = await runPythonConversion(fileURL: fileURL, title: title, ext: ext, useAI: useAI, password: password)
         }
 
-        // All other formats + Enhanced/AI: use Python pipeline
-        return await runPythonConversion(fileURL: fileURL, title: title, ext: ext, useAI: useAI, password: password)
+        // Step 2: Post-process successful conversions through NL + Writing Tools
+        guard case .success(let output) = raw else { return raw }
+        let refined = await postProcess(output)
+        return .success(refined)
+    }
+
+    /// Two-stage post-processing:
+    /// 1. NaturalLanguage — sentence boundaries, paragraph reconstruction, language detection
+    /// 2. WritingToolsRefiner — Apple Intelligence cleanup (macOS 15.1+ / Apple Silicon only)
+    private func postProcess(_ output: ConversionOutput) async -> ConversionOutput {
+        // Stage 1: NaturalLanguage structuring
+        let nlInput = TextStructurer.Input(
+            rawMarkdown: output.markdown,
+            detectedLanguage: nil
+        )
+        let nlResult = TextStructurer.refine(nlInput)
+
+        // Stage 2: Writing Tools (graceful no-op on unsupported platforms)
+        let wtResult = await WritingToolsRefinerAdapter.refine(
+            markdown: nlResult.markdown,
+            language: nlResult.detectedLanguage
+        )
+
+        return ConversionOutput(
+            markdown: wtResult.markdown,
+            pages: output.pages,
+            format: output.format,
+            title: output.title,
+            pipeline: output.pipeline
+        )
     }
 
     private func runPDFKitConversion(fileURL: URL, title: String, password: String?) -> ConversionResult {
         do {
             let result = try PDFConverter.convert(url: fileURL, password: password)
-
-            // If likely scanned and Enhanced is available, suggest it
-            // (caller handles this via complexityAdvice — just return what we have)
             return .success(ConversionOutput(
                 markdown: result.markdown,
                 pages: result.pageCount,
@@ -153,7 +180,6 @@ final class ConversionService: ObservableObject {
             Task { await MainActor.run { self.needsPassword = true } }
             return .failure("This PDF is password-protected.")
         } catch {
-            // Fall back to Python fast path on any PDFKit failure
             return runPythonConversionSync(fileURL: fileURL, title: title, ext: "pdf", useAI: false, password: password)
         }
     }
