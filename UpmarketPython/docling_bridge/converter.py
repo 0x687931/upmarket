@@ -131,6 +131,8 @@ def _convert_fast_pdf(path: Path, password: str | None) -> dict:
             page.close()
 
             if text:
+                # Remove soft-hyphen line-break artifacts (U+00AD, U+FFFD)
+                text = text.replace('\xad', '').replace('�', '-')
                 parts.append(text)
 
         markdown = "\n\n---\n\n".join(parts)
