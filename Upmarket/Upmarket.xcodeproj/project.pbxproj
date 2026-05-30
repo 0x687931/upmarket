@@ -46,6 +46,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		81265A442FCB199B007191C5 /* ConversionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversionService.swift; sourceTree = "<group>"; };
 		81A3B72B2FCB0F91004A488D /* Upmarket.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Upmarket.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		81A3B7302FCB0F91004A488D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		81A3B7382FCB0F91004A488D /* UpmarketTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UpmarketTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -152,6 +153,7 @@
 		81A3B7582FCB1000004A488D /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				81265A442FCB199B007191C5 /* ConversionService.swift */,
 				81E090C92FCB14F300FC901A /* PythonBridge.swift */,
 			);
 			path = Services;
