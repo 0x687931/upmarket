@@ -8,108 +8,150 @@ struct PaywallView: View {
 
     private let device = DeviceCapability.shared
 
-    @State private var isPurchasing = false
+    @State private var isPurchasing: String? = nil  // product ID currently purchasing
     @State private var errorMessage: String?
 
     var body: some View {
         VStack(spacing: 0) {
             header
             Divider()
-            plans
-            footer
+            ScrollView {
+                VStack(spacing: 12) {
+                    proCard
+                    if device.supportsUpmarketAI {
+                        basicCard
+                    }
+                    packCard
+                    restoreButton
+                }
+                .padding(24)
+            }
+            legalFooter
         }
-        .frame(width: 480)
+        .frame(width: 460)
         .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - Header
 
     private var header: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             Text("#")
-                .font(.system(size: 56, weight: .bold, design: .rounded))
+                .font(.system(size: 48, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.accentColor)
-                .padding(.top, 32)
+                .padding(.top, 28)
 
-            Text("Upmarket")
-                .font(.largeTitle)
+            Text("Unlock Upmarket")
+                .font(.title2)
                 .fontWeight(.bold)
 
-            Text("Convert any document to clean Markdown.\nEverything happens on your Mac — privately.")
+            Text("Convert unlimited documents, privately, on your Mac.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
-                .padding(.bottom, 24)
+                .padding(.bottom, 20)
         }
     }
 
-    // MARK: - Plans
+    // MARK: - Pro Card (hero)
 
-    private var plans: some View {
-        VStack(spacing: 12) {
-            // Basic plan
-            planRow(
-                title: "Upmarket",
-                price: store.basicProduct?.displayPrice ?? "$4.99",
-                tagline: "For everyday documents",
-                features: [
-                    "PDF, Word, PowerPoint, HTML → Markdown",
-                    "Tables and layout detection",
-                    "Scanned document support",
-                    "Unlimited conversions",
-                    "100% offline, 100% private"
-                ],
-                badge: nil,
-                isHighlighted: false,
-                product: store.basicProduct
-            )
+    private var proCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
 
-            // Pro plan
-            planRow(
-                title: "Upmarket + AI",
-                price: store.proProduct?.displayPrice ?? "$9.99",
-                tagline: "For complex and research documents",
-                features: [
-                    "Everything in Upmarket",
-                    "Upmarket AI for dense layouts and figures",
-                    "Handwritten and low-quality scans",
-                    "Research papers and academic content",
-                    device.supportsUpmarketAI ? "On-device AI, nothing sent to the cloud" : device.upmarketAIUnavailableReason
-                ],
-                badge: device.supportsUpmarketAI ? "RECOMMENDED" : "APPLE SILICON",
-                isHighlighted: device.supportsUpmarketAI,
-                product: device.supportsUpmarketAI ? store.proProduct : nil
-            )
-        }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 16)
-    }
-
-    private func planRow(title: String, price: String, tagline: String, features: [String], badge: String?, isHighlighted: Bool, product: Product?) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
+            // Top: price + badge
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 8) {
-                        Text(title)
-                            .font(.headline)
-                        if let badge {
-                            Text(badge)
-                                .font(.caption2)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(isHighlighted ? Color.accentColor : Color.secondary, in: Capsule())
-                        }
+                        Text("Upmarket + AI")
+                            .font(.title3)
+                            .fontWeight(.bold)
+                        Text("BEST")
+                            .font(.caption2)
+                            .fontWeight(.heavy)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(Color.accentColor, in: Capsule())
                     }
-                    Text(tagline)
+                    Text("Everything, including Upmarket AI for complex documents")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(product != nil ? price : "—")
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text(store.proProduct?.displayPrice ?? "$9.99")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    Text("one-time")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            // Features
+            VStack(alignment: .leading, spacing: 7) {
+                featureRow("Unlimited conversions — every format", isHighlight: false)
+                featureRow("Upmarket AI for scanned, complex and research documents", isHighlight: true)
+                featureRow("Tables, figures, dense layouts", isHighlight: false)
+                featureRow("100% on-device — nothing sent to the cloud", isHighlight: false)
+                if !device.supportsUpmarketAI {
+                    HStack(spacing: 6) {
+                        Image(systemName: "xmark.circle")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                        Text("Upmarket AI requires Apple Silicon")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            // CTA
+            Button {
+                guard let product = store.proProduct else { return }
+                Task { await buy(product) }
+            } label: {
+                HStack(spacing: 8) {
+                    if isPurchasing == StoreManager.proID {
+                        ProgressView().controlSize(.small).tint(.white)
+                    }
+                    Text("Get Upmarket + AI — \(store.proProduct?.displayPrice ?? "$9.99")")
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(isPurchasing != nil || store.proProduct == nil)
+        }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.accentColor.opacity(0.06))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(Color.accentColor, lineWidth: 2)
+                )
+        )
+    }
+
+    // MARK: - Basic Card (secondary)
+
+    private var basicCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Upmarket")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    Text("For everyday documents without AI")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text(store.basicProduct?.displayPrice ?? "$4.99")
                         .font(.title3)
                         .fontWeight(.bold)
                     Text("one-time")
@@ -118,83 +160,106 @@ struct PaywallView: View {
                 }
             }
 
-            ForEach(Array(features.enumerated()), id: \.offset) { index, feature in
-                HStack(spacing: 8) {
-                    Image(systemName: (product == nil && index == features.count - 1) ? "xmark.circle" : "checkmark.circle.fill")
-                        .foregroundStyle((product == nil && index == features.count - 1) ? Color.secondary : Color.green)
-                        .font(.caption)
-                    Text(feature)
-                        .font(.caption)
-                        .foregroundStyle(index == features.count - 1 && product == nil ? Color.secondary : Color.primary)
-                }
+            VStack(alignment: .leading, spacing: 6) {
+                featureRow("PDF, Word, PowerPoint, HTML → Markdown", isHighlight: false)
+                featureRow("Tables and layout detection", isHighlight: false)
+                featureRow("Unlimited conversions", isHighlight: false)
             }
 
-            if let product {
-                Button {
-                    Task { await buyProduct(product) }
-                } label: {
-                    HStack {
-                        if isPurchasing {
-                            ProgressView().controlSize(.small)
-                        }
-                        Text("Buy \(title) — \(price)")
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
+            Button {
+                guard let product = store.basicProduct else { return }
+                Task { await buy(product) }
+            } label: {
+                HStack(spacing: 8) {
+                    if isPurchasing == StoreManager.basicID {
+                        ProgressView().controlSize(.small)
                     }
+                    Text("Get Upmarket — \(store.basicProduct?.displayPrice ?? "$4.99")")
+                        .fontWeight(.medium)
+                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(isHighlighted ? Color.accentColor : Color.secondary)
-                .disabled(isPurchasing)
-            } else {
-                Text("Not available on \(device.chipDescription) Mac")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 6)
             }
+            .buttonStyle(.bordered)
+            .controlSize(.regular)
+            .disabled(isPurchasing != nil || store.basicProduct == nil)
         }
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(
-                    isHighlighted ? Color.accentColor : Color.secondary.opacity(0.3),
-                    lineWidth: isHighlighted ? 2 : 1
-                )
+                .strokeBorder(Color.secondary.opacity(0.25), lineWidth: 1)
         )
-        .opacity(product == nil ? 0.6 : 1.0)
+    }
+
+    // MARK: - Pack Card (last resort)
+
+    private var packCard: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Just need a few conversions?")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                Text("5 documents for \(store.packProduct?.displayPrice ?? "$0.99")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button {
+                guard let product = store.packProduct else { return }
+                Task { await buy(product) }
+            } label: {
+                HStack(spacing: 6) {
+                    if isPurchasing == StoreManager.packID {
+                        ProgressView().controlSize(.small)
+                    }
+                    Text(store.packProduct?.displayPrice ?? "$0.99")
+                        .fontWeight(.medium)
+                }
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .disabled(isPurchasing != nil || store.packProduct == nil)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: - Footer
 
-    private var footer: some View {
-        VStack(spacing: 8) {
-            if let error = errorMessage {
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-            }
-
-            Button("Restore Purchases") {
-                Task { await store.restorePurchases() }
-            }
-            .buttonStyle(.plain)
-            .font(.caption)
-            .foregroundStyle(.secondary)
-
-            Text("Payment processed by Apple. One-time purchase, no subscription.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 24)
+    private var restoreButton: some View {
+        Button("Restore Purchases") {
+            Task { await store.restorePurchases() }
         }
-        .padding(.top, 8)
+        .buttonStyle(.plain)
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .padding(.top, 4)
     }
 
-    // MARK: - Actions
+    private var legalFooter: some View {
+        Text("One-time purchase · No subscription · Processed by Apple")
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
+    }
 
-    private func buyProduct(_ product: Product) async {
-        isPurchasing = true
+    // MARK: - Helpers
+
+    private func featureRow(_ text: String, isHighlight: Bool) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(isHighlight ? Color.accentColor : Color.green)
+                .font(.caption)
+            Text(text)
+                .font(.caption)
+                .fontWeight(isHighlight ? .medium : .regular)
+        }
+    }
+
+    private func buy(_ product: Product) async {
+        isPurchasing = product.id
         errorMessage = nil
         do {
             try await store.purchase(product)
@@ -202,7 +267,7 @@ struct PaywallView: View {
         } catch {
             errorMessage = "Purchase failed. Please try again."
         }
-        isPurchasing = false
+        isPurchasing = nil
     }
 }
 
