@@ -27,8 +27,19 @@ final class ConversionService: ObservableObject {
         isConverting = true
         result = nil
 
+        // Copy to temp dir so the sandboxed Python process can read it
+        let tempURL: URL
+        do {
+            tempURL = try copyToTemp(fileURL: fileURL)
+        } catch {
+            result = .failure("Could not access file: \(error.localizedDescription)")
+            isConverting = false
+            return
+        }
+
         Task.detached(priority: .userInitiated) {
-            let output = await self.runConversion(fileURL: fileURL)
+            let output = await self.runConversion(fileURL: tempURL, originalURL: fileURL)
+            try? FileManager.default.removeItem(at: tempURL)
             await MainActor.run {
                 self.result = output
                 self.isConverting = false
@@ -38,7 +49,15 @@ final class ConversionService: ObservableObject {
 
     // MARK: - Private
 
-    private func runConversion(fileURL: URL) async -> ConversionResult {
+    private func copyToTemp(fileURL: URL) throws -> URL {
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension(fileURL.pathExtension)
+        try FileManager.default.copyItem(at: fileURL, to: tmp)
+        return tmp
+    }
+
+    private func runConversion(fileURL: URL, originalURL: URL) async -> ConversionResult {
         let converter = Python.import("docling_bridge.converter")
         let pyResult  = converter.convert(fileURL.path)
 
@@ -49,7 +68,7 @@ final class ConversionService: ObservableObject {
             let meta     = pyResult["metadata"]
             let pages    = Int(meta["pages"]) ?? 0
             let format   = String(meta["format"]) ?? ""
-            let title    = String(meta["title"]) ?? fileURL.lastPathComponent
+            let title    = String(meta["title"]) ?? originalURL.deletingPathExtension().lastPathComponent
             return .success(ConversionOutput(markdown: markdown, pages: pages, format: format, title: title))
         } else {
             let error = String(pyResult["error"]) ?? "Unknown error"
