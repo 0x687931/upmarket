@@ -23,6 +23,25 @@ struct UpmarketApp: App {
                 .environmentObject(storeManager)
                 .environmentObject(modelManager)
         }
+        .commands {
+            CommandGroup(replacing: .newItem) {
+                Button("Convert Document…") {
+                    NotificationCenter.default.post(name: .openFilePicker, object: nil)
+                }
+                .keyboardShortcut("o", modifiers: .command)
+            }
+        }
+
+        MenuBarExtra {
+            MenuBarView()
+                .environmentObject(conversionService)
+                .environmentObject(storeManager)
+                .environmentObject(modelManager)
+        } label: {
+            Text("#")
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+        }
+        .menuBarExtraStyle(.window)
     }
 
     init() {
