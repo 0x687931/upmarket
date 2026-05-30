@@ -33,7 +33,13 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .frame(minWidth: 720, minHeight: 520)
+        .frame(
+            minWidth: conversion.result != nil ? 560 : 400,
+            idealWidth: conversion.result != nil ? 600 : 400,
+            maxWidth: conversion.result != nil ? 800 : 400,
+            minHeight: 520,
+            maxHeight: .infinity
+        )
         .sheet(isPresented: $showPaywall) {
             PaywallView().environmentObject(store)
         }
