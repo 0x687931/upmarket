@@ -47,14 +47,14 @@ echo "==> Re-applying MPS compatibility patch..."
 ./scripts/patch_mps.sh "$VENV"
 echo ""
 
-# 5. Sync to bundled framework
-echo "==> Syncing to bundled framework..."
-cp -r "$VENV/lib/python3.12/site-packages/docling" "$SITE/"
-cp -r "$VENV/lib/python3.12/site-packages/docling_core" "$SITE/"
-cp -r "$VENV/lib/python3.12/site-packages/docling_parse" "$SITE/"
-cp -r "$VENV/lib/python3.12/site-packages/docling_ibm_models" "$SITE/" 2>/dev/null || true
+# 5. Sync fast-path packages to bundled framework (Enhanced/AI are on-demand)
+echo "==> Syncing fast-path packages to bundled framework..."
 cp -r "$VENV/lib/python3.12/site-packages/pymupdf" "$SITE/"
 cp -r "$VENV/lib/python3.12/site-packages/pymupdf4llm" "$SITE/"
+
+# Strip debug symbols from native libs to reduce bundle size
+echo "==> Stripping debug symbols..."
+find "$SITE" -name "*.so" -exec strip -x {} \; 2>/dev/null || true
 cp -r "$VENV/lib/python3.12/site-packages/transformers" "$SITE/"
 cp -r "$VENV/lib/python3.12/site-packages/huggingface_hub" "$SITE/"
 
