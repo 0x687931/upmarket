@@ -12,12 +12,14 @@ struct UpmarketApp: App {
 
     @StateObject private var pythonBridge = PythonBridge.shared
     @StateObject private var conversionService = ConversionService.shared
+    @StateObject private var storeManager = StoreManager.shared
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(pythonBridge)
                 .environmentObject(conversionService)
+                .environmentObject(storeManager)
         }
     }
 

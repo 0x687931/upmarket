@@ -11,10 +11,13 @@ import UniformTypeIdentifiers
 struct ContentView: View {
 
     @EnvironmentObject private var conversion: ConversionService
+    @EnvironmentObject private var store: StoreManager
     @State private var isTargeted = false
+    @State private var showPaywall = false
 
     var body: some View {
         VStack(spacing: 0) {
+            trialBanner
             if conversion.isConverting {
                 convertingView
             } else if let result = conversion.result {
@@ -24,6 +27,45 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 700, minHeight: 500)
+        .sheet(isPresented: $showPaywall) { PaywallView().environmentObject(store) }
+    }
+
+    // MARK: - Trial Banner
+
+    @ViewBuilder
+    private var trialBanner: some View {
+        switch store.entitlement {
+        case .trial(let days):
+            HStack(spacing: 8) {
+                Image(systemName: "clock")
+                Text(days == 1 ? "1 day left in your free trial" : "\(days) days left in your free trial")
+                    .fontWeight(.medium)
+                Spacer()
+                Button("Upgrade") { showPaywall = true }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color.accentColor.opacity(0.1))
+            .font(.subheadline)
+        case .none:
+            HStack(spacing: 8) {
+                Image(systemName: "lock.fill")
+                Text("Your free trial has expired")
+                    .fontWeight(.medium)
+                Spacer()
+                Button("Unlock Upmarket") { showPaywall = true }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color.red.opacity(0.1))
+            .font(.subheadline)
+        default:
+            EmptyView()
+        }
     }
 
     // MARK: - Drop Zone
@@ -144,6 +186,7 @@ struct ContentView: View {
     // MARK: - Actions
 
     private func openFilePicker() {
+        guard store.hasBasicOrAbove else { showPaywall = true; return }
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.pdf, .html, .png, .jpeg,
             UTType(filenameExtension: "docx") ?? .data,
@@ -156,6 +199,7 @@ struct ContentView: View {
     }
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
+        guard store.hasBasicOrAbove else { showPaywall = true; return false }
         guard let provider = providers.first else { return false }
         provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
             guard let data = item as? Data,

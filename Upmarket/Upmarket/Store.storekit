@@ -1,0 +1,41 @@
+{
+  "identifier" : "com.upmarket.app.storekit",
+  "nonConsumableProducts" : [
+    {
+      "displayPrice" : "4.99",
+      "familySharable" : false,
+      "internalID" : "com.upmarket.app.basic",
+      "localizations" : [
+        {
+          "description" : "Convert everyday documents — PDF, Word, PowerPoint, HTML — to clean Markdown. Powered by on-device AI.",
+          "displayName" : "Upmarket Basic",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.upmarket.app.basic",
+      "referenceName" : "Basic",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "9.99",
+      "familySharable" : false,
+      "internalID" : "com.upmarket.app.pro",
+      "localizations" : [
+        {
+          "description" : "Everything in Basic, plus SmolDocling AI for complex documents — scanned PDFs, dense layouts, figures, and research papers.",
+          "displayName" : "Upmarket Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.upmarket.app.pro",
+      "referenceName" : "Pro",
+      "type" : "NonConsumable"
+    }
+  ],
+  "products" : [],
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
