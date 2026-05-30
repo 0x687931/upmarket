@@ -1,7 +1,7 @@
 """
 Upmarket document converter — tiered pipeline.
 
-Tier 1 (zero download): PyMuPDF4LLM — fast, bundled, good for clean docs
+Tier 1 (zero download): pdfium + post-processor for PDFs, markitdown for everything else
 Tier 2 (172MB download): Enhanced pipeline — layout analysis for complex PDFs
 Tier 3 (500MB download): Upmarket AI — Pro, scanned/research documents
 
@@ -10,7 +10,6 @@ No internal library names are exposed to callers.
 
 import os
 import sys
-import traceback
 from pathlib import Path
 
 
@@ -62,13 +61,13 @@ def convert(file_path: str, options: dict | None = None) -> dict:
             return _convert_enhanced(path, opts)
 
         if suffix == ".pdf":
-            return _convert_fast(path, opts)
+            return _convert_fast_pdf(path, password)
 
         # Non-PDF formats: use enhanced if available, fast otherwise
         if use_enhanced and _enhanced_available():
             return _convert_enhanced(path, opts)
 
-        return _convert_fast(path, opts)
+        return _convert_fast_other(path)
 
     except Exception as e:
         print(f"[Upmarket] Conversion error: {type(e).__name__}: {e}", file=sys.stderr)
@@ -76,12 +75,9 @@ def convert(file_path: str, options: dict | None = None) -> dict:
 
 
 def check_pipelines() -> dict:
-    """
-    Returns which pipelines are available.
-    { "fast": bool, "enhanced": bool, "ai": bool }
-    """
+    """Returns which pipelines are available."""
     return {
-        "fast": True,  # always available — bundled
+        "fast": True,
         "enhanced": _enhanced_available(),
         "ai": _ai_available(),
     }
@@ -89,61 +85,26 @@ def check_pipelines() -> dict:
 
 # MARK: - Pipeline implementations
 
-def _convert_fast(path: Path, opts: dict) -> dict:
-    """
-    Fast path — all MIT/BSD/Apache licensed, zero download.
-    PDFs: pdfplumber (MIT)
-    Everything else: markitdown (MIT, Microsoft)
-    """
-    suffix = path.suffix.lower()
-    password = opts.get("password", None)
-
-    if suffix == ".pdf":
-        return _convert_fast_pdf(path, password)
-    else:
-        return _convert_fast_other(path)
-
-
 def _convert_fast_pdf(path: Path, password: str | None) -> dict:
     """
-    pdfium (Apache 2.0) for PDFs — Google's engine, powers Chrome.
-    Excellent quality for digital PDFs. We already bundle pypdfium2.
+    pdfium (Apache 2.0) + structured post-processing → clean Markdown.
+    Uses block-level rect extraction with font-size heuristics for headings,
+    paragraph merging, ligature fixing, and running header removal.
     """
-    import pypdfium2 as pdfium
-
     try:
-        doc = pdfium.PdfDocument(str(path), password=password)
-    except pdfium.PdfiumError as e:
+        from docling_bridge.postprocessor import pdf_to_clean_markdown
+        markdown, page_count = pdf_to_clean_markdown(str(path), password=password)
+        return _success(markdown, page_count, path, pipeline="fast")
+    except Exception as e:
         msg = str(e).lower()
         if "password" in msg or "encrypted" in msg:
             return {**_error("This PDF is password-protected."), "needs_password": True}
-        return _error("Upmarket couldn't open this PDF.")
-
-    try:
-        page_count = len(doc)
-        parts = []
-
-        for i in range(page_count):
-            page = doc[i]
-            textpage = page.get_textpage()
-            text = textpage.get_text_range().strip()
-            textpage.close()
-            page.close()
-
-            if text:
-                # Remove soft-hyphen line-break artifacts (U+00AD, U+FFFD)
-                text = text.replace('\xad', '').replace('�', '-')
-                parts.append(text)
-
-        markdown = "\n\n---\n\n".join(parts)
-        return _success(markdown, page_count, path, pipeline="fast")
-
-    finally:
-        doc.close()
+        print(f"[Upmarket] Post-processor error: {e}", file=sys.stderr)
+        return _error("Upmarket couldn't convert this PDF.")
 
 
 def _convert_fast_other(path: Path) -> dict:
-    """markitdown for DOCX, PPTX, XLSX, HTML, images — MIT (Microsoft)."""
+    """markitdown for DOCX, PPTX, XLSX, HTML, images, audio, EPUB — MIT (Microsoft)."""
     try:
         from markitdown import MarkItDown
         md_converter = MarkItDown()
@@ -153,7 +114,7 @@ def _convert_fast_other(path: Path) -> dict:
     except Exception as e:
         suffix = path.suffix.upper().lstrip(".")
         print(f"[Upmarket] markitdown error for {suffix}: {e}", file=sys.stderr)
-        return _error(f"Upmarket couldn't convert this {suffix} file. Try the Enhanced pipeline for better results.")
+        return _error(f"Upmarket couldn't convert this {suffix} file. Try downloading the Enhanced pipeline for better results.")
 
 
 def _convert_enhanced(path: Path, opts: dict) -> dict:
@@ -189,10 +150,8 @@ def _convert_enhanced(path: Path, opts: dict) -> dict:
 
 def _convert_ai(path: Path, opts: dict) -> dict:
     """Upmarket AI — Pro tier, best results for complex and scanned documents."""
-    # Temporarily re-enable hub for model loading if needed
     was_offline = os.environ.get("HF_HUB_OFFLINE", "0")
     os.environ["HF_HUB_OFFLINE"] = "0"
-
     try:
         result = _convert_enhanced(path, {**opts, "use_vlm": True})
         result["pipeline"] = "ai"
@@ -204,7 +163,6 @@ def _convert_ai(path: Path, opts: dict) -> dict:
 # MARK: - Availability checks
 
 def _enhanced_available() -> bool:
-    """Enhanced pipeline available if layout models are downloaded."""
     cache = Path(os.environ.get("HF_HUB_CACHE",
         Path.home() / "Library" / "Application Support" / "Upmarket" / "models"))
     layout_dir = cache / "layout"
@@ -212,7 +170,6 @@ def _enhanced_available() -> bool:
 
 
 def _ai_available() -> bool:
-    """Upmarket AI available if AI models are downloaded."""
     cache = Path(os.environ.get("HF_HUB_CACHE",
         Path.home() / "Library" / "Application Support" / "Upmarket" / "models"))
     ai_dir = cache / "upmarket_ai"
@@ -232,17 +189,6 @@ def _check_pdf_locked(file_path: str) -> tuple[bool, str | None]:
         if "password" in msg or "encrypted" in msg:
             return True, None
         return False, None
-
-
-def _count_pdf_pages(file_path: str, password: str | None = None) -> int:
-    try:
-        import pypdfium2 as pdfium
-        doc = pdfium.PdfDocument(file_path, password=password)
-        count = len(doc)
-        doc.close()
-        return count
-    except Exception:
-        return 0
 
 
 def _success(markdown: str, pages: int, path: Path, pipeline: str) -> dict:
