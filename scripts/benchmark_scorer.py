@@ -195,25 +195,59 @@ def count_artifacts(md: str) -> int:
 def convert_document(doc_path: Path, pipeline: str) -> tuple[str, float]:
     """Convert a document and return (markdown, elapsed_seconds)."""
     import sys
-    site = Path(__file__).parent.parent / 'Upmarket/Python/Python.xcframework/macos-arm64_x86_64/Python.framework/Versions/3.12/lib/python3.12/site-packages'
-    if str(site) not in sys.path:
-        sys.path.insert(0, str(site))
 
-    from docling_bridge.converter import convert
+    if pipeline in ("enhanced", "ai"):
+        # Use venv directly — has Docling + cached models
+        return _convert_via_venv(doc_path, pipeline)
+    else:
+        # Fast path — use bundled framework
+        site = Path(__file__).parent.parent / 'Upmarket/Python/Python.xcframework/macos-arm64_x86_64/Python.framework/Versions/3.12/lib/python3.12/site-packages'
+        if str(site) not in sys.path:
+            sys.path.insert(0, str(site))
+        from docling_bridge.converter import convert
+        start = time.time()
+        result = convert(str(doc_path), {"use_enhanced": False, "use_ai": False})
+        elapsed = time.time() - start
+        if result.get("success"):
+            return result["markdown"], elapsed
+        raise RuntimeError(result.get("error", "Unknown error"))
 
-    opts = {
-        "use_enhanced": pipeline in ("enhanced", "ai"),
-        "use_ai": pipeline == "ai",
-    }
 
+def _convert_via_venv(doc_path: Path, pipeline: str) -> tuple[str, float]:
+    """Run Enhanced/AI conversion directly via venv Docling (has cached models)."""
+    import subprocess, json, tempfile, os
+
+    venv_python = Path(__file__).parent.parent / ".venv/bin/python3"
+    script = f"""
+import sys, json, time
+sys.path.insert(0, '{Path(__file__).parent.parent}/Upmarket/Python/Python.xcframework/macos-arm64_x86_64/Python.framework/Versions/3.12/lib/python3.12/site-packages')
+# Use venv packages for Enhanced (has Docling + torch)
+sys.path.insert(0, '{Path(__file__).parent.parent}/.venv/lib/python3.12/site-packages')
+from docling_bridge.converter import convert
+opts = {{"use_enhanced": {pipeline in ("enhanced", "ai")}, "use_ai": {pipeline == "ai"}}}
+start = time.time()
+result = convert({repr(str(doc_path))}, opts)
+result["elapsed"] = time.time() - start
+print(json.dumps(result))
+"""
     start = time.time()
-    result = convert(str(doc_path), opts)
+    proc = subprocess.run(
+        [str(venv_python), "-c", script],
+        capture_output=True, text=True, timeout=120
+    )
     elapsed = time.time() - start
 
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr[-500:] if proc.stderr else "Conversion failed")
+
+    # Parse last JSON line from stdout
+    lines = [l for l in proc.stdout.strip().splitlines() if l.startswith("{")]
+    if not lines:
+        raise RuntimeError("No output from converter")
+    result = json.loads(lines[-1])
     if result.get("success"):
-        return result["markdown"], elapsed
-    else:
-        raise RuntimeError(result.get("error", "Unknown error"))
+        return result["markdown"], result.get("elapsed", elapsed)
+    raise RuntimeError(result.get("error", "Unknown error"))
 
 
 # ── Runner ────────────────────────────────────────────────────────────────────
