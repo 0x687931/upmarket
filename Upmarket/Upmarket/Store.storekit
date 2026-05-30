@@ -7,8 +7,8 @@
       "internalID" : "com.upmarket.app.basic",
       "localizations" : [
         {
-          "description" : "Convert everyday documents — PDF, Word, PowerPoint, HTML — to clean Markdown. Powered by on-device AI.",
-          "displayName" : "Upmarket Basic",
+          "description" : "Convert everyday documents — PDF, Word, PowerPoint, HTML — to clean Markdown. All processing happens on your Mac.",
+          "displayName" : "Upmarket",
           "locale" : "en_US"
         }
       ],
@@ -22,8 +22,8 @@
       "internalID" : "com.upmarket.app.pro",
       "localizations" : [
         {
-          "description" : "Everything in Basic, plus SmolDocling AI for complex documents — scanned PDFs, dense layouts, figures, and research papers.",
-          "displayName" : "Upmarket Pro",
+          "description" : "Everything in Upmarket, plus Upmarket AI for complex documents — scanned PDFs, dense layouts, figures, and research papers.",
+          "displayName" : "Upmarket + AI",
           "locale" : "en_US"
         }
       ],

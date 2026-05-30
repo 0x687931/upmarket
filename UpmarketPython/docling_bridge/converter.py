@@ -35,7 +35,7 @@ def convert(file_path: str, options: dict | None = None) -> dict:
 
         path = Path(file_path)
         if not path.exists():
-            return _error(f"File not found: {file_path}")
+            return _error("Upmarket couldn't find this file. Please try again.")
 
         pipeline_options = PdfPipelineOptions()
         pipeline_options.do_ocr = opts.get("ocr", True)
@@ -60,7 +60,10 @@ def convert(file_path: str, options: dict | None = None) -> dict:
         return {"success": True, "markdown": markdown, "metadata": metadata, "error": None}
 
     except Exception as e:
-        return _error(f"{type(e).__name__}: {e}\n{traceback.format_exc()}")
+        # Log technical detail internally but never expose to user
+        import sys
+        print(f"[Upmarket] Conversion error: {type(e).__name__}: {e}", file=sys.stderr)
+        return _error("Upmarket couldn't convert this document. The file may be damaged, password-protected, or in an unsupported format.")
 
 
 def _error(message: str) -> dict:

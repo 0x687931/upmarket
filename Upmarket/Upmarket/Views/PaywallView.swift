@@ -6,6 +6,8 @@ struct PaywallView: View {
     @EnvironmentObject private var store: StoreManager
     @Environment(\.dismiss) private var dismiss
 
+    private let device = DeviceCapability.shared
+
     @State private var isPurchasing = false
     @State private var errorMessage: String?
 
@@ -24,8 +26,8 @@ struct PaywallView: View {
 
     private var header: some View {
         VStack(spacing: 8) {
-            Image(systemName: "doc.text.magnifyingglass")
-                .font(.system(size: 48))
+            Text("#")
+                .font(.system(size: 56, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.accentColor)
                 .padding(.top, 32)
 
@@ -33,7 +35,7 @@ struct PaywallView: View {
                 .font(.largeTitle)
                 .fontWeight(.bold)
 
-            Text("Convert any document to Markdown\nusing on-device AI. Your files never leave your Mac.")
+            Text("Convert any document to clean Markdown.\nEverything happens on your Mac — privately.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -46,54 +48,68 @@ struct PaywallView: View {
 
     private var plans: some View {
         VStack(spacing: 12) {
+            // Basic plan
             planRow(
-                title: "Basic",
+                title: "Upmarket",
                 price: store.basicProduct?.displayPrice ?? "$4.99",
-                description: "PDF, Word, PowerPoint, HTML → Markdown",
-                features: ["Layout & table detection", "OCR for scanned documents", "Unlimited conversions", "100% offline"],
+                tagline: "For everyday documents",
+                features: [
+                    "PDF, Word, PowerPoint, HTML → Markdown",
+                    "Tables and layout detection",
+                    "Scanned document support",
+                    "Unlimited conversions",
+                    "100% offline, 100% private"
+                ],
+                badge: nil,
                 isHighlighted: false,
-                product: store.basicProduct,
-                isPro: false
+                product: store.basicProduct
             )
 
+            // Pro plan
             planRow(
-                title: "Pro",
+                title: "Upmarket + AI",
                 price: store.proProduct?.displayPrice ?? "$9.99",
-                description: "Everything in Basic, plus AI for complex documents",
-                features: ["SmolDocling VLM on-device AI", "Scanned & handwritten PDFs", "Dense layouts & figures", "Research papers & tables"],
-                isHighlighted: true,
-                product: store.proProduct,
-                isPro: true
+                tagline: "For complex and research documents",
+                features: [
+                    "Everything in Upmarket",
+                    "Upmarket AI for dense layouts and figures",
+                    "Handwritten and low-quality scans",
+                    "Research papers and academic content",
+                    device.supportsUpmarketAI ? "On-device AI, nothing sent to the cloud" : device.upmarketAIUnavailableReason
+                ],
+                badge: device.supportsUpmarketAI ? "RECOMMENDED" : "APPLE SILICON",
+                isHighlighted: device.supportsUpmarketAI,
+                product: device.supportsUpmarketAI ? store.proProduct : nil
             )
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 16)
     }
 
-    private func planRow(title: String, price: String, description: String, features: [String], isHighlighted: Bool, product: Product?, isPro: Bool) -> some View {
+    private func planRow(title: String, price: String, tagline: String, features: [String], badge: String?, isHighlighted: Bool, product: Product?) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 8) {
                         Text(title)
                             .font(.headline)
-                        if isPro {
-                            Text("RECOMMENDED")
+                        if let badge {
+                            Text(badge)
                                 .font(.caption2)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(Color.accentColor, in: Capsule())
+                                .background(isHighlighted ? Color.accentColor : Color.secondary, in: Capsule())
                         }
                     }
-                    Text(description)
+                    Text(tagline)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(price)
+                    Text(product != nil ? price : "—")
                         .font(.title3)
                         .fontWeight(.bold)
                     Text("one-time")
@@ -102,38 +118,50 @@ struct PaywallView: View {
                 }
             }
 
-            ForEach(features, id: \.self) { feature in
+            ForEach(Array(features.enumerated()), id: \.offset) { index, feature in
                 HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
+                    Image(systemName: (product == nil && index == features.count - 1) ? "xmark.circle" : "checkmark.circle.fill")
+                        .foregroundStyle((product == nil && index == features.count - 1) ? Color.secondary : Color.green)
                         .font(.caption)
                     Text(feature)
                         .font(.caption)
+                        .foregroundStyle(index == features.count - 1 && product == nil ? Color.secondary : Color.primary)
                 }
             }
 
-            Button {
-                guard let product else { return }
-                Task { await buyProduct(product) }
-            } label: {
-                HStack {
-                    if isPurchasing {
-                        ProgressView().controlSize(.small)
+            if let product {
+                Button {
+                    Task { await buyProduct(product) }
+                } label: {
+                    HStack {
+                        if isPurchasing {
+                            ProgressView().controlSize(.small)
+                        }
+                        Text("Buy \(title) — \(price)")
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
                     }
-                    Text("Buy \(title) — \(price)")
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(isHighlighted ? Color.accentColor : Color.secondary)
+                .disabled(isPurchasing)
+            } else {
+                Text("Not available on \(device.chipDescription) Mac")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 6)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(isHighlighted ? .accentColor : .secondary)
-            .disabled(isPurchasing || product == nil)
         }
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(isHighlighted ? Color.accentColor : Color.secondary.opacity(0.3), lineWidth: isHighlighted ? 2 : 1)
+                .strokeBorder(
+                    isHighlighted ? Color.accentColor : Color.secondary.opacity(0.3),
+                    lineWidth: isHighlighted ? 2 : 1
+                )
         )
+        .opacity(product == nil ? 0.6 : 1.0)
     }
 
     // MARK: - Footer

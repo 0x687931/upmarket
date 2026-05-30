@@ -6,7 +6,7 @@ final class StoreManager: ObservableObject {
 
     static let shared = StoreManager()
 
-    // Product IDs
+    // Product IDs — never expose these strings in UI
     static let basicID = "com.upmarket.app.basic"
     static let proID   = "com.upmarket.app.pro"
 

@@ -12,16 +12,16 @@ MODELS_DIR = Path(os.environ.get("HF_HUB_CACHE", Path.home() / "Library" / "Appl
 
 MODELS = {
     "layout": {
-        "name": "Layout Detection",
-        "description": "Detects headings, paragraphs, tables and figures",
+        "name": "Upmarket",
+        "description": "Document understanding, tables, and layout detection",
         "repo_id": "ds4sd/docling-models",
         "size_mb": 400,
         "required": True,
         "tier": "basic",
     },
-    "smoldocling": {
-        "name": "SmolDocling AI",
-        "description": "Advanced AI for complex documents, scans and research papers",
+    "upmarket_ai": {
+        "name": "Upmarket AI",
+        "description": "Advanced understanding for complex and scanned documents",
         "repo_id": "docling-project/SmolDocling-256M-preview-mlx-bf16-docling-snap",
         "size_mb": 500,
         "required": False,
