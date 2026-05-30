@@ -11,6 +11,7 @@ No internal library names are exposed to callers.
 import os
 import sys
 from pathlib import Path
+from docling_bridge.security import validate_file_path, validate_password, log_security_event
 
 
 def convert(file_path: str, options: dict | None = None) -> dict:
@@ -34,13 +35,19 @@ def convert(file_path: str, options: dict | None = None) -> dict:
         }
     """
     opts = options or {}
+
+    # Security: validate path (traversal, size) and password (buffer overrun)
+    try:
+        file_path = validate_file_path(file_path)
+        password_raw = opts.get("password", None)
+        password_raw = validate_password(password_raw)
+    except ValueError as e:
+        log_security_event("INPUT_VALIDATION_FAILED", str(e))
+        return _error(f"Upmarket couldn't open this file: {e}")
+
     path = Path(file_path)
-
-    if not path.exists():
-        return _error("Upmarket couldn't find this file. Please try again.")
-
     suffix = path.suffix.lower()
-    password = opts.get("password", None)
+    password = password_raw
     use_enhanced = opts.get("use_enhanced", True)
     use_ai = opts.get("use_ai", False)
 

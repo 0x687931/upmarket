@@ -14,6 +14,7 @@ import re
 import sys
 from collections import Counter
 from dataclasses import dataclass
+from docling_bridge.security import sanitise_text_block, SafeRegex
 
 # pdfium object type constants
 PDF_OBJ_TYPE_TEXT  = 1
@@ -66,7 +67,7 @@ def pdf_to_clean_markdown(file_path: str, password: str | None = None) -> tuple[
         tp = page.get_textpage()
         for i in range(tp.count_rects()):
             rect = tp.get_rect(i)
-            text = tp.get_text_bounded(*rect).strip()
+            text = sanitise_text_block(tp.get_text_bounded(*rect).strip())
             if not text:
                 continue
 
