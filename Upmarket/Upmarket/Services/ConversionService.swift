@@ -35,25 +35,21 @@ final class ConversionService: ObservableObject {
     // MARK: - Private
 
     private func runConversion(fileURL: URL) async -> ConversionResult {
-        do {
-            let converter = Python.import("docling_bridge.converter")
-            let pyResult  = converter.convert(fileURL.path)
+        let converter = Python.import("docling_bridge.converter")
+        let pyResult  = converter.convert(fileURL.path)
 
-            let success = Bool(pyResult["success"]) ?? false
+        let success = Bool(pyResult["success"]) ?? false
 
-            if success {
-                let markdown = String(pyResult["markdown"]) ?? ""
-                let meta     = pyResult["metadata"]
-                let pages    = Int(meta["pages"]) ?? 0
-                let format   = String(meta["format"]) ?? ""
-                let title    = String(meta["title"]) ?? fileURL.lastPathComponent
-                return .success(ConversionOutput(markdown: markdown, pages: pages, format: format, title: title))
-            } else {
-                let error = String(pyResult["error"]) ?? "Unknown error"
-                return .failure(error)
-            }
-        } catch {
-            return .failure(error.localizedDescription)
+        if success {
+            let markdown = String(pyResult["markdown"]) ?? ""
+            let meta     = pyResult["metadata"]
+            let pages    = Int(meta["pages"]) ?? 0
+            let format   = String(meta["format"]) ?? ""
+            let title    = String(meta["title"]) ?? fileURL.lastPathComponent
+            return .success(ConversionOutput(markdown: markdown, pages: pages, format: format, title: title))
+        } else {
+            let error = String(pyResult["error"]) ?? "Unknown error"
+            return .failure(error)
         }
     }
 }
