@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "description": "Upmarket conversion quality test corpus",
+  "documents": [
+    {
+      "id": "pdf_academic_001",
+      "file": "pdf_digital/academic/docling_technical_report.pdf",
+      "category": "pdf_digital/academic",
+      "language": "en",
+      "format": "pdf",
+      "expected_features": {
+        "headings": ["Abstract", "Introduction", "Related Work", "Conclusion"],
+        "tables": 2,
+        "estimated_words": 6000,
+        "has_equations": false,
+        "has_figures": true
+      },
+      "known_challenges": ["multi-column", "figure captions"],
+      "source": "arxiv.org",
+      "license": "CC BY 4.0",
+      "notes": "Docling paper itself — good irony to test it on"
+    },
+    {
+      "id": "pdf_academic_002",
+      "file": "pdf_digital/academic/algebra_rings_fields.pdf",
+      "category": "pdf_digital/academic",
+      "language": "en",
+      "format": "pdf",
+      "expected_features": {
+        "headings": ["Abstract", "Contents", "Preface", "Rings and ideals", "Fields and integral domains"],
+        "tables": 0,
+        "estimated_words": 120000,
+        "has_equations": true,
+        "has_figures": false
+      },
+      "known_challenges": ["math equations", "501 pages", "running headers"],
+      "source": "drexel.edu",
+      "license": "public",
+      "notes": "23wa.pdf — our existing test document"
+    }
+  ],
+  "categories": {
+    "pdf_digital/academic": "Clean digital PDFs from academic sources",
+    "pdf_digital/business": "Business documents: reports, contracts, invoices",
+    "pdf_digital/technical": "Technical manuals, datasheets, specifications",
+    "pdf_digital/multicolumn": "Multi-column newspaper/magazine style layouts",
+    "pdf_scanned/clean": "High quality scans, good OCR target",
+    "pdf_scanned/degraded": "Low quality scans, noise, skew",
+    "pdf_scanned/handwritten": "Handwritten notes and forms",
+    "office/docx": "Microsoft Word documents",
+    "office/pptx": "PowerPoint presentations",
+    "office/xlsx": "Excel spreadsheets",
+    "web/html": "HTML web pages",
+    "web/epub": "EPUB ebooks",
+    "data/csv": "CSV data files",
+    "data/json": "JSON documents",
+    "data/xml": "XML documents",
+    "audio/clean": "Clear speech audio for transcription",
+    "audio/noisy": "Noisy audio, accents, challenging transcription",
+    "edge_cases/encrypted": "Password-protected PDFs",
+    "edge_cases/multilingual": "Documents with mixed languages",
+    "edge_cases/tables_complex": "Complex tables with merged cells",
+    "edge_cases/math": "Mathematical equations and formulas",
+    "edge_cases/rtl": "Right-to-left text (Arabic, Hebrew)"
+  },
+  "scoring": {
+    "pass_threshold": 0.85,
+    "weights": {
+      "heading_recall": 0.30,
+      "table_accuracy": 0.25,
+      "content_completeness": 0.30,
+      "markdown_valid": 0.10,
+      "artifact_free": 0.05
+    }
+  }
+}
