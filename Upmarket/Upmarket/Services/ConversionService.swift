@@ -126,42 +126,109 @@ final class ConversionService: ObservableObject {
         let ext = originalURL.pathExtension.lowercased()
         let title = originalURL.deletingPathExtension().lastPathComponent
 
-        // Step 1: Extract raw content
+        // Step 1: Extract — pick best available engine for this format and OS
         let raw: ConversionResult
-        if ext == "pdf" && !useAI {
-            raw = runPDFKitConversion(fileURL: fileURL, title: title, password: password)
-        } else {
+        switch ext {
+        case "pdf":
+            if useAI {
+                // AI pipeline always uses Python (Upmarket AI / Enhanced)
+                raw = await runPythonConversion(fileURL: fileURL, title: title, ext: ext, useAI: true, password: password)
+            } else if VisionDocumentExtractor.isAvailable {
+                // macOS 26+: Vision structured extraction (best quality, zero download)
+                raw = await runVisionExtraction(fileURL: fileURL, title: title, password: password)
+            } else {
+                // macOS 13-15: PDFKit fast path
+                raw = runPDFKitConversion(fileURL: fileURL, title: title, password: password)
+            }
+        case "mp3", "m4a", "wav", "aiff", "opus":
+            raw = await runSpeechTranscription(fileURL: fileURL, title: title)
+        default:
             raw = await runPythonConversion(fileURL: fileURL, title: title, ext: ext, useAI: useAI, password: password)
         }
 
-        // Step 2: Post-process successful conversions through NL + Writing Tools
+        // Step 2: Post-process — NL structuring → Writing Tools → Foundation Models
         guard case .success(let output) = raw else { return raw }
         let refined = await postProcess(output)
         return .success(refined)
     }
 
-    /// Two-stage post-processing:
-    /// 1. NaturalLanguage — sentence boundaries, paragraph reconstruction, language detection
-    /// 2. WritingToolsRefiner — Apple Intelligence cleanup (macOS 15.1+ / Apple Silicon only)
+    // Vision structured extraction (macOS 26+)
+    private func runVisionExtraction(fileURL: URL, title: String, password: String?) async -> ConversionResult {
+        do {
+            let result = try await VisionDocumentExtractor.extract(pdfURL: fileURL, password: password)
+            return .success(ConversionOutput(
+                markdown: result.markdown,
+                pages: result.pageCount,
+                format: "PDF",
+                title: title,
+                pipeline: .fast
+            ))
+        } catch VisionDocumentExtractor.ExtractionError.passwordRequired {
+            Task { await MainActor.run { self.needsPassword = true } }
+            return .failure("This PDF is password-protected.")
+        } catch {
+            // Fall back to PDFKit
+            return runPDFKitConversion(fileURL: fileURL, title: title, password: password)
+        }
+    }
+
+    // Speech transcription via SFSpeechRecognizer
+    private func runSpeechTranscription(fileURL: URL, title: String) async -> ConversionResult {
+        guard await SpeechTranscriber.requestAuthorisation() else {
+            return .failure("Microphone access is required to transcribe audio. Enable it in System Settings → Privacy.")
+        }
+        do {
+            let transcriber = SpeechTranscriber()
+            let result = try await transcriber.transcribe(audioURL: fileURL)
+            let markdown = transcriber.toMarkdown(result)
+            return .success(ConversionOutput(
+                markdown: markdown,
+                pages: 1,
+                format: fileURL.pathExtension.uppercased(),
+                title: title,
+                pipeline: .fast
+            ))
+        } catch {
+            return .failure(error.localizedDescription)
+        }
+    }
+
+    /// Four-stage post-processing pipeline:
+    /// 1. DocumentIntelligence — NLTagger: entities, headings, running headers, doc type
+    /// 2. TextStructurer — NLTokenizer: sentence boundaries, paragraph reconstruction
+    /// 3. WritingToolsRefiner — Apple Intelligence cleanup (macOS 15.1+ only)
+    /// 4. FoundationModelEnhancer — metadata extraction, summaries (macOS 15.1+ only)
     private func postProcess(_ output: ConversionOutput) async -> ConversionOutput {
-        // Stage 1: NaturalLanguage structuring
+        // Stage 1: Extract intelligence from raw text
+        let intelligence = DocumentIntelligence.extractMetadata(from: output.markdown)
+
+        // Stage 2: NaturalLanguage structuring
         let nlInput = TextStructurer.Input(
             rawMarkdown: output.markdown,
-            detectedLanguage: nil
+            detectedLanguage: intelligence.language
         )
         let nlResult = TextStructurer.refine(nlInput)
 
-        // Stage 2: Writing Tools (graceful no-op on unsupported platforms)
+        // Stage 3: Writing Tools (macOS 15.1+, graceful no-op elsewhere)
         let wtResult = await WritingToolsRefinerAdapter.refine(
             markdown: nlResult.markdown,
             language: nlResult.detectedLanguage
         )
 
-        return ConversionOutput(
+        // Stage 4: Foundation Models enhancement (macOS 15.1+, graceful no-op elsewhere)
+        let fmResult = await FoundationModelEnhancer.enhance(
             markdown: wtResult.markdown,
+            documentType: intelligence.documentType.rawValue
+        )
+
+        // Use extracted title if we found one and the output doesn't have a better one
+        let title = fmResult.extractedTitle ?? intelligence.title ?? output.title
+
+        return ConversionOutput(
+            markdown: fmResult.refinedMarkdown,
             pages: output.pages,
             format: output.format,
-            title: output.title,
+            title: title,
             pipeline: output.pipeline
         )
     }
