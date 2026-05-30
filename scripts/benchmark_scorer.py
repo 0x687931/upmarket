@@ -276,8 +276,10 @@ def run_benchmark(corpus_dir: Path, pipeline: str, category_filter: str, fail_be
     for doc_meta in docs:
         doc_id = doc_meta["id"]
         category = doc_meta.get("category", "unknown")
+        # Try path relative to corpus_dir first, then relative to corpus_dir parent
         file_path = corpus_dir / doc_meta["file"]
-
+        if not file_path.exists():
+            file_path = corpus_dir / "docling" / "docling" / doc_meta["file"]
         if not file_path.exists():
             print(f"  SKIP {doc_id} — file not found")
             continue
@@ -289,6 +291,8 @@ def run_benchmark(corpus_dir: Path, pipeline: str, category_filter: str, fail_be
         gt_key = doc_meta.get("ground_truth")
         if gt_key:
             gt_path = corpus_dir / gt_key
+            if not gt_path.exists():
+                gt_path = corpus_dir / "docling" / "docling" / gt_key
             if gt_path.exists():
                 ground_truth_md = gt_path.read_text(encoding="utf-8", errors="replace")
 
