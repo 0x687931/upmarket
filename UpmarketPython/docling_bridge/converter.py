@@ -90,22 +90,68 @@ def check_pipelines() -> dict:
 # MARK: - Pipeline implementations
 
 def _convert_fast(path: Path, opts: dict) -> dict:
-    """PyMuPDF4LLM — zero download, good for clean digital documents."""
-    import pymupdf4llm
-
+    """
+    Fast path — all MIT/BSD/Apache licensed, zero download.
+    PDFs: pdfplumber (MIT)
+    Everything else: markitdown (MIT, Microsoft)
+    """
+    suffix = path.suffix.lower()
     password = opts.get("password", None)
-    kwargs = {}
-    if password:
-        kwargs["password"] = password
 
-    if path.suffix.lower() == ".pdf":
-        markdown = pymupdf4llm.to_markdown(str(path), **kwargs)
+    if suffix == ".pdf":
+        return _convert_fast_pdf(path, password)
     else:
-        # For non-PDF, fall through to enhanced or return unsupported
-        return _error(f"Format not supported without Upmarket Enhanced.")
+        return _convert_fast_other(path)
 
-    page_count = _count_pdf_pages(str(path), password)
+
+def _convert_fast_pdf(path: Path, password: str | None) -> dict:
+    """pdfplumber for PDFs — MIT, handles tables and text well."""
+    import pdfplumber
+
+    try:
+        open_kwargs = {"password": password} if password else {}
+        with pdfplumber.open(str(path), **open_kwargs) as pdf:
+            page_count = len(pdf.pages)
+            parts = []
+            for page in pdf.pages:
+                # Tables first
+                for table in page.extract_tables():
+                    if table:
+                        rows = []
+                        for i, row in enumerate(table):
+                            cells = [str(c or "").strip() for c in row]
+                            rows.append("| " + " | ".join(cells) + " |")
+                            if i == 0:
+                                rows.append("| " + " | ".join(["---"] * len(cells)) + " |")
+                        parts.append("\n".join(rows))
+                # Text
+                text = page.extract_text(x_tolerance=2, y_tolerance=2)
+                if text and text.strip():
+                    parts.append(text.strip())
+
+            markdown = "\n\n".join(parts)
+
+    except Exception as e:
+        msg = str(e).lower()
+        if "password" in msg or "encrypted" in msg:
+            return {**_error("This PDF is password-protected."), "needs_password": True}
+        raise
+
     return _success(markdown, page_count, path, pipeline="fast")
+
+
+def _convert_fast_other(path: Path) -> dict:
+    """markitdown for DOCX, PPTX, XLSX, HTML, images — MIT (Microsoft)."""
+    try:
+        from markitdown import MarkItDown
+        md_converter = MarkItDown()
+        result = md_converter.convert(str(path))
+        markdown = result.text_content or ""
+        return _success(markdown, 0, path, pipeline="fast")
+    except Exception as e:
+        suffix = path.suffix.upper().lstrip(".")
+        print(f"[Upmarket] markitdown error for {suffix}: {e}", file=sys.stderr)
+        return _error(f"Upmarket couldn't convert this {suffix} file. Try the Enhanced pipeline for better results.")
 
 
 def _convert_enhanced(path: Path, opts: dict) -> dict:
@@ -188,12 +234,10 @@ def _check_pdf_locked(file_path: str) -> tuple[bool, str | None]:
 
 def _count_pdf_pages(file_path: str, password: str | None = None) -> int:
     try:
-        import pymupdf
+        import pdfplumber
         kwargs = {"password": password} if password else {}
-        doc = pymupdf.open(file_path, **kwargs)
-        count = len(doc)
-        doc.close()
-        return count
+        with pdfplumber.open(file_path, **kwargs) as pdf:
+            return len(pdf.pages)
     except Exception:
         return 0
 

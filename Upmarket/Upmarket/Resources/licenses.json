@@ -1,0 +1,104 @@
+[
+  {
+    "name": "BeeWare Python-Apple-support",
+    "version": "3.12-b8",
+    "license": "MIT",
+    "url": "https://github.com/beeware/Python-Apple-support"
+  },
+  {
+    "name": "docling",
+    "version": "2.96.0",
+    "license": "MIT",
+    "url": "https://github.com/docling-project/docling"
+  },
+  {
+    "name": "docling-core",
+    "version": "2.78.0",
+    "license": "MIT",
+    "url": "https://github.com/docling-project"
+  },
+  {
+    "name": "docling-ibm-models",
+    "version": "3.13.2",
+    "license": "MIT",
+    "url": "https://github.com/docling-project/docling-ibm-models"
+  },
+  {
+    "name": "docling-parse",
+    "version": "6.2.0",
+    "license": "MIT",
+    "url": "https://github.com/docling-project/docling-parse"
+  },
+  {
+    "name": "huggingface_hub",
+    "version": "1.17.0",
+    "license": "Apache Software License",
+    "url": "https://github.com/huggingface/huggingface_hub"
+  },
+  {
+    "name": "markitdown",
+    "version": "0.1.6",
+    "license": "MIT",
+    "url": "https://github.com/microsoft/markitdown"
+  },
+  {
+    "name": "numpy",
+    "version": "2.4.6",
+    "license": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
+    "url": "https://numpy.org"
+  },
+  {
+    "name": "pdfminer.six",
+    "version": "20251230",
+    "license": "MIT",
+    "url": "https://github.com/pdfminer/pdfminer.six"
+  },
+  {
+    "name": "pdfplumber",
+    "version": "0.11.9",
+    "license": "MIT License",
+    "url": "https://github.com/jsvine/pdfplumber"
+  },
+  {
+    "name": "pillow",
+    "version": "12.2.0",
+    "license": "MIT-CMU",
+    "url": "https://python-pillow.github.io"
+  },
+  {
+    "name": "pydantic",
+    "version": "2.13.4",
+    "license": "MIT",
+    "url": "https://github.com/pydantic/pydantic"
+  },
+  {
+    "name": "pypdfium2",
+    "version": "5.8.0",
+    "license": "BSD-3-Clause, Apache-2.0, dependency licenses",
+    "url": "https://github.com/pypdfium2-team/pypdfium2"
+  },
+  {
+    "name": "PythonKit",
+    "version": "0.3.0",
+    "license": "MIT",
+    "url": "https://github.com/pvieito/PythonKit"
+  },
+  {
+    "name": "torch",
+    "version": "2.12.0",
+    "license": "BSD-3-Clause",
+    "url": "https://pytorch.org"
+  },
+  {
+    "name": "torchvision",
+    "version": "0.27.0",
+    "license": "BSD",
+    "url": "https://github.com/pytorch/vision"
+  },
+  {
+    "name": "transformers",
+    "version": "5.9.0",
+    "license": "Apache 2.0 License",
+    "url": "https://github.com/huggingface/transformers"
+  }
+]

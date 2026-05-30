@@ -31,7 +31,21 @@ struct UpmarketApp: App {
                 }
                 .keyboardShortcut("o", modifiers: .command)
             }
+            CommandGroup(replacing: .appSettings) {
+                Button("Preferences…") {
+                    openPreferences()
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
         }
+
+        Window("Preferences", id: "preferences") {
+            PreferencesView()
+                .environmentObject(modelManager)
+                .environmentObject(storeManager)
+        }
+        .windowResizability(.contentSize)
+        .defaultSize(width: 560, height: 400)
 
         MenuBarExtra {
             MenuBarView()
@@ -45,10 +59,16 @@ struct UpmarketApp: App {
         .menuBarExtraStyle(.window)
     }
 
+    @Environment(\.openWindow) private var openWindow
+
     init() {
         Task { @MainActor in
             PythonBridge.shared.setup()
         }
         FeatureFlags.shared.fetchFlags()
+    }
+
+    private func openPreferences() {
+        openWindow(id: "preferences")
     }
 }
