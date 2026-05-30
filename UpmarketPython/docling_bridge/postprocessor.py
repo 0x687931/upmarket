@@ -3,13 +3,22 @@ Upmarket PDF post-processor.
 Converts pdfium extraction to clean structured Markdown.
 
 Uses actual font sizes from PDF metadata (not guessed from rect heights)
-to reliably detect headings vs body text — no magic threshold tuning needed.
+to reliably detect headings vs body text.
+
+Key constraint: get_font_size() must only be called on PdfTextObj (type=1).
+Calling it on PdfObject (type=2, path) or PdfImage (type=3) hangs in the
+xcframework build of pypdfium2 due to undefined behaviour in the C binding.
 """
 
 import re
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from dataclasses import dataclass
+
+# pdfium object type constants
+PDF_OBJ_TYPE_TEXT  = 1
+PDF_OBJ_TYPE_PATH  = 2
+PDF_OBJ_TYPE_IMAGE = 3
 
 
 @dataclass
@@ -37,10 +46,14 @@ def pdf_to_clean_markdown(file_path: str, password: str | None = None) -> tuple[
         page = doc[page_idx]
         page_height = page.get_height()
 
-        # Map y_bottom → font_size from actual PDF text objects
+        # Build font_size map: y_bottom → font_size
+        # IMPORTANT: only call get_font_size() on TEXT objects (type=1).
+        # Calling it on path/image objects hangs in the xcframework pdfium build.
         font_map: dict[float, float] = {}
         for obj in page.get_objects():
             try:
+                if obj.type != PDF_OBJ_TYPE_TEXT:
+                    continue
                 size = obj.get_font_size()
                 bounds = obj.get_bounds()   # (x0, y0, x1, y1)
                 if size > 0:
@@ -57,7 +70,7 @@ def pdf_to_clean_markdown(file_path: str, password: str | None = None) -> tuple[
             if not text:
                 continue
 
-            # Look up font size — try exact match then nearby y values
+            # Look up font size by y-coordinate proximity
             y_bottom = round(rect[1], 1)
             font_size = font_map.get(y_bottom, 0)
             if font_size == 0:
@@ -71,7 +84,7 @@ def pdf_to_clean_markdown(file_path: str, password: str | None = None) -> tuple[
                 text=text,
                 font_size=font_size,
                 x=rect[0],
-                y=page_height - rect[3],   # convert to top-down
+                y=page_height - rect[3],
                 width=rect[2] - rect[0],
                 page=page_idx,
             ))
@@ -88,24 +101,20 @@ def pdf_to_clean_markdown(file_path: str, password: str | None = None) -> tuple[
 
 
 def _blocks_to_markdown(blocks: list[Block], page_count: int) -> str:
-    # Determine font size roles from the document's own data
     sizes = [b.font_size for b in blocks if b.font_size > 0]
     if not sizes:
         return "\n\n".join(_clean_text(b.text) for b in blocks)
 
-    # Body = most frequent size (the dominant reading font)
+    # Body = most frequent font size
     size_counts = Counter(round(s, 0) for s in sizes)
     body_size = size_counts.most_common(1)[0][0]
 
-    # Collect all distinct sizes larger than body for heading levels
+    # Map larger sizes to H1/H2/H3
     larger_sizes = sorted(
         {round(s, 0) for s in sizes if round(s, 0) > body_size + 1},
         reverse=True
     )
-    # Map to H1/H2/H3: largest → H1, next → H2, next → H3
-    size_to_level = {}
-    for i, s in enumerate(larger_sizes[:3]):
-        size_to_level[s] = i + 1
+    size_to_level = {s: i + 1 for i, s in enumerate(larger_sizes[:3])}
 
     parts: list[str] = []
     pending: list[str] = []
@@ -126,26 +135,18 @@ def _blocks_to_markdown(blocks: list[Block], page_count: int) -> str:
         prev_page = block.page
 
         text = _clean_text(block.text)
-        if not text:
+        if not text or _is_noise(text, block):
             continue
 
-        if _is_noise(text, block):
-            continue
-
-        rounded_size = round(block.font_size, 0)
-        level = size_to_level.get(rounded_size, 0)
+        level = size_to_level.get(round(block.font_size, 0), 0)
 
         if level == 1:
-            flush()
-            parts.append(f"# {text}")
+            flush(); parts.append(f"# {text}")
         elif level == 2:
-            flush()
-            parts.append(f"## {text}")
+            flush(); parts.append(f"## {text}")
         elif level == 3:
-            flush()
-            parts.append(f"### {text}")
+            flush(); parts.append(f"### {text}")
         else:
-            # Body — clean TOC dot leaders and accumulate
             cleaned = _strip_toc_leaders(text)
             if cleaned:
                 pending.append(cleaned)
@@ -163,14 +164,14 @@ def _blocks_to_markdown(blocks: list[Block], page_count: int) -> str:
 LIGATURES = {
     'ﬁ': 'fi', 'ﬂ': 'fl', 'ﬃ': 'ffi', 'ﬄ': 'ffl',
     'ﬀ': 'ff', 'ﬅ': 'st', 'ﬆ': 'st',
-    '­': '',   # soft hyphen
-    '�': '',   # replacement character
+    '\xad': '',    # soft hyphen
+    '�': '',  # replacement character
 }
+
 
 def _clean_text(text: str) -> str:
     for bad, good in LIGATURES.items():
         text = text.replace(bad, good)
-    # Rejoin hyphenated line breaks
     text = re.sub(r'(\w)-\n(\w)', r'\1\2', text)
     text = re.sub(r'[ \t]+', ' ', text)
     return text.strip()
@@ -183,28 +184,23 @@ def _clean_paragraph(text: str) -> str:
 
 
 def _strip_toc_leaders(text: str) -> str:
-    """Remove dot leaders: 'Section title . . . . . 42' → 'Section title'"""
-    # Repeated dots pattern: ". . . . . 42"
-    text = re.sub(r'(\s*\.\s*){3,}\s*\d*\s*$', '', text)
-    # Continuous dots: ".......... 42"
-    text = re.sub(r'\.{3,}\s*\d*\s*$', '', text)
-    # Trailing page number after whitespace
+    # Match TOC dot leaders: ". . . . 42" or "......... 42" or "   42"
+    # Use atomic patterns to avoid catastrophic backtracking (ReDoS).
+    # Pattern: one or more (dot + optional space) groups, then optional page number.
+    # We use [. ]+ (character class, no nesting) instead of (\s*\.\s*){3,}.
+    text = re.sub(r'[. ]{5,}\d*\s*$', '', text)
     text = re.sub(r'\s{3,}\d+\s*$', '', text)
     return text.strip()
 
 
 def _is_noise(text: str, block: Block) -> bool:
-    """Filter page numbers and running headers."""
     stripped = text.strip()
-    # Pure page number
     if re.match(r'^\d{1,4}$', stripped):
         return True
-    # "Page N" or "N of M"
     if re.match(r'^[Pp]age\s+\d+', stripped):
         return True
     if re.match(r'^\d+\s+of\s+\d+$', stripped, re.IGNORECASE):
         return True
-    # Running header pattern: contains "page N" at end
     if re.search(r'\bpage\s+\d+\s*$', stripped, re.IGNORECASE):
         return True
     return False

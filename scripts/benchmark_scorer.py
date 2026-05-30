@@ -259,13 +259,28 @@ def run_benchmark(corpus_dir: Path, pipeline: str, category_filter: str, fail_be
                 ground_truth_md = gt_path.read_text(encoding="utf-8", errors="replace")
 
         try:
-            markdown, elapsed = convert_document(file_path, pipeline or "fast")
+            import signal
+
+            def _timeout_handler(signum, frame):
+                raise TimeoutError("Conversion timed out after 30s")
+
+            signal.signal(signal.SIGALRM, _timeout_handler)
+            signal.alarm(30)
+            try:
+                markdown, elapsed = convert_document(file_path, pipeline or "fast")
+            finally:
+                signal.alarm(0)
+
             score = score_document(markdown, doc_meta, ground_truth_md)
             score.elapsed_seconds = elapsed
             scores.append(score)
             gt_indicator = "GT" if ground_truth_md else "  "
             status = "✓" if score.overall >= 0.8 else "⚠" if score.overall >= 0.6 else "✗"
             print(f"[{gt_indicator}] {status}  {score.overall*100:.0f}%  ({elapsed:.1f}s)")
+        except TimeoutError:
+            score = DocScore(doc_id=doc_id, category=category, error="Timed out after 30s")
+            scores.append(score)
+            print(f"[  ] ✗  TIMEOUT (>30s)")
         except Exception as e:
             score = DocScore(doc_id=doc_id, category=category, error=str(e))
             scores.append(score)
