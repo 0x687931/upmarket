@@ -12,8 +12,10 @@ struct ContentView: View {
 
     @EnvironmentObject private var conversion: ConversionService
     @EnvironmentObject private var store: StoreManager
+    @EnvironmentObject private var modelManager: ModelManager
     @State private var isTargeted = false
     @State private var showPaywall = false
+    @State private var showModelDownload = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,7 +29,23 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 700, minHeight: 500)
-        .sheet(isPresented: $showPaywall) { PaywallView().environmentObject(store) }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView().environmentObject(store)
+        }
+        .sheet(isPresented: $showModelDownload) {
+            ModelDownloadView()
+                .environmentObject(modelManager)
+                .environmentObject(store)
+        }
+        .onAppear {
+            modelManager.checkModels()
+            if !modelManager.allRequiredDownloaded {
+                showModelDownload = true
+            }
+        }
+        .onChange(of: modelManager.allRequiredDownloaded) { _, ready in
+            if ready { showModelDownload = false }
+        }
     }
 
     // MARK: - Trial Banner
@@ -187,6 +205,7 @@ struct ContentView: View {
 
     private func openFilePicker() {
         guard store.hasBasicOrAbove else { showPaywall = true; return }
+        guard modelManager.allRequiredDownloaded else { showModelDownload = true; return }
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.pdf, .html, .png, .jpeg,
             UTType(filenameExtension: "docx") ?? .data,
@@ -200,6 +219,7 @@ struct ContentView: View {
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
         guard store.hasBasicOrAbove else { showPaywall = true; return false }
+        guard modelManager.allRequiredDownloaded else { showModelDownload = true; return false }
         guard let provider = providers.first else { return false }
         provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
             guard let data = item as? Data,
