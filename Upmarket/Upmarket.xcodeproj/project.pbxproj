@@ -10,8 +10,8 @@
 		81A3B7312FCB0F91004A488D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81A3B7302FCB0F91004A488D /* ContentView.swift */; };
 		81A3B75A2FCB1000004A488D /* Services.txt in Resources */ = {isa = PBXBuildFile; fileRef = 81A3B7592FCB1000004A488D /* Services.txt */; };
 		81A3B75D2FCB1073004A488D /* PythonKit in Frameworks */ = {isa = PBXBuildFile; productRef = 81A3B75C2FCB1073004A488D /* PythonKit */; };
-		81A3B7602FCB116B004A488D /* Python.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 81A3B75F2FCB116B004A488D /* Python.xcframework */; };
-		81A3B7612FCB116B004A488D /* Python.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 81A3B75F2FCB116B004A488D /* Python.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		81E090C12FCB12E400FC901A /* Python.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 81E090C02FCB12E400FC901A /* Python.xcframework */; };
+		81E090C22FCB12E400FC901A /* Python.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 81E090C02FCB12E400FC901A /* Python.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,13 +32,13 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		81A3B7622FCB116B004A488D /* Embed Frameworks */ = {
+		81E090C32FCB12E400FC901A /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				81A3B7612FCB116B004A488D /* Python.xcframework in Embed Frameworks */,
+				81E090C22FCB12E400FC901A /* Python.xcframework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -52,6 +52,8 @@
 		81A3B7422FCB0F91004A488D /* UpmarketUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UpmarketUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		81A3B7592FCB1000004A488D /* Services.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Services.txt; sourceTree = "<group>"; };
 		81A3B75F2FCB116B004A488D /* Python.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Python.xcframework; path = ../../../../GitHub/upmarket/Upmarket/Python/Python.xcframework; sourceTree = "<group>"; };
+		81E090C02FCB12E400FC901A /* Python.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Python.xcframework; path = Python/Python.xcframework; sourceTree = "<group>"; };
+		81E090C92FCB14F300FC901A /* PythonBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PythonBridge.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -78,7 +80,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				81A3B75D2FCB1073004A488D /* PythonKit in Frameworks */,
-				81A3B7602FCB116B004A488D /* Python.xcframework in Frameworks */,
+				81E090C12FCB12E400FC901A /* Python.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -150,6 +152,7 @@
 		81A3B7582FCB1000004A488D /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				81E090C92FCB14F300FC901A /* PythonBridge.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -157,6 +160,7 @@
 		81A3B75E2FCB116B004A488D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				81E090C02FCB12E400FC901A /* Python.xcframework */,
 				81A3B75F2FCB116B004A488D /* Python.xcframework */,
 			);
 			name = Frameworks;
@@ -172,7 +176,7 @@
 				81A3B7272FCB0F91004A488D /* Sources */,
 				81A3B7282FCB0F91004A488D /* Frameworks */,
 				81A3B7292FCB0F91004A488D /* Resources */,
-				81A3B7622FCB116B004A488D /* Embed Frameworks */,
+				81E090C32FCB12E400FC901A /* Embed Frameworks */,
 			);
 			buildRules = (
 			);

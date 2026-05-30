@@ -1,22 +1,15 @@
 import Foundation
-import Combine
 import PythonKit
 
 /// Initialises the embedded CPython runtime and exposes it to the app.
 /// Must be set up once at app launch before any Python calls are made.
+@MainActor
 final class PythonBridge: ObservableObject {
 
     static let shared = PythonBridge()
 
-    let objectWillChange = PassthroughSubject<Void, Never>()
-
-    private(set) var isReady = false {
-        willSet { objectWillChange.send() }
-    }
-
-    private(set) var error: String? {
-        willSet { objectWillChange.send() }
-    }
+    @Published var isReady = false
+    @Published var error: String?
 
     private init() {}
 
@@ -27,8 +20,8 @@ final class PythonBridge: ObservableObject {
             try configurePythonRuntime()
             validatePython()
             isReady = true
-        } catch let e {
-            error = e.localizedDescription
+        } catch {
+            self.error = error.localizedDescription
         }
     }
 
@@ -40,12 +33,15 @@ final class PythonBridge: ObservableObject {
         }
 
         let pythonHome = "\(frameworkPath)/Python.framework/Versions/3.12"
-        let stdlibPath = "\(pythonHome)/lib/python3.12"
+        let stdlibPath  = "\(pythonHome)/lib/python3.12"
 
         setenv("PYTHONHOME", pythonHome, 1)
         setenv("PYTHONPATH", stdlibPath, 1)
+
+        // After models are downloaded, prevents any further HuggingFace hub calls
         setenv("HF_HUB_OFFLINE", "0", 1)
 
+        // Point HF cache to Application Support so models survive app updates
         let appSupport = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Upmarket/models")
