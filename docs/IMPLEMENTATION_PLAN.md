@@ -2,265 +2,195 @@
 
 ## Overview
 
-Upmarket converts documents to Markdown using on-device AI. Fully offline on Apple Silicon after first model download. Sold on the Mac App Store with a 7-day free trial, Basic ($4.99) and Pro ($9.99) tiers.
+Upmarket converts documents to Markdown using on-device AI. Fully offline on Apple Silicon after first model download. Sold on the Mac App Store with 3 free conversions, then Basic ($4.99), 5-doc pack ($0.99), and Pro + AI ($9.99).
 
 ---
 
-## Current Status
+## Architecture
 
-| Component | Status |
-|---|---|
-| SwiftUI app shell | ✅ Done |
-| BeeWare CPython 3.12 embedded | ✅ Done |
-| Docling + PyTorch/MPS conversion | ✅ Done |
-| MPS float32 patch | ✅ Done |
-| PythonBridge service | ✅ Done |
-| ConversionService | ✅ Done |
-| StoreKit 2 (trial + Basic + Pro) | ✅ Done |
-| ModelManager + download onboarding | ✅ Done |
-| Basic drop zone + output UI | ✅ Done (prototype quality) |
+```
+SwiftUI (animation-first UI, 400px portrait → 640px output)
+    ↓
+Tiered Python pipeline:
+  Fast path  — PyMuPDF4LLM, bundled, zero download
+  Enhanced   — Layout models, 172MB on demand
+  Upmarket AI — SmolDocling MLX, 500MB on demand, Pro only
+    ↓
+Models cached in ~/Library/Application Support/Upmarket/models/
+    ↓
+100% offline after first model download
+```
 
 ---
 
-## Phase 1 — App Store Technical Requirements
-*Blocks submission. Must be done before anything else.*
+## What's Done ✅
 
-### 1.1 Privacy & Signing
-- [ ] Create `PrivacyInfo.xcprivacy` — declare network usage (model download), file access, no tracking
-- [ ] Create `Upmarket.entitlements` — app sandbox, network client, user-selected files read-write
+### Core
+- [x] SwiftUI app shell with MenuBarExtra (liquid glass popover)
+- [x] BeeWare CPython 3.12 embedded and running (Python 3.12.10)
+- [x] PythonBridge service — PYTHONHOME/PYTHONPATH/HF_HUB_CACHE configured
+- [x] Tiered conversion pipeline (fast/enhanced/AI)
+- [x] PyMuPDF4LLM bundled — zero download for clean digital docs
+- [x] Docling + PyTorch/MPS for Enhanced pipeline (on-demand)
+- [x] MPS float32 patch for Apple Silicon compatibility
+- [x] Document complexity analyser — detects scanned, complex, multi-column
+- [x] Language detection — Unicode block analysis, warns on low-quality langs
+- [x] Sandbox file access — copy to temp dir before Python conversion
+- [x] Password-protected PDF detection and prompt
+
+### Monetisation
+- [x] StoreKit 2 — trial (3 free docs), Basic $4.99, Pro $9.99, 5-doc pack $0.99
+- [x] Smart upgrade nudge — escalates after 1/2/3+ packs purchased
+- [x] Paywall — Pro as hero, Basic secondary, pack as last resort
+- [x] AI credit / pack consumption tracking in UserDefaults
+- [x] Trial banner showing remaining free conversions
+
+### Models & Download
+- [x] ModelManager — check, download, offline mode, delete/offload
+- [x] ModelDownloadView — shows model sizes, progress, Pro-gated AI models
+- [x] No download on first launch — app works immediately with fast path
+- [x] Enhanced models prompted only when complexity detected
+- [x] Model deletion / offloading support (user and OS)
+
+### Device & Feature Intelligence
+- [x] DeviceCapability — Apple Silicon detection, Tahoe detection
+- [x] FeatureFlags — remote JSON config for AI language gating
+- [x] Language-aware AI gating — CJK/Arabic/Hebrew excluded from AI
+- [x] Language quality warning shown for low-support languages
+- [x] Intel Mac — AI hidden, clear explanation shown
+
+### UI
+- [x] Animation-first drop zone — breathing # symbol, glow, ripple on drop
+- [x] AppPhase state machine — idle/analysing/converting/result/error
+- [x] Progress ring around # during conversion
+- [x] Spring transitions between phases
+- [x] Format chips (PDF · DOCX · PPTX · XLSX · HTML)
+- [x] Icon-only output toolbar (copy/save/new with tooltips)
+- [x] Word count in output
+- [x] Cmd+O, Cmd+S, Cmd+N, Cmd+Shift+C keyboard shortcuts
+- [x] AI suggestion sheet when complexity detected
+- [x] Language warning banner (dismissible, slides from bottom)
+- [x] Password prompt sheet
+- [x] Accent colour set (#4f46e5 indigo)
+- [x] Menu bar with liquid glass popover
+- [x] Window resizes: 400px portrait → 640px for output
+
+### App Store Technical
+- [x] PrivacyInfo.xcprivacy — Privacy Manifest
+- [x] Upmarket.entitlements — App Sandbox, network client, user files
+- [x] Bundle stripped to 102MB (was 1.3GB — removed PyTorch/Docling)
+- [x] Apple compresses to ~47MB download automatically
+
+### Tooling
+- [x] update_dependencies.sh — one-command dependency update + sync
+- [x] patch_mps.sh — MPS float32 patch after transformers updates
+- [x] strip_stdlib.sh — reduces Python stdlib size
+- [x] RELEASING.md — release process documentation
+- [x] docs/public/flags.json — remote feature flag file
+
+---
+
+## Outstanding — P0 (Blocks App Store Submission)
+
+### Must be done by you (requires Apple ID / Xcode GUI)
+- [ ] Wire `Upmarket.entitlements` in Xcode Build Settings → Code Signing Entitlements
 - [ ] Register bundle ID `com.upmarket.app` in App Store Connect
-- [ ] Set Team ID in Xcode project settings
+- [ ] Set Team ID in Xcode project settings (General → Signing)
 - [ ] Register app record in App Store Connect (name, category, age rating)
+- [ ] Create IAP products in App Store Connect:
+  - `com.upmarket.app.basic` — $4.99
+  - `com.upmarket.app.pro` — $9.99
+  - `com.upmarket.app.doc_pack` — $0.99
+- [ ] Test purchase flow with StoreKit sandbox
 
-### 1.2 Bundle Size
-- [ ] Run `strip_stdlib.sh` on bundled Python framework
-- [ ] Audit `site-packages` — remove unused packages (test suites, dev tools)
-- [ ] Measure final app bundle size (target: <200MB without models)
-- [ ] Verify models download correctly to Application Support (not bundled)
-
-### 1.3 In-App Purchase Setup
-- [ ] Create IAP products in App Store Connect (`com.upmarket.app.basic`, `com.upmarket.app.pro`)
-- [ ] Configure pricing tiers ($4.99, $9.99)
-- [ ] Test purchase flow end-to-end with StoreKit sandbox
-
----
-
-## Phase 2 — UI & Design
-*App needs to look and feel like a premium product.*
-
-### 2.1 App Icon
-- [ ] Design app icon — concept: document + markdown arrow, clean and minimal
-- [ ] Export all required sizes (16, 32, 64, 128, 256, 512, 1024px @1x and @2x)
+### App Icon (required — App Store rejects without it)
+- [ ] Design icon — `#` symbol, indigo on white, Tahoe style (see prompt in docs)
+- [ ] Export all sizes (16, 32, 64, 128, 256, 512, 1024px @1x and @2x)
 - [ ] Add to `Assets.xcassets/AppIcon.appiconset`
-- [ ] Design matches "upmarket" brand — premium, not cutesy
 
-### 2.2 Visual Design System
-- [ ] Choose accent colour (suggest: deep indigo or teal — professional, not generic blue)
-- [ ] Set accent colour in `Assets.xcassets/AccentColor`
-- [ ] Typography: system font (SF Pro) is fine — ensure consistent sizing hierarchy
-- [ ] Light and dark mode tested and correct throughout
+### GitHub Pages (for feature flags)
+- [ ] Enable GitHub Pages on `0x687931/upmarket` repo → serve from `/docs/public`
+- [ ] Verify `https://0x687931.github.io/upmarket/flags.json` is accessible
 
-### 2.3 Drop Zone (Main Screen)
-- [ ] Replace placeholder globe icon with document drop illustration or SF Symbol composition
-- [ ] Animated drop zone border on hover (subtle pulse or glow)
-- [ ] File type chips shown below drop zone (PDF · DOCX · PPTX · HTML · Images)
-- [ ] Keyboard shortcut hint: Cmd+O shown subtly in corner
-- [ ] App name / logo in toolbar
+---
 
-### 2.4 Conversion Progress Screen
-- [ ] Indeterminate progress bar with animated shimmer
-- [ ] Show filename being converted
-- [ ] Show estimated time ("Usually takes 5–30 seconds")
-- [ ] Cancel button (wire up Task cancellation)
-- [ ] Smooth transition from drop zone → progress → result
+## Outstanding — P1 (Required for Paid Product)
 
-### 2.5 Output / Result Screen
-- [ ] Toolbar: filename, page count, format badge
-- [ ] Markdown preview — monospaced, readable, syntax highlighted (basic)
-- [ ] Toggle: Raw Markdown ↔ Rendered preview (use `AttributedString` or WebKit)
-- [ ] Copy button (Cmd+C)
-- [ ] Save As button (Cmd+S) — saves .md file
-- [ ] Share button — macOS share sheet
-- [ ] Convert Another button (Cmd+N)
-- [ ] Word count / character count shown in footer
-
-### 2.6 Paywall / Upgrade Screen
-- [ ] Polish plan comparison cards (currently functional, needs visual refinement)
-- [ ] Add "Most Popular" badge to Pro
-- [ ] Testimonial or sample output showing Pro vs Basic quality difference
-- [ ] Animated checkmarks on feature list
-- [ ] Smooth sheet presentation
-
-### 2.7 Model Download Screen
-- [ ] Show estimated download time based on connection (if detectable)
-- [ ] Animated download progress (not just a bar — show model name animating in)
-- [ ] Success state: checkmark animation when complete
-- [ ] "Why do I need this?" expandable explanation
-- [ ] Skip option for Basic (download layout models only, defer Pro models)
-
-### 2.8 Preferences Window
+### Preferences Window
 - [ ] Cmd+, opens preferences
-- [ ] General tab: default save location, output format options
-- [ ] Models tab: show downloaded models, storage used, delete individual models
-- [ ] Account tab: show current plan, upgrade button, restore purchases
-- [ ] About tab: version, open source licenses, privacy policy link
+- [ ] Models tab — show downloaded models, storage used, delete button
+- [ ] Account tab — current plan, upgrade, restore purchases
+- [ ] About tab — version, open source licenses, privacy policy link
 
-### 2.9 Menu Bar
-- [ ] File → Open (Cmd+O)
-- [ ] File → Save (Cmd+S)
-- [ ] File → Convert Another (Cmd+N)
-- [ ] Edit → Copy Markdown (Cmd+C)
-- [ ] Upmarket → Preferences (Cmd+,)
-- [ ] Upmarket → Check for Updates
-- [ ] Help → Report an Issue (opens mailto or feedback form)
+### Legal
+- [ ] Write privacy policy (1 page, host on GitHub Pages)
+- [ ] Write EULA / Terms (1 page, host alongside)
+- [ ] Open source attribution screen (generate from pip-licenses)
+- [ ] Link both in App Store listing and in-app About tab
 
-### 2.10 Onboarding (First Launch)
-- [ ] Welcome screen before model download — explains what Upmarket does
-- [ ] 3-step flow: Welcome → Download Models → Ready
-- [ ] "What Upmarket can do" with 3 example conversions (PDF → clean markdown preview)
-- [ ] Only shown once (UserDefaults flag)
-
----
-
-## Phase 3 — Core Features
-*Required for a complete paid product.*
-
-### 3.1 Conversion Quality
-- [ ] Test PDF conversion (digital) — verify output quality
-- [ ] Test PDF conversion (scanned) — verify OCR works
-- [ ] Test DOCX conversion — headings, tables, lists
-- [ ] Test PPTX conversion — slide titles, bullet points
-- [ ] Test HTML conversion
-- [ ] Test image conversion (PNG/JPG with text)
-- [ ] Error handling: unsupported file shows friendly message
-- [ ] Large file handling: test 100+ page PDF, add timeout (5 min)
-
-### 3.2 Pro Conversion (SmolDocling)
-- [ ] Wire SmolDocling option into converter.py
-- [ ] UI toggle: "Use AI (Pro)" in drop zone or conversion options
-- [ ] Show Pro badge on result when SmolDocling was used
-- [ ] Download Pro models prompt if Pro user hasn't downloaded yet
-
-### 3.3 Conversion Options
-- [ ] OCR toggle (on by default)
-- [ ] Table detection toggle (on by default)
-- [ ] Output format: Markdown / JSON / plain text
-
-### 3.4 Batch Conversion (v1.1)
-- [ ] Multi-file selection in Open panel
-- [ ] Queue UI showing files and status
-- [ ] Zip and save all results
-- [ ] Progress: "Converting 3 of 7 files"
-
----
-
-## Phase 4 — Legal & Compliance
-
-### 4.1 Privacy Policy
-- [ ] Write privacy policy — emphasise offline, no data collection, no tracking
-- [ ] Host on GitHub Pages or simple static site
-- [ ] Link in App Store listing
-- [ ] Link in app (Preferences → About → Privacy Policy)
-
-### 4.2 Terms of Service
-- [ ] Write basic EULA / Terms
-- [ ] Host alongside privacy policy
-- [ ] Link in App Store listing
-
-### 4.3 Open Source Attribution
-- [ ] Generate full license list from pip (`pip-licenses` package)
-- [ ] Create `Licenses` view in Preferences → About
-- [ ] Key attributions: Docling (MIT, IBM), PyTorch (BSD), BeeWare (MIT)
-
----
-
-## Phase 5 — App Store Listing
-
-### 5.1 Copy
-- [ ] App name: Upmarket
-- [ ] Subtitle (30 chars): "Document to Markdown Converter"
-- [ ] Description (4000 chars max): lead with offline + privacy, explain tiers
-- [ ] Keywords (100 chars): pdf markdown, document converter, offline ai, docx markdown
+### App Store Listing
+- [ ] App description (4000 chars) — lead with offline + privacy
+- [ ] Subtitle (30 chars): "Document to Markdown, On-Device"
+- [ ] Keywords (100 chars): pdf markdown, document converter, offline ai
+- [ ] 5 screenshots at 1440×900 or 2560×1600
 - [ ] Support URL
-- [ ] Marketing URL (landing page)
+- [ ] Privacy policy URL
 
-### 5.2 Screenshots (required)
-- [ ] Screenshot 1: Drop zone — clean, empty state with a document hovering
-- [ ] Screenshot 2: Converting — progress screen with a real document
-- [ ] Screenshot 3: Output — Markdown result from a beautiful PDF
-- [ ] Screenshot 4: Paywall / pricing — clean tier comparison
-- [ ] Screenshot 5: Preferences — model management screen
-- [ ] All at 1440×900 (MacBook Pro 13") or 2560×1600 (MacBook Pro 16")
-
-### 5.3 App Preview Video (optional but recommended)
-- [ ] 15–30 second screen recording
-- [ ] Show: drag PDF → converting → clean Markdown output
-- [ ] No voiceover needed — let the product speak
-
-### 5.4 Landing Page (optional for launch)
-- [ ] Simple one-pager: hero, features, pricing, App Store badge
-- [ ] Domain: upmarket.app (check availability) or upmarketapp.com
-- [ ] Host on GitHub Pages or Vercel (free)
-
----
-
-## Phase 6 — Stability & Quality
-
-### 6.1 Error Handling
-- [ ] Replace raw Python tracebacks with friendly error messages
-- [ ] Categorise errors: unsupported format, file too large, conversion failed, no models
-- [ ] Add "Copy Error Details" for power users to share bug reports
-- [ ] Offline detection: warn if models not downloaded and no internet
-
-### 6.2 Crash Reporting
-- [ ] Integrate Sentry (free tier) or Apple's built-in crash reporting
-- [ ] Capture Python exceptions with context
-- [ ] Add "Report Issue" menu item
-
-### 6.3 Performance
-- [ ] Conversion timeout: 5 minutes max, show friendly error
-- [ ] Memory monitor: warn if >2GB during conversion
-- [ ] Test on M1, M2, M3 (Apple Silicon)
-- [ ] Test on Intel Mac — verify CPU fallback works
-
-### 6.4 Accessibility
-- [ ] VoiceOver labels on all interactive elements
-- [ ] Keyboard navigation throughout
-- [ ] Minimum contrast ratio 4.5:1 for all text
-
-### 6.5 Testing
-- [ ] Unit tests: ConversionService, StoreManager, ModelManager
-- [ ] UI tests: drop zone, conversion flow, paywall
+### Quality
+- [ ] Friendly error messages — categorise: unsupported format, too large, failed
+- [ ] Conversion timeout — 5 min max, show clear error
+- [ ] Dark mode — test and fix any contrast issues
 - [ ] Test on macOS 13.3, 14.x, 15.x, 26.x
 
 ---
 
-## Phase 7 — Launch Prep
+## Outstanding — P2 (Polish / Post-Launch)
 
-- [ ] TestFlight beta (internal) — test full flow end to end
-- [ ] TestFlight beta (external) — 5–10 external testers
-- [ ] Address all beta feedback
-- [ ] Final App Store submission
-- [ ] Prepare launch announcement (Twitter/X, Reddit r/macapps, ProductHunt)
-- [ ] ProductHunt submission scheduled
+### UI Polish
+- [ ] Rendered Markdown preview toggle (raw ↔ rendered)
+- [ ] Share button (macOS share sheet)
+- [ ] Onboarding flow — 3-step welcome for first launch
+- [ ] Dark mode drop zone and output polish
+- [ ] Animated checkmarks in paywall feature list
+
+### Features
+- [ ] Batch conversion (multiple files, queue UI)
+- [ ] Conversion history (recent files list)
+- [ ] Output format options (Markdown / plain text)
+- [ ] OCR toggle in drop zone
+
+### Localisation (#10)
+- [ ] Localizable.strings — English baseline
+- [ ] German, French, Japanese (v1.1)
+- [ ] Spanish, Italian, Portuguese, Korean, Chinese (v1.2)
+- [ ] App Store listing translated per locale
+
+### Stability
+- [ ] Unit tests — ConversionService, StoreManager, ModelManager
+- [ ] UI tests — drop zone, conversion flow, paywall
+- [ ] Crash reporting (Apple-native or Sentry)
+- [ ] Memory monitor — warn if >2GB during conversion
+
+### Launch
+- [ ] TestFlight internal beta
+- [ ] TestFlight external beta (5-10 testers)
+- [ ] ProductHunt submission
+- [ ] Reddit r/macapps launch post
 
 ---
 
 ## Milestone Summary
 
-| Milestone | What's included | Est. effort |
+| Milestone | Scope | Est. |
 |---|---|---|
-| **M1 — Submittable** | Phase 1 + basic Phase 2 UI + Phase 4 legal | 2 weeks |
-| **M2 — Polished v1.0** | Full Phase 2 UI + Phase 3 features + Phase 5 listing | 2 weeks |
-| **M3 — Launch** | Phase 6 stability + Phase 7 launch prep | 1 week |
-| **Total** | | **~5 weeks** |
+| **M1 — Submittable** | P0 items above + app icon | 1 week |
+| **M2 — v1.0 Launch** | P1 items + screenshots + legal | 1 week |
+| **M3 — Post-launch** | P2 polish based on user feedback | ongoing |
 
 ---
 
 ## Open Questions
-
 - [ ] Domain: upmarket.app vs upmarketapp.com — check availability
-- [ ] Landing page: build before or after App Store submission?
-- [ ] Intel Mac: support or Apple Silicon only for v1?
+- [ ] Landing page: before or after App Store submission?
+- [ ] Intel Mac: document as "Apple Silicon recommended" in listing?
 - [ ] Batch conversion: v1.0 or v1.1?
-- [ ] Crash reporting: Sentry or Apple-native only?
