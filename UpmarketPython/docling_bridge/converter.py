@@ -50,8 +50,9 @@ def convert(file_path: str, options: dict | None = None) -> dict:
         result = converter.convert(str(path))
         markdown = result.document.export_to_markdown()
 
+        num_pages = result.document.num_pages()
         metadata = {
-            "pages": getattr(result.document, "num_pages", 0),
+            "pages": num_pages if isinstance(num_pages, int) else 0,
             "format": path.suffix.lstrip(".").upper(),
             "title": getattr(result.document, "title", path.stem) or path.stem,
         }
