@@ -55,6 +55,50 @@ final class ModelManager: ObservableObject {
         models.filter { $0.tier == "pro" }.reduce(0) { $0 + $1.sizeMB }
     }
 
+    // MARK: - Storage
+
+    /// Total disk space used by downloaded models in bytes
+    var totalStorageUsed: Int64 {
+        let cacheURL = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Upmarket/models")
+        return directorySize(cacheURL)
+    }
+
+    var totalStorageUsedFormatted: String {
+        ByteCountFormatter.string(fromByteCount: totalStorageUsed, countStyle: .file)
+    }
+
+    /// Remove a specific model — user can re-download later
+    func deleteModel(key: String) {
+        let cacheURL = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Upmarket/models/\(key)")
+        try? FileManager.default.removeItem(at: cacheURL)
+        checkModels()
+    }
+
+    /// Remove all downloaded models — app falls back to fast path
+    func deleteAllModels() {
+        let cacheURL = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Upmarket/models")
+        try? FileManager.default.removeItem(at: cacheURL)
+        // Reset offline mode so models can be re-downloaded
+        setenv("HF_HUB_OFFLINE", "0", 1)
+        checkModels()
+    }
+
+    private func directorySize(_ url: URL) -> Int64 {
+        guard let enumerator = FileManager.default.enumerator(
+            at: url, includingPropertiesForKeys: [.fileSizeKey],
+            options: [.skipsHiddenFiles]
+        ) else { return 0 }
+        return enumerator.compactMap { $0 as? URL }
+            .compactMap { try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize }
+            .reduce(0) { $0 + Int64($1) }
+    }
+
     // MARK: - Public
 
     func checkModels() {
