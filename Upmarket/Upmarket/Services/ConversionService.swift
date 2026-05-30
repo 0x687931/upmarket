@@ -123,45 +123,87 @@ final class ConversionService: ObservableObject {
     }
 
     private func runConversion(fileURL: URL, originalURL: URL, useAI: Bool, password: String?) async -> ConversionResult {
-        let converter = Python.import("docling_bridge.converter")
+        let ext = originalURL.pathExtension.lowercased()
+        let title = originalURL.deletingPathExtension().lastPathComponent
 
+        // PDFs: use native PDFKit — zero download, zero Python, built into macOS
+        // Only route to Python if Enhanced or AI pipeline is requested and available
+        if ext == "pdf" && !useAI {
+            return runPDFKitConversion(fileURL: fileURL, title: title, password: password)
+        }
+
+        // All other formats + Enhanced/AI: use Python pipeline
+        return await runPythonConversion(fileURL: fileURL, title: title, ext: ext, useAI: useAI, password: password)
+    }
+
+    private func runPDFKitConversion(fileURL: URL, title: String, password: String?) -> ConversionResult {
+        do {
+            let result = try PDFConverter.convert(url: fileURL, password: password)
+
+            // If likely scanned and Enhanced is available, suggest it
+            // (caller handles this via complexityAdvice — just return what we have)
+            return .success(ConversionOutput(
+                markdown: result.markdown,
+                pages: result.pageCount,
+                format: "PDF",
+                title: title,
+                pipeline: .fast
+            ))
+        } catch PDFConverter.ConversionError.passwordRequired {
+            Task { await MainActor.run { self.needsPassword = true } }
+            return .failure("This PDF is password-protected.")
+        } catch {
+            // Fall back to Python fast path on any PDFKit failure
+            return runPythonConversionSync(fileURL: fileURL, title: title, ext: "pdf", useAI: false, password: password)
+        }
+    }
+
+    private func runPythonConversionSync(fileURL: URL, title: String, ext: String, useAI: Bool, password: String?) -> ConversionResult {
+        let converter = Python.import("docling_bridge.converter")
         var opts: [String: PythonObject] = [
             "use_ai": PythonObject(useAI),
             "use_enhanced": PythonObject(true),
             "ocr": PythonObject(true)
         ]
-        if let password {
-            opts["password"] = PythonObject(password)
-        }
-        let pyOptions = PythonObject(opts)
-        let pyResult = converter.convert(fileURL.path, pyOptions)
+        if let password { opts["password"] = PythonObject(password) }
+        let pyResult = converter.convert(fileURL.path, PythonObject(opts))
+        return parsePythonResult(pyResult, title: title)
+    }
 
-        let success      = Bool(pyResult["success"]) ?? false
-        let needsPassword = Bool(pyResult["needs_password"]) ?? false
+    private func runPythonConversion(fileURL: URL, title: String, ext: String, useAI: Bool, password: String?) async -> ConversionResult {
+        let converter = Python.import("docling_bridge.converter")
+        var opts: [String: PythonObject] = [
+            "use_ai": PythonObject(useAI),
+            "use_enhanced": PythonObject(true),
+            "ocr": PythonObject(true)
+        ]
+        if let password { opts["password"] = PythonObject(password) }
+        let pyResult = converter.convert(fileURL.path, PythonObject(opts))
 
-        if needsPassword {
+        let needsPwd = Bool(pyResult["needs_password"]) ?? false
+        if needsPwd {
             await MainActor.run { self.needsPassword = true }
             return .failure("This PDF is password-protected.")
         }
 
+        return parsePythonResult(pyResult, title: title)
+    }
+
+    private func parsePythonResult(_ pyResult: PythonObject, title: String) -> ConversionResult {
+        let success = Bool(pyResult["success"]) ?? false
         if success {
-            let markdown     = String(pyResult["markdown"]) ?? ""
-            let meta         = pyResult["metadata"]
-            let pages        = Int(meta["pages"]) ?? 0
-            let format       = String(meta["format"]) ?? ""
-            let title        = String(meta["title"]) ?? originalURL.deletingPathExtension().lastPathComponent
-            let pipelineStr  = String(pyResult["pipeline"]) ?? "fast"
-            let pipeline     = Pipeline(rawValue: pipelineStr) ?? .fast
+            let markdown    = String(pyResult["markdown"]) ?? ""
+            let meta        = pyResult["metadata"]
+            let pages       = Int(meta["pages"]) ?? 0
+            let format      = String(meta["format"]) ?? ""
+            let pipelineStr = String(pyResult["pipeline"]) ?? "fast"
+            let pipeline    = Pipeline(rawValue: pipelineStr) ?? .fast
             return .success(ConversionOutput(
-                markdown: markdown,
-                pages: pages,
-                format: format,
-                title: title,
-                pipeline: pipeline
+                markdown: markdown, pages: pages,
+                format: format, title: title, pipeline: pipeline
             ))
         } else {
-            let error = String(pyResult["error"]) ?? "Upmarket couldn't convert this document."
-            return .failure(error)
+            return .failure(String(pyResult["error"]) ?? "Upmarket couldn't convert this document.")
         }
     }
 }
