@@ -15,15 +15,17 @@ def convert(file_path: str, options: dict | None = None) -> dict:
     Args:
         file_path: Absolute path to the input document.
         options: Optional dict with keys:
-            - use_vlm (bool): Use SmolDocling VLM if available. Default False.
+            - use_vlm (bool): Use Upmarket AI pipeline. Default False.
             - ocr (bool): Enable OCR for scanned PDFs. Default True.
+            - password (str): Password for encrypted PDFs. Default None.
 
     Returns:
         {
             "success": bool,
             "markdown": str,
             "metadata": { "pages": int, "format": str, "title": str },
-            "error": str | None
+            "error": str | None,
+            "needs_password": bool
         }
     """
     opts = options or {}
@@ -37,16 +39,40 @@ def convert(file_path: str, options: dict | None = None) -> dict:
         if not path.exists():
             return _error("Upmarket couldn't find this file. Please try again.")
 
+        # Handle password-protected PDFs
+        password = opts.get("password", None)
+        if password is None and path.suffix.lower() == ".pdf":
+            try:
+                import pypdfium2 as pdfium
+                doc = pdfium.PdfDocument(str(path))
+                doc.close()
+            except Exception as e:
+                if "password" in str(e).lower() or "encrypted" in str(e).lower():
+                    return {
+                        "success": False,
+                        "markdown": "",
+                        "metadata": {},
+                        "error": "This PDF is password-protected.",
+                        "needs_password": True,
+                    }
+
         pipeline_options = PdfPipelineOptions()
         pipeline_options.do_ocr = opts.get("ocr", True)
         pipeline_options.do_table_structure = True
 
-        converter = DocumentConverter(
-            format_options={
-                InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
-            }
-        )
+        format_options = {}
+        pdf_options = PdfFormatOption(pipeline_options=pipeline_options)
+        if password:
+            try:
+                pdf_options = PdfFormatOption(
+                    pipeline_options=pipeline_options,
+                    backend_options={"password": password}
+                )
+            except Exception:
+                pass
+        format_options[InputFormat.PDF] = pdf_options
 
+        converter = DocumentConverter(format_options=format_options)
         result = converter.convert(str(path))
         markdown = result.document.export_to_markdown()
 
@@ -57,7 +83,7 @@ def convert(file_path: str, options: dict | None = None) -> dict:
             "title": getattr(result.document, "title", path.stem) or path.stem,
         }
 
-        return {"success": True, "markdown": markdown, "metadata": metadata, "error": None}
+        return {"success": True, "markdown": markdown, "metadata": metadata, "error": None, "needs_password": False}
 
     except Exception as e:
         # Log technical detail internally but never expose to user

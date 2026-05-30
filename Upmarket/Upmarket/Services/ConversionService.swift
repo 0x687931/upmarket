@@ -24,11 +24,16 @@ final class ConversionService: ObservableObject {
         willSet { objectWillChange.send() }
     }
 
+    private(set) var needsPassword = false {
+        willSet { objectWillChange.send() }
+    }
+
     private init() {}
 
     func reset() {
         result = nil
         complexityAdvice = nil
+        needsPassword = false
     }
 
     // MARK: - Analyse
@@ -80,7 +85,7 @@ final class ConversionService: ObservableObject {
 
     // MARK: - Convert
 
-    func convert(fileURL: URL, useAI: Bool = false) {
+    func convert(fileURL: URL, useAI: Bool = false, password: String? = nil) {
         guard !isConverting else { return }
         isConverting = true
         result = nil
@@ -95,7 +100,7 @@ final class ConversionService: ObservableObject {
         }
 
         Task.detached(priority: .userInitiated) {
-            let output = await self.runConversion(fileURL: tempURL, originalURL: fileURL, useAI: useAI)
+            let output = await self.runConversion(fileURL: tempURL, originalURL: fileURL, useAI: useAI, password: password)
             try? FileManager.default.removeItem(at: tempURL)
             await MainActor.run {
                 self.result = output
@@ -114,12 +119,26 @@ final class ConversionService: ObservableObject {
         return tmp
     }
 
-    private func runConversion(fileURL: URL, originalURL: URL, useAI: Bool) async -> ConversionResult {
+    private func runConversion(fileURL: URL, originalURL: URL, useAI: Bool, password: String?) async -> ConversionResult {
         let converter = Python.import("docling_bridge.converter")
-        let pyOptions: PythonObject = ["use_vlm": PythonObject(useAI), "ocr": PythonObject(true)]
+
+        var opts: [String: PythonObject] = [
+            "use_vlm": PythonObject(useAI),
+            "ocr": PythonObject(true)
+        ]
+        if let password {
+            opts["password"] = PythonObject(password)
+        }
+        let pyOptions = PythonObject(opts)
         let pyResult = converter.convert(fileURL.path, pyOptions)
 
-        let success = Bool(pyResult["success"]) ?? false
+        let success      = Bool(pyResult["success"]) ?? false
+        let needsPassword = Bool(pyResult["needs_password"]) ?? false
+
+        if needsPassword {
+            await MainActor.run { self.needsPassword = true }
+            return .failure("This PDF is password-protected.")
+        }
 
         if success {
             let markdown = String(pyResult["markdown"]) ?? ""

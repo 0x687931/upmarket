@@ -32,7 +32,23 @@
       "type" : "NonConsumable"
     }
   ],
-  "products" : [],
+  "products" : [
+    {
+      "displayPrice" : "0.99",
+      "familySharable" : false,
+      "internalID" : "com.upmarket.app.ai_credit",
+      "localizations" : [
+        {
+          "description" : "Use Upmarket AI on one document. Perfect for trying AI on a complex file before upgrading.",
+          "displayName" : "Upmarket AI — One Document",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.upmarket.app.ai_credit",
+      "referenceName" : "AI Credit",
+      "type" : "Consumable"
+    }
+  ],
   "subscriptionGroups" : [],
   "version" : {
     "major" : 3,
