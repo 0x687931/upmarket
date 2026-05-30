@@ -12,7 +12,15 @@ final class ConversionService: ObservableObject {
         willSet { objectWillChange.send() }
     }
 
-    private(set) var result: ConversionResult?  {
+    private(set) var isAnalysing = false {
+        willSet { objectWillChange.send() }
+    }
+
+    private(set) var result: ConversionResult? {
+        willSet { objectWillChange.send() }
+    }
+
+    private(set) var complexityAdvice: ComplexityAdvice? {
         willSet { objectWillChange.send() }
     }
 
@@ -20,25 +28,74 @@ final class ConversionService: ObservableObject {
 
     func reset() {
         result = nil
+        complexityAdvice = nil
     }
 
-    func convert(fileURL: URL) {
+    // MARK: - Analyse
+
+    /// Fast pre-scan to detect whether Upmarket AI would give better results.
+    /// Calls completion on main thread with advice (or nil on failure).
+    func analyse(fileURL: URL, completion: @escaping (ComplexityAdvice?) -> Void) {
+        guard let tempURL = try? copyToTemp(fileURL: fileURL) else {
+            completion(nil)
+            return
+        }
+
+        isAnalysing = true
+
+        Task.detached(priority: .userInitiated) {
+            let analyser = Python.import("docling_bridge.analyser")
+            let pyResult = analyser.analyse(tempURL.path)
+            try? FileManager.default.removeItem(at: tempURL)
+
+            let success = Bool(pyResult["success"]) ?? false
+            guard success else {
+                await MainActor.run {
+                    self.isAnalysing = false
+                    completion(nil)
+                }
+                return
+            }
+
+            let recommendation = String(pyResult["recommendation"]) ?? "basic"
+            let score = Int(pyResult["score"]) ?? 0
+            var reasons: [String] = []
+            for item in pyResult["reasons"] {
+                if let s = String(item) { reasons.append(s) }
+            }
+
+            let advice = ComplexityAdvice(
+                recommendation: ComplexityAdvice.Recommendation(rawValue: recommendation) ?? .basic,
+                score: score,
+                reasons: reasons
+            )
+
+            await MainActor.run {
+                self.isAnalysing = false
+                self.complexityAdvice = advice
+                completion(advice)
+            }
+        }
+    }
+
+    // MARK: - Convert
+
+    func convert(fileURL: URL, useAI: Bool = false) {
         guard !isConverting else { return }
         isConverting = true
         result = nil
 
-        // Copy to temp dir so the sandboxed Python process can read it
         let tempURL: URL
         do {
             tempURL = try copyToTemp(fileURL: fileURL)
         } catch {
-            result = .failure("Could not access file: \(error.localizedDescription)")
+            result = .failure("Upmarket couldn't access this file. Please try again.")
             isConverting = false
             return
         }
 
         Task.detached(priority: .userInitiated) {
-            let output = await self.runConversion(fileURL: tempURL, originalURL: fileURL)
+            let output = await self.runConversion(fileURL: tempURL, originalURL: fileURL, useAI: useAI)
             try? FileManager.default.removeItem(at: tempURL)
             await MainActor.run {
                 self.result = output
@@ -57,9 +114,10 @@ final class ConversionService: ObservableObject {
         return tmp
     }
 
-    private func runConversion(fileURL: URL, originalURL: URL) async -> ConversionResult {
+    private func runConversion(fileURL: URL, originalURL: URL, useAI: Bool) async -> ConversionResult {
         let converter = Python.import("docling_bridge.converter")
-        let pyResult  = converter.convert(fileURL.path)
+        let pyOptions: PythonObject = ["use_vlm": PythonObject(useAI), "ocr": PythonObject(true)]
+        let pyResult = converter.convert(fileURL.path, pyOptions)
 
         let success = Bool(pyResult["success"]) ?? false
 
@@ -69,9 +127,15 @@ final class ConversionService: ObservableObject {
             let pages    = Int(meta["pages"]) ?? 0
             let format   = String(meta["format"]) ?? ""
             let title    = String(meta["title"]) ?? originalURL.deletingPathExtension().lastPathComponent
-            return .success(ConversionOutput(markdown: markdown, pages: pages, format: format, title: title))
+            return .success(ConversionOutput(
+                markdown: markdown,
+                pages: pages,
+                format: format,
+                title: title,
+                usedAI: useAI
+            ))
         } else {
-            let error = String(pyResult["error"]) ?? "Unknown error"
+            let error = String(pyResult["error"]) ?? "Upmarket couldn't convert this document."
             return .failure(error)
         }
     }
@@ -89,4 +153,32 @@ struct ConversionOutput {
     let pages: Int
     let format: String
     let title: String
+    let usedAI: Bool
+}
+
+struct ComplexityAdvice {
+    enum Recommendation: String {
+        case basic = "basic"
+        case aiRecommended = "ai_recommended"
+        case aiRequired = "ai_required"
+    }
+
+    let recommendation: Recommendation
+    let score: Int
+    let reasons: [String]
+
+    var suggestAI: Bool {
+        recommendation == .aiRecommended || recommendation == .aiRequired
+    }
+
+    var userMessage: String {
+        switch recommendation {
+        case .basic:
+            return ""
+        case .aiRecommended:
+            return "Upmarket AI may give better results for this document."
+        case .aiRequired:
+            return "This document looks complex. Upmarket AI is recommended."
+        }
+    }
 }
