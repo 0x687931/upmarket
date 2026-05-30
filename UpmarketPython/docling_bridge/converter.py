@@ -105,39 +105,39 @@ def _convert_fast(path: Path, opts: dict) -> dict:
 
 
 def _convert_fast_pdf(path: Path, password: str | None) -> dict:
-    """pdfplumber for PDFs — MIT, handles tables and text well."""
-    import pdfplumber
+    """
+    pdfium (Apache 2.0) for PDFs — Google's engine, powers Chrome.
+    Excellent quality for digital PDFs. We already bundle pypdfium2.
+    """
+    import pypdfium2 as pdfium
 
     try:
-        open_kwargs = {"password": password} if password else {}
-        with pdfplumber.open(str(path), **open_kwargs) as pdf:
-            page_count = len(pdf.pages)
-            parts = []
-            for page in pdf.pages:
-                # Tables first
-                for table in page.extract_tables():
-                    if table:
-                        rows = []
-                        for i, row in enumerate(table):
-                            cells = [str(c or "").strip() for c in row]
-                            rows.append("| " + " | ".join(cells) + " |")
-                            if i == 0:
-                                rows.append("| " + " | ".join(["---"] * len(cells)) + " |")
-                        parts.append("\n".join(rows))
-                # Text
-                text = page.extract_text(x_tolerance=2, y_tolerance=2)
-                if text and text.strip():
-                    parts.append(text.strip())
-
-            markdown = "\n\n".join(parts)
-
-    except Exception as e:
+        doc = pdfium.PdfDocument(str(path), password=password)
+    except pdfium.PdfiumError as e:
         msg = str(e).lower()
         if "password" in msg or "encrypted" in msg:
             return {**_error("This PDF is password-protected."), "needs_password": True}
-        raise
+        return _error("Upmarket couldn't open this PDF.")
 
-    return _success(markdown, page_count, path, pipeline="fast")
+    try:
+        page_count = len(doc)
+        parts = []
+
+        for i in range(page_count):
+            page = doc[i]
+            textpage = page.get_textpage()
+            text = textpage.get_text_range().strip()
+            textpage.close()
+            page.close()
+
+            if text:
+                parts.append(text)
+
+        markdown = "\n\n---\n\n".join(parts)
+        return _success(markdown, page_count, path, pipeline="fast")
+
+    finally:
+        doc.close()
 
 
 def _convert_fast_other(path: Path) -> dict:
@@ -234,10 +234,11 @@ def _check_pdf_locked(file_path: str) -> tuple[bool, str | None]:
 
 def _count_pdf_pages(file_path: str, password: str | None = None) -> int:
     try:
-        import pdfplumber
-        kwargs = {"password": password} if password else {}
-        with pdfplumber.open(file_path, **kwargs) as pdf:
-            return len(pdf.pages)
+        import pypdfium2 as pdfium
+        doc = pdfium.PdfDocument(file_path, password=password)
+        count = len(doc)
+        doc.close()
+        return count
     except Exception:
         return 0
 
