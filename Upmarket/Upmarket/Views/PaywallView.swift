@@ -26,7 +26,7 @@ struct PaywallView: View {
         VStack(spacing: 8) {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 48))
-                .foregroundStyle(.accent)
+                .foregroundStyle(Color.accentColor)
                 .padding(.top, 32)
 
             Text("Upmarket")
