@@ -48,3 +48,4 @@ Upmarket/Python/Python.xcframework/
 
 # Archives
 *.xcarchive
+.venv/
