@@ -19,15 +19,15 @@ struct ShelfView: View {
     @State private var hoverToggle = false
     @State private var hoverDrop   = false
 
-    // Closed state: two-column square
+    // Closed state: two-column panel
     // Left col: 3 buttons stacked [X][+][>]  |  Right col: [↓] drop arrow
-    private let colWidth:     CGFloat = 36   // each column width
-    private let closedHeight: CGFloat = 72   // 3 × 24pt buttons
+    private let colWidth:     CGFloat = 48   // wider columns for proper padding
+    private let closedHeight: CGFloat = 108  // 3 × 36pt buttons — room to breathe
     private let itemWidth:    CGFloat = 64
     private let itemSpacing:  CGFloat = 8
     private let maxVisible:   Int     = 5
 
-    private var buttonHeight: CGFloat { closedHeight / 3 }  // 24pt each
+    private var buttonHeight: CGFloat { closedHeight / 3 }  // 36pt each
 
     private var isAnyConverting: Bool {
         queue.contains { $0.state == .converting }
@@ -124,11 +124,12 @@ struct ShelfView: View {
     ) -> some View {
         Button(action: action) {
             ZStack {
+                // Circle grows to fill available space minus 10pt padding each side
                 Circle()
-                    .fill(hoverColor.opacity(isHovered ? 0.2 : 0))
-                    .frame(width: 22, height: 22)
+                    .fill(hoverColor.opacity(isHovered ? 0.18 : 0))
+                    .frame(width: buttonHeight - 10, height: buttonHeight - 10)
                 Image(systemName: symbol)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(isHovered ? hoverColor : .primary.opacity(0.45))
                     .symbolRenderingMode(.hierarchical)
             }
@@ -143,16 +144,16 @@ struct ShelfView: View {
     private var dropArrowButton: some View {
         ZStack {
             Circle()
-                .fill(Color.accentColor.opacity(isTargeted || hoverDrop ? 0.2 : 0))
-                .frame(width: 20, height: 20)
+                .fill(Color.accentColor.opacity(isTargeted || hoverDrop ? 0.18 : 0))
+                .frame(width: buttonHeight - 10, height: buttonHeight - 10)
             if #available(macOS 14.0, *) {
                 Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
-                    .font(.system(size: 10))
+                    .font(.system(size: 18))
                     .foregroundStyle(isTargeted || hoverDrop ? Color.accentColor : .primary.opacity(0.4))
                     .contentTransition(.symbolEffect(.replace.offUp))
             } else {
                 Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
-                    .font(.system(size: 10))
+                    .font(.system(size: 18))
                     .foregroundStyle(isTargeted || hoverDrop ? Color.accentColor : .primary.opacity(0.4))
             }
         }

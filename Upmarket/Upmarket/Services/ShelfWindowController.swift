@@ -10,7 +10,7 @@ final class ShelfWindowController: NSWindowController {
     private let positioner = ShelfPositioner.shared
     private var mouseMonitor: Any?
     private var workspaceObserver: NSObjectProtocol?
-    private let shelfSize:  CGFloat = 73   // closed: colWidth*2+1 = 73pt wide, 72pt tall
+    private let shelfSize:  CGFloat = 97   // closed: colWidth*2+1 = 97pt wide, 108pt tall
     private let shelfInset: CGFloat = 10
     private let snapRadius: CGFloat = 60
 
@@ -91,8 +91,8 @@ final class ShelfWindowController: NSWindowController {
         let screen = positioner.primaryScreen
         let visible = screen.visibleFrame
         // Start as a square — ShelfView will call resizeToContent when it expands
-        let w = shelfSize       // 73pt wide
-        let h: CGFloat = 72    // 72pt tall (3 × 24pt buttons)
+        let w = shelfSize       // 97pt wide (48×2 + 1 divider)
+        let h: CGFloat = 108   // 108pt tall (3 × 36pt buttons)
 
         switch anchor {
         case .bottomLeft:
