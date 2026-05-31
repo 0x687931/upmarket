@@ -13,6 +13,10 @@ struct ShelfView: View {
     @State private var showPaywall = false
     @State private var isCollapsed = false
 
+    private var isAnyConverting: Bool {
+        queue.contains { $0.state == .converting }
+    }
+
     // Persisted width — user can resize
     @AppStorage("upmarket.shelfWidth") private var shelfWidth: Double = 480
 
@@ -30,6 +34,8 @@ struct ShelfView: View {
 
                 if isCollapsed {
                     collapsedLabel
+                } else if queue.isEmpty && isAnyConverting {
+                    conversionAnimation
                 } else if queue.isEmpty {
                     emptyDropZone
                 } else {
@@ -164,6 +170,18 @@ struct ShelfView: View {
         .frame(maxWidth: .infinity)
     }
 
+    // MARK: - Animated icon (shows during conversion)
+
+    private var conversionAnimation: some View {
+        HStack(spacing: 10) {
+            ConversionIconView(isAnimating: isAnyConverting, size: 48)
+            Text("Converting…")
+                .font(.system(size: 12))
+                .foregroundStyle(.primary.opacity(0.5))
+        }
+        .frame(maxWidth: .infinity)
+    }
+
     private var collapsedLabel: some View {
         Text("Upmarket")
             .font(.system(size: 11, weight: .medium))
@@ -288,6 +306,7 @@ struct ShelfView: View {
         withAnimation(.spring(duration: 0.3)) {
             queue.insert(item, at: 0)
         }
+        NotificationCenter.default.post(name: .upmarketConversionStarted, object: nil)
         convertItem(item)
     }
 
@@ -316,6 +335,10 @@ struct ShelfView: View {
                     self.queue[idx].state = .failed(error)
                 case .none:
                     self.queue[idx].state = .failed("Conversion failed")
+                }
+                // Stop Dock animation when nothing left converting
+                if !self.queue.contains(where: { $0.state == .converting }) {
+                    NotificationCenter.default.post(name: .upmarketConversionEnded, object: nil)
                 }
             }
         }

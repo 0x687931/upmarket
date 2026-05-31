@@ -10,8 +10,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        // Register for Services — tells macOS this app handles the convertToMarkdown service
         NSApp.servicesProvider = self
+
+        // Observe conversion state for Dock tile animation
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(conversionStarted),
+            name: .upmarketConversionStarted, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(conversionEnded),
+            name: .upmarketConversionEnded, object: nil
+        )
+    }
+
+    @objc private func conversionStarted() {
+        ConversionIconLayerView.startDockAnimation()
+    }
+
+    @objc private func conversionEnded() {
+        ConversionIconLayerView.stopDockAnimation()
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
