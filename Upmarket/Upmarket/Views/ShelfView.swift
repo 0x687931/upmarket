@@ -21,7 +21,7 @@ struct ShelfView: View {
     private let maxWidth: CGFloat = 900
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .topLeading) {
             shelfBackground
 
             HStack(spacing: 0) {
@@ -41,6 +41,9 @@ struct ShelfView: View {
                 resizeHandle
             }
         }
+        // Close button — top-left, appears on hover like macOS traffic lights
+        closeButton
+
         .frame(width: CGFloat(shelfWidth), height: shelfHeight)
         .onDrop(of: [.fileURL], isTargeted: $isTargeted, perform: handleDrop)
         .overlay(dropHighlight)
@@ -49,12 +52,29 @@ struct ShelfView: View {
         }
     }
 
-    // MARK: - Background — more transparent than before
+    private var closeButton: some View {
+        Button {
+            ShelfWindowController.shared.hide()
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(Color(nsColor: .systemRed))
+                    .frame(width: 12, height: 12)
+                Image(systemName: "xmark")
+                    .font(.system(size: 6, weight: .bold))
+                    .foregroundStyle(.black.opacity(0.7))
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 5)
+        .padding(.leading, 7)
+        .help("Hide shelf  (show again from menu bar)")
+    }
+
+    // MARK: - Background — true liquid glass via NSVisualEffectView
 
     private var shelfBackground: some View {
-        RoundedRectangle(cornerRadius: 12)
-            .fill(.ultraThinMaterial)
-            .overlay(Color.black.opacity(0.15))  // subtle, not heavy
+        LiquidGlassBackground(cornerRadius: 12)
     }
 
     private var dropHighlight: some View {

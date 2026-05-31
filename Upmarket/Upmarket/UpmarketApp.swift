@@ -3,6 +3,8 @@ import SwiftUI
 @main
 struct UpmarketApp: App {
 
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     @StateObject private var pythonBridge    = PythonBridge.shared
     @StateObject private var conversionService = ConversionService.shared
     @StateObject private var storeManager    = StoreManager.shared
@@ -62,6 +64,14 @@ struct UpmarketApp: App {
                         NSWorkspace.shared.open(url)
                     }
                 }
+            }
+
+            // Ensure Quit Upmarket appears with Cmd+Q
+            CommandGroup(replacing: .appTermination) {
+                Button("Quit Upmarket") {
+                    NSApp.terminate(nil)
+                }
+                .keyboardShortcut("q", modifiers: .command)
             }
         }
 
