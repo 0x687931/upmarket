@@ -180,11 +180,24 @@ struct ShelfView: View {
     }
 
     private var emptyView: some View {
-        Text("Drop documents here")
-            .font(.system(size: 11))
-            .foregroundStyle(.primary.opacity(0.35))
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 12)
+        HStack(spacing: 12) {
+            if #available(macOS 14.0, *) {
+                Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
+                    .font(.system(size: 32))
+                    .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.25))
+                    .contentTransition(.symbolEffect(.replace.offUp))
+                    .animation(.easeInOut(duration: 0.12), value: isTargeted)
+            } else {
+                Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
+                    .font(.system(size: 32))
+                    .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.25))
+            }
+            Text(isTargeted ? "Release to convert" : "Drop documents here")
+                .font(.system(size: 12))
+                .foregroundStyle(.primary.opacity(0.35))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 16)
     }
 
     private var conversionView: some View {

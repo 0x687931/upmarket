@@ -15,22 +15,20 @@ struct UpmarketApp: App {
 
     var body: some Scene {
 
-        // MARK: Main window — suppressed, shelf is the primary UI
+        // MARK: Main window — hidden immediately, never shown on launch
+        // WindowGroup is kept so Preferences/output views can open windows on demand.
+        // The window is ordered out before it can be seen.
         WindowGroup {
-            ContentView()
-                .environmentObject(pythonBridge)
-                .environmentObject(conversionService)
-                .environmentObject(storeManager)
-                .environmentObject(modelManager)
+            Color.clear
+                .frame(width: 0, height: 0)
                 .onAppear {
-                    DispatchQueue.main.async {
-                        // Close ALL regular windows — only shelf and menu bar should exist
-                        NSApp.windows
-                            .filter { $0.className != "NSStatusBarWindow" && !($0 is NSPanel) }
-                            .forEach { $0.close() }
-                    }
+                    // Order out instantly — no flash
+                    NSApp.windows
+                        .filter { !($0 is NSPanel) && $0.className != "NSStatusBarWindow" }
+                        .forEach { $0.orderOut(nil) }
                 }
         }
+        .defaultSize(width: 0, height: 0)
         .commands {
             // File menu
             CommandGroup(replacing: .newItem) {
