@@ -13,13 +13,19 @@ struct UpmarketApp: App {
 
     var body: some Scene {
 
-        // MARK: Main window — full output view, history, settings access
+        // MARK: Main window — only opens on demand (not on launch)
         WindowGroup {
             ContentView()
                 .environmentObject(pythonBridge)
                 .environmentObject(conversionService)
                 .environmentObject(storeManager)
                 .environmentObject(modelManager)
+                .onAppear {
+                    // Close the main window on launch — shelf is the primary UI
+                    DispatchQueue.main.async {
+                        NSApp.windows.first { $0.isKeyWindow }?.close()
+                    }
+                }
         }
         .commands {
             // File menu
@@ -102,13 +108,9 @@ struct UpmarketApp: App {
         }
         FeatureFlags.shared.fetchFlags()
 
-        // Show onboarding on first launch, otherwise show shelf
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            if !UserDefaults.standard.bool(forKey: "upmarket.onboardingComplete") {
-                // Onboarding shown via openWindow in ContentView.onAppear
-            } else {
-                ShelfWindowController.shared.show(animate: false)
-            }
+        // Always show the shelf — it's the primary UI
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            ShelfWindowController.shared.show(animate: true)
         }
     }
 }
