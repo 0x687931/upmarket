@@ -192,6 +192,14 @@ final class ShelfWindowController: NSWindowController {
         panel.isVisible ? hide() : show()
     }
 
+    /// Called when user drags the resize handle — updates window width.
+    func resizeToContent(width: CGFloat) {
+        guard let panel = window else { return }
+        var frame = panel.frame
+        frame.size.width = width
+        panel.setFrame(frame, display: true)
+    }
+
     // MARK: - Monitoring
 
     private func startMonitoring() {
