@@ -10,9 +10,9 @@ final class ShelfWindowController: NSWindowController {
     private let positioner = ShelfPositioner.shared
     private var mouseMonitor: Any?
     private var workspaceObserver: NSObjectProtocol?
-    private let shelfHeight: CGFloat = 68
-    private let shelfInset: CGFloat = 8   // gap from screen edge
-    private let snapRadius: CGFloat = 60  // magnetic snap distance in points
+    private let shelfSize:  CGFloat = 52   // closed square size
+    private let shelfInset: CGFloat = 10
+    private let snapRadius: CGFloat = 60
 
     // Persisted shelf position preference
     enum ShelfAnchor: Int {
@@ -90,33 +90,19 @@ final class ShelfWindowController: NSWindowController {
     private func shelfFrame() -> NSRect {
         let screen = positioner.primaryScreen
         let visible = screen.visibleFrame
-        let shelfWidth = min(visible.width * 0.52, 580)
+        // Start as a square — ShelfView will call resizeToContent when it expands
+        let w = shelfSize
+        let h = shelfSize
 
         switch anchor {
         case .bottomLeft:
-            return NSRect(
-                x: visible.minX + shelfInset,
-                y: visible.minY + shelfInset,
-                width: shelfWidth, height: shelfHeight
-            )
+            return NSRect(x: visible.minX + shelfInset, y: visible.minY + shelfInset, width: w, height: h)
         case .bottomRight:
-            return NSRect(
-                x: visible.maxX - shelfWidth - shelfInset,
-                y: visible.minY + shelfInset,
-                width: shelfWidth, height: shelfHeight
-            )
+            return NSRect(x: visible.maxX - w - shelfInset, y: visible.minY + shelfInset, width: w, height: h)
         case .topLeft:
-            return NSRect(
-                x: visible.minX + shelfInset,
-                y: visible.maxY - shelfHeight - shelfInset,
-                width: shelfWidth, height: shelfHeight
-            )
+            return NSRect(x: visible.minX + shelfInset, y: visible.maxY - h - shelfInset, width: w, height: h)
         case .topRight:
-            return NSRect(
-                x: visible.maxX - shelfWidth - shelfInset,
-                y: visible.maxY - shelfHeight - shelfInset,
-                width: shelfWidth, height: shelfHeight
-            )
+            return NSRect(x: visible.maxX - w - shelfInset, y: visible.maxY - h - shelfInset, width: w, height: h)
         }
     }
 

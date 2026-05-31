@@ -11,71 +11,55 @@ struct ShelfView: View {
     @State private var isTargeted = false
     @State private var queue: [QueueItem] = []
     @State private var showPaywall = false
-    @State private var isCollapsed = false
-    @State private var showControls = false  // traffic-light controls on hover
+    @State private var isExpanded = false
 
-    // Item sizing
-    private let itemWidth: CGFloat  = 64
-    private let itemSpacing: CGFloat = 8
-    private let shelfHeight: CGFloat = 68
-    private let collapsedWidth: CGFloat = 120  // +  |logo|  >
-    private let maxVisibleItems = 5
+    // Hover states per button
+    @State private var hoverClose  = false
+    @State private var hoverAdd    = false
+    @State private var hoverToggle = false
+    @State private var hoverDrop   = false
+
+    private let buttonSize:   CGFloat = 44
+    private let stripWidth:   CGFloat = 52   // closed square strip
+    private let itemWidth:    CGFloat = 64
+    private let itemSpacing:  CGFloat = 8
+    private let maxVisible:   Int     = 5
 
     private var isAnyConverting: Bool {
         queue.contains { $0.state == .converting }
     }
 
-    // Dynamic width: expands to fit items up to maxVisible, collapses when toggled
-    private var currentWidth: CGFloat {
-        if isCollapsed { return collapsedWidth }
-        let itemCount = min(queue.count, maxVisibleItems)
-        let itemsWidth: CGFloat = itemCount > 0
-            ? CGFloat(itemCount) * (itemWidth + itemSpacing) + 16
-            : 220
-        let chrome: CGFloat = 40 + 1 + 1 + 60 + 8
-        return max(220, min(700, itemsWidth + chrome))
+    // Width: closed = stripWidth, open = strip + items
+    private var totalWidth: CGFloat {
+        guard isExpanded else { return stripWidth }
+        let count = min(queue.count, maxVisible)
+        let content: CGFloat = count > 0
+            ? CGFloat(count) * (itemWidth + itemSpacing) + itemSpacing
+            : 200   // empty expanded state
+        let overflow: CGFloat = queue.count > maxVisible ? itemWidth + itemSpacing : 0
+        return stripWidth + 12 + content + overflow
     }
 
     var body: some View {
-        ZStack {
-            // 1. Liquid glass background
-            LiquidGlassBackground(cornerRadius: 12)
+        HStack(spacing: 0) {
+            // Vertical control strip (always visible)
+            controlStrip
 
-            // 2. Drop highlight ring
-            if isTargeted {
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(Color.accentColor, lineWidth: 2)
-            }
-
-            // 3. Main shelf content row
-            HStack(spacing: 0) {
-                addButton
-                thinDivider
-                mainContent
-                thinDivider
-                collapseButton
-                resizeHandle
-            }
-
-            // 4. Traffic-light controls — overlay inside shelf, top-left
-            // Only visible on hover
-            if showControls {
-                HStack(spacing: 5) {
-                    // Red: hide shelf
-                    trafficButton(color: .systemRed) {
-                        ShelfWindowController.shared.hide()
-                    }
-                }
-                .padding(.leading, 8)
-                .padding(.top, 6)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .transition(.opacity)
+            // Expandable content area
+            if isExpanded {
+                expandedContent
+                    .transition(.move(edge: .leading).combined(with: .opacity))
             }
         }
-        .frame(width: currentWidth, height: shelfHeight)
-        .animation(.spring(duration: 0.3), value: isCollapsed)
+        .frame(width: totalWidth, height: stripWidth)
+        .animation(.spring(duration: 0.35, bounce: 0.1), value: isExpanded)
         .animation(.spring(duration: 0.25), value: queue.count)
-        .onHover { showControls = $0 }
+        .background(LiquidGlassBackground(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color.accentColor.opacity(isTargeted ? 0.8 : 0), lineWidth: 2)
+                .animation(.easeInOut(duration: 0.15), value: isTargeted)
+        )
         .onDrop(of: [.fileURL], isTargeted: $isTargeted, perform: handleDrop)
         .sheet(isPresented: $showPaywall) {
             PaywallView().environmentObject(store)
@@ -90,113 +74,154 @@ struct ShelfView: View {
                 reprocessItem(queue[idx], useAI: req.useAI)
             }
         }
-        // Resize window to match content width
-        .onChange(of: currentWidth) { w in
+        .onChange(of: totalWidth) { w in
             ShelfWindowController.shared.resizeToContent(width: w)
         }
-        .onChange(of: isCollapsed) { _ in
-            ShelfWindowController.shared.resizeToContent(width: currentWidth)
-        }
     }
 
-    // MARK: - Traffic light button
+    // MARK: - Control strip (vertical, always visible, square when closed)
 
-    private func trafficButton(color: NSColor, action: @escaping () -> Void) -> some View {
+    private var controlStrip: some View {
+        VStack(spacing: 0) {
+            // (X) Close — red on hover
+            controlButton(
+                symbol: "xmark",
+                hoverColor: .red,
+                isHovered: hoverClose,
+                help: "Hide shelf"
+            ) {
+                ShelfWindowController.shared.hide()
+            }
+            .onHover { hoverClose = $0 }
+
+            Divider().opacity(0.2).frame(width: 32)
+
+            // (+) Add — green on hover
+            controlButton(
+                symbol: "plus",
+                hoverColor: .green,
+                isHovered: hoverAdd,
+                help: "Add files  (+)"
+            ) {
+                openFilePicker()
+            }
+            .onHover { hoverAdd = $0 }
+
+            Divider().opacity(0.2).frame(width: 32)
+
+            // (<) / (>) Toggle — blue on hover
+            controlButton(
+                symbol: isExpanded ? "chevron.left" : "chevron.right",
+                hoverColor: Color(nsColor: .systemBlue),
+                isHovered: hoverToggle,
+                help: isExpanded ? "Collapse shelf" : "Expand shelf"
+            ) {
+                withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
+                    isExpanded.toggle()
+                }
+            }
+            .onHover { hoverToggle = $0 }
+
+            Divider().opacity(0.2).frame(width: 32)
+
+            // Drop arrow — accent on target hover
+            dropArrowButton
+                .onHover { hoverDrop = $0 }
+        }
+        .frame(width: stripWidth)
+    }
+
+    private func controlButton(
+        symbol: String,
+        hoverColor: Color,
+        isHovered: Bool,
+        help: String,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
+            ZStack {
+                // Background circle on hover
+                Circle()
+                    .fill(hoverColor.opacity(isHovered ? 0.18 : 0))
+                    .frame(width: 28, height: 28)
+
+                Image(systemName: symbol)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(isHovered ? hoverColor : .primary.opacity(0.5))
+                    .symbolRenderingMode(.hierarchical)
+            }
+            .frame(width: stripWidth, height: buttonSize)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(help)
+        .animation(.easeInOut(duration: 0.12), value: isHovered)
+    }
+
+    private var dropArrowButton: some View {
+        ZStack {
             Circle()
-                .fill(Color(nsColor: color))
-                .frame(width: 12, height: 12)
-                .overlay(
-                    Image(systemName: "xmark")
-                        .font(.system(size: 6, weight: .bold))
-                        .foregroundStyle(.black.opacity(0.5))
-                )
-        }
-        .buttonStyle(.plain)
-    }
+                .fill(Color.accentColor.opacity(isTargeted || hoverDrop ? 0.18 : 0))
+                .frame(width: 28, height: 28)
 
-    // MARK: - Add button (+)
-
-    private var addButton: some View {
-        Button { openFilePicker() } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.primary.opacity(0.65))
-                .frame(width: 38, height: shelfHeight)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help("Add files  (+)")
-    }
-
-    // MARK: - Main content area
-
-    @ViewBuilder
-    private var mainContent: some View {
-        if isCollapsed {
-            // Collapsed: drop target arrow (communicates function)
             if #available(macOS 14.0, *) {
                 Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
-                    .font(.system(size: 18))
-                    .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.45))
-                    .contentTransition(.symbolEffect(.replace.offUp))
-                    .frame(maxWidth: .infinity)
-                    .animation(.easeInOut(duration: 0.12), value: isTargeted)
-            } else {
-                Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
-                    .font(.system(size: 18))
-                    .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.45))
-                    .frame(maxWidth: .infinity)
-            }
-        } else if queue.isEmpty && isAnyConverting {
-            conversionAnimation
-        } else if queue.isEmpty {
-            emptyDropZone
-        } else {
-            itemsArea
-        }
-    }
-
-    // MARK: - Empty drop zone
-
-    private var emptyDropZone: some View {
-        HStack(spacing: 6) {
-            if #available(macOS 14.0, *) {
-                Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
-                    .font(.system(size: 15))
-                    .foregroundStyle(.primary.opacity(0.4))
+                    .font(.system(size: 16))
+                    .foregroundStyle(isTargeted ? Color.accentColor : (hoverDrop ? Color.accentColor : .primary.opacity(0.4)))
                     .contentTransition(.symbolEffect(.replace.offUp))
             } else {
                 Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
-                    .font(.system(size: 15))
-                    .foregroundStyle(.primary.opacity(0.4))
+                    .font(.system(size: 16))
+                    .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.4))
             }
-            Text(isTargeted ? "Release to convert" : "Drop documents here")
-                .font(.system(size: 12))
-                .foregroundStyle(.primary.opacity(0.4))
         }
-        .frame(maxWidth: .infinity)
+        .frame(width: stripWidth, height: buttonSize)
         .animation(.easeInOut(duration: 0.12), value: isTargeted)
+        .animation(.easeInOut(duration: 0.12), value: hoverDrop)
     }
 
-    // MARK: - Conversion animation
+    // MARK: - Expanded content
 
-    private var conversionAnimation: some View {
+    private var expandedContent: some View {
+        HStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.primary.opacity(0.1))
+                .frame(width: 1)
+                .padding(.vertical, 10)
+
+            if queue.isEmpty && isAnyConverting {
+                conversionView
+            } else if queue.isEmpty {
+                emptyView
+            } else {
+                itemsView
+            }
+        }
+    }
+
+    private var emptyView: some View {
+        Text("Drop documents here")
+            .font(.system(size: 11))
+            .foregroundStyle(.primary.opacity(0.35))
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 12)
+    }
+
+    private var conversionView: some View {
         HStack(spacing: 8) {
-            ConversionIconView(isAnimating: isAnyConverting, size: 44)
+            ConversionIconView(isAnimating: isAnyConverting, size: 36)
             Text("Converting…")
-                .font(.system(size: 12))
+                .font(.system(size: 11))
                 .foregroundStyle(.primary.opacity(0.4))
         }
         .frame(maxWidth: .infinity)
+        .padding(.horizontal, 12)
     }
 
-    // MARK: - Items area (springs open per item count)
-
-    private var itemsArea: some View {
+    private var itemsView: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: itemSpacing) {
-                ForEach(queue.prefix(maxVisibleItems)) { item in
+                ForEach(queue.prefix(maxVisible)) { item in
                     ShelfItemView(item: item) {
                         withAnimation(.spring(duration: 0.25)) {
                             queue.removeAll { $0.id == item.id }
@@ -204,9 +229,7 @@ struct ShelfView: View {
                     }
                     .frame(width: itemWidth)
                 }
-
-                // Overflow badge — shows when >maxVisible items queued
-                if queue.count > maxVisibleItems {
+                if queue.count > maxVisible {
                     overflowBadge
                 }
             }
@@ -214,100 +237,30 @@ struct ShelfView: View {
         }
     }
 
-    // Dockside-style stack badge for overflow
     private var overflowBadge: some View {
-        let extra = queue.count - maxVisibleItems
+        let extra = queue.count - maxVisible
         return ZStack {
-            // Stacked cards effect
             ForEach(0..<min(3, extra), id: \.self) { i in
                 RoundedRectangle(cornerRadius: 6)
                     .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .strokeBorder(.white.opacity(0.3), lineWidth: 0.5)
-                    )
+                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.white.opacity(0.3), lineWidth: 0.5))
                     .frame(width: 38, height: 44)
                     .offset(x: CGFloat(i) * 3, y: CGFloat(-i) * 2)
             }
-            // Count badge
             Text("+\(extra)")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.primary.opacity(0.7))
-                .frame(width: 38, height: 44)
         }
         .frame(width: itemWidth)
-        .help("\(extra) more document\(extra == 1 ? "" : "s") queued")
-        .onTapGesture {
-            // Show all items by expanding
-            withAnimation { isCollapsed = false }
-        }
+        .help("\(extra) more queued")
+        .onTapGesture { withAnimation { isExpanded = true } }
     }
 
-    // MARK: - Collapse/expand button (now an arrow)
-
-    private var collapseButton: some View {
-        Button {
-            withAnimation(.spring(duration: 0.3)) {
-                isCollapsed.toggle()
-            }
-        } label: {
-            Image(systemName: isCollapsed ? "arrow.right" : "arrow.left")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.primary.opacity(0.5))
-                .frame(width: 30, height: shelfHeight)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help(isCollapsed ? "Expand shelf" : "Collapse shelf")
-    }
-
-    // MARK: - Thin divider
-
-    private var thinDivider: some View {
-        Rectangle()
-            .fill(Color.primary.opacity(0.12))
-            .frame(width: 1, height: 32)
-    }
-
-    // MARK: - Resize handle
-
-    private var resizeHandle: some View {
-        Rectangle()
-            .fill(Color.clear)
-            .frame(width: 5, height: shelfHeight)
-            .contentShape(Rectangle())
-            .cursor(.resizeLeftRight)
-            .gesture(
-                DragGesture(minimumDistance: 2)
-                    .onChanged { value in
-                        guard !isCollapsed else { return }
-                        let newW = currentWidth + value.translation.width
-                        let clamped = max(220, min(700, newW))
-                        ShelfWindowController.shared.resizeToContent(width: clamped)
-                    }
-            )
-    }
-
-    // MARK: - Actions
-
-    private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
-        guard store.canConvert else { showPaywall = true; return false }
-        // Spring open when files are dropped
-        if isCollapsed {
-            withAnimation(.spring(duration: 0.25)) { isCollapsed = false }
-        }
-        for provider in providers {
-            provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
-                guard let data = item as? Data,
-                      let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
-                DispatchQueue.main.async { self.addToQueue(url) }
-            }
-        }
-        return true
-    }
+    // MARK: - File picker (appears near shelf)
 
     private func openFilePicker() {
         guard store.canConvert else { showPaywall = true; return }
+
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
@@ -321,10 +274,41 @@ struct ShelfView: View {
             UTType(filenameExtension: "mp3")  ?? .data,
             UTType(filenameExtension: "m4a")  ?? .data,
         ]
+
+        // Position panel near the shelf window
+        if let shelfWindow = ShelfWindowController.shared.window {
+            let shelfFrame = shelfWindow.frame
+            panel.setFrameOrigin(NSPoint(
+                x: shelfFrame.maxX + 8,
+                y: shelfFrame.minY
+            ))
+        }
         panel.orderFrontRegardless()
-        if isCollapsed { withAnimation(.spring(duration: 0.25)) { isCollapsed = false } }
-        if panel.runModal() == .OK { panel.urls.forEach { addToQueue($0) } }
+
+        // Expand shelf smoothly while picker is open
+        withAnimation(.spring(duration: 0.35, bounce: 0.1)) { isExpanded = true }
+
+        if panel.runModal() == .OK {
+            panel.urls.forEach { addToQueue($0) }
+        }
     }
+
+    // MARK: - Drop handler
+
+    private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
+        guard store.canConvert else { showPaywall = true; return false }
+        withAnimation(.spring(duration: 0.35, bounce: 0.1)) { isExpanded = true }
+        for provider in providers {
+            provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
+                guard let data = item as? Data,
+                      let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
+                DispatchQueue.main.async { self.addToQueue(url) }
+            }
+        }
+        return true
+    }
+
+    // MARK: - Queue management
 
     private func addToQueue(_ url: URL) {
         guard !queue.contains(where: { $0.url == url }) else { return }
@@ -338,19 +322,16 @@ struct ShelfView: View {
     private func convertItem(_ item: QueueItem) {
         guard let idx = queue.firstIndex(where: { $0.id == item.id }) else { return }
         queue[idx].state = .converting
-
         Task.detached(priority: .userInitiated) {
             let tempURL = FileManager.default.temporaryDirectory
                 .appendingPathComponent(UUID().uuidString)
                 .appendingPathExtension(item.url.pathExtension)
             try? FileManager.default.copyItem(at: item.url, to: tempURL)
             defer { try? FileManager.default.removeItem(at: tempURL) }
-
             await ConversionService.shared.convert(fileURL: tempURL)
             while await ConversionService.shared.isConverting {
                 try? await Task.sleep(nanoseconds: 100_000_000)
             }
-
             await MainActor.run {
                 guard let idx = self.queue.firstIndex(where: { $0.id == item.id }) else { return }
                 switch ConversionService.shared.result {
@@ -382,12 +363,9 @@ struct ShelfView: View {
             await MainActor.run {
                 guard let idx = self.queue.firstIndex(where: { $0.id == item.id }) else { return }
                 switch ConversionService.shared.result {
-                case .success(let output):
-                    self.queue[idx].state = .done(output.markdown, output.title)
-                case .failure(let error):
-                    self.queue[idx].state = .failed(error)
-                case .none:
-                    self.queue[idx].state = .failed("Conversion failed")
+                case .success(let output): self.queue[idx].state = .done(output.markdown, output.title)
+                case .failure(let error):  self.queue[idx].state = .failed(error)
+                case .none:                self.queue[idx].state = .failed("Conversion failed")
                 }
                 if !self.queue.contains(where: { $0.state == .converting }) {
                     NotificationCenter.default.post(name: .upmarketConversionEnded, object: nil)
@@ -412,7 +390,6 @@ extension View {
 struct ShelfItemView: View {
     let item: QueueItem
     let onRemove: () -> Void
-
     @State private var showActions = false
 
     var body: some View {
@@ -443,30 +420,24 @@ struct ShelfItemView: View {
         .contextMenu { contextMenuItems }
     }
 
-    @ViewBuilder
-    private var fileIcon: some View {
+    @ViewBuilder private var fileIcon: some View {
         if FileManager.default.fileExists(atPath: item.url.path),
            let icon = NSWorkspace.shared.icon(forFile: item.url.path) as NSImage? {
             Image(nsImage: icon).resizable().interpolation(.high).antialiased(true)
         } else {
             Image(systemName: extensionIcon)
-                .font(.system(size: 24))
-                .foregroundStyle(.primary.opacity(0.6))
+                .font(.system(size: 24)).foregroundStyle(.primary.opacity(0.6))
         }
     }
 
-    @ViewBuilder
-    private var stateIndicator: some View {
+    @ViewBuilder private var stateIndicator: some View {
         switch item.state {
-        case .pending:
-            EmptyView()
+        case .pending: EmptyView()
         case .converting:
             if #available(macOS 15.0, *) {
                 Image(systemName: "arrow.triangle.2.circlepath")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(2)
-                    .background(Color.accentColor, in: Circle())
+                    .font(.system(size: 9, weight: .bold)).foregroundStyle(.white)
+                    .padding(2).background(Color.accentColor, in: Circle())
                     .symbolEffect(.rotate, isActive: true)
             } else {
                 ProgressView().scaleEffect(0.5).frame(width: 12, height: 12)
@@ -482,30 +453,24 @@ struct ShelfItemView: View {
         }
     }
 
-    @ViewBuilder
-    private var hoverActions: some View {
+    @ViewBuilder private var hoverActions: some View {
         HStack(spacing: 3) {
             if case .done(let markdown, _) = item.state {
                 Button {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(markdown, forType: .string)
-                } label: {
-                    Image(systemName: "doc.on.doc").font(.system(size: 9))
-                }
-                .buttonStyle(ShelfActionButtonStyle())
-                .help("Copy Markdown")
+                } label: { Image(systemName: "doc.on.doc").font(.system(size: 9)) }
+                .buttonStyle(ShelfActionButtonStyle()).help("Copy Markdown")
             }
             Button(action: onRemove) {
                 Image(systemName: "xmark").font(.system(size: 9))
             }
-            .buttonStyle(ShelfActionButtonStyle())
-            .help("Remove")
+            .buttonStyle(ShelfActionButtonStyle()).help("Remove")
         }
         .padding(.bottom, 2)
     }
 
-    @ViewBuilder
-    private var contextMenuItems: some View {
+    @ViewBuilder private var contextMenuItems: some View {
         if case .done(let markdown, let title) = item.state {
             Button("Open in Markdown Editor") { openInDefaultApp(markdown, title: title) }
             Divider()
@@ -521,8 +486,8 @@ struct ShelfItemView: View {
             Button("Save As…") { saveMarkdown(markdown, title: title) }
             Divider()
             Menu("Reprocess") {
-                Button("Fast (instant)") { reprocess(useAI: false) }
-                Button("Upmarket AI (best)") { reprocess(useAI: true) }
+                Button("Fast (instant)")       { reprocess(useAI: false) }
+                Button("Upmarket AI (best)")   { reprocess(useAI: true)  }
             }
             Divider()
         }
@@ -603,10 +568,8 @@ struct QueueItem: Identifiable {
     let id = UUID()
     let url: URL
     var state: State = .pending
-
     var name: String { url.deletingPathExtension().lastPathComponent }
     var ext: String  { url.pathExtension.uppercased() }
-
     enum State: Equatable {
         case pending
         case converting
