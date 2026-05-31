@@ -1,22 +1,19 @@
-//
-//  UpmarketApp.swift
-//  Upmarket
-//
-//  Created by Andrew McArdle on 30/5/2026.
-//
-
 import SwiftUI
 
 @main
 struct UpmarketApp: App {
 
-    @StateObject private var pythonBridge = PythonBridge.shared
+    @StateObject private var pythonBridge    = PythonBridge.shared
     @StateObject private var conversionService = ConversionService.shared
-    @StateObject private var storeManager = StoreManager.shared
-    @StateObject private var modelManager = ModelManager.shared
-    @StateObject private var featureFlags = FeatureFlags.shared
+    @StateObject private var storeManager    = StoreManager.shared
+    @StateObject private var modelManager    = ModelManager.shared
+    @StateObject private var featureFlags    = FeatureFlags.shared
+
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
+
+        // MARK: Main window — full output view, history, settings access
         WindowGroup {
             ContentView()
                 .environmentObject(pythonBridge)
@@ -25,50 +22,93 @@ struct UpmarketApp: App {
                 .environmentObject(modelManager)
         }
         .commands {
+            // File menu
             CommandGroup(replacing: .newItem) {
                 Button("Convert Document…") {
                     NotificationCenter.default.post(name: .openFilePicker, object: nil)
                 }
                 .keyboardShortcut("o", modifiers: .command)
+
+                Button("Show Shelf") {
+                    ShelfWindowController.shared.toggle()
+                }
+                .keyboardShortcut("s", modifiers: [.command, .shift])
             }
+
+            // Settings
             CommandGroup(replacing: .appSettings) {
                 Button("Preferences…") {
-                    openPreferences()
+                    openWindow(id: "preferences")
                 }
                 .keyboardShortcut(",", modifiers: .command)
             }
+
+            // Help menu additions
+            CommandGroup(after: .help) {
+                Button("Report an Issue…") {
+                    if let url = URL(string: "mailto:support@upmarket.app?subject=Upmarket%20Issue") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+                Divider()
+                Button("Join Discord Community…") {
+                    if let url = URL(string: "https://discord.gg/upmarket") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+            }
         }
 
+        // MARK: Preferences window
         Window("Preferences", id: "preferences") {
             PreferencesView()
                 .environmentObject(modelManager)
                 .environmentObject(storeManager)
         }
         .windowResizability(.contentSize)
-        .defaultSize(width: 560, height: 400)
+        .defaultSize(width: 560, height: 440)
 
+        // MARK: Onboarding window — shown on first launch
+        Window("Welcome to Upmarket", id: "onboarding") {
+            OnboardingView()
+                .environmentObject(storeManager)
+                .environmentObject(modelManager)
+        }
+        .windowResizability(.contentSize)
+        .defaultSize(width: 480, height: 400)
+
+        // MARK: Menu bar icon — minimal, opens shelf or main window
         MenuBarExtra {
             MenuBarView()
                 .environmentObject(conversionService)
                 .environmentObject(storeManager)
                 .environmentObject(modelManager)
         } label: {
-            Text("#")
-                .font(.system(size: 14, weight: .bold, design: .rounded))
+            // SF Symbol: "number" — template image for menu bar
+            // symbolEffect(.pulse) shows activity on macOS 14+ (Variable Draw)
+            if #available(macOS 14.0, *) {
+                Image(systemName: conversionService.isConverting ? "number.circle.fill" : "number")
+                    .symbolEffect(.pulse, isActive: conversionService.isConverting)
+            } else {
+                Image(systemName: conversionService.isConverting ? "number.circle.fill" : "number")
+            }
         }
         .menuBarExtraStyle(.window)
     }
-
-    @Environment(\.openWindow) private var openWindow
 
     init() {
         Task { @MainActor in
             PythonBridge.shared.setup()
         }
         FeatureFlags.shared.fetchFlags()
-    }
 
-    private func openPreferences() {
-        openWindow(id: "preferences")
+        // Show onboarding on first launch, otherwise show shelf
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            if !UserDefaults.standard.bool(forKey: "upmarket.onboardingComplete") {
+                // Onboarding shown via openWindow in ContentView.onAppear
+            } else {
+                ShelfWindowController.shared.show(animate: false)
+            }
+        }
     }
 }
