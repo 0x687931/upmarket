@@ -143,7 +143,7 @@ struct PaywallView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Upmarket")
+                    Text(verbatim: "Upmarket")
                         .font(.headline)
                         .fontWeight(.semibold)
                     Text("For everyday documents without AI")
@@ -238,7 +238,7 @@ struct PaywallView: View {
     }
 
     private var legalFooter: some View {
-        Text("One-time purchase · No subscription · Processed by Apple")
+        Text(L("paywall.footer"))
             .font(.caption2)
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)

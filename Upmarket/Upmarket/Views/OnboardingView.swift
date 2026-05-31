@@ -8,36 +8,35 @@ struct OnboardingView: View {
 
     @State private var step = 0
 
-    private let steps: [OnboardingStep] = [
+    private var steps: [OnboardingStep] {[
         OnboardingStep(
             symbol: "#",
-            title: "Welcome to Upmarket",
-            subtitle: "Convert any document to clean Markdown using on-device AI.\nYour files never leave your Mac.",
+            title: L("onboarding.welcome.title"),
+            subtitle: L("onboarding.welcome.subtitle"),
             detail: nil,
-            primaryLabel: "Get Started",
+            primaryLabel: L("onboarding.button.start"),
             secondaryLabel: nil
         ),
         OnboardingStep(
             symbol: "arrow.down.doc",
-            title: "Drop Anywhere",
-            subtitle: "Drag files onto the shelf next to your Dock, or onto the menu bar icon.\nPDF, Word, PowerPoint, HTML, Audio and more.",
-            detail: "Upmarket lives next to your Dock — always ready, never in the way.",
-            primaryLabel: "Next",
+            title: L("onboarding.drop.title"),
+            subtitle: L("onboarding.drop.subtitle"),
+            detail: L("onboarding.drop.detail"),
+            primaryLabel: L("onboarding.button.next"),
             secondaryLabel: nil
         ),
         OnboardingStep(
             symbol: "cpu",
-            title: "On-Device AI",
-            subtitle: "All conversion happens on your Mac using Apple Silicon.\nNo internet needed after setup.",
-            detail: "Basic conversion works immediately. Upgrade to Upmarket + AI for complex documents.",
-            primaryLabel: "Start Converting",
-            secondaryLabel: "Set Up Later"
+            title: L("onboarding.ai.title"),
+            subtitle: L("onboarding.ai.subtitle"),
+            detail: L("onboarding.ai.detail"),
+            primaryLabel: L("onboarding.button.begin"),
+            secondaryLabel: L("onboarding.button.later")
         ),
-    ]
+    ]}
 
     var body: some View {
         ZStack {
-            // Background blur
             VisualEffectBackground()
                 .ignoresSafeArea()
 
@@ -52,12 +51,9 @@ struct OnboardingView: View {
         .frame(width: 480, height: 400)
     }
 
-    // MARK: - Step Content
-
     private var stepContent: some View {
         let s = steps[step]
         return VStack(spacing: 20) {
-            // Icon
             ZStack {
                 Circle()
                     .fill(Color.accentColor.opacity(0.1))
@@ -77,20 +73,15 @@ struct OnboardingView: View {
 
             VStack(spacing: 8) {
                 Text(s.title)
-                    .font(.title2)
-                    .fontWeight(.bold)
+                    .font(.title2).fontWeight(.bold)
                     .multilineTextAlignment(.center)
-
                 Text(s.subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(.subheadline).foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-
                 if let detail = s.detail {
                     Text(detail)
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .font(.caption).foregroundStyle(.tertiary)
                         .multilineTextAlignment(.center)
                         .padding(.top, 4)
                 }
@@ -104,11 +95,8 @@ struct OnboardingView: View {
         .animation(.spring(duration: 0.4), value: step)
     }
 
-    // MARK: - Controls
-
     private var controls: some View {
         VStack(spacing: 12) {
-            // Step dots
             HStack(spacing: 6) {
                 ForEach(0..<steps.count, id: \.self) { i in
                     Circle()
@@ -120,26 +108,19 @@ struct OnboardingView: View {
             .padding(.bottom, 4)
 
             let s = steps[step]
-
-            Button(s.primaryLabel) {
-                advance()
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .frame(maxWidth: .infinity)
+            Button(s.primaryLabel) { advance() }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .frame(maxWidth: .infinity)
 
             if let secondary = s.secondaryLabel {
-                Button(secondary) {
-                    complete()
-                }
-                .buttonStyle(.plain)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Button(secondary) { complete() }
+                    .buttonStyle(.plain)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
     }
-
-    // MARK: - Navigation
 
     private func advance() {
         if step < steps.count - 1 {
@@ -152,7 +133,6 @@ struct OnboardingView: View {
     private func complete() {
         UserDefaults.standard.set(true, forKey: "upmarket.onboardingComplete")
         dismiss()
-        // Show the shelf after onboarding
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             ShelfWindowController.shared.show()
         }
@@ -168,8 +148,6 @@ struct OnboardingStep {
     let secondaryLabel: String?
 }
 
-// MARK: - Visual Effect Background
-
 struct VisualEffectBackground: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {
         let v = NSVisualEffectView()
@@ -179,10 +157,4 @@ struct VisualEffectBackground: NSViewRepresentable {
         return v
     }
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
-}
-
-#Preview {
-    OnboardingView()
-        .environmentObject(StoreManager.shared)
-        .environmentObject(ModelManager.shared)
 }

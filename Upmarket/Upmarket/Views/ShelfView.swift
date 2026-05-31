@@ -106,11 +106,11 @@ struct ShelfView: View {
                 }
             }
             VStack(spacing: 3) {
-                Text(isTargeted ? "Release to convert" : "Drop documents here")
+                Text(isTargeted ? L("shelf.drop.release") : L("shelf.drop.title"))
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .animation(.easeInOut(duration: 0.15), value: isTargeted)
-                Text("PDF · DOCX · PPTX · HTML · Audio")
+                Text(L("shelf.drop.formats"))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -139,7 +139,7 @@ struct ShelfView: View {
     private var footer: some View {
         HStack(spacing: 6) {
             if !queue.isEmpty {
-                Button("Clear All") {
+                Button(L("shelf.clear_all")) {
                     withAnimation { queue.removeAll() }
                 }
                 .buttonStyle(.plain)
@@ -150,21 +150,21 @@ struct ShelfView: View {
 
                 let pending = queue.filter { $0.state == .pending }.count
                 if pending > 0 {
-                    Button("Convert All") {
+                    Button(L("shelf.convert_all")) {
                         convertAll()
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.mini)
                 }
             } else {
-                Button("Open Main Window") {
+                Button(L("shelf.open_main")) {
                     NSApp.activate(ignoringOtherApps: true)
                 }
                 .buttonStyle(.plain)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 Spacer()
-                Button("Preferences") {
+                Button(L("shelf.preferences")) {
                     NotificationCenter.default.post(name: .showPreferences, object: nil)
                 }
                 .buttonStyle(.plain)
@@ -304,7 +304,7 @@ struct QueueItemRow: View {
     private var stateLabel: some View {
         switch item.state {
         case .pending:
-            Text("Waiting…")
+            Text(L("shelf.state.waiting"))
                 .font(.caption2).foregroundStyle(.secondary)
         case .converting:
             HStack(spacing: 4) {
@@ -321,7 +321,7 @@ struct QueueItemRow: View {
                 } else {
                     ProgressView().controlSize(.mini).scaleEffect(0.7)
                 }
-                Text("Converting").font(.caption2).foregroundStyle(.secondary)
+                Text(L("shelf.state.converting")).font(.caption2).foregroundStyle(.secondary)
             }
         case .done(_, _):
             HStack(spacing: 4) {
@@ -335,7 +335,7 @@ struct QueueItemRow: View {
                         .font(.system(size: 9))
                         .foregroundStyle(.green)
                 }
-                Text("Ready").font(.caption2).foregroundStyle(.green)
+                Text(L("shelf.state.ready")).font(.caption2).foregroundStyle(.green)
             }
         case .failed(let err):
             Text(err).font(.caption2).foregroundStyle(.red).lineLimit(1)

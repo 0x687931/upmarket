@@ -33,7 +33,7 @@ struct ModelDownloadView: View {
                 .font(.system(size: 48, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.accentColor)
 
-            Text("One-time download required")
+            Text(L("models.setup.title"))
                 .font(.title2)
                 .fontWeight(.bold)
 
@@ -194,7 +194,7 @@ struct ModelDownloadView: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 32))
                 .foregroundStyle(.red)
-            Text("Download failed")
+            Text(L("models.status.failed"))
                 .fontWeight(.medium)
             Text("Please check your internet connection and try again.")
                 .font(.caption)

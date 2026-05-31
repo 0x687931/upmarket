@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 import UniformTypeIdentifiers
 import AppKit
 
@@ -73,6 +74,7 @@ struct ContentView: View {
             if let advice = pendingAdvice, let url = pendingFileURL {
                 AISuggestionView(
                     advice: advice,
+                    proPrice: store.proProduct?.displayPrice ?? "$9.99",
                     onUseAI: {
                         showAISuggestion = false
                         beginConversion(url: url, useAI: true)
@@ -169,7 +171,7 @@ struct ContentView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "folder")
                             .font(.system(size: 13))
-                        Text("Choose File")
+                        Text(L("dropzone.button"))
                             .font(.system(size: 13, weight: .medium))
                     }
                     .foregroundStyle(Color.accentColor)
