@@ -151,6 +151,25 @@ struct ModelDownloadView: View {
 
     private var downloadingView: some View {
         VStack(spacing: 16) {
+            // Variable Colour symbol fills as download progresses (macOS 15+)
+            // Falls back to standard progress bar on older OS
+            if #available(macOS 15.0, *) {
+                HStack(spacing: 12) {
+                    Image(systemName: "arrow.down.circle", variableValue: modelManager.downloadProgress / 100)
+                        .font(.system(size: 32))
+                        .foregroundStyle(Color.accentColor)
+                        .symbolEffect(.pulse, isActive: true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(modelManager.downloadMessage)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Text("\(Int(modelManager.downloadProgress))%")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .monospacedDigit()
+                    }
+                }
+            }
             ProgressView(value: modelManager.downloadProgress, total: 100)
                 .progressViewStyle(.linear)
 

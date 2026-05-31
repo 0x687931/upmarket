@@ -90,15 +90,26 @@ struct ShelfView: View {
                     .fill(Color.accentColor.opacity(isTargeted ? 0.18 : 0.08))
                     .frame(width: 64, height: 64)
                     .animation(.easeInOut(duration: 0.2), value: isTargeted)
-                Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
-                    .font(.system(size: 28))
-                    .foregroundStyle(Color.accentColor)
-                    .animation(.easeInOut(duration: 0.15), value: isTargeted)
+
+                // Magic Replace: swaps between outlined and filled with a morph animation
+                if #available(macOS 14.0, *) {
+                    Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
+                        .font(.system(size: 28))
+                        .foregroundStyle(Color.accentColor)
+                        .contentTransition(.symbolEffect(.replace.offUp))
+                        .symbolEffect(.bounce, value: isTargeted)
+                } else {
+                    Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
+                        .font(.system(size: 28))
+                        .foregroundStyle(Color.accentColor)
+                        .animation(.easeInOut(duration: 0.15), value: isTargeted)
+                }
             }
             VStack(spacing: 3) {
                 Text(isTargeted ? "Release to convert" : "Drop documents here")
                     .font(.subheadline)
                     .fontWeight(.medium)
+                    .animation(.easeInOut(duration: 0.15), value: isTargeted)
                 Text("PDF · DOCX · PPTX · HTML · Audio")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -297,11 +308,35 @@ struct QueueItemRow: View {
                 .font(.caption2).foregroundStyle(.secondary)
         case .converting:
             HStack(spacing: 4) {
-                ProgressView().controlSize(.mini).scaleEffect(0.7)
+                if #available(macOS 15.0, *) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 9))
+                        .foregroundStyle(Color.accentColor)
+                        .symbolEffect(.rotate, isActive: true)
+                } else if #available(macOS 14.0, *) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 9))
+                        .foregroundStyle(Color.accentColor)
+                        .symbolEffect(.pulse, isActive: true)
+                } else {
+                    ProgressView().controlSize(.mini).scaleEffect(0.7)
+                }
                 Text("Converting").font(.caption2).foregroundStyle(.secondary)
             }
         case .done(_, _):
-            Text("Ready").font(.caption2).foregroundStyle(.green)
+            HStack(spacing: 4) {
+                if #available(macOS 14.0, *) {
+                    Image(symbol: UpmarketSymbols.done)
+                        .font(.system(size: 9))
+                        .foregroundStyle(.green)
+                        .symbolEffect(.bounce, value: item.state == .done("", ""))
+                } else {
+                    Image(symbol: UpmarketSymbols.done)
+                        .font(.system(size: 9))
+                        .foregroundStyle(.green)
+                }
+                Text("Ready").font(.caption2).foregroundStyle(.green)
+            }
         case .failed(let err):
             Text(err).font(.caption2).foregroundStyle(.red).lineLimit(1)
         }
@@ -316,7 +351,7 @@ struct QueueItemRow: View {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(markdown, forType: .string)
                 } label: {
-                    Image(systemName: "doc.on.doc").font(.system(size: 11))
+                    Image(symbol: UpmarketSymbols.copy).font(.system(size: 11))
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(Color.accentColor)
