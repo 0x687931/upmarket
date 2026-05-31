@@ -210,16 +210,18 @@ struct ShelfView: View {
         queue[idx].state = .converting
 
         Task.detached(priority: .userInitiated) {
-            guard let tempURL = try? FileManager.default.temporaryDirectory
+            // temporaryDirectory doesn't throw — no try? needed
+            let tempURL = FileManager.default.temporaryDirectory
                 .appendingPathComponent(UUID().uuidString)
-                .appendingPathExtension(item.url.pathExtension) else { return }
+                .appendingPathExtension(item.url.pathExtension)
             try? FileManager.default.copyItem(at: item.url, to: tempURL)
             defer { try? FileManager.default.removeItem(at: tempURL) }
 
-            ConversionService.shared.convert(fileURL: tempURL)
+            // convert() and isConverting are MainActor-isolated — use await
+            await ConversionService.shared.convert(fileURL: tempURL)
 
-            // Poll for completion
-            while ConversionService.shared.isConverting {
+            // Poll for completion on MainActor
+            while await ConversionService.shared.isConverting {
                 try? await Task.sleep(nanoseconds: 100_000_000)
             }
 
