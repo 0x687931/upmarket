@@ -1,0 +1,12 @@
+{
+  "symbols" : [
+    {
+      "filename" : "clock.badge.questionmark.svg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

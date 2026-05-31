@@ -14,7 +14,7 @@ struct AISuggestionView: View {
                 Circle()
                     .fill(Color.accentColor.opacity(0.1))
                     .frame(width: 72, height: 72)
-                Image(systemName: "sparkles")
+                Image(symbol: UpmarketSymbols.ai)
                     .font(.system(size: 32))
                     .foregroundStyle(Color.accentColor)
             }

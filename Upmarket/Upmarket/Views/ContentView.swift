@@ -266,7 +266,7 @@ struct ContentView: View {
                         .lineLimit(1)
 
                     if output.usedAI {
-                        Image(systemName: "sparkles")
+                        Image(symbol: UpmarketSymbols.ai)
                             .font(.caption)
                             .foregroundStyle(Color.accentColor)
                     }
@@ -286,13 +286,13 @@ struct ContentView: View {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(output.markdown, forType: .string)
                     } label: {
-                        Image(systemName: "doc.on.doc")
+                        Image(symbol: UpmarketSymbols.copy)
                     }
                     .help("Copy Markdown  ⌘C")
                     .keyboardShortcut("c", modifiers: [.command, .shift])
 
                     Button { saveMarkdown(output) } label: {
-                        Image(systemName: "square.and.arrow.down")
+                        Image(symbol: UpmarketSymbols.save)
                     }
                     .help("Save as .md  ⌘S")
                     .keyboardShortcut("s", modifiers: .command)

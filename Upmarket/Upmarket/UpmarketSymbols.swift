@@ -123,16 +123,31 @@ enum UpmarketSymbols {
     static let onboardReady     = "checkmark.seal.fill"
 }
 
+// MARK: - Exported symbol names (SVG in Assets.xcassets, work on macOS 13.3+)
+// These were exported from SF Symbols 7.2 and added to Assets.xcassets.
+// Use Image(exported:) to get them — falls back to system symbol on newer OS.
+
+private let exportedSymbols: Set<String> = [
+    "sparkles.rectangle.stack",
+    "text.badge.checkmark",
+    "clock.badge.questionmark",
+]
+
 // MARK: - SwiftUI Image extension
 
 extension Image {
 
     /// Create an image using a symbol from UpmarketSymbols.
-    /// Prefers system symbol; falls back to asset catalogue export on older OS.
-    /// Usage: Image(symbol: UpmarketSymbols.converting)
-    init(symbol: String) {
-        // All our symbols currently exist in system — assets used if system lookup fails
-        self = Image(systemName: symbol)
+    /// - For symbols exported to Assets.xcassets: uses asset on all OS versions
+    /// - For system symbols: uses systemName
+    /// Usage: Image(symbol: UpmarketSymbols.aiDocument)
+    init(symbol name: String) {
+        if exportedSymbols.contains(name) {
+            // Use asset catalogue export — works back to macOS 13.3
+            self = Image(name)
+        } else {
+            self = Image(systemName: name)
+        }
     }
 
     /// Apply standard Upmarket rendering to a symbol image.
