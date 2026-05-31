@@ -54,7 +54,7 @@ struct PDFConverter {
     // MARK: - Private
 
     private static func pageToMarkdown(page: PDFPage, text: String) -> String {
-        var lines = text
+        let lines = text
             .components(separatedBy: "\n")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }

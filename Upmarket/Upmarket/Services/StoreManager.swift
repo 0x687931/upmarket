@@ -6,10 +6,10 @@ final class StoreManager: ObservableObject {
 
     static let shared = StoreManager()
 
-    // Product IDs — never expose these strings in UI
-    static let basicID    = "com.upmarket.app.basic"
-    static let proID      = "com.upmarket.app.pro"
-    static let packID     = "com.upmarket.app.doc_pack"  // 5-doc pack at $0.99
+    // Product IDs — nonisolated so they're accessible from any actor context
+    nonisolated static let basicID    = "com.upmarket.app.basic"
+    nonisolated static let proID      = "com.upmarket.app.pro"
+    nonisolated static let packID     = "com.upmarket.app.doc_pack"
 
     let objectWillChange = PassthroughSubject<Void, Never>()
 
@@ -203,7 +203,7 @@ final class StoreManager: ObservableObject {
         }
     }
 
-    private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
+    nonisolated private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
         switch result {
         case .unverified: throw StoreError.failedVerification
         case .verified(let value): return value
