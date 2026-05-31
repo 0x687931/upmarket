@@ -547,9 +547,9 @@ struct ShelfItemView: View {
     }
 
     private func openInDefaultApp(_ markdown: String, title: String) {
-        Task {
-            let savedURL = await SavePreference.shared.save(markdown: markdown, title: title, sourceURL: item.url)
-            if let url = savedURL { await MainActor.run { NSWorkspace.shared.open(url) } }
+        Task { @MainActor in
+            let savedURL = SavePreference.shared.save(markdown: markdown, title: title, sourceURL: item.url)
+            if let url = savedURL { NSWorkspace.shared.open(url) }
         }
     }
 

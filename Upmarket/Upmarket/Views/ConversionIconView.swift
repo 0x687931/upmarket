@@ -61,7 +61,7 @@ final class ConversionIconLayerView: NSView {
 
         // Load the icon SVGs as images for each layer
         // Each layer gets the correct portion of the composition
-        let layers: [(CALayer, String)] = [
+        let _ : [(CALayer, String)] = [
             (tileLayer,      "icon_layer_tile"),
             (glowLayer,      "icon_layer_glow"),
             (inputDocLayer,  "icon_layer_input"),

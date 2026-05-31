@@ -47,14 +47,15 @@ final class SavePreference {
     /// Shows the first-use prompt if not yet configured.
     /// Returns the URL where the file was saved (nil if user cancelled).
     @discardableResult
-    func save(markdown: String, title: String, sourceURL: URL?) async -> URL? {
+    @MainActor
+    func save(markdown: String, title: String, sourceURL: URL?) -> URL? {
         // First use — prompt once
         if !hasPrompted {
-            let chosen = await promptFirstUse(sourceURL: sourceURL)
+            let chosen = promptFirstUse(sourceURL: sourceURL)
             if !chosen { return nil }
         }
 
-        return await performSave(markdown: markdown, title: title, sourceURL: sourceURL)
+        return performSave(markdown: markdown, title: title, sourceURL: sourceURL)
     }
 
     // MARK: - Perform save based on preference
@@ -85,7 +86,7 @@ final class SavePreference {
             guard let folder = chosenFolderURL else {
                 return showSavePanel(defaultName: fileName, markdown: markdown)
             }
-            folder.startAccessingSecurityScopedResource()
+            _ = folder.startAccessingSecurityScopedResource()
             defer { folder.stopAccessingSecurityScopedResource() }
             let saveURL = folder.appendingPathComponent(fileName)
             do {
