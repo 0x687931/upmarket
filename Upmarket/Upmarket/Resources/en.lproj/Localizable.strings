@@ -1,0 +1,146 @@
+/* Upmarket — English (Base)
+   All user-facing strings. Keep values short — they appear in a compact UI.
+   Format: "KEY" = "Value"; */
+
+// MARK: - Drop Zone
+"dropzone.title" = "Drop a document";
+"dropzone.release" = "Release to convert";
+"dropzone.button" = "Choose File";
+"dropzone.formats" = "PDF · DOCX · PPTX · XLSX · HTML · EPUB · CSV · Images · Audio";
+
+// MARK: - Conversion
+"converting.analysing" = "Analysing document…";
+"converting.progress" = "Converting…";
+"converting.hint" = "This usually takes 5–30 seconds";
+"converting.analysing.hint" = "Checking complexity — usually a few seconds";
+
+// MARK: - Output toolbar
+"output.copy" = "Copy";
+"output.save" = "Save…";
+"output.new" = "New";
+"output.copy.hint" = "Copy Markdown";
+"output.save.hint" = "Save as .md";
+"output.new.hint" = "Convert Another";
+
+// MARK: - Error states
+"error.title" = "Couldn't convert this document";
+"error.try_again" = "Try Again";
+"error.enter_password" = "Enter Password";
+"error.password.title" = "This PDF is password-protected";
+"error.password.subtitle" = "Enter the document password to convert it.";
+"error.password.placeholder" = "Password";
+"error.password.cancel" = "Cancel";
+"error.password.convert" = "Convert";
+
+// MARK: - Status banner
+"banner.free_remaining_singular" = "1 free conversion remaining";
+"banner.free_remaining_plural" = "%d free conversions remaining";
+"banner.free_no_expiry" = "%d free conversions — no sign-up needed";
+"banner.upgrade" = "Upgrade";
+"banner.see_plans" = "See Plans";
+"banner.unlock" = "Unlock";
+"banner.expired" = "Free conversions used";
+
+// MARK: - Language warning
+"language.warning.format" = "This looks like a %@ document. We're working on improving quality for %@ — results may vary.";
+
+// MARK: - AI Suggestion
+"ai.suggestion.title" = "This document looks complex";
+"ai.suggestion.subtitle" = "Upmarket AI is recommended for better results.";
+"ai.suggestion.use_ai" = "Use Upmarket AI — %@";
+"ai.suggestion.basic" = "Convert without AI";
+"ai.suggestion.cancel" = "Cancel";
+
+// MARK: - Model Download
+"models.setup.title" = "Set Up Upmarket";
+"models.setup.subtitle" = "Upmarket uses on-device AI — your documents never leave your Mac. Download once, work offline forever.";
+"models.download.basic" = "Download Upmarket — %d MB";
+"models.download.ai" = "Download Upmarket AI — %d MB";
+"models.download.offline_note" = "Requires internet for initial download only. All processing is offline.";
+"models.status.ready" = "Ready";
+"models.status.failed" = "Download failed";
+"models.status.retry" = "Try Again";
+
+// MARK: - Paywall
+"paywall.title" = "Unlock Upmarket";
+"paywall.subtitle" = "Convert unlimited documents, privately, on your Mac.";
+"paywall.pro.title" = "Upmarket + AI";
+"paywall.pro.tagline" = "For complex and research documents";
+"paywall.basic.title" = "Upmarket";
+"paywall.basic.tagline" = "For everyday documents";
+"paywall.pack.title" = "Just need a few conversions?";
+"paywall.pack.subtitle" = "5 documents for %@";
+"paywall.restore" = "Restore Purchases";
+"paywall.footer" = "One-time purchase · No subscription · Processed by Apple";
+"paywall.badge.best" = "BEST";
+"paywall.feature.unlimited" = "Unlimited conversions — every format";
+"paywall.feature.ai" = "Upmarket AI for scanned, complex and research documents";
+"paywall.feature.tables" = "Tables, figures, dense layouts";
+"paywall.feature.private" = "100% on-device — nothing sent to the cloud";
+
+// MARK: - Onboarding
+"onboarding.welcome.title" = "Welcome to Upmarket";
+"onboarding.welcome.subtitle" = "Convert any document to clean Markdown using on-device AI.\nYour files never leave your Mac.";
+"onboarding.drop.title" = "Drop Anywhere";
+"onboarding.drop.subtitle" = "Drag files onto the shelf next to your Dock, or onto the menu bar icon.\nPDF, Word, PowerPoint, HTML, Audio and more.";
+"onboarding.drop.detail" = "Upmarket lives next to your Dock — always ready, never in the way.";
+"onboarding.ai.title" = "On-Device AI";
+"onboarding.ai.subtitle" = "All conversion happens on your Mac using Apple Silicon.\nNo internet needed after setup.";
+"onboarding.ai.detail" = "Basic conversion works immediately. Upgrade to Upmarket + AI for complex documents.";
+"onboarding.button.start" = "Get Started";
+"onboarding.button.next" = "Next";
+"onboarding.button.begin" = "Start Converting";
+"onboarding.button.later" = "Set Up Later";
+
+// MARK: - Shelf
+"shelf.drop.title" = "Drop documents here";
+"shelf.drop.release" = "Release to convert";
+"shelf.drop.formats" = "PDF · DOCX · PPTX · HTML · Audio";
+"shelf.clear_all" = "Clear All";
+"shelf.convert_all" = "Convert All";
+"shelf.open_main" = "Open Main Window";
+"shelf.preferences" = "Preferences";
+"shelf.state.waiting" = "Waiting…";
+"shelf.state.converting" = "Converting";
+"shelf.state.ready" = "Ready";
+
+// MARK: - Preferences
+"prefs.title" = "Preferences";
+"prefs.tab.models" = "Models";
+"prefs.tab.account" = "Account";
+"prefs.tab.about" = "About";
+"prefs.models.storage" = "Storage used: %@";
+"prefs.models.delete_all" = "Delete All Models";
+"prefs.account.plan.pro" = "Upmarket + AI";
+"prefs.account.plan.basic" = "Upmarket";
+"prefs.account.plan.free" = "Free";
+"prefs.account.plan.free_used" = "Free (used)";
+"prefs.account.plan.pro.detail" = "Unlimited conversions · Upmarket AI included";
+"prefs.account.plan.basic.detail" = "Unlimited conversions · One-time purchase";
+"prefs.account.restore" = "Restore Purchases";
+"prefs.account.upgrade" = "Upgrade";
+"prefs.about.privacy" = "Privacy Policy";
+"prefs.about.terms" = "Terms of Use";
+"prefs.about.support" = "Support";
+"prefs.about.opensource" = "Open Source";
+"prefs.about.version" = "Version %@";
+
+// MARK: - Menu bar
+"menu.convert" = "Convert Document…";
+"menu.shelf" = "Show Shelf";
+"menu.preferences" = "Preferences…";
+"menu.report_issue" = "Report an Issue…";
+"menu.discord" = "Join Discord Community…";
+
+// MARK: - General
+"general.cancel" = "Cancel";
+"general.ok" = "OK";
+"general.done" = "Done";
+"general.close" = "Close";
+"general.open" = "Open";
+"general.copy" = "Copy";
+"general.save" = "Save";
+"general.delete" = "Delete";
+"general.na" = "N/A";
+"general.pro_badge" = "PRO";
+"general.ai_badge" = "AI";
