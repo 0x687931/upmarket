@@ -15,7 +15,7 @@ struct UpmarketApp: App {
 
     var body: some Scene {
 
-        // MARK: Main window — only opens on demand (not on launch)
+        // MARK: Main window — suppressed, shelf is the primary UI
         WindowGroup {
             ContentView()
                 .environmentObject(pythonBridge)
@@ -23,9 +23,11 @@ struct UpmarketApp: App {
                 .environmentObject(storeManager)
                 .environmentObject(modelManager)
                 .onAppear {
-                    // Close the main window on launch — shelf is the primary UI
                     DispatchQueue.main.async {
-                        NSApp.windows.first { $0.isKeyWindow }?.close()
+                        // Close ALL regular windows — only shelf and menu bar should exist
+                        NSApp.windows
+                            .filter { $0.className != "NSStatusBarWindow" && !($0 is NSPanel) }
+                            .forEach { $0.close() }
                     }
                 }
         }

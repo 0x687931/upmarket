@@ -19,44 +19,48 @@ struct ShelfView: View {
     @State private var hoverToggle = false
     @State private var hoverDrop   = false
 
-    private let stripWidth:   CGFloat = 52   // closed square — width AND height
+    // Closed state: two-column square
+    // Left col: 3 buttons stacked [X][+][>]  |  Right col: [↓] drop arrow
+    private let colWidth:     CGFloat = 36   // each column width
+    private let closedHeight: CGFloat = 72   // 3 × 24pt buttons
     private let itemWidth:    CGFloat = 64
     private let itemSpacing:  CGFloat = 8
     private let maxVisible:   Int     = 5
 
-    // 4 buttons fit into 52pt: each gets 13pt, no dividers between them
-    private var buttonSize: CGFloat { stripWidth / 4 }
+    private var buttonHeight: CGFloat { closedHeight / 3 }  // 24pt each
 
     private var isAnyConverting: Bool {
         queue.contains { $0.state == .converting }
     }
 
     // Width: closed = stripWidth, open = strip + items
+    private var closedWidth: CGFloat { colWidth * 2 + 1 }  // two cols + divider
+
     private var totalWidth: CGFloat {
-        guard isExpanded else { return stripWidth }
+        guard isExpanded else { return closedWidth }
         let count = min(queue.count, maxVisible)
         let content: CGFloat = count > 0
             ? CGFloat(count) * (itemWidth + itemSpacing) + itemSpacing
-            : 200   // empty expanded state
+            : 200
         let overflow: CGFloat = queue.count > maxVisible ? itemWidth + itemSpacing : 0
-        return stripWidth + 12 + content + overflow
+        return closedWidth + 8 + content + overflow
     }
 
     var body: some View {
         HStack(spacing: 0) {
-            // Vertical control strip (always visible)
-            controlStrip
+            // Closed state: [X][+][>] | [↓]
+            closedPanel
 
-            // Expandable content area
+            // Expanded content slides out to the right
             if isExpanded {
                 expandedContent
                     .transition(.move(edge: .leading).combined(with: .opacity))
             }
         }
-        .frame(width: totalWidth, height: stripWidth)
+        .frame(width: totalWidth, height: closedHeight)
         .animation(.spring(duration: 0.35, bounce: 0.1), value: isExpanded)
         .animation(.spring(duration: 0.25), value: queue.count)
-        .background(LiquidGlassBackground(cornerRadius: 14))
+        .background(LiquidGlassBackground(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .strokeBorder(Color.accentColor.opacity(isTargeted ? 0.8 : 0), lineWidth: 2)
@@ -81,38 +85,34 @@ struct ShelfView: View {
         }
     }
 
-    // MARK: - Control strip (vertical, always visible, square when closed)
+    // MARK: - Closed panel: [X][+][>] | [↓]
 
-    private var controlStrip: some View {
-        VStack(spacing: 0) {
-            // (X) Close — red on hover
-            controlButton(symbol: "xmark", hoverColor: .red, isHovered: hoverClose, help: "Hide shelf") {
-                ShelfWindowController.shared.hide()
+    private var closedPanel: some View {
+        HStack(spacing: 0) {
+            // Left column: 3 stacked buttons
+            VStack(spacing: 0) {
+                controlButton(symbol: "xmark",  hoverColor: .red,                          isHovered: hoverClose,  help: "Hide shelf") { ShelfWindowController.shared.hide() }
+                    .onHover { hoverClose = $0 }
+                controlButton(symbol: "plus",   hoverColor: .green,                        isHovered: hoverAdd,    help: "Add files")  { openFilePicker() }
+                    .onHover { hoverAdd = $0 }
+                controlButton(symbol: isExpanded ? "arrow.left" : "arrow.right",
+                              hoverColor: Color(nsColor: .systemBlue),                     isHovered: hoverToggle, help: isExpanded ? "Collapse" : "Expand") {
+                    withAnimation(.spring(duration: 0.35, bounce: 0.1)) { isExpanded.toggle() }
+                }
+                .onHover { hoverToggle = $0 }
             }
-            .onHover { hoverClose = $0 }
+            .frame(width: colWidth, height: closedHeight)
 
-            // (+) Add — green on hover
-            controlButton(symbol: "plus", hoverColor: .green, isHovered: hoverAdd, help: "Add files") {
-                openFilePicker()
-            }
-            .onHover { hoverAdd = $0 }
+            // Thin divider between columns
+            Rectangle()
+                .fill(Color.primary.opacity(0.12))
+                .frame(width: 1, height: closedHeight * 0.6)
 
-            // (<) / (>) Toggle — blue on hover
-            controlButton(
-                symbol: isExpanded ? "chevron.left" : "chevron.right",
-                hoverColor: Color(nsColor: .systemBlue),
-                isHovered: hoverToggle,
-                help: isExpanded ? "Collapse" : "Expand"
-            ) {
-                withAnimation(.spring(duration: 0.35, bounce: 0.1)) { isExpanded.toggle() }
-            }
-            .onHover { hoverToggle = $0 }
-
-            // Drop arrow — accent on target hover
+            // Right column: drop arrow centred
             dropArrowButton
                 .onHover { hoverDrop = $0 }
+                .frame(width: colWidth, height: closedHeight)
         }
-        .frame(width: stripWidth, height: stripWidth)  // force square
     }
 
     private func controlButton(
@@ -126,13 +126,13 @@ struct ShelfView: View {
             ZStack {
                 Circle()
                     .fill(hoverColor.opacity(isHovered ? 0.2 : 0))
-                    .frame(width: 20, height: 20)
+                    .frame(width: 22, height: 22)
                 Image(systemName: symbol)
-                    .font(.system(size: 9, weight: .medium))
+                    .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(isHovered ? hoverColor : .primary.opacity(0.45))
                     .symbolRenderingMode(.hierarchical)
             }
-            .frame(width: stripWidth, height: buttonSize)
+            .frame(width: colWidth, height: buttonHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -156,7 +156,6 @@ struct ShelfView: View {
                     .foregroundStyle(isTargeted || hoverDrop ? Color.accentColor : .primary.opacity(0.4))
             }
         }
-        .frame(width: stripWidth, height: buttonSize)
         .animation(.easeInOut(duration: 0.12), value: isTargeted)
         .animation(.easeInOut(duration: 0.12), value: hoverDrop)
     }
