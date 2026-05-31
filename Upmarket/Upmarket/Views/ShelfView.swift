@@ -19,11 +19,13 @@ struct ShelfView: View {
     @State private var hoverToggle = false
     @State private var hoverDrop   = false
 
-    private let buttonSize:   CGFloat = 44
-    private let stripWidth:   CGFloat = 52   // closed square strip
+    private let stripWidth:   CGFloat = 52   // closed square — width AND height
     private let itemWidth:    CGFloat = 64
     private let itemSpacing:  CGFloat = 8
     private let maxVisible:   Int     = 5
+
+    // 4 buttons fit into 52pt: each gets 13pt, no dividers between them
+    private var buttonSize: CGFloat { stripWidth / 4 }
 
     private var isAnyConverting: Bool {
         queue.contains { $0.state == .converting }
@@ -84,51 +86,33 @@ struct ShelfView: View {
     private var controlStrip: some View {
         VStack(spacing: 0) {
             // (X) Close — red on hover
-            controlButton(
-                symbol: "xmark",
-                hoverColor: .red,
-                isHovered: hoverClose,
-                help: "Hide shelf"
-            ) {
+            controlButton(symbol: "xmark", hoverColor: .red, isHovered: hoverClose, help: "Hide shelf") {
                 ShelfWindowController.shared.hide()
             }
             .onHover { hoverClose = $0 }
 
-            Divider().opacity(0.2).frame(width: 32)
-
             // (+) Add — green on hover
-            controlButton(
-                symbol: "plus",
-                hoverColor: .green,
-                isHovered: hoverAdd,
-                help: "Add files  (+)"
-            ) {
+            controlButton(symbol: "plus", hoverColor: .green, isHovered: hoverAdd, help: "Add files") {
                 openFilePicker()
             }
             .onHover { hoverAdd = $0 }
-
-            Divider().opacity(0.2).frame(width: 32)
 
             // (<) / (>) Toggle — blue on hover
             controlButton(
                 symbol: isExpanded ? "chevron.left" : "chevron.right",
                 hoverColor: Color(nsColor: .systemBlue),
                 isHovered: hoverToggle,
-                help: isExpanded ? "Collapse shelf" : "Expand shelf"
+                help: isExpanded ? "Collapse" : "Expand"
             ) {
-                withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
-                    isExpanded.toggle()
-                }
+                withAnimation(.spring(duration: 0.35, bounce: 0.1)) { isExpanded.toggle() }
             }
             .onHover { hoverToggle = $0 }
-
-            Divider().opacity(0.2).frame(width: 32)
 
             // Drop arrow — accent on target hover
             dropArrowButton
                 .onHover { hoverDrop = $0 }
         }
-        .frame(width: stripWidth)
+        .frame(width: stripWidth, height: stripWidth)  // force square
     }
 
     private func controlButton(
@@ -140,14 +124,12 @@ struct ShelfView: View {
     ) -> some View {
         Button(action: action) {
             ZStack {
-                // Background circle on hover
                 Circle()
-                    .fill(hoverColor.opacity(isHovered ? 0.18 : 0))
-                    .frame(width: 28, height: 28)
-
+                    .fill(hoverColor.opacity(isHovered ? 0.2 : 0))
+                    .frame(width: 20, height: 20)
                 Image(systemName: symbol)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(isHovered ? hoverColor : .primary.opacity(0.5))
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(isHovered ? hoverColor : .primary.opacity(0.45))
                     .symbolRenderingMode(.hierarchical)
             }
             .frame(width: stripWidth, height: buttonSize)
@@ -161,18 +143,17 @@ struct ShelfView: View {
     private var dropArrowButton: some View {
         ZStack {
             Circle()
-                .fill(Color.accentColor.opacity(isTargeted || hoverDrop ? 0.18 : 0))
-                .frame(width: 28, height: 28)
-
+                .fill(Color.accentColor.opacity(isTargeted || hoverDrop ? 0.2 : 0))
+                .frame(width: 20, height: 20)
             if #available(macOS 14.0, *) {
                 Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
-                    .font(.system(size: 16))
-                    .foregroundStyle(isTargeted ? Color.accentColor : (hoverDrop ? Color.accentColor : .primary.opacity(0.4)))
+                    .font(.system(size: 10))
+                    .foregroundStyle(isTargeted || hoverDrop ? Color.accentColor : .primary.opacity(0.4))
                     .contentTransition(.symbolEffect(.replace.offUp))
             } else {
                 Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
-                    .font(.system(size: 16))
-                    .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.4))
+                    .font(.system(size: 10))
+                    .foregroundStyle(isTargeted || hoverDrop ? Color.accentColor : .primary.opacity(0.4))
             }
         }
         .frame(width: stripWidth, height: buttonSize)
