@@ -19,5 +19,11 @@
     <array>
         <string>/private/tmp/</string>
     </array>
+
+    <!-- App Groups: needed for sharing data with extensions -->
+    <key>com.apple.security.application-groups</key>
+    <array>
+        <string>$(TeamIdentifierPrefix)com.upmarket.app</string>
+    </array>
 </dict>
 </plist>

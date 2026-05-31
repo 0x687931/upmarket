@@ -50,6 +50,12 @@ struct ShelfView: View {
         .sheet(isPresented: $showPaywall) {
             PaywallView().environmentObject(store)
         }
+        // Handle files from Quick Action extension and Services menu
+        .onReceive(NotificationCenter.default.publisher(for: .upmarketConvertFile)) { note in
+            if let url = note.object as? URL {
+                addToQueue(url)
+            }
+        }
     }
 
     private var closeButton: some View {
@@ -430,25 +436,33 @@ struct ShelfItemView: View {
     }
 
     private func openInDefaultApp(_ markdown: String, title: String) {
-        // Save to a temp .md file and open it
-        let tempDir = FileManager.default.temporaryDirectory
-        let fileName = title.isEmpty ? "converted" : title
-        let url = tempDir.appendingPathComponent(fileName).appendingPathExtension("md")
-        do {
-            try markdown.write(to: url, atomically: true, encoding: .utf8)
-            NSWorkspace.shared.open(url)
-        } catch {
-            print("[Upmarket] Could not open markdown: \(error)")
+        // Use SavePreference — respects user's chosen save location
+        Task {
+            let savedURL = await SavePreference.shared.save(
+                markdown: markdown,
+                title: title,
+                sourceURL: item.url
+            )
+            if let url = savedURL {
+                await MainActor.run {
+                    NSWorkspace.shared.open(url)
+                }
+            }
         }
     }
 
     private func saveMarkdown(_ markdown: String, title: String) {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
-        panel.nameFieldStringValue = (title.isEmpty ? "converted" : title) + ".md"
-        panel.orderFrontRegardless()
-        if panel.runModal() == .OK, let url = panel.url {
-            try? markdown.write(to: url, atomically: true, encoding: .utf8)
+        // Explicit save — always show panel regardless of preference
+        Task {
+            let panel = NSSavePanel()
+            panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
+            panel.nameFieldStringValue = (title.isEmpty ? "converted" : title) + ".md"
+            await MainActor.run {
+                panel.orderFrontRegardless()
+                if panel.runModal() == .OK, let url = panel.url {
+                    try? markdown.write(to: url, atomically: true, encoding: .utf8)
+                }
+            }
         }
     }
 
