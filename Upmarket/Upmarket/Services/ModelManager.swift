@@ -192,14 +192,12 @@ final class ModelManager: ObservableObject {
 
             // Check if download completed
             let result = await downloadTask.value
-            if let result = result as? PythonObject {
-                let success = Bool(result["success"]) ?? false
-                if !success {
-                    let error = String(result["error"]) ?? "Download failed"
-                    await MainActor.run { self.downloadError = error }
-                }
-                break
+            let success = Bool(result["success"]) ?? false
+            if !success {
+                let error = String(result["error"]) ?? "Download failed"
+                await MainActor.run { self.downloadError = error }
             }
+            break
         }
 
         try? FileManager.default.removeItem(atPath: progressFile)
