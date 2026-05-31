@@ -134,14 +134,20 @@ struct ShelfView: View {
     @ViewBuilder
     private var mainContent: some View {
         if isCollapsed {
-            // Collapsed: just the logo
-            HStack(spacing: 6) {
-                Image(nsImage: NSApp.applicationIconImage)
-                    .resizable()
-                    .frame(width: 22, height: 22)
-                    .opacity(0.75)
+            // Collapsed: drop target arrow (communicates function)
+            if #available(macOS 14.0, *) {
+                Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
+                    .font(.system(size: 18))
+                    .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.45))
+                    .contentTransition(.symbolEffect(.replace.offUp))
+                    .frame(maxWidth: .infinity)
+                    .animation(.easeInOut(duration: 0.12), value: isTargeted)
+            } else {
+                Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
+                    .font(.system(size: 18))
+                    .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.45))
+                    .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity)
         } else if queue.isEmpty && isAnyConverting {
             conversionAnimation
         } else if queue.isEmpty {
