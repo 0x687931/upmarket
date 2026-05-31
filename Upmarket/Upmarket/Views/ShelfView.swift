@@ -52,8 +52,39 @@ struct ShelfView: View {
         }
         // Handle files from Quick Action extension and Services menu
         .onReceive(NotificationCenter.default.publisher(for: .upmarketConvertFile)) { note in
-            if let url = note.object as? URL {
-                addToQueue(url)
+            if let url = note.object as? URL { addToQueue(url) }
+        }
+        // Handle reprocess requests from context menu
+        .onReceive(NotificationCenter.default.publisher(for: .upmarketReprocessItem)) { note in
+            guard let req = note.object as? ReprocessRequest else { return }
+            if let idx = queue.firstIndex(where: { $0.id == req.itemID }) {
+                queue[idx].state = .converting
+                reprocessItem(queue[idx], useAI: req.useAI)
+            }
+        }
+    }
+
+    private func reprocessItem(_ item: QueueItem, useAI: Bool) {
+        Task.detached(priority: .userInitiated) {
+            let tempURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString)
+                .appendingPathExtension(item.url.pathExtension)
+            try? FileManager.default.copyItem(at: item.url, to: tempURL)
+            defer { try? FileManager.default.removeItem(at: tempURL) }
+            await ConversionService.shared.convert(fileURL: tempURL, useAI: useAI)
+            while await ConversionService.shared.isConverting {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+            await MainActor.run {
+                guard let idx = self.queue.firstIndex(where: { $0.id == item.id }) else { return }
+                switch ConversionService.shared.result {
+                case .success(let output):
+                    self.queue[idx].state = .done(output.markdown, output.title)
+                case .failure(let error):
+                    self.queue[idx].state = .failed(error)
+                case .none:
+                    self.queue[idx].state = .failed("Conversion failed")
+                }
             }
         }
     }
@@ -336,9 +367,9 @@ struct ShelfItemView: View {
         .frame(width: 60)
         .contentShape(Rectangle())
         .onHover { showActions = $0 }
-        // Double-click to open — the key UX improvement
         .onTapGesture(count: 2) { handleDoubleClick() }
         .onTapGesture(count: 1) { handleSingleClick() }
+        .contextMenu { contextMenuItems }
     }
 
     @ViewBuilder
@@ -415,6 +446,82 @@ struct ShelfItemView: View {
             .help("Remove")
         }
         .padding(.bottom, 2)
+    }
+
+    // MARK: - Right-click context menu
+
+    @ViewBuilder
+    private var contextMenuItems: some View {
+        // Open actions
+        if case .done(let markdown, let title) = item.state {
+            Button("Open in Markdown Editor") {
+                openInDefaultApp(markdown, title: title)
+            }
+            Divider()
+
+            // Copy options
+            Button("Copy Markdown") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(markdown, forType: .string)
+            }
+            Button("Copy File Path") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(item.url.path, forType: .string)
+            }
+
+            Divider()
+
+            // Save
+            Button("Save As…") {
+                saveMarkdown(markdown, title: title)
+            }
+
+            Divider()
+
+            // Reprocess
+            Menu("Reprocess") {
+                Button("Fast (instant)") {
+                    reprocess(useAI: false, enhanced: false)
+                }
+                Button("Enhanced (better quality)") {
+                    reprocess(useAI: false, enhanced: true)
+                }
+                Button("Upmarket AI (best)") {
+                    reprocess(useAI: true, enhanced: true)
+                }
+            }
+
+            Divider()
+        } else if item.state == .pending || item.state == .converting {
+            // Can still copy path while converting
+            Button("Copy Source Path") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(item.url.path, forType: .string)
+            }
+            Divider()
+        }
+
+        // Show source in Finder
+        Button("Show Original in Finder") {
+            NSWorkspace.shared.activateFileViewerSelecting([item.url])
+        }
+
+        Divider()
+
+        // Remove
+        Button("Remove from Shelf", role: .destructive) {
+            onRemove()
+        }
+    }
+
+    // MARK: - Reprocess
+
+    private func reprocess(useAI: Bool, enhanced: Bool) {
+        // Notify ShelfView to re-convert this item with different settings
+        NotificationCenter.default.post(
+            name: .upmarketReprocessItem,
+            object: ReprocessRequest(url: item.url, itemID: item.id, useAI: useAI, enhanced: enhanced)
+        )
     }
 
     // MARK: - Tap handlers
