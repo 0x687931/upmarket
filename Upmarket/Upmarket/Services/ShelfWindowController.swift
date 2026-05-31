@@ -1,16 +1,31 @@
 import AppKit
 import SwiftUI
 
-/// Manages the floating Dock-adjacent shelf window.
-/// NSPanel approach mirrors Dockside — floats above all windows,
-/// follows Dock position, respects auto-hide, works in fullscreen.
+/// Manages the conversion queue shelf window.
+/// Sits to the left of the Dock, flush with the screen bottom — exactly like Dockside.
 final class ShelfWindowController: NSWindowController {
 
     static let shared = ShelfWindowController()
 
     private let positioner = ShelfPositioner.shared
     private var mouseMonitor: Any?
-    private var dockObserver: NSKeyValueObservation?
+    private var workspaceObserver: NSObjectProtocol?
+    private let shelfHeight: CGFloat = 68
+    private let shelfInset: CGFloat = 8   // gap from screen edge
+    private let snapRadius: CGFloat = 60  // magnetic snap distance in points
+
+    // Persisted shelf position preference
+    enum ShelfAnchor: Int {
+        case bottomLeft = 0
+        case bottomRight = 1
+        case topLeft = 2
+        case topRight = 3
+    }
+
+    var anchor: ShelfAnchor {
+        get { ShelfAnchor(rawValue: UserDefaults.standard.integer(forKey: "upmarket.shelfAnchor")) ?? .bottomLeft }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: "upmarket.shelfAnchor") }
+    }
 
     // MARK: - Init
 
@@ -19,11 +34,12 @@ final class ShelfWindowController: NSWindowController {
         super.init(window: panel)
         configureContent()
         startMonitoring()
+        reposition()
     }
 
     required init?(coder: NSCoder) { fatalError() }
 
-    // MARK: - Panel creation
+    // MARK: - Panel
 
     private static func makePanel() -> NSPanel {
         let panel = NSPanel(
@@ -34,7 +50,7 @@ final class ShelfWindowController: NSWindowController {
         )
         panel.level                   = .floating
         panel.collectionBehavior      = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
-        panel.isMovableByWindowBackground = false
+        panel.isMovableByWindowBackground = true   // user can drag to reposition
         panel.hidesOnDeactivate       = false
         panel.isOpaque                = false
         panel.backgroundColor         = .clear
@@ -47,39 +63,94 @@ final class ShelfWindowController: NSWindowController {
 
     private func configureContent() {
         guard let panel = window else { return }
+        panel.delegate = self
 
-        // Liquid glass background via NSVisualEffectView
-        let effect = NSVisualEffectView()
-        effect.material       = .sidebar
-        effect.blendingMode   = .behindWindow
-        effect.state          = .active
-        effect.wantsLayer     = true
-        effect.layer?.cornerRadius = 16
-        effect.layer?.masksToBounds = true
-
-        // Host SwiftUI shelf content
-        let hosting = NSHostingView(rootView: ShelfView()
-            .environmentObject(ConversionService.shared)
-            .environmentObject(StoreManager.shared)
-            .environmentObject(ModelManager.shared)
+        let hosting = NSHostingView(rootView:
+            ShelfView()
+                .environmentObject(ConversionService.shared)
+                .environmentObject(StoreManager.shared)
+                .environmentObject(ModelManager.shared)
         )
-        hosting.frame = effect.bounds
-        hosting.autoresizingMask = [.width, .height]
-        effect.addSubview(hosting)
-
-        panel.contentView = effect
-
-        // Position adjacent to Dock
-        reposition()
+        panel.contentView = hosting
     }
 
     // MARK: - Positioning
+    // Matches Dockside: shelf sits to the left of the Dock, flush with screen bottom.
 
     func reposition() {
         guard let panel = window else { return }
-        let shelfSize = NSSize(width: 280, height: 480)
-        let frame = positioner.shelfFrame(shelfSize: shelfSize)
-        panel.setFrame(frame, display: false)
+        let frame = shelfFrame()
+        panel.setFrame(frame, display: true)
+    }
+
+    private func shelfFrame() -> NSRect {
+        let screen = positioner.primaryScreen
+        let visible = screen.visibleFrame
+        let shelfWidth = min(visible.width * 0.52, 580)
+
+        switch anchor {
+        case .bottomLeft:
+            return NSRect(
+                x: visible.minX + shelfInset,
+                y: visible.minY + shelfInset,
+                width: shelfWidth, height: shelfHeight
+            )
+        case .bottomRight:
+            return NSRect(
+                x: visible.maxX - shelfWidth - shelfInset,
+                y: visible.minY + shelfInset,
+                width: shelfWidth, height: shelfHeight
+            )
+        case .topLeft:
+            return NSRect(
+                x: visible.minX + shelfInset,
+                y: visible.maxY - shelfHeight - shelfInset,
+                width: shelfWidth, height: shelfHeight
+            )
+        case .topRight:
+            return NSRect(
+                x: visible.maxX - shelfWidth - shelfInset,
+                y: visible.maxY - shelfHeight - shelfInset,
+                width: shelfWidth, height: shelfHeight
+            )
+        }
+    }
+
+    /// Call this when the user finishes dragging the shelf window.
+    /// Snaps to the nearest screen corner/edge.
+    func snapToNearestCorner() {
+        guard let panel = window else { return }
+        let mid = NSPoint(
+            x: panel.frame.midX,
+            y: panel.frame.midY
+        )
+        let screen = positioner.primaryScreen
+        let visible = screen.visibleFrame
+
+        // Determine which corner is closest
+        let corners: [(ShelfAnchor, NSPoint)] = [
+            (.bottomLeft,  NSPoint(x: visible.minX, y: visible.minY)),
+            (.bottomRight, NSPoint(x: visible.maxX, y: visible.minY)),
+            (.topLeft,     NSPoint(x: visible.minX, y: visible.maxY)),
+            (.topRight,    NSPoint(x: visible.maxX, y: visible.maxY)),
+        ]
+
+        let nearest = corners.min {
+            distance($0.1, mid) < distance($1.1, mid)
+        }
+
+        if let nearest {
+            anchor = nearest.0
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.25
+                ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                panel.animator().setFrame(shelfFrame(), display: true)
+            }
+        }
+    }
+
+    private func distance(_ a: NSPoint, _ b: NSPoint) -> CGFloat {
+        sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2))
     }
 
     // MARK: - Show / Hide
@@ -91,11 +162,12 @@ final class ShelfWindowController: NSWindowController {
             panel.alphaValue = 0
             panel.makeKeyAndOrderFront(nil)
             NSAnimationContext.runAnimationGroup { ctx in
-                ctx.duration = 0.18
+                ctx.duration = 0.2
                 ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
                 panel.animator().alphaValue = 1
             }
         } else {
+            panel.alphaValue = 1
             panel.makeKeyAndOrderFront(nil)
         }
     }
@@ -117,22 +189,13 @@ final class ShelfWindowController: NSWindowController {
 
     func toggle() {
         guard let panel = window else { return }
-        if panel.isVisible { hide() } else { show() }
+        panel.isVisible ? hide() : show()
     }
 
-    // MARK: - Auto-hide monitoring
+    // MARK: - Monitoring
 
     private func startMonitoring() {
-        // Watch mouse position for auto-hide Dock behaviour
-        mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
-            guard let self, self.positioner.isDockAutoHiding else { return }
-            let loc = NSEvent.mouseLocation
-            if self.positioner.shouldBeVisible(mouseLocation: loc) {
-                if !(self.window?.isVisible ?? false) { self.show() }
-            }
-        }
-
-        // Reposition when screen configuration changes
+        // Reposition on screen changes
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(screenChanged),
@@ -140,16 +203,31 @@ final class ShelfWindowController: NSWindowController {
             object: nil
         )
 
-        // Watch for Dock orientation changes
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(screenChanged),
-            name: NSNotification.Name("com.apple.dock.appledockupdaterequest"),
-            object: nil
-        )
+        // Auto-hide with Dock if enabled
+        mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in
+            guard let self, self.positioner.isDockAutoHiding else { return }
+            let loc = NSEvent.mouseLocation
+            if self.positioner.shouldBeVisible(mouseLocation: loc) {
+                if !(self.window?.isVisible ?? false) { self.show() }
+            }
+        }
     }
 
     @objc private func screenChanged() {
         reposition()
+    }
+}
+
+// MARK: - NSWindowDelegate — snap on drag end
+
+extension ShelfWindowController: NSWindowDelegate {
+    func windowDidMove(_ notification: Notification) {
+        // Snap to nearest corner after user stops dragging
+        NSObject.cancelPreviousPerformRequests(withTarget: self)
+        perform(#selector(delayedSnap), with: nil, afterDelay: 0.3)
+    }
+
+    @objc private func delayedSnap() {
+        snapToNearestCorner()
     }
 }
