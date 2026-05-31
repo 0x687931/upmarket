@@ -673,10 +673,10 @@
 		AA000008000000000000008A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = UpmarketQuickAction/UpmarketQuickAction.entitlements;
+				CODE_SIGN_ENTITLEMENTS = UpmarketQuickActionSupport/UpmarketQuickAction.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				INFOPLIST_FILE = UpmarketQuickAction/Info.plist;
+				INFOPLIST_FILE = UpmarketQuickActionSupport/Info.plist;
 				MACOSX_DEPLOYMENT_TARGET = 13.3;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.upmarket.app.quickaction;
@@ -689,10 +689,10 @@
 		AA000009000000000000009A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = UpmarketQuickAction/UpmarketQuickAction.entitlements;
+				CODE_SIGN_ENTITLEMENTS = UpmarketQuickActionSupport/UpmarketQuickAction.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				INFOPLIST_FILE = UpmarketQuickAction/Info.plist;
+				INFOPLIST_FILE = UpmarketQuickActionSupport/Info.plist;
 				MACOSX_DEPLOYMENT_TARGET = 13.3;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.upmarket.app.quickaction;
