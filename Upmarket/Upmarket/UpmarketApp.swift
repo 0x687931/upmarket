@@ -93,15 +93,15 @@ struct UpmarketApp: App {
         .windowResizability(.contentSize)
         .defaultSize(width: 480, height: 400)
 
-        // MARK: Menu bar icon — minimal, opens shelf or main window
+        // MARK: Menu bar icon — .menu style stays open while interacting
         MenuBarExtra {
-            MenuBarView()
-                .environmentObject(conversionService)
-                .environmentObject(storeManager)
-                .environmentObject(modelManager)
+            // Quick actions that don't require focus
+            Button("Show Shelf") { ShelfWindowController.shared.show() }
+            Divider()
+            Button("Preferences…") { openWindow(id: "preferences") }
+            Divider()
+            Button("Quit Upmarket") { NSApp.terminate(nil) }
         } label: {
-            // SF Symbol: "number" — template image for menu bar
-            // symbolEffect(.pulse) shows activity on macOS 14+ (Variable Draw)
             if #available(macOS 14.0, *) {
                 Image(systemName: conversionService.isConverting ? "number.circle.fill" : "number")
                     .symbolEffect(.pulse, isActive: conversionService.isConverting)
@@ -109,7 +109,7 @@ struct UpmarketApp: App {
                 Image(systemName: conversionService.isConverting ? "number.circle.fill" : "number")
             }
         }
-        .menuBarExtraStyle(.window)
+        .menuBarExtraStyle(.menu)  // .menu never auto-dismisses on click-away
     }
 
     init() {

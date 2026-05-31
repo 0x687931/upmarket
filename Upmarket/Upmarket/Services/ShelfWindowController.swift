@@ -50,12 +50,14 @@ final class ShelfWindowController: NSWindowController {
         )
         panel.level                   = .floating
         panel.collectionBehavior      = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
-        panel.isMovableByWindowBackground = true   // user can drag to reposition
+        panel.isMovableByWindowBackground = true
         panel.hidesOnDeactivate       = false
         panel.isOpaque                = false
         panel.backgroundColor         = .clear
         panel.hasShadow               = true
         panel.animationBehavior       = .utilityWindow
+        panel.titlebarAppearsTransparent = true
+        panel.titleVisibility         = .hidden
         return panel
     }
 
@@ -71,6 +73,8 @@ final class ShelfWindowController: NSWindowController {
                 .environmentObject(StoreManager.shared)
                 .environmentObject(ModelManager.shared)
         )
+        hosting.wantsLayer = true
+        hosting.layer?.backgroundColor = NSColor.clear.cgColor
         panel.contentView = hosting
     }
 

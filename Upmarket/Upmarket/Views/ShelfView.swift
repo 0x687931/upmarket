@@ -85,7 +85,7 @@ struct ShelfView: View {
 
     private var divider: some View {
         Rectangle()
-            .fill(Color.white.opacity(0.12))
+            .fill(Color.primary.opacity(0.15))
             .frame(width: 1, height: 36)
     }
 
@@ -97,7 +97,7 @@ struct ShelfView: View {
         } label: {
             Image(systemName: "plus")
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(.primary.opacity(0.7))
                 .frame(width: 40, height: shelfHeight)
                 .contentShape(Rectangle())
         }
@@ -112,16 +112,16 @@ struct ShelfView: View {
             if #available(macOS 14.0, *) {
                 Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
                     .font(.system(size: 16))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(.primary.opacity(0.5))
                     .contentTransition(.symbolEffect(.replace.offUp))
             } else {
                 Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
                     .font(.system(size: 16))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(.primary.opacity(0.5))
             }
             Text(isTargeted ? "Release to convert" : "Drop documents here")
                 .font(.system(size: 12))
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(.primary.opacity(0.5))
                 .animation(.easeInOut(duration: 0.12), value: isTargeted)
         }
         .frame(maxWidth: .infinity)
@@ -130,7 +130,7 @@ struct ShelfView: View {
     private var collapsedLabel: some View {
         Text("Upmarket")
             .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(.white.opacity(0.5))
+            .foregroundStyle(.primary.opacity(0.5))
             .frame(maxWidth: .infinity)
     }
 
@@ -162,7 +162,7 @@ struct ShelfView: View {
                 } label: {
                     Image(systemName: "xmark.circle")
                         .font(.system(size: 11))
-                        .foregroundStyle(.white.opacity(0.55))
+                        .foregroundStyle(.primary.opacity(0.6))
                         .frame(width: 28, height: shelfHeight)
                         .contentShape(Rectangle())
                 }
@@ -170,15 +170,17 @@ struct ShelfView: View {
                 .help("Clear all")
             }
 
-            // Collapse / expand toggle
+            // Collapse / expand toggle — actually resizes the window
             Button {
                 withAnimation(.spring(duration: 0.3)) {
                     isCollapsed.toggle()
+                    let newWidth: Double = isCollapsed ? 60 : shelfWidth
+                    ShelfWindowController.shared.resizeToContent(width: CGFloat(newWidth))
                 }
             } label: {
                 Image(systemName: isCollapsed ? "chevron.right" : "chevron.left")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.55))
+                    .foregroundStyle(.primary.opacity(0.6))
                     .frame(width: 30, height: shelfHeight)
                     .contentShape(Rectangle())
             }
@@ -312,7 +314,7 @@ struct ShelfItemView: View {
 
                 Text(item.name)
                     .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(.primary.opacity(0.85))
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .frame(width: 52)
@@ -342,7 +344,7 @@ struct ShelfItemView: View {
         } else {
             Image(systemName: extensionIcon)
                 .font(.system(size: 26))
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(.primary.opacity(0.7))
         }
     }
 
