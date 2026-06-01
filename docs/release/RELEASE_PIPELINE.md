@@ -110,6 +110,14 @@ Do not change conversion queue concurrency from intuition. Use the corpus/pathwa
 - treat large OCR/model paths as isolated work so a stall or native crash cannot block the app;
 - only promote a concurrency change when it improves throughput without quality downgrade, UI responsiveness loss, memory pressure risk, or worse failure recovery.
 
+Run the local comparison with:
+
+```sh
+scripts/benchmark_concurrency.py --pathway python-fast-pdfium --workers 4 --json-output reports/concurrency-python-fast-pdfium.json --markdown-output reports/concurrency-python-fast-pdfium.md
+```
+
+Committed release evidence lives in `docs/release/SERIAL_PARALLEL_BENCHMARKS.md`; ignored raw JSON/Markdown outputs remain under `reports/` for local inspection.
+
 ## Upstream Issue and Patch Intake
 
 Upstream work must enter Upmarket through a controlled intake path. Do not copy patches, bump packages, or change runtime behavior just because an upstream issue looks relevant.

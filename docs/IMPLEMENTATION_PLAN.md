@@ -135,7 +135,7 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 - [x] Add an availability-gated native document classifier that can recommend PDFKit, Vision OCR, or enhanced conversion without failing when Vision/Core ML are unavailable.
 - [x] Add local Vision/NaturalLanguage-style candidate quality selection for permitted PDF paths using language confidence, coverage, structure, artifact penalties, duplication penalties, and image-text agreement.
 - [x] Record forensic benchmark inventory: package versions, binary versions, corpus source commits, benchmark-only OCR/model cache artifacts, and cache roots.
-- [ ] Add a follow-on serial-vs-parallel processing benchmark using the same corpus/pathway matrix, including accuracy, wall time, failures, and system-load evidence before changing queue concurrency.
+- [x] Add a follow-on serial-vs-parallel processing benchmark using the same corpus/pathway matrix, including accuracy, wall time, failures, and system-load evidence before changing queue concurrency.
 - [x] Require ADRs for local patches to upstream behavior, including removal condition and packaged-app validation.
 - [x] Require fork/cherry-pick candidates to be temporary, upstream-linked, pinned to immutable commits or packaged artifacts, covered by corpus validation, and removable once upstream releases.
 - [x] Add dependency audit workflow for exact pins, `pip check`, license generation, vulnerability review where practical, and undeclared runtime tool detection.
