@@ -367,7 +367,7 @@
 			mainGroup = 81A3B7222FCB0F91004A488D;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				81A3B75B2FCB1073004A488D /* XCRemoteSwiftPackageReference "PythonKit" */,
+				81A3B75B2FCB1073004A488D /* XCLocalSwiftPackageReference "Vendor/PythonKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 81A3B72C2FCB0F91004A488D /* Products */;
@@ -813,6 +813,10 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_INCLUDE_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/Vendor/PythonKit/build/$(CONFIGURATION)",
+				);
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 			};
@@ -841,6 +845,10 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_INCLUDE_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/Vendor/PythonKit/build/$(CONFIGURATION)",
+				);
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 			};
@@ -905,21 +913,17 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		81A3B75B2FCB1073004A488D /* XCRemoteSwiftPackageReference "PythonKit" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/pvieito/PythonKit";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.3.0;
-			};
+/* Begin XCLocalSwiftPackageReference section */
+		81A3B75B2FCB1073004A488D /* XCLocalSwiftPackageReference "Vendor/PythonKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Vendor/PythonKit;
 		};
-/* End XCRemoteSwiftPackageReference section */
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		81A3B75C2FCB1073004A488D /* PythonKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 81A3B75B2FCB1073004A488D /* XCRemoteSwiftPackageReference "PythonKit" */;
+			package = 81A3B75B2FCB1073004A488D /* XCLocalSwiftPackageReference "Vendor/PythonKit" */;
 			productName = PythonKit;
 		};
 /* End XCSwiftPackageProductDependency section */

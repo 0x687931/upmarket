@@ -123,6 +123,12 @@ struct RuntimeHelperClient: Sendable {
             }
         }
 
+        stderr.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            guard !data.isEmpty else { return }
+            AppLog.pythonBridge.debug("Runtime helper stderr drained bytes=\(data.count, privacy: .public)")
+        }
+
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 do {

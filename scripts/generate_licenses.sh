@@ -53,7 +53,7 @@ for p in sorted(pkgs, key=lambda x: x['Name'].lower()):
 out.extend([
     {'name': 'BeeWare Python-Apple-support', 'version': '3.12-b8', 'license': 'MIT',
      'url': 'https://github.com/beeware/Python-Apple-support'},
-    {'name': 'PythonKit', 'version': '0.3.0', 'license': 'MIT',
+    {'name': 'PythonKit', 'version': '0.5.1', 'license': 'Apache-2.0',
      'url': 'https://github.com/pvieito/PythonKit'},
 ])
 out.sort(key=lambda x: x['name'].lower())

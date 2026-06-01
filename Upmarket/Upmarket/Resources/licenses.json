@@ -79,8 +79,8 @@
   },
   {
     "name": "PythonKit",
-    "version": "0.3.0",
-    "license": "MIT",
+    "version": "0.5.1",
+    "license": "Apache-2.0",
     "url": "https://github.com/pvieito/PythonKit"
   },
   {

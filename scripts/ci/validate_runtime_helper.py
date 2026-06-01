@@ -13,6 +13,7 @@ from pathlib import Path
 PROJECT = Path("Upmarket/Upmarket.xcodeproj/project.pbxproj")
 HELPER_SOURCE = Path("Upmarket/UpmarketRuntimeHelper/main.swift")
 HELPER_ENTITLEMENTS = Path("Upmarket/UpmarketRuntimeHelper/UpmarketRuntimeHelper.entitlements")
+VENDORED_PYTHONKIT_NOTE = Path("Upmarket/Vendor/PythonKit/UPMARKET_VENDOR.md")
 
 
 def fail(message: str) -> int:
@@ -37,6 +38,7 @@ def main() -> int:
         "Embed Runtime Helper",
         "UpmarketRuntimeHelper.entitlements",
         "PythonKit in Frameworks",
+        "XCLocalSwiftPackageReference \"Vendor/PythonKit\"",
     ]
     for marker in required_project_markers:
         if marker not in project_text:
@@ -51,9 +53,15 @@ def main() -> int:
         errors.append(f"{HELPER_ENTITLEMENTS}: helper entitlements missing")
     else:
         entitlements = HELPER_ENTITLEMENTS.read_text(encoding="utf-8")
-        for marker in ["com.apple.security.app-sandbox", "com.apple.security.network.client"]:
+        for marker in ["com.apple.security.app-sandbox", "com.apple.security.inherit"]:
             if marker not in entitlements:
                 errors.append(f"{HELPER_ENTITLEMENTS}: missing {marker}")
+        for marker in ["com.apple.security.network.client", "com.apple.security.application-groups"]:
+            if marker in entitlements:
+                errors.append(f"{HELPER_ENTITLEMENTS}: helper should inherit {marker} from the app sandbox")
+
+    if not VENDORED_PYTHONKIT_NOTE.exists():
+        errors.append(f"{VENDORED_PYTHONKIT_NOTE}: vendored runtime bridge dependency must record upstream provenance")
 
     app_path = built_app_from_args()
     if app_path:
