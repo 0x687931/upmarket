@@ -12,6 +12,18 @@ def load_report(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def markdown_cell(value: str) -> str:
+    return value.replace("|", "\\|").replace("\n", " ")
+
+
+def score_cell(document: dict | None) -> str:
+    if document is None:
+        return "-"
+    if document.get("error"):
+        return "ERR"
+    return f"{float(document.get('overall_percent', 0)):.1f}%"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("reports", nargs="+", type=Path)
@@ -70,9 +82,48 @@ def main() -> int:
         lines.append("")
 
     lines.extend([
+        "## Document Score Matrix",
+        "",
+        "Scores are overall percentages. `ERR` means the pathway ran and failed for that file. `-` means that converter was not run for that file.",
+        "",
+    ])
+
+    document_rows: dict[str, dict] = {}
+    for report in reports_by_pathway.values():
+        for document in report.get("documents", []):
+            doc_id = document.get("id", "")
+            if not doc_id:
+                continue
+            row = document_rows.setdefault(doc_id, {
+                "id": doc_id,
+                "file": document.get("file") or doc_id,
+                "category": document.get("category", ""),
+                "scores": {},
+            })
+            if document.get("file"):
+                row["file"] = document["file"]
+            if document.get("category"):
+                row["category"] = document["category"]
+            pathway = report.get("pathway") or report.get("pipeline", "")
+            row["scores"][pathway] = document
+
+    if document_rows:
+        run_pathways = sorted(reports_by_pathway)
+        lines.append("| File | Category | " + " | ".join(run_pathways) + " |")
+        lines.append("| --- | --- | " + " | ".join("---:" for _ in run_pathways) + " |")
+        for row in sorted(document_rows.values(), key=lambda item: (item["category"], item["file"], item["id"])):
+            cells = [
+                markdown_cell(row["file"]),
+                markdown_cell(row["category"]),
+            ]
+            cells.extend(score_cell(row["scores"].get(pathway)) for pathway in run_pathways)
+            lines.append("| " + " | ".join(cells) + " |")
+        lines.append("")
+
+    lines.extend([
         "## Document-Level Data",
         "",
-        "Use the JSON reports in the same artifact for document-level regression and uplift review.",
+        "Use the JSON reports in the same artifact for component scores, elapsed time, errors, regression review, and uplift review.",
         "",
     ])
 

@@ -62,6 +62,7 @@ PATHWAYS = {
 class DocScore:
     doc_id: str
     category: str
+    file: str = ""
     heading_recall: float = 0.0
     table_accuracy: float = 0.0
     content_completeness: float = 0.0
@@ -519,17 +520,18 @@ def run_benchmark(
                 signal.alarm(0)
 
             score = score_document(markdown, doc_meta, ground_truth_md)
+            score.file = doc_meta.get("file", "")
             score.elapsed_seconds = elapsed
             scores.append(score)
             gt_indicator = "GT" if ground_truth_md else "  "
             status = "✓" if score.overall >= 0.8 else "⚠" if score.overall >= 0.6 else "✗"
             print(f"[{gt_indicator}] {status}  {score.overall*100:.0f}%  ({elapsed:.1f}s)")
         except TimeoutError:
-            score = DocScore(doc_id=doc_id, category=category, error="Timed out after 30s")
+            score = DocScore(doc_id=doc_id, category=category, file=doc_meta.get("file", ""), error="Timed out after 30s")
             scores.append(score)
             print(f"[  ] ✗  TIMEOUT (>30s)")
         except Exception as e:
-            score = DocScore(doc_id=doc_id, category=category, error=str(e))
+            score = DocScore(doc_id=doc_id, category=category, file=doc_meta.get("file", ""), error=str(e))
             scores.append(score)
             print(f"[  ] ✗  ERROR: {e}")
 
@@ -602,6 +604,7 @@ def write_json_report(path: Path, pipeline: str, pathway: str | None, scores: li
         "documents": [
             {
                 "id": score.doc_id,
+                "file": score.file,
                 "category": score.category.split("/")[0],
                 "overall_percent": round(score.overall * 100, 1),
                 "heading_recall_percent": round(score.heading_recall * 100, 1),
