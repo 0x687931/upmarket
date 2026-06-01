@@ -56,6 +56,8 @@ def main() -> int:
             errors.append(f"{path}: PythonKit imports must stay behind PythonBridge/PythonWorker")
         if "Python.import" in text and path not in APPROVED_PYTHON_CALLS:
             errors.append(f"{path}: Python.import calls must stay behind PythonBridge/PythonWorker")
+        if path.parent == ROOT / "Services" and "print(" in text:
+            errors.append(f"{path}: service diagnostics must use AppLog/OSLog, not print")
 
     if not (ROOT / "Services" / "FileAccessService.swift").exists():
         errors.append("Services/FileAccessService.swift is required for AppKit file/pasteboard operations")

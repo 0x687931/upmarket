@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 /// Enhances document Markdown using Apple's Foundation Models framework.
 /// On-device ~3B parameter model. Requires macOS 26+ with Apple Intelligence enabled.
@@ -39,7 +40,7 @@ struct FoundationModelEnhancer {
             do {
                 return try await _FMImpl.enhance(markdown: markdown, documentType: documentType)
             } catch {
-                print("[FoundationModels] \(error)")
+                AppLog.featureFlags.error("Foundation model enhancement failed: \(error.localizedDescription, privacy: .private)")
             }
         }
         return DocumentEnhancement(

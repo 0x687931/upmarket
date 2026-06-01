@@ -1,6 +1,7 @@
 import Foundation
 import StoreKit
 import Combine
+import OSLog
 
 final class StoreManager: ObservableObject {
 
@@ -132,7 +133,7 @@ final class StoreManager: ObservableObject {
                 loadPackSnapshot()
                 return true
             } catch {
-                print("[StoreManager] Failed to consume pack credit: \(error)")
+                AppLog.storeKit.error("Failed to consume pack credit: \(error.localizedDescription, privacy: .private)")
                 return false
             }
         }
@@ -203,7 +204,7 @@ final class StoreManager: ObservableObject {
                 self.productsLoaded = true
                 self.productLoadError = "Purchase options could not be loaded."
             }
-            print("[StoreManager] Failed to load products: \(error)")
+            AppLog.storeKit.error("Failed to load products: \(error.localizedDescription, privacy: .private)")
         }
     }
 
@@ -239,7 +240,7 @@ final class StoreManager: ObservableObject {
                         await MainActor.run {
                             self.productLoadError = "A document pack purchase could not be recorded. Keep Upmarket open and try Restore Purchases."
                         }
-                        print("[StoreManager] Failed to record pack transaction \(transaction.id): \(error)")
+                        AppLog.storeKit.error("Failed to record pack transaction id=\(transaction.id, privacy: .public): \(error.localizedDescription, privacy: .private)")
                         continue
                     }
                 } else {
@@ -278,7 +279,7 @@ final class StoreManager: ObservableObject {
         } catch {
             packCredits = 0
             productLoadError = "Purchase records could not be read. Please contact support before buying another document pack."
-            print("[StoreManager] Failed to read pack credit ledger: \(error)")
+            AppLog.storeKit.error("Failed to read pack credit ledger: \(error.localizedDescription, privacy: .private)")
         }
     }
 
@@ -299,7 +300,7 @@ final class StoreManager: ObservableObject {
         } catch {
             packCredits = 0
             productLoadError = "Purchase records could not be migrated. Please contact support before buying another document pack."
-            print("[StoreManager] Failed to migrate legacy pack credits: \(error)")
+            AppLog.storeKit.error("Failed to migrate legacy pack credits: \(error.localizedDescription, privacy: .private)")
         }
     }
 }

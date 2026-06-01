@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import OSLog
 
 @MainActor
 final class ConversionQueue: ObservableObject {
@@ -64,6 +65,7 @@ final class ConversionQueue: ObservableObject {
         let job = ConversionJob(sourceURL: url, useAI: useAI, password: password)
         jobs.insert(job, at: 0)
         latestResult = nil
+        AppLog.conversion.info("Queued conversion correlationID=\(job.correlationID, privacy: .public) ext=\(job.ext, privacy: .public)")
         enqueue(job.id)
         return job.id
     }
@@ -77,6 +79,7 @@ final class ConversionQueue: ObservableObject {
 
     func cancel(_ id: UUID) {
         cancelledJobIDs.insert(id)
+        AppLog.conversion.info("Cancelling conversion correlationID=\(id.uuidString, privacy: .public)")
         pendingJobIDs.removeAll { $0 == id }
         if activeJobID == id {
             activeTask?.cancel()
@@ -154,6 +157,7 @@ final class ConversionQueue: ObservableObject {
         guard jobs[index].isRunning else { return }
         jobs[index].stage = stage
         jobs[index].lastProgressAt = Date()
+        AppLog.conversion.info("Conversion stage correlationID=\(id.uuidString, privacy: .public) stage=\(stage.rawValue, privacy: .public)")
     }
 
     private func finish(_ id: UUID, result: ConversionResult, stage: ConversionStage) {
@@ -163,6 +167,7 @@ final class ConversionQueue: ObservableObject {
         jobs[index].result = result
         jobs[index].lastProgressAt = Date()
         latestResult = result
+        AppLog.conversion.info("Finished conversion correlationID=\(id.uuidString, privacy: .public) stage=\(stage.rawValue, privacy: .public)")
         continuations.removeValue(forKey: id)?.resume(returning: result)
     }
 }

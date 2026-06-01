@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import PythonKit
 
 struct ModelDownloadResult: Sendable {
@@ -37,6 +38,7 @@ struct PythonWorker {
     nonisolated func convert(fileURL: URL, title: String, useAI: Bool, password: String?, workspaceURL: URL? = nil) async -> ConversionResult {
         do {
             return try await withWorkspace(workspaceURL) {
+                AppLog.pythonBridge.info("Python conversion started ext=\(fileURL.pathExtension, privacy: .public) useAI=\(useAI, privacy: .public)")
                 let converter = Python.import("docling_bridge.converter")
                 var opts: [String: PythonObject] = [
                     "use_ai": PythonObject(useAI),
@@ -54,8 +56,10 @@ struct PythonWorker {
                 return parseConversionResult(pyResult, title: title)
             }
         } catch let error as PythonBridgeError {
+            AppLog.pythonBridge.error("Python conversion bridge failure: \(error.localizedDescription, privacy: .private)")
             return .failure(error.localizedDescription)
         } catch {
+            AppLog.pythonBridge.error("Python conversion failure: \(error.localizedDescription, privacy: .private)")
             return .failure(ConversionError.pythonRuntime(error.localizedDescription).errorDescription ?? error.localizedDescription)
         }
     }
@@ -101,6 +105,7 @@ struct PythonWorker {
                 return ModelDownloadResult(success: success, error: error)
             }
         } catch {
+            AppLog.modelDownload.error("Model download failed for key=\(key, privacy: .public): \(error.localizedDescription, privacy: .private)")
             return ModelDownloadResult(success: false, error: error.localizedDescription)
         }
     }

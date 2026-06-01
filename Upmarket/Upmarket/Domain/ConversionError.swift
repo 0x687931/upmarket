@@ -5,6 +5,7 @@ enum ConversionError: Error, Equatable, LocalizedError {
     case passwordRequired
     case cancelled
     case noProgress
+    case fileTooLarge
     case pythonRuntime(String)
     case failed(String)
 
@@ -18,6 +19,8 @@ enum ConversionError: Error, Equatable, LocalizedError {
             return "Conversion cancelled."
         case .noProgress:
             return "Conversion made no progress."
+        case .fileTooLarge:
+            return "This document is too large to convert safely."
         case .pythonRuntime(let message), .failed(let message):
             return message
         }

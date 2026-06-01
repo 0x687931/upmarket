@@ -82,9 +82,11 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 ### P0 - Observability, CI, and Release Validation
 - [ ] Fix CI to build and test `Upmarket/Upmarket.xcodeproj`.
 - [ ] Add CI/release checks for archive, entitlements, effective `Info.plist`, embedded Python imports, offline conversion smoke tests, and model-missing behavior.
-- [ ] Replace Swift `print` and Python stderr diagnostics with structured `OSLog` categories, signposts, per-job correlation IDs, and privacy-redacted diagnostic bundles.
-- [ ] Add fault-injection tests for Python bridge setup failure, conversion helper failure, stalled conversion, temp cleanup, partial model download, password PDFs, corrupt files, and huge files.
-- [ ] Add memory-pressure safeguards for Vision/OCR paths: page/pixel/file limits, streaming page processing, autorelease pools, and actionable “document too large” errors.
+- [x] Replace Swift service `print` diagnostics with structured `OSLog` categories, per-job correlation IDs, and privacy-redacted diagnostic bundles.
+- [x] Add fault-injection tests for Python bridge setup failure, stalled conversion, temp cleanup, and huge input rejection.
+- [x] Add first release memory-pressure safeguard: reject oversized input before workspace copy with an actionable “document too large” error.
+- [ ] Add deeper conversion-corpus fault tests for partial model download, password PDFs, corrupt files, and Python stderr handling.
+- [ ] Add deeper Vision/OCR safeguards: page/pixel limits, streaming page processing, and autorelease pools.
 
 ### P0 - Crash and Bug Reporting
 - [ ] Define a privacy-first support policy: no automatic telemetry, no document contents, no extracted text, no passwords, and no full local file paths in reports.
@@ -176,8 +178,8 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [ ] Verify conversion result state always resolves to result, actionable error, password prompt, or explicit in-progress state
 
 ### Gate C - Stability and Diagnostics
-- [ ] Replace `print` diagnostics in Swift services with `OSLog.Logger`
-- [ ] Add OSLog categories: conversion, pythonBridge, modelDownload, storeKit, fileAccess, featureFlags
+- [x] Replace `print` diagnostics in Swift services with `OSLog.Logger`
+- [x] Add OSLog categories: conversion, pythonBridge, modelDownload, storeKit, fileAccess, featureFlags
 - [ ] Add signposts around conversion stages: copyToTemp, analyse, nativeExtract, pythonConvert, postProcess, saveOutput
 - [ ] Add conversion liveness monitor based on progress/heartbeat updates, not fixed elapsed duration
 - [ ] Surface stalled conversion state with "still working" vs "no progress detected" messaging
@@ -221,7 +223,7 @@ This is a launch requirement, not post-launch polish.
 - [ ] Unsupported format
 - [ ] Password required
 - [ ] File inaccessible / sandbox denied
-- [ ] File too large or memory pressure
+- [x] File too large or memory pressure
 - [ ] Model unavailable / download required
 - [ ] Model download failed
 - [ ] Python bridge import/runtime failure
@@ -231,7 +233,7 @@ This is a launch requirement, not post-launch polish.
 ### Native Test Coverage
 - [x] `ConversionRunner` routing and `ConversionQueue` state transitions
 - [ ] PDF password path
-- [ ] Python bridge success/failure parsing
+- [x] Python bridge success/failure parsing
 - [ ] Liveness monitor state transitions
 - [ ] ModelManager check/download/delete error handling
 - [ ] StoreManager product loading, entitlement refresh, pack credit consumption, restore

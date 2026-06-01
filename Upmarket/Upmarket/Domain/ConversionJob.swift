@@ -44,6 +44,7 @@ struct ConversionJob: Identifiable, Equatable {
 
     var name: String { sourceURL.deletingPathExtension().lastPathComponent }
     var ext: String { sourceURL.pathExtension.uppercased() }
+    var correlationID: String { id.uuidString }
     var isRunning: Bool { stage == .queued || stage == .copying || stage == .extracting || stage == .python || stage == .postProcessing }
 
     func isStalled(referenceDate: Date = Date(), threshold: TimeInterval) -> Bool {

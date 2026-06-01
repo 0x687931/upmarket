@@ -115,6 +115,20 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertEqual(job?.result?.errorMessage, "Unsupported file")
     }
 
+    func testPythonBridgeFailureIsStoredPerJob() async {
+        let queue = ConversionQueue { _, progress in
+            progress?(.python)
+            return .failure(ConversionError.pythonRuntime("Bridge unavailable").errorDescription!)
+        }
+
+        let id = queue.add(URL(fileURLWithPath: "/tmp/python.pdf"))
+        await waitForResult(id, in: queue)
+
+        let job = queue.jobs.first { $0.id == id }
+        XCTAssertEqual(job?.stage, .failed)
+        XCTAssertEqual(job?.result?.errorMessage, "Bridge unavailable")
+    }
+
     func testRetryCreatesNewJobForOriginalSource() async {
         var attempts = 0
         let queue = ConversionQueue { job, _ in

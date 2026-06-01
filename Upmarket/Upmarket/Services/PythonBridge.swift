@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import OSLog
 import PythonKit
 
 enum PythonBridgeError: Error, Equatable, LocalizedError, Sendable {
@@ -48,12 +49,15 @@ actor PythonRuntime {
             version = String(sys.version) ?? "unknown"
             isReady = true
             lastError = nil
+            AppLog.pythonBridge.info("Python runtime ready version=\(self.version ?? "unknown", privacy: .public)")
         } catch let error as PythonBridgeError {
             isReady = false
             lastError = error
+            AppLog.pythonBridge.error("Python runtime setup failed: \(error.localizedDescription, privacy: .private)")
         } catch {
             isReady = false
             lastError = .runtimeUnavailable(error.localizedDescription)
+            AppLog.pythonBridge.error("Python runtime setup failed: \(error.localizedDescription, privacy: .private)")
         }
     }
 

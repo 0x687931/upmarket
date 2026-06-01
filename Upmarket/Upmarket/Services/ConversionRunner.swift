@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 struct ConversionRunner {
     typealias ProgressHandler = (ConversionStage) -> Void
@@ -17,6 +18,7 @@ struct ConversionRunner {
     }
 
     func run(_ job: ConversionJob, progress: ProgressHandler? = nil) async -> ConversionResult {
+        AppLog.conversion.info("Starting conversion correlationID=\(job.correlationID, privacy: .public) ext=\(job.ext, privacy: .public)")
         guard !Task.isCancelled else { return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.") }
 
         progress?(.copying)
@@ -25,7 +27,11 @@ struct ConversionRunner {
         do {
             workspace = try AppWorkspace.create(prefix: "conversion")
             tempURL = try AppWorkspace.copy(job.sourceURL, into: workspace)
+        } catch ConversionError.fileTooLarge {
+            AppLog.conversion.error("Conversion rejected oversized file correlationID=\(job.correlationID, privacy: .public)")
+            return .failure(ConversionError.fileTooLarge.errorDescription ?? "This document is too large to convert safely.")
         } catch {
+            AppLog.conversion.error("Conversion input copy failed correlationID=\(job.correlationID, privacy: .public) error=\(error.localizedDescription, privacy: .private)")
             return .failure(ConversionError.inaccessible.errorDescription ?? "Upmarket couldn't access this file.")
         }
         defer { AppWorkspace.remove(workspace) }
@@ -33,11 +39,15 @@ struct ConversionRunner {
         progress?(.extracting)
         let raw = await extract(job: job, tempURL: tempURL, workspaceURL: workspace)
         guard !Task.isCancelled else { return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.") }
-        guard case .success(let output) = raw else { return raw }
+        guard case .success(let output) = raw else {
+            AppLog.conversion.error("Conversion failed correlationID=\(job.correlationID, privacy: .public)")
+            return raw
+        }
 
         progress?(.postProcessing)
         let refined = await postProcess(output)
         progress?(.complete)
+        AppLog.conversion.info("Conversion completed correlationID=\(job.correlationID, privacy: .public)")
         return .success(refined)
     }
 
