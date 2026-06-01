@@ -125,6 +125,8 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Validate `python-ai-docling` with repo-local model cache, explicit model directory wiring, warm-runtime benchmarking, and fallback to fast conversion when model-backed handlers reject otherwise-supported files.
 - [x] Publish release-candidate corpus pathway comparison artifacts for owner review before shipping.
 - [x] Document each conversion pathway's CPU/GPU/Apple Neural Engine behavior and whether benchmark compute mode can be explicitly controlled.
+- [x] Add a native PDFKit corpus benchmark and clean-room inspection plan for improving Apple-native PDF extraction without adopting GPL/incompatible PDF engines.
+- [x] Document Vision/Core ML/CoreGraphics native inspection options for OCR, document structure, image classification, page quality, and OS-managed Apple silicon acceleration.
 - [x] Record forensic benchmark inventory: package versions, binary versions, corpus source commits, benchmark-only OCR/model cache artifacts, and cache roots.
 - [ ] Add a follow-on serial-vs-parallel processing benchmark using the same corpus/pathway matrix, including accuracy, wall time, failures, and system-load evidence before changing queue concurrency.
 - [x] Require ADRs for local patches to upstream behavior, including removal condition and packaged-app validation.

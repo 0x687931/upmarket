@@ -5,13 +5,13 @@
   "pathways": {
     "swift-pdfkit": {
       "owner": "Services/PDFConverter.swift",
-      "runner": "xcode-test",
+      "runner": "python3 scripts/benchmark_pdfkit.py --json-output reports/corpus-swift-pdfkit.json",
       "release_status": "shipping",
       "valid_categories": ["pdf"],
       "compute_modes": ["cpu"],
       "accelerator_control": "none",
       "baseline_required": true,
-      "notes": "Apple-native digital PDF extraction path."
+      "notes": "Apple-native digital PDF extraction path. Uses PDFKit text extraction plus small Markdown cleanup heuristics."
     },
     "swift-vision-document": {
       "owner": "Services/VisionDocumentExtractor.swift",
@@ -22,7 +22,7 @@
       "accelerator_control": "none; Vision chooses available Apple hardware internally",
       "availability": "macOS/Vision availability gated",
       "baseline_required": true,
-      "notes": "Apple-native OCR and structured document extraction path."
+      "notes": "Apple-native OCR, document analysis, image quality, and classification path."
     },
     "swift-speech": {
       "owner": "Services/SpeechTranscriber.swift",
