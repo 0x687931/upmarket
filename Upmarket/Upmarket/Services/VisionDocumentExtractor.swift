@@ -50,19 +50,23 @@ struct VisionDocumentExtractor {
         }
 
         let pageCount = document.pageCount
+        try VisionProcessingLimits.validatePageCount(pageCount)
         var pages: [String] = []
         var totalTables = 0; var totalLists = 0
 
         for i in 0..<pageCount {
+            try Task.checkCancellation()
             guard let page = document.page(at: i),
-                  let cgImage = renderPage(page) else { continue }
+                  let cgImage = try autoreleasepool(invoking: { try renderPage(page) }) else { continue }
             let (md, t, l) = try await processImage(cgImage)
-            pages.append(md); totalTables += t; totalLists += l
+            if !md.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                pages.append(md)
+            }
+            totalTables += t; totalLists += l
         }
 
         return Result(
-            markdown: pages.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-                          .joined(separator: "\n\n---\n\n"),
+            markdown: pages.joined(separator: "\n\n---\n\n"),
             pageCount: pageCount, tablesFound: totalTables,
             listsFound: totalLists, usedStructuredAPI: true
         )
@@ -74,6 +78,7 @@ struct VisionDocumentExtractor {
               let cg = CGImageSourceCreateImageAtIndex(src, 0, nil) else {
             throw ExtractionError.cannotReadImage
         }
+        try VisionProcessingLimits.validateImagePixels(width: cg.width, height: cg.height)
         let (md, t, l) = try await processImage(cg)
         return Result(markdown: md, pageCount: 1, tablesFound: t, listsFound: l, usedStructuredAPI: true)
     }
@@ -148,10 +153,10 @@ struct VisionDocumentExtractor {
 
     // MARK: - PDF page renderer
 
-    private static func renderPage(_ page: PDFPage) -> CGImage? {
+    private static func renderPage(_ page: PDFPage) throws -> CGImage? {
         let bounds = page.bounds(for: .mediaBox)
-        let scale: CGFloat = 150.0 / 72.0
-        let w = Int(bounds.width * scale); let h = Int(bounds.height * scale)
+        let size = try VisionProcessingLimits.renderSize(for: bounds, dpi: 150)
+        let w = size.width; let h = size.height
         guard let ctx = CGContext(
             data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
             space: CGColorSpaceCreateDeviceRGB(),

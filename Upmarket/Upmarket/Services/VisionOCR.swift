@@ -41,31 +41,36 @@ struct VisionOCR {
         }
 
         let pageCount = document.pageCount
-        var pageResults: [PageResult] = []
+        try VisionProcessingLimits.validatePageCount(pageCount)
 
+        var pageTexts: [String] = []
+        var confidenceSum: Float = 0
+        var confidenceCount = 0
+        var languageSet = Set<String>()
         for i in 0..<pageCount {
+            try Task.checkCancellation()
             guard let page = document.page(at: i) else { continue }
             let pageResult = try await recognisePage(page: page, index: i)
-            pageResults.append(pageResult)
+            let text = pageResult.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !text.isEmpty {
+                pageTexts.append(text)
+            }
+            if pageResult.confidence > 0 {
+                confidenceSum += pageResult.confidence
+                confidenceCount += 1
+            }
+            languageSet.formUnion(extractLanguages(pageResult.observations))
         }
 
-        let fullText = pageResults
-            .sorted { $0.pageIndex < $1.pageIndex }
-            .map(\.text)
-            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-            .joined(separator: "\n\n---\n\n")
-
-        let avgConfidence = pageResults.isEmpty ? 0 :
-            pageResults.map(\.confidence).reduce(0, +) / Float(pageResults.count)
-
-        let languages = Array(Set(pageResults.flatMap { extractLanguages($0.observations) }))
+        let fullText = pageTexts.joined(separator: "\n\n---\n\n")
+        let avgConfidence = confidenceCount == 0 ? 0 : confidenceSum / Float(confidenceCount)
 
         return Result(
             text: fullText,
             pageCount: pageCount,
             averageConfidence: avgConfidence,
             isLikelyScanned: avgConfidence > 0.1,
-            detectedLanguages: languages
+            detectedLanguages: Array(languageSet).sorted()
         )
     }
 
@@ -74,6 +79,10 @@ struct VisionOCR {
         guard let ciImage = CIImage(contentsOf: imageURL) else {
             throw OCRError.cannotReadImage
         }
+        try VisionProcessingLimits.validateImagePixels(
+            width: Int(ciImage.extent.width),
+            height: Int(ciImage.extent.height)
+        )
 
         let pageResult = try await recogniseCIImage(ciImage, pageIndex: 0)
         let languages = extractLanguages(pageResult.observations)
@@ -90,14 +99,11 @@ struct VisionOCR {
     // MARK: - Private
 
     private static func recognisePage(page: PDFPage, index: Int) async throws -> PageResult {
-        // Render page to image at 150 DPI — good balance of quality vs speed
         let bounds = page.bounds(for: .mediaBox)
-        let scale: CGFloat = 150.0 / 72.0   // PDF points are 72 DPI
-        let width  = Int(bounds.width  * scale)
-        let height = Int(bounds.height * scale)
+        let size = try VisionProcessingLimits.renderSize(for: bounds, dpi: 150)
 
-        let renderer = PDFPageRenderer(page: page, width: width, height: height)
-        guard let cgImage = renderer.render() else {
+        let renderer = PDFPageRenderer(page: page, width: size.width, height: size.height)
+        guard let cgImage = autoreleasepool(invoking: { renderer.render() }) else {
             return PageResult(pageIndex: index, text: "", confidence: 0, observations: [])
         }
 

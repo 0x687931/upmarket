@@ -259,7 +259,7 @@ struct NativeDocumentClassifier {
         }
 
         #if canImport(Vision)
-        guard let image = render(page: first.page) else { return .unavailable }
+        guard let image = autoreleasepool(invoking: { render(page: first.page) }) else { return .unavailable }
         return await recogniseText(in: image)
         #else
         return .unavailable
@@ -301,9 +301,9 @@ struct NativeDocumentClassifier {
 
     private static func render(page: PDFPage) -> CGImage? {
         let bounds = page.bounds(for: .mediaBox)
-        let scale: CGFloat = 96.0 / 72.0
-        let width = max(Int(bounds.width * scale), 1)
-        let height = max(Int(bounds.height * scale), 1)
+        guard let size = try? VisionProcessingLimits.renderSize(for: bounds, dpi: 96) else { return nil }
+        let width = size.width
+        let height = size.height
         guard let context = CGContext(
             data: nil,
             width: width,

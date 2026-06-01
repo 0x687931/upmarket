@@ -100,7 +100,7 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 - [x] Add fault-injection tests for Python bridge setup failure, stalled conversion, temp cleanup, and huge input rejection.
 - [x] Add first release memory-pressure safeguard: reject oversized input before workspace copy with an actionable “document too large” error.
 - [x] Add deeper conversion-corpus fault tests for partial model download, password PDFs, corrupt files, and Python stderr handling.
-- [ ] Add deeper Vision/OCR safeguards: page/pixel limits, streaming page processing, and autorelease pools.
+- [x] Add deeper Vision/OCR safeguards: page/pixel limits, streaming page processing, and autorelease pools.
 
 ### P0 - Crash and Bug Reporting
 - [x] Define a privacy-first support policy: no automatic telemetry, no document contents, no extracted text, no passwords, and no full local file paths in reports.

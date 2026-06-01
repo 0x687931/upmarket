@@ -193,6 +193,22 @@ final class IntelligenceServicesTests: XCTestCase {
         XCTAssertFalse(result.markdown.isEmpty)
     }
 
+    func testVisionProcessingLimitsCapRenderedPageSize() throws {
+        let size = try VisionProcessingLimits.renderSize(
+            for: CGRect(x: 0, y: 0, width: 20_000, height: 20_000),
+            dpi: 150
+        )
+
+        XCTAssertLessThanOrEqual(size.width, VisionProcessingLimits.maximumRenderedSide)
+        XCTAssertLessThanOrEqual(size.height, VisionProcessingLimits.maximumRenderedSide)
+        XCTAssertLessThanOrEqual(size.width * size.height, VisionProcessingLimits.maximumRenderedPixels)
+    }
+
+    func testVisionProcessingLimitsRejectExcessivePagesAndImages() {
+        XCTAssertThrowsError(try VisionProcessingLimits.validatePageCount(VisionProcessingLimits.maximumOCRPages + 1))
+        XCTAssertThrowsError(try VisionProcessingLimits.validateImagePixels(width: 100_000, height: 100_000))
+    }
+
     // MARK: - Integration: Full pipeline on corpus
 
     func testFullPipelineOnDoclingAcademicPDF() async throws {
