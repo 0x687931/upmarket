@@ -11,7 +11,11 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
-MODELS_DIR = Path(os.environ.get("HF_HUB_CACHE", Path.home() / "Library" / "Application Support" / "Upmarket" / "models"))
+MODELS_DIR = Path(
+    os.environ.get("UPMARKET_MODELS_DIR")
+    or os.environ.get("HF_HUB_CACHE")
+    or Path.home() / "Library" / "Application Support" / "Upmarket" / "models"
+)
 MANIFEST_NAME = "upmarket_manifest.json"
 MANIFEST_VERSION = 1
 

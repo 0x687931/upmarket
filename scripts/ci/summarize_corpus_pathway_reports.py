@@ -99,6 +99,8 @@ def main() -> int:
         report = reports_by_pathway.get(pathway_id)
         config = pathways.get(pathway_id.split("@", 1)[0], {})
         status = config.get("release_status", "unknown")
+        if config.get("deprecated") or config.get("blocked"):
+            status = f"{status} blocked/deprecated"
         compute_capability = ", ".join(config.get("compute_modes", [])) or "-"
         accelerator_control = config.get("accelerator_control", "-")
         if report is None:

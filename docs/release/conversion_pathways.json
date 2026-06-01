@@ -132,12 +132,14 @@
       "owner": "developer benchmark environment only",
       "runner": "scripts/benchmark.sh --pathway internal-reference-paddleocr",
       "release_status": "internal-reference-only",
+      "deprecated": true,
+      "blocked": true,
       "valid_categories": ["image", "pdf"],
       "compute_modes": ["cpu", "gpu"],
       "accelerator_control": "environment-dependent; developer reference only",
       "baseline_required": false,
       "license_gate": "May be promoted only after dependency/model license review, offline model packaging review, and packaged-runtime validation.",
-      "notes": "Reference OCR pathway for comparing Apple Vision OCR against PaddleOCR output."
+      "notes": "Blocked/deprecated reference pathway. The 2026-06-01 M4 Pro benchmark required external model downloads, had multiple 45-second per-document timeouts, and showed native-process stability risk. Keep only as historical evidence unless a future ADR proves a safe isolated worker and material quality uplift."
     }
   }
 }

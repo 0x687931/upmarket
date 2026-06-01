@@ -121,6 +121,8 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Remove PyMuPDF/pymupdf4llm from release dependency locks and block AGPL/commercial-only PDF packages from the paid-app runtime unless a commercial-license ADR is approved.
 - [x] Permit PyMuPDF only as an internal benchmark/reference pathway; promotion to a shipping path requires a commercial-license ADR and packaged-runtime validation.
 - [x] Add PyMuPDF, Poppler, RapidOCR, and PaddleOCR as internal/reference benchmark pathways so future uplift can be measured before any licensing or packaging decision.
+- [x] Mark PaddleOCR blocked/deprecated after the 2026-06-01 M4 Pro benchmark showed external model-download requirements, multiple 45-second document timeouts, and native stability risk.
+- [x] Validate `python-ai-docling` with repo-local model cache, explicit model directory wiring, warm-runtime benchmarking, and fallback to fast conversion when model-backed handlers reject otherwise-supported files.
 - [x] Publish release-candidate corpus pathway comparison artifacts for owner review before shipping.
 - [x] Document each conversion pathway's CPU/GPU/Apple Neural Engine behavior and whether benchmark compute mode can be explicitly controlled.
 - [x] Record forensic benchmark inventory: package versions, binary versions, corpus source commits, benchmark-only OCR/model cache artifacts, and cache roots.

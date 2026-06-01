@@ -430,37 +430,21 @@ def _paddleocr_text(result) -> str:
 
 
 def _convert_via_venv(doc_path: Path, pipeline: str) -> tuple[str, float]:
-    """Run Enhanced/AI conversion directly via venv Docling (has cached models)."""
-    import subprocess, json, tempfile, os
+    """Run Enhanced/AI conversion in-process so model-backed benchmarks stay warm."""
+    root = Path(__file__).parent.parent
+    source_bridge = root / "UpmarketPython"
+    packaged_site = root / "Upmarket/Python/Python.xcframework/macos-arm64_x86_64/Python.framework/Versions/3.12/lib/python3.12/site-packages"
+    for path in (packaged_site, source_bridge):
+        value = str(path)
+        if value not in sys.path:
+            sys.path.insert(0, value)
 
-    venv_python = Path(__file__).parent.parent / ".venv/bin/python3"
-    script = f"""
-import sys, json, time
-sys.path.insert(0, '{Path(__file__).parent.parent}/Upmarket/Python/Python.xcframework/macos-arm64_x86_64/Python.framework/Versions/3.12/lib/python3.12/site-packages')
-# Use venv packages for Enhanced (has Docling + torch)
-sys.path.insert(0, '{Path(__file__).parent.parent}/.venv/lib/python3.12/site-packages')
-from docling_bridge.converter import convert
-opts = {{"use_enhanced": {pipeline in ("enhanced", "ai")}, "use_ai": {pipeline == "ai"}}}
-start = time.time()
-result = convert({repr(str(doc_path))}, opts)
-result["elapsed"] = time.time() - start
-print(json.dumps(result))
-"""
+    from docling_bridge.converter import convert
+
+    opts = {"use_enhanced": pipeline in ("enhanced", "ai"), "use_ai": pipeline == "ai"}
     start = time.time()
-    proc = subprocess.run(
-        [str(venv_python), "-c", script],
-        capture_output=True, text=True, timeout=120
-    )
+    result = convert(str(doc_path), opts)
     elapsed = time.time() - start
-
-    if proc.returncode != 0:
-        raise RuntimeError(proc.stderr[-500:] if proc.stderr else "Conversion failed")
-
-    # Parse last JSON line from stdout
-    lines = [l for l in proc.stdout.strip().splitlines() if l.startswith("{")]
-    if not lines:
-        raise RuntimeError("No output from converter")
-    result = json.loads(lines[-1])
     if result.get("success"):
         return result["markdown"], result.get("elapsed", elapsed)
     raise RuntimeError(result.get("error", "Unknown error"))
@@ -546,6 +530,7 @@ def run_benchmark(
     os.environ["UPMARKET_BENCHMARK_COMPUTE_MODE"] = compute_mode
     benchmark_cache = Path.cwd() / "reports" / "benchmark-cache"
     benchmark_cache.mkdir(parents=True, exist_ok=True)
+    os.environ.setdefault("UPMARKET_MODELS_DIR", str((benchmark_cache / "upmarket-models").resolve()))
     os.environ.setdefault("PADDLE_PDX_CACHE_HOME", str((benchmark_cache / "paddlex").resolve()))
     os.environ.setdefault("PADDLE_HOME", str((benchmark_cache / "paddle").resolve()))
     os.environ.setdefault("HF_HOME", str((benchmark_cache / "huggingface").resolve()))
@@ -612,6 +597,7 @@ def run_benchmark(
 
             elapsed_runs = []
             markdown = ""
+            timeout_seconds = 120 if pipeline in ("enhanced", "ai") else 30
             if pathway in ISOLATED_REFERENCE_PATHWAYS:
                 for _ in range(repeat_count):
                     markdown, elapsed = convert_document_isolated(
@@ -623,10 +609,10 @@ def run_benchmark(
                     elapsed_runs.append(elapsed)
             else:
                 def _timeout_handler(signum, frame):
-                    raise TimeoutError("Conversion timed out after 30s")
+                    raise TimeoutError(f"Conversion timed out after {timeout_seconds}s")
 
                 signal.signal(signal.SIGALRM, _timeout_handler)
-                signal.alarm(30)
+                signal.alarm(timeout_seconds)
                 try:
                     for _ in range(repeat_count):
                         markdown, elapsed = convert_document(file_path, pipeline or "fast", pathway or None)
@@ -642,10 +628,10 @@ def run_benchmark(
             gt_indicator = "GT" if ground_truth_md else "  "
             status = "✓" if score.overall >= 0.8 else "⚠" if score.overall >= 0.6 else "✗"
             print(f"[{gt_indicator}] {status}  {score.overall*100:.0f}%  ({score.elapsed_seconds:.3f}s avg)")
-        except TimeoutError:
-            score = DocScore(doc_id=doc_id, category=category, file=doc_meta.get("file", ""), error="Timed out after 30s")
+        except TimeoutError as exc:
+            score = DocScore(doc_id=doc_id, category=category, file=doc_meta.get("file", ""), error=str(exc) or "Timed out")
             scores.append(score)
-            print(f"[  ] ✗  TIMEOUT (>30s)")
+            print(f"[  ] ✗  TIMEOUT ({score.error})")
         except Exception as e:
             score = DocScore(doc_id=doc_id, category=category, file=doc_meta.get("file", ""), error=str(e))
             scores.append(score)

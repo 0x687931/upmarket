@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 from docling_bridge.security import validate_file_path, validate_password, log_security_event
 
+_ENHANCED_CONVERTERS = {}
+
 
 def convert(file_path: str, options: dict | None = None) -> dict:
     """
@@ -70,17 +72,35 @@ def convert(file_path: str, options: dict | None = None) -> dict:
         if use_ai and can_use_enhanced:
             if not _ai_available():
                 return _error("Upmarket AI model is not downloaded or failed validation. Download it again from Settings > Models.")
-            return _convert_ai(path, opts)
+            try:
+                return _convert_ai(path, opts)
+            except TimeoutError:
+                raise
+            except Exception as e:
+                print(f"[Upmarket] AI pipeline fallback for {suffix}: {e}", file=sys.stderr)
+                return _convert_fast_pdf(path, password) if suffix == ".pdf" else _convert_fast_other(path)
 
         if suffix == ".pdf" and use_enhanced and _enhanced_available():
-            return _convert_enhanced(path, opts)
+            try:
+                return _convert_enhanced(path, opts)
+            except TimeoutError:
+                raise
+            except Exception as e:
+                print(f"[Upmarket] Enhanced PDF fallback: {e}", file=sys.stderr)
+                return _convert_fast_pdf(path, password)
 
         if suffix == ".pdf":
             return _convert_fast_pdf(path, password)
 
         # Non-PDF office formats: use enhanced if available and format is supported
         if use_enhanced and _enhanced_available() and can_use_enhanced:
-            return _convert_enhanced(path, opts)
+            try:
+                return _convert_enhanced(path, opts)
+            except TimeoutError:
+                raise
+            except Exception as e:
+                print(f"[Upmarket] Enhanced pipeline fallback for {suffix}: {e}", file=sys.stderr)
+                return _convert_fast_other(path)
 
         # All other formats (audio, video, images, CSV, etc): always fast path
         return _convert_fast_other(path)
@@ -251,7 +271,6 @@ def _convert_enhanced(path: Path, opts: dict) -> dict:
     pipeline_options.do_ocr = opts.get("ocr", True)
     pipeline_options.do_table_structure = True
 
-    format_options = {}
     pdf_opts = PdfFormatOption(pipeline_options=pipeline_options)
 
     if opts.get("password"):
@@ -263,8 +282,14 @@ def _convert_enhanced(path: Path, opts: dict) -> dict:
         except Exception:
             pass
 
-    format_options[InputFormat.PDF] = pdf_opts
-    converter = DocumentConverter(format_options=format_options)
+    cache_key = None if opts.get("password") else (pipeline_options.do_ocr, pipeline_options.do_table_structure)
+    converter = _ENHANCED_CONVERTERS.get(cache_key) if cache_key is not None else None
+    if converter is None:
+        format_options = {InputFormat.PDF: pdf_opts}
+        converter = DocumentConverter(format_options=format_options)
+        if cache_key is not None:
+            _ENHANCED_CONVERTERS[cache_key] = converter
+
     result = converter.convert(str(path))
     markdown = result.document.export_to_markdown()
     page_count = result.document.num_pages() if callable(result.document.num_pages) else 0

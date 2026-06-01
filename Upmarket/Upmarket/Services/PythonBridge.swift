@@ -151,6 +151,7 @@ actor PythonRuntime {
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Upmarket/models")
             .path
+        setenv("UPMARKET_MODELS_DIR", appSupport, 1)
         setenv("HF_HUB_CACHE", appSupport, 1)
     }
 }

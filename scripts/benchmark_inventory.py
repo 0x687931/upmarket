@@ -255,6 +255,7 @@ def main() -> int:
     inventory = {
         "host": host_inventory(),
         "cache": {
+            "UPMARKET_MODELS_DIR": str((BENCHMARK_CACHE / "upmarket-models").resolve()),
             "PADDLE_PDX_CACHE_HOME": str((BENCHMARK_CACHE / "paddlex").resolve()),
             "PADDLE_HOME": str((BENCHMARK_CACHE / "paddle").resolve()),
             "HF_HOME": str((BENCHMARK_CACHE / "huggingface").resolve()),
