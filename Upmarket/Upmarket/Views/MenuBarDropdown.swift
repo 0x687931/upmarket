@@ -5,7 +5,7 @@ import SwiftUI
 struct MenuBarDropdown: View {
 
     @EnvironmentObject private var store: StoreManager
-    @EnvironmentObject private var conversion: ConversionService
+    @EnvironmentObject private var conversion: ConversionQueue
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {

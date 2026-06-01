@@ -252,15 +252,6 @@ final class StoreManager: ObservableObject {
     }
 }
 
-// MARK: - Models
-
-enum Entitlement: Equatable {
-    case none
-    case basic
-    case pro
-    // Note: trial is now doc-count based (freeDocsRemaining), not time-based
-}
-
 enum UpgradeNudge {
     case none
     case softNudge     // 1 pack bought, running low

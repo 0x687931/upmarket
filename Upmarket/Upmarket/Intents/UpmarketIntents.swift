@@ -64,13 +64,8 @@ struct ConvertDocumentIntent: AppIntent {
         try document.data.write(to: tempURL)
         defer { try? FileManager.default.removeItem(at: tempURL) }
 
-        await ConversionService.shared.convert(fileURL: tempURL, useAI: useAI)
-
-        while await ConversionService.shared.isConverting {
-            try await Task.sleep(nanoseconds: 200_000_000)
-        }
-
-        guard case .success(let output) = await ConversionService.shared.result else {
+        let result = await ConversionQueue.shared.convert(tempURL, useAI: useAI)
+        guard case .success(let output) = result else {
             throw UpmarketIntentError.conversionFailed
         }
 
@@ -113,12 +108,8 @@ struct ConvertAndSaveIntent: AppIntent {
         try document.data.write(to: tempURL)
         defer { try? FileManager.default.removeItem(at: tempURL) }
 
-        await ConversionService.shared.convert(fileURL: tempURL, useAI: useAI)
-        while await ConversionService.shared.isConverting {
-            try await Task.sleep(nanoseconds: 200_000_000)
-        }
-
-        guard case .success(let output) = await ConversionService.shared.result else {
+        let result = await ConversionQueue.shared.convert(tempURL, useAI: useAI)
+        guard case .success(let output) = result else {
             throw UpmarketIntentError.conversionFailed
         }
 

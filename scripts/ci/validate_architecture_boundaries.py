@@ -9,6 +9,18 @@ from pathlib import Path
 
 ROOT = Path("Upmarket/Upmarket")
 VIEW_DIR = ROOT / "Views"
+APPROVED_PYTHONKIT_IMPORTS = {
+    ROOT / "Services" / "PythonBridge.swift",
+    ROOT / "Services" / "PythonWorker.swift",
+}
+REQUIRED_CORE_FILES = {
+    ROOT / "Domain" / "ConversionJob.swift",
+    ROOT / "Domain" / "ConversionResult.swift",
+    ROOT / "Domain" / "ConversionError.swift",
+    ROOT / "Services" / "ConversionQueue.swift",
+    ROOT / "Services" / "ConversionRunner.swift",
+    ROOT / "Services" / "PythonWorker.swift",
+}
 FORBIDDEN_IN_VIEWS = {
     "import PythonKit": "views must not import PythonKit",
     "Python.import": "views must not call Python modules",
@@ -24,11 +36,23 @@ def main() -> int:
     if (VIEW_DIR / "MenuBarView.swift").exists():
         errors.append("Views/MenuBarView.swift is an unused duplicate of MenuBarDropdown; do not restore it")
 
+    if (ROOT / "Services" / "ConversionService.swift").exists():
+        errors.append("Services/ConversionService.swift must not be restored; use ConversionQueue and ConversionRunner")
+
+    for required in sorted(REQUIRED_CORE_FILES):
+        if not required.exists():
+            errors.append(f"{required}: required minimalist conversion core file is missing")
+
     for path in sorted(VIEW_DIR.glob("*.swift")):
         text = path.read_text(encoding="utf-8")
         for pattern, message in FORBIDDEN_IN_VIEWS.items():
             if pattern in text:
                 errors.append(f"{path}: {message} ({pattern})")
+
+    for path in sorted(ROOT.rglob("*.swift")):
+        text = path.read_text(encoding="utf-8")
+        if "import PythonKit" in text and path not in APPROVED_PYTHONKIT_IMPORTS:
+            errors.append(f"{path}: PythonKit imports must stay behind PythonBridge/PythonWorker")
 
     if not (ROOT / "Services" / "FileAccessService.swift").exists():
         errors.append("Services/FileAccessService.swift is required for AppKit file/pasteboard operations")

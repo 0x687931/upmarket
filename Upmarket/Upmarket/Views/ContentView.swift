@@ -5,7 +5,7 @@ import AppKit
 
 struct ContentView: View {
 
-    @EnvironmentObject private var conversion: ConversionService
+    @EnvironmentObject private var conversion: ConversionQueue
     @EnvironmentObject private var store: StoreManager
     @EnvironmentObject private var modelManager: ModelManager
 
@@ -94,7 +94,7 @@ struct ContentView: View {
         }
         .onChange(of: conversion.isConverting) { converting in
             if converting { transitionToConverting() }
-            else if let result = conversion.result { transitionToResult(result) }
+            else if let result = conversion.latestResult { transitionToResult(result) }
         }
         .onChange(of: conversion.needsPassword) { needs in
             if needs { showPasswordPrompt = true }
@@ -433,7 +433,7 @@ struct ContentView: View {
                 Button("Convert") {
                     guard let url = pendingFileURL else { return }
                     showPasswordPrompt = false
-                    conversion.convert(fileURL: url, password: passwordInput)
+                    conversion.add(url, password: passwordInput)
                     passwordInput = ""
                 }
                 .buttonStyle(.borderedProminent)
@@ -543,7 +543,7 @@ struct ContentView: View {
     }
 
     private func beginConversion(url: URL, useAI: Bool) {
-        conversion.convert(fileURL: url, useAI: useAI)
+        conversion.add(url, useAI: useAI)
     }
 
     private func saveMarkdown(_ output: ConversionOutput) {
@@ -558,7 +558,7 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .environmentObject(ConversionService.shared)
+        .environmentObject(ConversionQueue.shared)
         .environmentObject(StoreManager.shared)
         .environmentObject(ModelManager.shared)
 }

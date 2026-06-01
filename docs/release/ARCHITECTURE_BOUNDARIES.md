@@ -31,9 +31,8 @@ Do not create folders until there is code to move. Prefer one clear service over
 
 These are known P0 follow-up items, not patterns to copy:
 
-- `ShelfView` keeps local queue state and polls `ConversionService.result`; P0-003 replaces this with per-job conversion state.
-- `ConversionService` owns conversion routing and Python calls; P0-002 introduces a stricter bridge/helper boundary.
-- `ModelManager` calls Python directly for model checks/downloads; P0-004 hardens offline model integrity.
+- Python still runs in-process through `PythonWorker`/`PythonBridge`; P0-002 decides whether this moves to a signed helper or XPC boundary.
+- `ModelManager` uses `PythonWorker` for model checks/downloads; P0-004 hardens offline model integrity and download validation.
 - `PaywallView` imports StoreKit for `Product`; P0-007 reviews StoreKit accounting and purchase policy.
 - `SavePreference` owns save-location prompts; it predates `FileAccessService` and should either stay as the save-preference coordinator or delegate picker mechanics later.
 

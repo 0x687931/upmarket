@@ -1,8 +1,7 @@
 import Foundation
 import Combine
-import PythonKit
 
-struct ModelStatus {
+struct ModelStatus: Sendable {
     let key: String
     let name: String
     let description: String
@@ -37,6 +36,8 @@ final class ModelManager: ObservableObject {
     private(set) var downloadError: String? {
         willSet { objectWillChange.send() }
     }
+
+    private let pythonWorker = PythonWorker()
 
     private init() {}
 
@@ -102,26 +103,11 @@ final class ModelManager: ObservableObject {
     // MARK: - Public
 
     func checkModels() {
-        let manager = Python.import("upmarket_models.model_manager")
-        let pyStatus = manager.check_models()
-
-        var result: [ModelStatus] = []
-        for item in pyStatus.items() {
-            guard let key = String(item[0]) else { continue }
-            let info = item[1]
-            result.append(ModelStatus(
-                key: key,
-                name: String(info["name"]) ?? key,
-                description: String(info["description"]) ?? "",
-                isDownloaded: Bool(info["downloaded"]) ?? false,
-                sizeMB: Int(info["size_mb"]) ?? 0,
-                isRequired: Bool(info["required"]) ?? false,
-                tier: String(info["tier"]) ?? "basic"
-            ))
-        }
-
-        DispatchQueue.main.async {
-            self.models = result.sorted { $0.isRequired && !$1.isRequired }
+        Task.detached(priority: .userInitiated) {
+            let result = self.pythonWorker.checkModels()
+            await MainActor.run {
+                self.models = result
+            }
         }
     }
 
@@ -147,8 +133,7 @@ final class ModelManager: ObservableObject {
                 if await self.downloadError != nil { break }
             }
 
-            let manager = Python.import("upmarket_models.model_manager")
-            manager.set_offline_mode()
+            self.pythonWorker.setOfflineMode()
 
             await MainActor.run {
                 self.isDownloading = false
@@ -165,11 +150,9 @@ final class ModelManager: ObservableObject {
         // Clear any existing progress file
         try? FileManager.default.removeItem(atPath: progressFile)
 
-        let manager = Python.import("upmarket_models.model_manager")
-
         // Start download in a separate task so we can poll progress
         let downloadTask = Task.detached {
-            manager.download_model(key, progressFile)
+            self.pythonWorker.downloadModel(key: key, progressFile: progressFile)
         }
 
         // Poll progress file every 500ms
@@ -192,10 +175,8 @@ final class ModelManager: ObservableObject {
 
             // Check if download completed
             let result = await downloadTask.value
-            let success = Bool(result["success"]) ?? false
-            if !success {
-                let error = String(result["error"]) ?? "Download failed"
-                await MainActor.run { self.downloadError = error }
+            if !result.success {
+                await MainActor.run { self.downloadError = result.error ?? "Download failed" }
             }
             break
         }

@@ -34,7 +34,7 @@ bar recovery.
 3. If access is available:
    - a free conversion or pack credit is consumed when applicable
    - the file is copied to a sandbox-safe temp URL
-   - `ConversionService` starts conversion
+   - `ConversionQueue` creates a job and `ConversionRunner` starts conversion
    - menu bar and Dock status receive conversion-start notifications
 4. Conversion runs through the local Swift/Python pipeline.
 5. Shelf updates the item state:

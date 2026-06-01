@@ -6,7 +6,7 @@ struct UpmarketApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     @StateObject private var pythonBridge    = PythonBridge.shared
-    @StateObject private var conversionService = ConversionService.shared
+    @StateObject private var conversionQueue = ConversionQueue.shared
     @StateObject private var storeManager    = StoreManager.shared
     @StateObject private var modelManager    = ModelManager.shared
     @StateObject private var featureFlags    = FeatureFlags.shared
@@ -97,9 +97,9 @@ struct UpmarketApp: App {
         MenuBarExtra {
             MenuBarDropdown()
                 .environmentObject(storeManager)
-                .environmentObject(conversionService)
+                .environmentObject(conversionQueue)
         } label: {
-            MenuBarIconView(isConverting: conversionService.isConverting)
+            MenuBarIconView(isConverting: conversionQueue.isConverting)
         }
         .menuBarExtraStyle(.window)
     }

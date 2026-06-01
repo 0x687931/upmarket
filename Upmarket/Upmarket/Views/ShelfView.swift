@@ -4,12 +4,11 @@ import AppKit
 
 struct ShelfView: View {
 
-    @EnvironmentObject private var conversion: ConversionService
+    @EnvironmentObject private var conversion: ConversionQueue
     @EnvironmentObject private var store: StoreManager
     @EnvironmentObject private var modelManager: ModelManager
 
     @State private var isTargeted = false
-    @State private var queue: [QueueItem] = []
     @State private var showPaywall = false
     @State private var isExpanded = false
 
@@ -30,7 +29,7 @@ struct ShelfView: View {
     private var buttonHeight: CGFloat { closedHeight / 3 }  // 36pt each
 
     private var isAnyConverting: Bool {
-        queue.contains { $0.state == .converting }
+        conversion.isConverting
     }
 
     // Width: closed = stripWidth, open = strip + items
@@ -38,11 +37,11 @@ struct ShelfView: View {
 
     private var totalWidth: CGFloat {
         guard isExpanded else { return closedWidth }
-        let count = min(queue.count, maxVisible)
+        let count = min(conversion.jobs.count, maxVisible)
         let content: CGFloat = count > 0
             ? CGFloat(count) * (itemWidth + itemSpacing) + itemSpacing
             : 200
-        let overflow: CGFloat = queue.count > maxVisible ? itemWidth + itemSpacing : 0
+        let overflow: CGFloat = conversion.jobs.count > maxVisible ? itemWidth + itemSpacing : 0
         return closedWidth + 8 + content + overflow
     }
 
@@ -59,7 +58,7 @@ struct ShelfView: View {
         }
         .frame(width: totalWidth, height: closedHeight)
         .animation(.spring(duration: 0.35, bounce: 0.1), value: isExpanded)
-        .animation(.spring(duration: 0.25), value: queue.count)
+        .animation(.spring(duration: 0.25), value: conversion.jobs.count)
         .background(LiquidGlassBackground(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
@@ -75,10 +74,7 @@ struct ShelfView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .upmarketReprocessItem)) { note in
             guard let req = note.object as? ReprocessRequest else { return }
-            if let idx = queue.firstIndex(where: { $0.id == req.itemID }) {
-                queue[idx].state = .converting
-                reprocessItem(queue[idx], useAI: req.useAI)
-            }
+            _ = conversion.retry(req.itemID, useAI: req.useAI)
         }
         .onReceive(NotificationCenter.default.publisher(for: .upmarketSetShelfExpanded)) { note in
             guard let expanded = note.object as? Bool else { return }
@@ -176,9 +172,9 @@ struct ShelfView: View {
                 .frame(width: 1)
                 .padding(.vertical, 10)
 
-            if queue.isEmpty && isAnyConverting {
+            if conversion.jobs.isEmpty && isAnyConverting {
                 conversionView
-            } else if queue.isEmpty {
+            } else if conversion.jobs.isEmpty {
                 emptyView
             } else {
                 itemsView
@@ -221,15 +217,15 @@ struct ShelfView: View {
     private var itemsView: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: itemSpacing) {
-                ForEach(queue.prefix(maxVisible)) { item in
+                ForEach(conversion.jobs.prefix(maxVisible)) { item in
                     ShelfItemView(item: item) {
                         withAnimation(.spring(duration: 0.25)) {
-                            queue.removeAll { $0.id == item.id }
+                            conversion.remove(item.id)
                         }
                     }
                     .frame(width: itemWidth)
                 }
-                if queue.count > maxVisible {
+                if conversion.jobs.count > maxVisible {
                     overflowBadge
                 }
             }
@@ -238,7 +234,7 @@ struct ShelfView: View {
     }
 
     private var overflowBadge: some View {
-        let extra = queue.count - maxVisible
+        let extra = conversion.jobs.count - maxVisible
         return ZStack {
             ForEach(0..<min(3, extra), id: \.self) { i in
                 RoundedRectangle(cornerRadius: 6)
@@ -284,69 +280,20 @@ struct ShelfView: View {
     // MARK: - Queue management
 
     private func addToQueue(_ url: URL) {
-        guard !queue.contains(where: { $0.url == url }) else { return }
-        let item = QueueItem(url: url)
+        guard !conversion.jobs.contains(where: { $0.sourceURL == url && $0.isRunning }) else { return }
         store.consumeConversion()
-        withAnimation(.spring(duration: 0.3)) { queue.insert(item, at: 0) }
         NotificationCenter.default.post(name: .upmarketConversionStarted, object: nil)
-        convertItem(item)
-    }
-
-    private func convertItem(_ item: QueueItem) {
-        guard let idx = queue.firstIndex(where: { $0.id == item.id }) else { return }
-        queue[idx].state = .converting
-        Task.detached(priority: .userInitiated) {
-            let tempURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent(UUID().uuidString)
-                .appendingPathExtension(item.url.pathExtension)
-            try? FileManager.default.copyItem(at: item.url, to: tempURL)
-            defer { try? FileManager.default.removeItem(at: tempURL) }
-            await ConversionService.shared.convert(fileURL: tempURL)
-            while await ConversionService.shared.isConverting {
+        let id = conversion.add(url)
+        Task { @MainActor in
+            while conversion.jobs.first(where: { $0.id == id })?.isRunning == true {
                 try? await Task.sleep(nanoseconds: 100_000_000)
             }
-            await MainActor.run {
-                guard let idx = self.queue.firstIndex(where: { $0.id == item.id }) else { return }
-                switch ConversionService.shared.result {
-                case .success(let output):
-                    self.queue[idx].state = .done(output.markdown, output.title)
-                case .failure(let error):
-                    self.queue[idx].state = .failed(error)
-                case .none:
-                    self.queue[idx].state = .failed("Conversion failed")
-                }
-                if !self.queue.contains(where: { $0.state == .converting }) {
-                    NotificationCenter.default.post(name: .upmarketConversionEnded, object: nil)
-                }
-                if self.store.shouldShowTrialPaywallAfterConversion() {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                        NotificationCenter.default.post(name: .showPaywall, object: nil)
-                    }
-                }
+            if !conversion.isConverting {
+                NotificationCenter.default.post(name: .upmarketConversionEnded, object: nil)
             }
-        }
-    }
-
-    private func reprocessItem(_ item: QueueItem, useAI: Bool) {
-        Task.detached(priority: .userInitiated) {
-            let tempURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent(UUID().uuidString)
-                .appendingPathExtension(item.url.pathExtension)
-            try? FileManager.default.copyItem(at: item.url, to: tempURL)
-            defer { try? FileManager.default.removeItem(at: tempURL) }
-            await ConversionService.shared.convert(fileURL: tempURL, useAI: useAI)
-            while await ConversionService.shared.isConverting {
-                try? await Task.sleep(nanoseconds: 100_000_000)
-            }
-            await MainActor.run {
-                guard let idx = self.queue.firstIndex(where: { $0.id == item.id }) else { return }
-                switch ConversionService.shared.result {
-                case .success(let output): self.queue[idx].state = .done(output.markdown, output.title)
-                case .failure(let error):  self.queue[idx].state = .failed(error)
-                case .none:                self.queue[idx].state = .failed("Conversion failed")
-                }
-                if !self.queue.contains(where: { $0.state == .converting }) {
-                    NotificationCenter.default.post(name: .upmarketConversionEnded, object: nil)
+            if store.shouldShowTrialPaywallAfterConversion() {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                    NotificationCenter.default.post(name: .showPaywall, object: nil)
                 }
             }
         }
@@ -366,7 +313,7 @@ extension View {
 // MARK: - Shelf Item View
 
 struct ShelfItemView: View {
-    let item: QueueItem
+    let item: ConversionJob
     let onRemove: () -> Void
     @State private var showActions = false
 
@@ -399,8 +346,8 @@ struct ShelfItemView: View {
     }
 
     @ViewBuilder private var fileIcon: some View {
-        if FileManager.default.fileExists(atPath: item.url.path),
-           let icon = NSWorkspace.shared.icon(forFile: item.url.path) as NSImage? {
+        if FileManager.default.fileExists(atPath: item.sourceURL.path),
+           let icon = NSWorkspace.shared.icon(forFile: item.sourceURL.path) as NSImage? {
             Image(nsImage: icon).resizable().interpolation(.high).antialiased(true)
         } else {
             Image(systemName: extensionIcon)
@@ -409,9 +356,10 @@ struct ShelfItemView: View {
     }
 
     @ViewBuilder private var stateIndicator: some View {
-        switch item.state {
-        case .pending: EmptyView()
-        case .converting:
+        switch item.stage {
+        case .queued:
+            EmptyView()
+        case .copying, .extracting, .python, .postProcessing:
             if #available(macOS 15.0, *) {
                 Image(systemName: "arrow.triangle.2.circlepath")
                     .font(.system(size: 9, weight: .bold)).foregroundStyle(.white)
@@ -420,11 +368,13 @@ struct ShelfItemView: View {
             } else {
                 ProgressView().scaleEffect(0.5).frame(width: 12, height: 12)
             }
-        case .done:
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 11)).foregroundStyle(.green)
-                .background(Color.black.opacity(0.4), in: Circle())
-        case .failed:
+        case .complete:
+            if case .success = item.result {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 11)).foregroundStyle(.green)
+                    .background(Color.black.opacity(0.4), in: Circle())
+            }
+        case .failed, .cancelled:
             Image(systemName: "xmark.circle.fill")
                 .font(.system(size: 11)).foregroundStyle(.red)
                 .background(Color.black.opacity(0.4), in: Circle())
@@ -433,9 +383,9 @@ struct ShelfItemView: View {
 
     @ViewBuilder private var hoverActions: some View {
         HStack(spacing: 3) {
-            if case .done(let markdown, _) = item.state {
+            if let output = item.result?.output {
                 Button {
-                    FileAccessService.shared.copyMarkdown(markdown)
+                    FileAccessService.shared.copyMarkdown(output.markdown)
                 } label: { Image(systemName: "doc.on.doc").font(.system(size: 9)) }
                 .buttonStyle(ShelfActionButtonStyle()).help("Copy Markdown")
             }
@@ -448,17 +398,17 @@ struct ShelfItemView: View {
     }
 
     @ViewBuilder private var contextMenuItems: some View {
-        if case .done(let markdown, let title) = item.state {
-            Button("Open in Markdown Editor") { openInDefaultApp(markdown, title: title) }
+        if let output = item.result?.output {
+            Button("Open in Markdown Editor") { openInDefaultApp(output.markdown, title: output.title) }
             Divider()
             Button("Copy Markdown") {
-                FileAccessService.shared.copyMarkdown(markdown)
+                FileAccessService.shared.copyMarkdown(output.markdown)
             }
             Button("Copy File Path") {
-                FileAccessService.shared.copyFilePath(item.url)
+                FileAccessService.shared.copyFilePath(item.sourceURL)
             }
             Divider()
-            Button("Save As…") { saveMarkdown(markdown, title: title) }
+            Button("Save As…") { saveMarkdown(output.markdown, title: output.title) }
             Divider()
             Menu("Reprocess") {
                 Button("Fast (instant)")       { reprocess(useAI: false) }
@@ -467,27 +417,27 @@ struct ShelfItemView: View {
             Divider()
         }
         Button("Show Original in Finder") {
-            FileAccessService.shared.revealInFinder(item.url)
+            FileAccessService.shared.revealInFinder(item.sourceURL)
         }
         Divider()
         Button("Remove from Shelf", role: .destructive) { onRemove() }
     }
 
     private func handleSingleClick() {
-        if case .done(let markdown, _) = item.state {
-            FileAccessService.shared.copyMarkdown(markdown)
+        if let output = item.result?.output {
+            FileAccessService.shared.copyMarkdown(output.markdown)
         }
     }
 
     private func handleDoubleClick() {
-        if case .done(let markdown, let title) = item.state {
-            openInDefaultApp(markdown, title: title)
+        if let output = item.result?.output {
+            openInDefaultApp(output.markdown, title: output.title)
         }
     }
 
     private func openInDefaultApp(_ markdown: String, title: String) {
         Task { @MainActor in
-            let savedURL = SavePreference.shared.save(markdown: markdown, title: title, sourceURL: item.url)
+            let savedURL = SavePreference.shared.save(markdown: markdown, title: title, sourceURL: item.sourceURL)
             if let url = savedURL { FileAccessService.shared.open(url) }
         }
     }
@@ -501,12 +451,12 @@ struct ShelfItemView: View {
     private func reprocess(useAI: Bool) {
         NotificationCenter.default.post(
             name: .upmarketReprocessItem,
-            object: ReprocessRequest(url: item.url, itemID: item.id, useAI: useAI, enhanced: useAI)
+            object: ReprocessRequest(url: item.sourceURL, itemID: item.id, useAI: useAI, enhanced: useAI)
         )
     }
 
     private var extensionIcon: String {
-        switch item.url.pathExtension.lowercased() {
+        switch item.sourceURL.pathExtension.lowercased() {
         case "pdf":                return "doc.richtext"
         case "docx", "doc":        return "doc.text"
         case "pptx", "ppt":        return "rectangle.on.rectangle"
@@ -525,21 +475,5 @@ struct ShelfActionButtonStyle: ButtonStyle {
             .foregroundStyle(.white)
             .padding(4)
             .background(Color.black.opacity(configuration.isPressed ? 0.85 : 0.65), in: Circle())
-    }
-}
-
-// MARK: - Queue Item Model
-
-struct QueueItem: Identifiable {
-    let id = UUID()
-    let url: URL
-    var state: State = .pending
-    var name: String { url.deletingPathExtension().lastPathComponent }
-    var ext: String  { url.pathExtension.uppercased() }
-    enum State: Equatable {
-        case pending
-        case converting
-        case done(String, String)
-        case failed(String)
     }
 }

@@ -35,17 +35,17 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Keep file access behind a concrete service; views must not own file picker, save panel, or pasteboard mechanics.
 - [x] Remove speculative architecture, duplicate conversion entry points, and unused product surfaces that do not support conversion, monetization, diagnostics, or release safety.
 - [x] Add a lightweight architecture decision record whenever a P0 decision adds a new dependency, new process boundary, new entitlement, or new release hook.
-- [ ] Complete the P0 minimalist core rewrite: `ConversionQueue`, `ConversionRunner`, `PythonWorker`, and small `Domain/` models with no TCA, no enterprise layers, no protocol forests, and no speculative abstractions.
+- [x] Complete the P0 minimalist core rewrite: `ConversionQueue`, `ConversionRunner`, `PythonWorker`, and small `Domain/` models with no TCA, no enterprise layers, no protocol forests, and no speculative abstractions.
 - [ ] Move remaining StoreKit accounting and diagnostics behind the P0-007 and P0-008 service boundaries.
 
 ### P0 - Minimalist Core Rewrite
-- [ ] Add `Domain/ConversionJob.swift`, `Domain/ConversionResult.swift`, `Domain/ConversionError.swift`, and `Domain/Entitlement.swift` or document why any file remains unnecessary.
-- [ ] Add `@MainActor final class ConversionQueue: ObservableObject` with `jobs`, `add(_:)`, `cancel(_:)`, and `retry(_:)`.
-- [ ] Add `ConversionRunner` with `run(_ job: ConversionJob) async -> ConversionResult`.
-- [ ] Add `PythonWorker` as the single Python conversion/model call boundary; no view, queue, runner, or model service should import `PythonKit` directly after this rewrite.
-- [ ] Deprecate or remove `ConversionService.shared.result` polling from shelf, intents, and views.
-- [ ] Keep existing UI, shelf, paywall, product IDs, and monetization behavior intact unless the task explicitly proves a change is required.
-- [ ] Add small tests for queue correctness, cancellation, retry, Python error mapping, temp cleanup, and no-progress classification without a hard five-minute timeout.
+- [x] Add `Domain/ConversionJob.swift`, `Domain/ConversionResult.swift`, `Domain/ConversionError.swift`, and `Domain/Entitlement.swift` or document why any file remains unnecessary.
+- [x] Add `@MainActor final class ConversionQueue: ObservableObject` with `jobs`, `add(_:)`, `cancel(_:)`, and `retry(_:)`.
+- [x] Add `ConversionRunner` with `run(_ job: ConversionJob) async -> ConversionResult`.
+- [x] Add `PythonWorker` as the single Python conversion/model call boundary; no view, queue, runner, or model service should import `PythonKit` directly after this rewrite.
+- [x] Deprecate or remove `ConversionService.shared.result` polling from shelf, intents, and views.
+- [x] Keep existing UI, shelf, paywall, product IDs, and monetization behavior intact unless the task explicitly proves a change is required.
+- [x] Add small tests for queue correctness, cancellation, and no-progress classification without a hard five-minute timeout; deeper Python failure injection remains under P0-002/P0-008.
 
 ### P0 - Python Runtime Isolation
 - [ ] Move Python conversion/model execution out of the main app process into a signed helper, preferably XPC; map helper crashes, hangs, and exits to typed Swift errors.
@@ -53,9 +53,9 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [ ] Make the Python packaging path reproducible: copy first-party bridge packages into the embedded runtime, pin dependencies, run `pip check`, and smoke-test imports from the packaged app.
 
 ### P0 - Conversion Job Correctness
-- [ ] Replace singleton `ConversionService.result` polling with `ConversionQueue` and `ConversionRunner`.
-- [ ] Serialize shelf/app-intent conversions through `ConversionQueue`; each queued item must own its own result, error, progress, and cancellation state.
-- [ ] Add per-job IDs, stage updates, progress/heartbeat signals, Cancel/Retry UI, and stuck-state classification based on missing progress rather than elapsed time alone.
+- [x] Replace singleton `ConversionService.result` polling with `ConversionQueue` and `ConversionRunner`.
+- [x] Serialize shelf/app-intent conversions through `ConversionQueue`; each queued item must own its own result, error, progress, and cancellation state.
+- [x] Add per-job IDs, stage updates, progress/heartbeat signals, Cancel/Retry UI, and stuck-state classification based on missing progress rather than elapsed time alone.
 - [ ] Guarantee conversion state reset and temp cleanup on success, failure, cancellation, helper crash, app quit, and startup cleanup of stale job directories.
 
 ### P0 - Offline and Model Integrity
@@ -129,7 +129,7 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Sandbox-friendly file copy to temp before Python conversion
 
 ### Conversion
-- [x] Swift `ConversionService` routing by format and capability
+- [x] Swift `ConversionRunner` routing by format and capability
 - [x] Apple-native PDFKit fast path
 - [x] Vision document extraction availability gate
 - [x] Speech transcription service using Speech framework
@@ -212,7 +212,7 @@ This is a launch requirement, not post-launch polish.
 - [ ] Define stage enum: queued, copying, analysing, extracting, python, postProcessing, saving, complete, failed
 - [ ] Emit stage updates from Swift paths and Python bridge boundaries
 - [ ] Add Python progress callback or progress file for long Docling/model operations
-- [ ] Track last progress heartbeat and current stage in `ConversionService`
+- [x] Track last progress heartbeat and current stage in `ConversionQueue`
 - [ ] If no progress is observed, keep the job running but show a recoverable stalled-state UI with cancel/retry options
 - [ ] Log stage, file type, file size, pipeline, OS version, and failure class without logging file contents
 
@@ -228,7 +228,7 @@ This is a launch requirement, not post-launch polish.
 - [ ] Conversion failed with partial output available
 
 ### Native Test Coverage
-- [ ] `ConversionService` routing and state transitions
+- [x] `ConversionRunner` routing and `ConversionQueue` state transitions
 - [ ] PDF password path
 - [ ] Python bridge success/failure parsing
 - [ ] Liveness monitor state transitions

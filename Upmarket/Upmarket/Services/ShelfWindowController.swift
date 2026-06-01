@@ -69,7 +69,7 @@ final class ShelfWindowController: NSWindowController {
 
         let hosting = NSHostingView(rootView:
             ShelfView()
-                .environmentObject(ConversionService.shared)
+                .environmentObject(ConversionQueue.shared)
                 .environmentObject(StoreManager.shared)
                 .environmentObject(ModelManager.shared)
         )
