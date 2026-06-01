@@ -1,7 +1,12 @@
 import Cocoa
 import AppKit
+import UniformTypeIdentifiers
 
 private let appGroupID = "group.com.upmarket.app"
+private let maxInputBytes: Int64 = 500 * 1024 * 1024
+private let maxBatchBytes: Int64 = 2 * 1024 * 1024 * 1024
+private let maxBatchFiles = 100
+private let quickActionStaleAge: TimeInterval = 24 * 60 * 60
 
 private struct QuickActionHandoff: Encodable {
     let files: [String]
@@ -25,27 +30,26 @@ class ActionViewController: NSViewController {
             return
         }
 
-        var urls: [URL] = []
-        let group = DispatchGroup()
-        let urlQueue = DispatchQueue(label: "com.upmarket.quickaction.urls")
+        let providers = items.flatMap { $0.attachments ?? [] }
+        loadFileURLsSerially(from: providers, at: 0, collected: [])
+    }
 
-        for item in items {
-            for provider in item.attachments ?? [] {
-                group.enter()
-                provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
-                    defer { group.leave() }
-                    if let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) {
-                        urlQueue.async { urls.append(url) }
-                    } else if let url = item as? URL {
-                        urlQueue.async { urls.append(url) }
-                    }
-                }
-            }
+    private func loadFileURLsSerially(from providers: [NSItemProvider], at index: Int, collected: [URL]) {
+        guard providers.indices.contains(index), collected.count < maxBatchFiles else {
+            convertFiles(collected)
+            return
         }
 
-        group.notify(queue: .main) {
-            let collected = urlQueue.sync { urls }
-            self.convertFiles(collected)
+        providers[index].loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, _ in
+            var next = collected
+            if let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) {
+                next.append(url)
+            } else if let url = item as? URL {
+                next.append(url)
+            }
+            DispatchQueue.main.async {
+                self.loadFileURLsSerially(from: providers, at: index + 1, collected: next)
+            }
         }
     }
 
@@ -75,6 +79,8 @@ class ActionViewController: NSViewController {
             return nil
         }
 
+        removeStaleHandoffs(in: container)
+
         let id = UUID().uuidString
         let handoffDirectory = container
             .appendingPathComponent("QuickActionHandoffs", isDirectory: true)
@@ -83,6 +89,7 @@ class ActionViewController: NSViewController {
         do {
             try FileManager.default.createDirectory(at: handoffDirectory, withIntermediateDirectories: true)
             var fileNames: [String] = []
+            var totalBytes: Int64 = 0
 
             for (index, url) in urls.enumerated() {
                 let scoped = url.startAccessingSecurityScopedResource()
@@ -92,10 +99,19 @@ class ActionViewController: NSViewController {
                     }
                 }
 
+                guard let fileSize = readableRegularFileSize(url) else { continue }
+                guard totalBytes + fileSize <= maxBatchBytes else { break }
+                totalBytes += fileSize
+
                 let name = "\(index)-\(url.lastPathComponent)"
                 let destination = handoffDirectory.appendingPathComponent(name)
                 try FileManager.default.copyItem(at: url, to: destination)
                 fileNames.append(name)
+            }
+
+            guard !fileNames.isEmpty else {
+                try? FileManager.default.removeItem(at: handoffDirectory)
+                return nil
             }
 
             let manifest = QuickActionHandoff(files: fileNames)
@@ -108,7 +124,71 @@ class ActionViewController: NSViewController {
         }
     }
 
+    private func readableRegularFileSize(_ url: URL) -> Int64? {
+        guard supportedInputTypes.contains(where: { url.conforms(to: $0) }) else { return nil }
+        guard (try? url.checkResourceIsReachable()) == true else { return nil }
+        guard let values = try? url.resourceValues(forKeys: [
+            .isRegularFileKey,
+            .isReadableKey,
+            .fileSizeKey,
+            .isUbiquitousItemKey,
+            .ubiquitousItemDownloadingStatusKey
+        ]) else { return nil }
+        guard values.isRegularFile != false, values.isReadable != false else { return nil }
+        guard let fileSize = values.fileSize, Int64(fileSize) <= maxInputBytes else { return nil }
+        if values.isUbiquitousItem == true,
+           let status = values.ubiquitousItemDownloadingStatus,
+           status != .current,
+           status != .downloaded {
+            return nil
+        }
+        return Int64(fileSize)
+    }
+
+    private func removeStaleHandoffs(in container: URL) {
+        let root = container.appendingPathComponent("QuickActionHandoffs", isDirectory: true)
+        guard let entries = try? FileManager.default.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.contentModificationDateKey, .isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else { return }
+
+        let cutoff = Date().addingTimeInterval(-quickActionStaleAge)
+        for entry in entries {
+            let values = try? entry.resourceValues(forKeys: [.contentModificationDateKey, .isDirectoryKey])
+            guard values?.isDirectory == true,
+                  (values?.contentModificationDate ?? .distantPast) < cutoff else { continue }
+            try? FileManager.default.removeItem(at: entry)
+        }
+    }
+
+    private var supportedInputTypes: [UTType] {
+        [
+            .pdf, .html, .plainText, .png, .jpeg, .gif, .tiff,
+            UTType(filenameExtension: "docx") ?? .data,
+            UTType(filenameExtension: "pptx") ?? .data,
+            UTType(filenameExtension: "xlsx") ?? .data,
+            UTType(filenameExtension: "epub") ?? .data,
+            UTType(filenameExtension: "csv") ?? .data,
+            UTType(filenameExtension: "json") ?? .data,
+            UTType(filenameExtension: "xml") ?? .data,
+            UTType(filenameExtension: "zip") ?? .data,
+            UTType(filenameExtension: "mp3") ?? .data,
+            UTType(filenameExtension: "m4a") ?? .data,
+            UTType(filenameExtension: "wav") ?? .data,
+            UTType(filenameExtension: "aiff") ?? .data,
+            UTType(filenameExtension: "opus") ?? .data,
+        ]
+    }
+
     private func done() {
         extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+    }
+}
+
+private extension URL {
+    func conforms(to type: UTType) -> Bool {
+        guard let ownType = UTType(filenameExtension: pathExtension) else { return false }
+        return ownType.conforms(to: type)
     }
 }

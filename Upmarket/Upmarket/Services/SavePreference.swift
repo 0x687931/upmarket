@@ -74,7 +74,6 @@ final class SavePreference {
                 // No source URL (e.g. dragged from elsewhere) — fall back to ask
                 return showSavePanel(defaultName: fileName, markdown: markdown)
             }
-            let saveURL = sourceURL.deletingLastPathComponent().appendingPathComponent(fileName)
             let folder = sourceURL.deletingLastPathComponent()
             let scoped = folder.startAccessingSecurityScopedResource()
             defer {
@@ -83,6 +82,7 @@ final class SavePreference {
                 }
             }
             do {
+                let saveURL = uniqueMarkdownURL(in: folder, fileName: fileName)
                 try markdown.write(to: saveURL, atomically: true, encoding: .utf8)
                 return saveURL
             } catch {
@@ -99,14 +99,30 @@ final class SavePreference {
             }
             _ = folder.startAccessingSecurityScopedResource()
             defer { folder.stopAccessingSecurityScopedResource() }
-            let saveURL = folder.appendingPathComponent(fileName)
             do {
+                let saveURL = uniqueMarkdownURL(in: folder, fileName: fileName)
                 try markdown.write(to: saveURL, atomically: true, encoding: .utf8)
                 return saveURL
             } catch {
                 return showSavePanel(defaultName: fileName, markdown: markdown)
             }
         }
+    }
+
+    private func uniqueMarkdownURL(in folder: URL, fileName: String) -> URL {
+        let candidate = folder.appendingPathComponent(fileName)
+        guard FileManager.default.fileExists(atPath: candidate.path) else { return candidate }
+
+        let baseName = (fileName as NSString).deletingPathExtension
+        let pathExtension = (fileName as NSString).pathExtension
+        for index in 2...999 {
+            let numberedName = "\(baseName) \(index).\(pathExtension)"
+            let numberedURL = folder.appendingPathComponent(numberedName)
+            if !FileManager.default.fileExists(atPath: numberedURL.path) {
+                return numberedURL
+            }
+        }
+        return folder.appendingPathComponent("\(baseName) \(UUID().uuidString).\(pathExtension)")
     }
 
     @MainActor

@@ -24,7 +24,7 @@ enum AppWorkspace {
             throw ConversionError.fileTooLarge
         } catch FileAccessError.unavailable {
             throw ConversionError.sourceUnavailable
-        } catch FileAccessError.notAFile, FileAccessError.unreadable {
+        } catch FileAccessError.notAFile, FileAccessError.unreadable, FileAccessError.unsupportedType {
             throw ConversionError.inaccessible
         } catch {
             AppLog.fileAccess.error("Input validation failed before workspace copy: \(error.localizedDescription, privacy: .private)")

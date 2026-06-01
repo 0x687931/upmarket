@@ -56,16 +56,11 @@ struct ConvertDocumentIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        let workspace = try AppWorkspace.create(prefix: "intent")
-        defer { AppWorkspace.remove(workspace) }
+        let input = try prepareShortcutInput(document)
+        defer { input.cleanup() }
+        try await authorizeShortcutConversion(useAI: useAI)
 
-        let tempURL = workspace
-            .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension(document.filename.components(separatedBy: ".").last ?? "pdf")
-
-        try document.data.write(to: tempURL)
-
-        let result = await ConversionQueue.shared.convert(tempURL, useAI: useAI)
+        let result = await ConversionQueue.shared.convert(input.url, useAI: useAI)
         guard case .success(let output) = result else {
             throw UpmarketIntentError.conversionFailed
         }
@@ -80,7 +75,7 @@ struct ConvertAndSaveIntent: AppIntent {
 
     static var title: LocalizedStringResource = "Convert Document and Save Markdown"
     static var description = IntentDescription(
-        "Converts a document to Markdown and saves the .md file next to the original.",
+        "Converts a document to Markdown and returns a .md file to the shortcut.",
         categoryName: "Documents"
     )
     static var openAppWhenRun = false
@@ -102,30 +97,69 @@ struct ConvertAndSaveIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult & ReturnsValue<IntentFile> {
-        let workspace = try AppWorkspace.create(prefix: "intent")
+        let input = try prepareShortcutInput(document)
+        defer { input.cleanup() }
+        try await authorizeShortcutConversion(useAI: useAI)
 
-        let tempURL = workspace
-            .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension(document.filename.components(separatedBy: ".").last ?? "pdf")
-
-        try document.data.write(to: tempURL)
-        defer { try? FileManager.default.removeItem(at: tempURL) }
-
-        let result = await ConversionQueue.shared.convert(tempURL, useAI: useAI)
+        let result = await ConversionQueue.shared.convert(input.url, useAI: useAI)
         guard case .success(let output) = result else {
             throw UpmarketIntentError.conversionFailed
         }
 
-        // Save the markdown
         let baseName = document.filename.components(separatedBy: ".").dropLast().joined(separator: ".")
-        let saveURL = workspace
-            .appendingPathComponent(baseName.isEmpty ? "converted" : baseName)
-            .appendingPathExtension("md")
-
-        try output.markdown.write(to: saveURL, atomically: true, encoding: .utf8)
-
-        let savedFile = IntentFile(fileURL: saveURL, filename: saveURL.lastPathComponent)
+        let filename = "\(baseName.isEmpty ? "converted" : baseName).md"
+        let savedFile = IntentFile(data: Data(output.markdown.utf8), filename: filename, type: .plainText)
         return .result(value: savedFile)
+    }
+}
+
+private struct ShortcutInput {
+    let url: URL
+    let workspace: URL?
+
+    func cleanup() {
+        if let workspace {
+            AppWorkspace.remove(workspace)
+        }
+    }
+}
+
+private func prepareShortcutInput(_ document: IntentFile) throws -> ShortcutInput {
+    if let fileURL = document.fileURL {
+        do {
+            try FileAccessService.shared.validateReadableInput(fileURL)
+        } catch {
+            throw UpmarketIntentError.inputRejected
+        }
+        return ShortcutInput(url: fileURL, workspace: nil)
+    }
+
+    guard Int64(document.data.count) <= AppWorkspace.maxInputBytes else {
+        throw UpmarketIntentError.inputRejected
+    }
+
+    let workspace = try AppWorkspace.create(prefix: "intent")
+    let tempURL = workspace
+        .appendingPathComponent(UUID().uuidString)
+        .appendingPathExtension(document.filename.components(separatedBy: ".").last ?? "pdf")
+    try document.data.write(to: tempURL)
+    return ShortcutInput(url: tempURL, workspace: workspace)
+}
+
+@MainActor
+private func authorizeShortcutConversion(useAI: Bool) throws {
+    let store = StoreManager.shared
+    if useAI {
+        guard store.hasProOrAbove,
+              FeatureFlags.shared.aiAvailable,
+              DeviceCapability.shared.supportsUpmarketAI,
+              ModelManager.shared.proDownloaded else {
+            throw UpmarketIntentError.aiUnavailable
+        }
+    }
+
+    guard store.canConvert, store.consumeConversion() else {
+        throw UpmarketIntentError.purchaseRequired
     }
 }
 
@@ -133,11 +167,17 @@ struct ConvertAndSaveIntent: AppIntent {
 
 enum UpmarketIntentError: Error, LocalizedError {
     case noData
+    case inputRejected
+    case purchaseRequired
+    case aiUnavailable
     case conversionFailed
 
     var errorDescription: String? {
         switch self {
         case .noData:            return "Upmarket couldn't read the file."
+        case .inputRejected:     return "This file can't be converted safely."
+        case .purchaseRequired:  return "Open Upmarket to unlock more conversions."
+        case .aiUnavailable:     return "Upmarket AI is not available for this shortcut."
         case .conversionFailed:  return "Upmarket couldn't convert this document."
         }
     }

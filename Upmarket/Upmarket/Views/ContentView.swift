@@ -2,6 +2,7 @@ import SwiftUI
 import StoreKit
 import UniformTypeIdentifiers
 import AppKit
+import OSLog
 
 struct ContentView: View {
 
@@ -77,7 +78,7 @@ struct ContentView: View {
                     proPrice: store.proProduct?.displayPrice ?? "$9.99",
                     onUseAI: {
                         showAISuggestion = false
-                        beginConversion(url: url, useAI: true)
+                        showPaywall = true
                     },
                     onBasic: {
                         showAISuggestion = false
@@ -514,16 +515,30 @@ struct ContentView: View {
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
         guard store.canConvert else { showPaywall = true; return false }
-        guard let provider = providers.first else { return false }
-        provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
-            guard let data = item as? Data,
-                  let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
-            DispatchQueue.main.async { self.handleFile(url) }
+        guard !providers.isEmpty else { return false }
+
+        if providers.count == 1, let provider = providers.first {
+            provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
+                guard let data = item as? Data,
+                      let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
+                DispatchQueue.main.async { self.handleFile(url) }
+            }
+        } else {
+            ShelfWindowController.shared.show()
+            FileAccessService.shared.loadFileURLs(from: providers) { url in
+                NotificationCenter.default.post(name: .upmarketConvertFile, object: url)
+            }
         }
         return true
     }
 
     private func handleFile(_ url: URL) {
+        do {
+            try FileAccessService.shared.validateReadableInput(url)
+        } catch {
+            AppLog.fileAccess.error("Rejected input before conversion: \(error.localizedDescription, privacy: .private)")
+            return
+        }
         store.consumeConversion()
         pendingFileURL = url
         languageWarning = nil

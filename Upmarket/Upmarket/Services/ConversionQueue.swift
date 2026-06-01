@@ -18,6 +18,7 @@ final class ConversionQueue: ObservableObject {
     private let runHandler: RunHandler
     private let analyseHandler: AnalyseHandler
     private var pendingJobIDs: [UUID] = []
+    private var pendingHeadIndex = 0
     private var activeJobID: UUID?
     private var activeTask: Task<Void, Never>?
     private var livenessTask: Task<Void, Never>?
@@ -83,12 +84,14 @@ final class ConversionQueue: ObservableObject {
     func cancel(_ id: UUID) {
         cancelledJobIDs.insert(id)
         AppLog.conversion.info("Cancelling conversion correlationID=\(id.uuidString, privacy: .public)")
-        pendingJobIDs.removeAll { $0 == id }
         if activeJobID == id {
             activeTask?.cancel()
             activeTask = nil
             activeJobID = nil
             startNextJob()
+        } else {
+            pendingJobIDs = pendingJobIDs[pendingHeadIndex...].filter { $0 != id }
+            pendingHeadIndex = 0
         }
         finish(id, result: .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled."), stage: .cancelled)
     }
@@ -100,7 +103,8 @@ final class ConversionQueue: ObservableObject {
             return
         }
         cancelledJobIDs.formUnion(ids)
-        pendingJobIDs.removeAll()
+        pendingJobIDs.removeAll(keepingCapacity: true)
+        pendingHeadIndex = 0
         activeTask?.cancel()
         activeTask = nil
         activeJobID = nil
@@ -115,7 +119,8 @@ final class ConversionQueue: ObservableObject {
         guard !ids.isEmpty else { return }
         AppLog.diagnostics.error("Critical memory pressure; stopping active conversions count=\(ids.count, privacy: .public)")
         cancelledJobIDs.formUnion(ids)
-        pendingJobIDs.removeAll()
+        pendingJobIDs.removeAll(keepingCapacity: true)
+        pendingHeadIndex = 0
         activeTask?.cancel()
         activeTask = nil
         activeJobID = nil
@@ -145,8 +150,10 @@ final class ConversionQueue: ObservableObject {
 
     private func startNextJob() {
         guard activeTask == nil else { return }
-        while !pendingJobIDs.isEmpty {
-            let id = pendingJobIDs.removeFirst()
+        while pendingHeadIndex < pendingJobIDs.count {
+            let id = pendingJobIDs[pendingHeadIndex]
+            pendingHeadIndex += 1
+            compactPendingQueueIfNeeded()
             guard !cancelledJobIDs.contains(id) else { continue }
             activeJobID = id
             activeTask = Task { [weak self] in
@@ -160,6 +167,14 @@ final class ConversionQueue: ObservableObject {
             }
             return
         }
+        pendingJobIDs.removeAll(keepingCapacity: true)
+        pendingHeadIndex = 0
+    }
+
+    private func compactPendingQueueIfNeeded() {
+        guard pendingHeadIndex > 128, pendingHeadIndex * 2 > pendingJobIDs.count else { return }
+        pendingJobIDs.removeFirst(pendingHeadIndex)
+        pendingHeadIndex = 0
     }
 
     private func runJob(_ id: UUID) async {

@@ -15,6 +15,7 @@ enum FileAccessError: Error, Equatable, LocalizedError {
     case unavailable
     case unreadable
     case notAFile
+    case unsupportedType
     case tooLarge
 
     var errorDescription: String? {
@@ -25,6 +26,8 @@ enum FileAccessError: Error, Equatable, LocalizedError {
             return "Upmarket couldn't access this file. Please try again."
         case .notAFile:
             return "Choose a document file to convert."
+        case .unsupportedType:
+            return "Choose a supported document file to convert."
         case .tooLarge:
             return "This document is too large to convert safely."
         }
@@ -49,7 +52,34 @@ final class FileAccessService {
         }
 
         guard panel.runModal() == .OK else { return [] }
+        AppLog.fileAccess.info("Selected input batch count=\(panel.urls.count, privacy: .public)")
         return panel.urls
+    }
+
+    func loadFileURLs(from providers: [NSItemProvider], receiveURL: @escaping @MainActor (URL) -> Void) {
+        AppLog.fileAccess.info("Loading dropped input batch count=\(providers.count, privacy: .public)")
+        loadFileURL(from: providers, at: 0, receiveURL: receiveURL)
+    }
+
+    private func loadFileURL(
+        from providers: [NSItemProvider],
+        at index: Int,
+        receiveURL: @escaping @MainActor (URL) -> Void
+    ) {
+        guard providers.indices.contains(index) else { return }
+        providers[index].loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
+            if let data = item as? Data,
+               let url = URL(dataRepresentation: data, relativeTo: nil) {
+                DispatchQueue.main.async {
+                    receiveURL(url)
+                    self.loadFileURL(from: providers, at: index + 1, receiveURL: receiveURL)
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.loadFileURL(from: providers, at: index + 1, receiveURL: receiveURL)
+                }
+            }
+        }
     }
 
     func saveMarkdown(_ markdown: String, title: String) -> URL? {
@@ -121,6 +151,9 @@ final class FileAccessService {
 
         guard values.isRegularFile != false else { throw FileAccessError.notAFile }
         guard values.isReadable != false else { throw FileAccessError.unreadable }
+        guard Self.supportedInputTypes.contains(where: { url.conforms(to: $0) }) else {
+            throw FileAccessError.unsupportedType
+        }
         if let fileSize = values.fileSize, Int64(fileSize) > maxBytes {
             AppLog.fileAccess.error("Rejected oversized input: bytes=\(fileSize, privacy: .public)")
             throw FileAccessError.tooLarge
@@ -153,7 +186,7 @@ final class FileAccessService {
     }
 
     static let supportedInputTypes: [UTType] = [
-        .pdf, .html, .png, .jpeg, .gif, .tiff,
+        .pdf, .html, .plainText, .png, .jpeg, .gif, .tiff,
         UTType(filenameExtension: "docx") ?? .data,
         UTType(filenameExtension: "pptx") ?? .data,
         UTType(filenameExtension: "xlsx") ?? .data,
@@ -168,4 +201,11 @@ final class FileAccessService {
         UTType(filenameExtension: "aiff") ?? .data,
         UTType(filenameExtension: "opus") ?? .data,
     ]
+}
+
+private extension URL {
+    func conforms(to type: UTType) -> Bool {
+        guard let ownType = UTType(filenameExtension: pathExtension) else { return false }
+        return ownType.conforms(to: type)
+    }
 }

@@ -48,6 +48,11 @@ final class ModelManager: ObservableObject {
         models.first { $0.tier == "enhanced" }?.isDownloaded ?? false
     }
 
+    var proDownloaded: Bool {
+        let proModels = models.filter { $0.tier == "pro" }
+        return !proModels.isEmpty && proModels.allSatisfy(\.isDownloaded)
+    }
+
     var requiredSizeMB: Int {
         models.filter(\.isRequired).reduce(0) { $0 + $1.sizeMB }
     }
@@ -114,6 +119,10 @@ final class ModelManager: ObservableObject {
     }
 
     func downloadProModels() {
+        guard DeviceCapability.shared.supportsUpmarketAI else {
+            downloadError = DeviceCapability.shared.upmarketAIUnavailableReason
+            return
+        }
         downloadModels(keys: models.filter { $0.tier == "pro" && !$0.isDownloaded }.map(\.key))
     }
 
@@ -167,17 +176,14 @@ final class ModelManager: ObservableObject {
         while !downloadTask.isCancelled {
             try? await Task.sleep(nanoseconds: 500_000_000)
 
-            if let lines = try? String(contentsOfFile: progressFile, encoding: .utf8) {
-                let lastLine = lines.split(separator: "\n").last.map(String.init)
-                if let line = lastLine,
-                   let data = line.data(using: .utf8),
-                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    let percent = json["percent"] as? Double ?? 0
-                    let message = json["message"] as? String ?? ""
-                    await MainActor.run {
-                        self.downloadProgress = percent
-                        self.downloadMessage = message
-                    }
+            if let line = Self.lastProgressLine(atPath: progressFile),
+               let data = line.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                let percent = json["percent"] as? Double ?? 0
+                let message = json["message"] as? String ?? ""
+                await MainActor.run {
+                    self.downloadProgress = percent
+                    self.downloadMessage = message
                 }
             }
 
@@ -190,5 +196,20 @@ final class ModelManager: ObservableObject {
         }
 
         try? FileManager.default.removeItem(atPath: progressFile)
+    }
+
+    private static func lastProgressLine(atPath path: String) -> String? {
+        guard let handle = FileHandle(forReadingAtPath: path) else { return nil }
+        defer { try? handle.close() }
+        let fileSize = (try? handle.seekToEnd()) ?? 0
+        guard fileSize > 0 else { return nil }
+        let bytesToRead = min(UInt64(8192), fileSize)
+        try? handle.seek(toOffset: fileSize - bytesToRead)
+        let data = handle.readDataToEndOfFile()
+        guard let chunk = String(data: data, encoding: .utf8) else { return nil }
+        return chunk
+            .split(separator: "\n", omittingEmptySubsequences: true)
+            .last
+            .map(String.init)
     }
 }

@@ -6,6 +6,11 @@ private struct QuickActionHandoff: Decodable {
     let files: [String]
 }
 
+struct QuickActionHandoffFile {
+    let fileURL: URL
+    let handoffDirectory: URL
+}
+
 /// AppDelegate handles app lifecycle, URL scheme handling (from Quick Action),
 /// and Services menu integration.
 @MainActor
@@ -24,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         NSApp.servicesProvider = self
         MemoryPressureMonitor.shared.start()
+        removeStaleQuickActionHandoffs()
 
         // Observe conversion state for Dock tile animation
         NotificationCenter.default.addObserver(
@@ -90,8 +96,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for fileName in handoff.files where !fileName.contains("/") {
             NotificationCenter.default.post(
                 name: .upmarketConvertFile,
-                object: handoffDirectory.appendingPathComponent(fileName)
+                object: QuickActionHandoffFile(
+                    fileURL: handoffDirectory.appendingPathComponent(fileName),
+                    handoffDirectory: handoffDirectory
+                )
             )
+        }
+    }
+
+    private func removeStaleQuickActionHandoffs() {
+        guard let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else {
+            return
+        }
+        let root = container.appendingPathComponent("QuickActionHandoffs", isDirectory: true)
+        guard let entries = try? FileManager.default.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.contentModificationDateKey, .isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else { return }
+
+        let cutoff = Date().addingTimeInterval(-24 * 60 * 60)
+        for entry in entries {
+            let values = try? entry.resourceValues(forKeys: [.contentModificationDateKey, .isDirectoryKey])
+            guard values?.isDirectory == true,
+                  (values?.contentModificationDate ?? .distantPast) < cutoff else { continue }
+            try? FileManager.default.removeItem(at: entry)
         }
     }
 

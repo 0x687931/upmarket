@@ -1,6 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import AppKit
+import OSLog
 
 struct ShelfView: View {
 
@@ -70,7 +71,11 @@ struct ShelfView: View {
             PaywallView().environmentObject(store)
         }
         .onReceive(NotificationCenter.default.publisher(for: .upmarketConvertFile)) { note in
-            if let url = note.object as? URL { addToQueue(url) }
+            if let handoff = note.object as? QuickActionHandoffFile {
+                addToQueue(handoff.fileURL, cleanupDirectory: handoff.handoffDirectory)
+            } else if let url = note.object as? URL {
+                addToQueue(url)
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .upmarketReprocessItem)) { note in
             guard let req = note.object as? ReprocessRequest else { return }
@@ -273,21 +278,31 @@ struct ShelfView: View {
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
         guard store.canConvert else { showPaywall = true; return false }
         withAnimation(.spring(duration: 0.35, bounce: 0.1)) { isExpanded = true }
-        for provider in providers {
-            provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
-                guard let data = item as? Data,
-                      let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
-                DispatchQueue.main.async { self.addToQueue(url) }
-            }
+        FileAccessService.shared.loadFileURLs(from: providers) { url in
+            self.addToQueue(url)
         }
         return true
     }
 
     // MARK: - Queue management
 
-    private func addToQueue(_ url: URL) {
+    private func addToQueue(_ url: URL, cleanupDirectory: URL? = nil) {
         guard !conversion.jobs.contains(where: { $0.sourceURL == url && $0.isRunning }) else { return }
-        guard consumeConversionOrShowPaywall() else { return }
+        do {
+            try FileAccessService.shared.validateReadableInput(url)
+        } catch {
+            AppLog.fileAccess.error("Rejected shelf input before queue: \(error.localizedDescription, privacy: .private)")
+            if let cleanupDirectory {
+                cleanupQuickActionHandoffIfDone(cleanupDirectory)
+            }
+            return
+        }
+        guard consumeConversionOrShowPaywall() else {
+            if let cleanupDirectory {
+                try? FileManager.default.removeItem(at: cleanupDirectory)
+            }
+            return
+        }
         NotificationCenter.default.post(name: .upmarketConversionStarted, object: nil)
         let id = conversion.add(url)
         Task { @MainActor in
@@ -302,7 +317,18 @@ struct ShelfView: View {
                     NotificationCenter.default.post(name: .showPaywall, object: nil)
                 }
             }
+            if let cleanupDirectory {
+                cleanupQuickActionHandoffIfDone(cleanupDirectory)
+            }
         }
+    }
+
+    private func cleanupQuickActionHandoffIfDone(_ directory: URL) {
+        let stillNeeded = conversion.jobs.contains { job in
+            job.isRunning && job.sourceURL.deletingLastPathComponent() == directory
+        }
+        guard !stillNeeded else { return }
+        try? FileManager.default.removeItem(at: directory)
     }
 
     private func consumeConversionOrShowPaywall() -> Bool {
@@ -462,16 +488,20 @@ struct ShelfItemView: View {
             Divider()
             Button("Save As…") { saveMarkdown(output.markdown, title: output.title) }
             Divider()
-            Menu("Reprocess") {
-                Button("Fast (instant)")       { reprocess(useAI: false) }
-                Button("Upmarket AI (best)")   { reprocess(useAI: true)  }
+            if sourceExists {
+                Menu("Reprocess") {
+                    Button("Fast (instant)")       { reprocess(useAI: false) }
+                    Button("Upmarket AI (best)")   { reprocess(useAI: true)  }
+                }
+                Divider()
+            }
+        }
+        if sourceExists {
+            Button("Show Original in Finder") {
+                FileAccessService.shared.revealInFinder(item.sourceURL)
             }
             Divider()
         }
-        Button("Show Original in Finder") {
-            FileAccessService.shared.revealInFinder(item.sourceURL)
-        }
-        Divider()
         Button("Remove from Shelf", role: .destructive) { onRemove() }
     }
 
@@ -540,6 +570,10 @@ struct ShelfItemView: View {
             name: .upmarketReprocessItem,
             object: ReprocessRequest(url: item.sourceURL, itemID: item.id, useAI: useAI, enhanced: useAI)
         )
+    }
+
+    private var sourceExists: Bool {
+        FileManager.default.fileExists(atPath: item.sourceURL.path)
     }
 
     private var extensionIcon: String {

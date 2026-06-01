@@ -165,23 +165,25 @@ struct DocumentIntelligence {
         let tagger = NLTagger(tagSchemes: [.nameType])
         tagger.string = text
         var entities: [String] = []
+        var seenEntities = Set<String>()
 
         tagger.enumerateTags(in: text.startIndex..<text.endIndex,
                              unit: .word, scheme: .nameType,
                              options: [.omitWhitespace, .joinNames]) { foundTag, range in
             if foundTag == tag {
                 let entity = String(text[range]).trimmingCharacters(in: .whitespaces)
-                if entity.count > 2 && !entities.contains(entity) {
+                if entity.count > 2 && seenEntities.insert(entity).inserted {
                     entities.append(entity)
                 }
             }
-            return true
+            return entities.count < 10
         }
         return Array(entities.prefix(10))
     }
 
     private static func extractOrganisations(from text: String) -> [String] {
         var organisations = extractEntities(from: text, tag: .organizationName)
+        var seenOrganisations = Set(organisations)
 
         let patterns = [
             #"\b[A-Z][A-Za-z&.-]+(?:\s+[A-Z][A-Za-z&.-]+){0,3}\s+(?:Inc\.?|Corp\.?|Corporation|Company|University|Institute|Laboratory|Labs|LLC|Ltd\.?)\b"#,
@@ -194,10 +196,12 @@ struct DocumentIntelligence {
             for match in regex.matches(in: text, range: range) {
                 guard let matchRange = Range(match.range, in: text) else { continue }
                 let entity = String(text[matchRange]).trimmingCharacters(in: .whitespacesAndNewlines)
-                if entity.count > 2 && !organisations.contains(entity) {
+                if entity.count > 2 && seenOrganisations.insert(entity).inserted {
                     organisations.append(entity)
                 }
+                if organisations.count >= 10 { break }
             }
+            if organisations.count >= 10 { break }
         }
 
         return Array(organisations.prefix(10))
@@ -248,6 +252,7 @@ struct DocumentIntelligence {
 
         // Extract noun phrases (consecutive nouns/adjectives)
         var phrases: [String] = []
+        var seenPhrases = Set<String>()
         var currentPhrase: [String] = []
 
         tagger.enumerateTags(in: text.startIndex..<text.endIndex,
@@ -260,11 +265,11 @@ struct DocumentIntelligence {
             default:
                 if currentPhrase.count >= 2 {
                     let phrase = currentPhrase.joined(separator: " ")
-                    if !phrases.contains(phrase) { phrases.append(phrase) }
+                    if seenPhrases.insert(phrase).inserted { phrases.append(phrase) }
                 }
                 currentPhrase.removeAll()
             }
-            return true
+            return phrases.count < 10
         }
 
         return Array(phrases.prefix(10))
