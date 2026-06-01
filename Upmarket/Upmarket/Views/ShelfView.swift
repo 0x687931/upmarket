@@ -218,7 +218,11 @@ struct ShelfView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: itemSpacing) {
                 ForEach(conversion.jobs.prefix(maxVisible)) { item in
-                    ShelfItemView(item: item) {
+                    ShelfItemView(
+                        item: item,
+                        onCancel: { conversion.cancel(item.id) },
+                        onRetry: { _ = conversion.retry(item.id) }
+                    ) {
                         withAnimation(.spring(duration: 0.25)) {
                             conversion.remove(item.id)
                         }
@@ -314,8 +318,15 @@ extension View {
 
 struct ShelfItemView: View {
     let item: ConversionJob
+    let onCancel: () -> Void
+    let onRetry: () -> Void
     let onRemove: () -> Void
     @State private var showActions = false
+    @State private var now = Date()
+
+    private var isStalled: Bool {
+        item.isStalled(referenceDate: now, threshold: 60)
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -330,6 +341,7 @@ struct ShelfItemView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .frame(width: 56)
+                statusText
             }
             .padding(.vertical, 6)
 
@@ -343,6 +355,12 @@ struct ShelfItemView: View {
         .onTapGesture(count: 2) { handleDoubleClick() }
         .onTapGesture(count: 1) { handleSingleClick() }
         .contextMenu { contextMenuItems }
+        .task(id: item.id) {
+            while item.isRunning {
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                now = Date()
+            }
+        }
     }
 
     @ViewBuilder private var fileIcon: some View {
@@ -360,7 +378,11 @@ struct ShelfItemView: View {
         case .queued:
             EmptyView()
         case .copying, .extracting, .python, .postProcessing:
-            if #available(macOS 15.0, *) {
+            if isStalled {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .font(.system(size: 11)).foregroundStyle(.yellow)
+                    .background(Color.black.opacity(0.4), in: Circle())
+            } else if #available(macOS 15.0, *) {
                 Image(systemName: "arrow.triangle.2.circlepath")
                     .font(.system(size: 9, weight: .bold)).foregroundStyle(.white)
                     .padding(2).background(Color.accentColor, in: Circle())
@@ -383,6 +405,17 @@ struct ShelfItemView: View {
 
     @ViewBuilder private var hoverActions: some View {
         HStack(spacing: 3) {
+            if item.isRunning {
+                Button(action: onCancel) {
+                    Image(systemName: "stop.fill").font(.system(size: 8))
+                }
+                .buttonStyle(ShelfActionButtonStyle()).help("Cancel")
+            } else if item.result?.errorMessage != nil {
+                Button(action: onRetry) {
+                    Image(systemName: "arrow.clockwise").font(.system(size: 9))
+                }
+                .buttonStyle(ShelfActionButtonStyle()).help("Retry")
+            }
             if let output = item.result?.output {
                 Button {
                     FileAccessService.shared.copyMarkdown(output.markdown)
@@ -398,6 +431,13 @@ struct ShelfItemView: View {
     }
 
     @ViewBuilder private var contextMenuItems: some View {
+        if item.isRunning {
+            Button("Cancel Conversion") { onCancel() }
+            Divider()
+        } else if item.result?.errorMessage != nil {
+            Button("Retry Conversion") { onRetry() }
+            Divider()
+        }
         if let output = item.result?.output {
             Button("Open in Markdown Editor") { openInDefaultApp(output.markdown, title: output.title) }
             Divider()
@@ -421,6 +461,29 @@ struct ShelfItemView: View {
         }
         Divider()
         Button("Remove from Shelf", role: .destructive) { onRemove() }
+    }
+
+    @ViewBuilder private var statusText: some View {
+        if isStalled {
+            Text("No progress")
+                .font(.system(size: 7))
+                .foregroundStyle(.yellow)
+                .lineLimit(1)
+                .frame(width: 56, height: 8)
+        } else if let message = item.result?.errorMessage {
+            Text(message)
+                .font(.system(size: 7))
+                .foregroundStyle(.red.opacity(0.85))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(width: 56, height: 8)
+        } else {
+            Text(stageLabel)
+                .font(.system(size: 7))
+                .foregroundStyle(.primary.opacity(0.4))
+                .lineLimit(1)
+                .frame(width: 56, height: 8)
+        }
     }
 
     private func handleSingleClick() {
@@ -465,6 +528,19 @@ struct ShelfItemView: View {
         case "mp3", "m4a", "wav":  return "waveform"
         case "png", "jpg", "jpeg": return "photo"
         default:                   return "doc"
+        }
+    }
+
+    private var stageLabel: String {
+        switch item.stage {
+        case .queued: return "Queued"
+        case .copying: return "Copying"
+        case .extracting: return "Reading"
+        case .python: return "Python"
+        case .postProcessing: return "Refining"
+        case .complete: return "Done"
+        case .failed: return "Failed"
+        case .cancelled: return "Cancelled"
         }
     }
 }

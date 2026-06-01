@@ -56,6 +56,7 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Replace singleton `ConversionService.result` polling with `ConversionQueue` and `ConversionRunner`.
 - [x] Serialize shelf/app-intent conversions through `ConversionQueue`; each queued item must own its own result, error, progress, and cancellation state.
 - [x] Add per-job IDs, stage updates, progress/heartbeat signals, Cancel/Retry UI, and stuck-state classification based on missing progress rather than elapsed time alone.
+- [x] Lock terminal conversion states so late progress updates cannot reopen completed, failed, or cancelled jobs.
 - [ ] Guarantee conversion state reset and temp cleanup on success, failure, cancellation, helper crash, app quit, and startup cleanup of stale job directories.
 
 ### P0 - Offline and Model Integrity

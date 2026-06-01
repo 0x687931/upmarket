@@ -127,6 +127,7 @@ final class ConversionQueue: ObservableObject {
 
     private func update(_ id: UUID, stage: ConversionStage) {
         guard let index = jobs.firstIndex(where: { $0.id == id }) else { return }
+        guard jobs[index].isRunning else { return }
         jobs[index].stage = stage
         jobs[index].lastProgressAt = Date()
     }

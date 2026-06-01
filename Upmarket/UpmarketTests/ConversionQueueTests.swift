@@ -72,9 +72,54 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertEqual(job.stage, .python)
     }
 
+    func testFailureIsStoredPerJob() async {
+        let queue = ConversionQueue { _, progress in
+            progress?(.extracting)
+            return .failure("Unsupported file")
+        }
+
+        let id = queue.add(URL(fileURLWithPath: "/tmp/bad.bin"))
+
+        await waitForResult(id, in: queue)
+
+        let job = queue.jobs.first { $0.id == id }
+        XCTAssertEqual(job?.stage, .failed)
+        XCTAssertEqual(job?.result?.errorMessage, "Unsupported file")
+    }
+
+    func testRetryCreatesNewJobForOriginalSource() async {
+        var attempts = 0
+        let queue = ConversionQueue { job, _ in
+            attempts += 1
+            if attempts == 1 { return .failure("Try again") }
+            return .success(ConversionOutput(
+                markdown: job.name,
+                pages: 1,
+                format: job.ext,
+                title: job.name,
+                pipeline: .fast
+            ))
+        }
+
+        let first = queue.add(URL(fileURLWithPath: "/tmp/retry.pdf"))
+        await waitForResult(first, in: queue)
+
+        let second = queue.retry(first)
+        XCTAssertNotNil(second)
+        await waitForResult(second!, in: queue)
+
+        XCTAssertNotEqual(first, second)
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == first })?.stage, .failed)
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.stage, .complete)
+    }
+
     private func waitForResult(_ id: UUID, in queue: ConversionQueue) async {
         for _ in 0..<100 {
-            if queue.jobs.first(where: { $0.id == id })?.result != nil { return }
+            if let job = queue.jobs.first(where: { $0.id == id }),
+               job.result != nil,
+               !job.isRunning {
+                return
+            }
             try? await Task.sleep(nanoseconds: 10_000_000)
         }
         XCTFail("Timed out waiting for conversion job \(id)")
