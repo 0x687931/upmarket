@@ -10,9 +10,9 @@ Host: Mac mini M4 Pro-class local benchmark host. Corpus: `tests/corpus`, PDF ca
 scripts/benchmark_concurrency.py --pathway python-fast-pdfium --workers 4 --json-output reports/concurrency-python-fast-pdfium.json --markdown-output reports/concurrency-python-fast-pdfium.md
 ```
 
-| Mode | Workers | Docs | Failures | Avg Score | Converter Avg | Wall Time | Throughput | Load Before | Load After |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
-| serial | 1 | 60 | 1 | 81.5% | 0.0314s | 3.970s | 15.1143 docs/s | 4.99, 3.40, 4.15 | 4.91, 3.41, 4.15 |
-| parallel | 4 | 60 | 1 | 81.5% | 0.0314s | 1.067s | 56.2433 docs/s | 4.91, 3.41, 4.15 | 4.91, 3.41, 4.15 |
+| Mode | Workers | Docs | Blocked | Failures | Avg Score | Converter Avg | Wall Time | Throughput | Load Before | Load After |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| serial | 1 | 60 | 1 | 0 | 81.5% | 0.0295s | 3.876s | 15.4815 docs/s | 1.75, 2.20, 3.13 | 1.77, 2.20, 3.13 |
+| parallel | 4 | 60 | 1 | 0 | 81.5% | 0.0315s | 1.074s | 55.8634 docs/s | 1.77, 2.20, 3.13 | 1.77, 2.20, 3.13 |
 
-Result: 4-worker isolated parallel conversion improved throughput for the fast PDF pathway without a score or failure regression in this run. This does not yet justify changing app queue behavior for all pathways; repeat for native OCR, enhanced/model paths, cancellation, and memory pressure before promotion.
+Result: 4-worker isolated parallel conversion improved throughput for the fast PDF pathway without a score or failure regression in this run. The single blocked document is the password-protected corpus PDF without a supplied password, which is expected blocked behavior rather than converter failure. This does not yet justify changing app queue behavior for all pathways; repeat for native OCR, enhanced/model paths, cancellation, and memory pressure before promotion.

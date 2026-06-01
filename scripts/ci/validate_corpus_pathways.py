@@ -130,6 +130,8 @@ def validate_results(results: dict, baseline: dict) -> list[str]:
         if expected is None:
             missing.append(doc_id)
             continue
+        if result.get("status") == "expected_blocked":
+            continue
         actual = float(result.get("overall_percent", 0))
         expected_score = float(expected.get("overall_percent", 0))
         expected_elapsed = expected.get("avg_elapsed_seconds", expected.get("elapsed_seconds"))

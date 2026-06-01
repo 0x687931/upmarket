@@ -30,6 +30,10 @@ This matrix defines the minimum validation surface. Add focused tests when a cha
 
 Do not run every expensive test for every backend-only change. Run the narrowest reliable gate for the touched interface, then broaden to the full release-candidate matrix before shipping.
 
+## Expected Blocked Results
+
+A corpus document that needs missing user input, such as a password-protected PDF without a supplied password, is `expected_blocked`, not `failed`. It still appears in benchmark output, but it must not reduce quality averages or count against failed-document limits.
+
 ## Automation Boundary
 
 UI automation is intentionally release-candidate scoped because it can alter the user's system appearance. Unit, package, copy, corpus, and model checks should remain safe for normal PR/local runs.

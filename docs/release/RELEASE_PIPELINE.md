@@ -111,7 +111,7 @@ No dependency moves to `current` without corpus smoke, packaged import, offline 
 Do not change conversion queue concurrency from intuition. Use the corpus/pathway benchmark matrix to compare serial and parallel execution separately from converter quality:
 
 - run the same corpus, pathway, dependency versions, and model cache;
-- record accuracy, average wall time, total wall time, failures, timeouts, and system load;
+- record accuracy, average wall time, total wall time, expected blocked states, failures, timeouts, and system load;
 - separate CPU-only, OS-managed Apple acceleration, and explicit GPU-capable paths;
 - treat large OCR/model paths as isolated work so a stall or native crash cannot block the app;
 - only promote a concurrency change when it improves throughput without quality downgrade, UI responsiveness loss, memory pressure risk, or worse failure recovery.

@@ -76,10 +76,12 @@ class DocScore:
     elapsed_seconds: float = 0.0
     elapsed_runs_seconds: list[float] = field(default_factory=list)
     error: str | None = None
+    expected_blocked: bool = False
+    blocked_reason: str | None = None
 
     @property
     def overall(self) -> float:
-        if self.error:
+        if self.error or self.expected_blocked:
             return 0.0
         w = [
             (self.heading_recall,       0.30),
@@ -239,6 +241,16 @@ def count_artifacts(md: str) -> int:
     for lig in ['ﬁ', 'ﬂ', 'ﬃ', 'ﬄ', 'ﬀ']:
         artifacts += md.count(lig)
     return artifacts
+
+
+def is_expected_blocked_error(message: str | None) -> tuple[bool, str | None]:
+    """Classify missing user-supplied input as blocked, not converter failure."""
+    if not message:
+        return False, None
+    lowered = message.lower()
+    if "password" in lowered and ("protected" in lowered or "required" in lowered or "encrypted" in lowered):
+        return True, "password_required"
+    return False, None
 
 
 # ── Conversion ────────────────────────────────────────────────────────────────
@@ -633,17 +645,32 @@ def run_benchmark(
             scores.append(score)
             print(f"[  ] ✗  TIMEOUT ({score.error})")
         except Exception as e:
-            score = DocScore(doc_id=doc_id, category=category, file=doc_meta.get("file", ""), error=str(e))
+            message = str(e)
+            expected_blocked, reason = is_expected_blocked_error(message)
+            score = DocScore(
+                doc_id=doc_id,
+                category=category,
+                file=doc_meta.get("file", ""),
+                error=None if expected_blocked else message,
+                expected_blocked=expected_blocked,
+                blocked_reason=reason,
+            )
             scores.append(score)
-            print(f"[  ] ✗  ERROR: {e}")
+            if expected_blocked:
+                print(f"[  ] ⏸  BLOCKED: {reason}")
+            else:
+                print(f"[  ] ✗  ERROR: {e}")
 
     # Summary table
     print("\n" + "═" * 65)
     print_summary(scores)
 
-    overall_avg = sum(s.overall for s in scores) / len(scores) if scores else 0
-    elapsed_avg = sum(s.elapsed_seconds for s in scores) / len(scores) if scores else 0
-    print(f"\nOverall: {overall_avg*100:.1f}%  ({len(scores)} documents, {elapsed_avg:.3f}s avg/document)")
+    scored = [s for s in scores if not s.expected_blocked]
+    overall_avg = sum(s.overall for s in scored) / len(scored) if scored else 0
+    elapsed_avg = sum(s.elapsed_seconds for s in scored) / len(scored) if scored else 0
+    blocked_count = sum(1 for s in scores if s.expected_blocked)
+    blocked_label = f", {blocked_count} expected blocked" if blocked_count else ""
+    print(f"\nOverall: {overall_avg*100:.1f}%  ({len(scored)}/{len(scores)} scored documents{blocked_label}, {elapsed_avg:.3f}s avg/document)")
 
     if json_output:
         write_json_report(json_output, pipeline or "fast", pathway or None, scores, corpus_dir, category_filter, repeat_count, compute_mode)
@@ -668,7 +695,7 @@ def print_summary(scores: list[DocScore]):
     print("-" * 65)
 
     for cat, cat_scores in sorted(by_category.items()):
-        valid = [s for s in cat_scores if not s.error]
+        valid = [s for s in cat_scores if not s.error and not s.expected_blocked]
         if not valid:
             continue
         avg = lambda f: sum(getattr(s, f) for s in valid) / len(valid)
@@ -690,14 +717,18 @@ def write_json_report(path: Path, pipeline: str, pathway: str | None, scores: li
 
     categories = {}
     for category, category_scores in sorted(by_category.items()):
+        scored_category = [score for score in category_scores if not score.expected_blocked]
         categories[category] = {
             "document_count": len(category_scores),
-            "overall_percent": round(sum(score.overall for score in category_scores) / len(category_scores) * 100, 1),
-            "avg_elapsed_seconds": round(sum(score.elapsed_seconds for score in category_scores) / len(category_scores), 4),
-            "total_elapsed_seconds": round(sum(score.elapsed_seconds for score in category_scores), 4),
+            "scored_document_count": len(scored_category),
+            "overall_percent": round(sum(score.overall for score in scored_category) / len(scored_category) * 100, 1) if scored_category else 0.0,
+            "avg_elapsed_seconds": round(sum(score.elapsed_seconds for score in scored_category) / len(scored_category), 4) if scored_category else 0.0,
+            "total_elapsed_seconds": round(sum(score.elapsed_seconds for score in scored_category), 4),
             "failed_count": sum(1 for score in category_scores if score.error),
+            "expected_blocked_count": sum(1 for score in category_scores if score.expected_blocked),
         }
 
+    scored = [score for score in scores if not score.expected_blocked]
     report = {
         "version": 1,
         "pipeline": pipeline,
@@ -708,15 +739,19 @@ def write_json_report(path: Path, pipeline: str, pathway: str | None, scores: li
         "corpus": str(corpus_dir),
         "category_filter": category_filter or None,
         "document_count": len(scores),
-        "overall_percent": round(sum(score.overall for score in scores) / len(scores) * 100, 1) if scores else 0.0,
-        "avg_elapsed_seconds": round(sum(score.elapsed_seconds for score in scores) / len(scores), 4) if scores else 0.0,
-        "total_elapsed_seconds": round(sum(score.elapsed_seconds for score in scores), 4),
+        "scored_document_count": len(scored),
+        "overall_percent": round(sum(score.overall for score in scored) / len(scored) * 100, 1) if scored else 0.0,
+        "avg_elapsed_seconds": round(sum(score.elapsed_seconds for score in scored) / len(scored), 4) if scored else 0.0,
+        "total_elapsed_seconds": round(sum(score.elapsed_seconds for score in scored), 4),
+        "failed_count": sum(1 for score in scores if score.error),
+        "expected_blocked_count": sum(1 for score in scores if score.expected_blocked),
         "categories": categories,
         "documents": [
             {
                 "id": score.doc_id,
                 "file": score.file,
                 "category": score.category.split("/")[0],
+                "status": "expected_blocked" if score.expected_blocked else ("failed" if score.error else "scored"),
                 "overall_percent": round(score.overall * 100, 1),
                 "heading_recall_percent": round(score.heading_recall * 100, 1),
                 "table_accuracy_percent": round(score.table_accuracy * 100, 1),
@@ -726,6 +761,7 @@ def write_json_report(path: Path, pipeline: str, pathway: str | None, scores: li
                 "elapsed_seconds": round(score.elapsed_seconds, 3),
                 "elapsed_runs_seconds": [round(value, 3) for value in score.elapsed_runs_seconds],
                 "error": score.error,
+                "blocked_reason": score.blocked_reason,
             }
             for score in scores
         ],

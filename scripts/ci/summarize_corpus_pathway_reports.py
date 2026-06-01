@@ -28,6 +28,8 @@ def table(headers: list[str], rows: list[list[str]]) -> list[str]:
 def score_cell(document: dict | None) -> str:
     if document is None:
         return "-"
+    if document.get("status") == "expected_blocked":
+        return "BLOCKED"
     if document.get("error"):
         return "ERR"
     elapsed = float(document.get("elapsed_seconds", 0))
@@ -132,7 +134,7 @@ def main() -> int:
     lines.extend([
         "## Document Score Matrix",
         "",
-        "Cells are `accuracy / average wall time`. `ERR` means the pathway ran and failed for that file. `-` means that converter was not run for that file.",
+        "Cells are `accuracy / average wall time`. `BLOCKED` means the document needed missing user input, such as a password. `ERR` means the pathway ran and failed unexpectedly. `-` means that converter was not run for that file.",
         "",
     ])
 

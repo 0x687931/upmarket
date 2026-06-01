@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from benchmark_scorer import PATHWAYS, benchmark_host, score_document  # noqa: E402
+from benchmark_scorer import PATHWAYS, benchmark_host, is_expected_blocked_error, score_document  # noqa: E402
 
 
 def load_manifest(corpus: Path) -> list[dict]:
@@ -72,10 +72,25 @@ def convert_one(doc: dict, corpus: Path, pipeline: str, pathway: str, repeat: in
         lines = [line for line in proc.stdout.splitlines() if line.startswith("{")]
         if proc.returncode != 0 or not lines:
             detail = proc.stderr.strip() or proc.stdout.strip() or f"worker exited {proc.returncode}"
-            return {"doc": doc, "error": detail[-500:], "elapsed_runs_seconds": elapsed_runs}
+            expected_blocked, reason = is_expected_blocked_error(detail)
+            return {
+                "doc": doc,
+                "error": None if expected_blocked else detail[-500:],
+                "expected_blocked": expected_blocked,
+                "blocked_reason": reason,
+                "elapsed_runs_seconds": elapsed_runs,
+            }
         payload = json.loads(lines[-1])
         if not payload.get("success"):
-            return {"doc": doc, "error": payload.get("error", "conversion failed"), "elapsed_runs_seconds": elapsed_runs}
+            message = payload.get("error", "conversion failed")
+            expected_blocked, reason = is_expected_blocked_error(message)
+            return {
+                "doc": doc,
+                "error": None if expected_blocked else message,
+                "expected_blocked": expected_blocked,
+                "blocked_reason": reason,
+                "elapsed_runs_seconds": elapsed_runs,
+            }
         markdown = payload.get("markdown", "")
         elapsed_runs.append(float(payload.get("elapsed_seconds") or elapsed_wall))
 
@@ -100,18 +115,21 @@ def run_mode(docs: list[dict], corpus: Path, pipeline: str, pathway: str, repeat
     wall = time.monotonic() - started
     after_load = os.getloadavg() if hasattr(os, "getloadavg") else None
     scores = [item["score"] for item in results if "score" in item]
-    failures = [item for item in results if "error" in item]
+    blocked = [item for item in results if item.get("expected_blocked")]
+    failures = [item for item in results if item.get("error")]
+    scored_count = len(scores)
 
     return {
         "mode": mode,
         "workers": 1 if mode == "serial" else workers,
         "document_count": len(results),
-        "successful_count": len(scores),
+        "successful_count": scored_count,
+        "expected_blocked_count": len(blocked),
         "failed_count": len(failures),
         "wall_time_seconds": round(wall, 3),
         "throughput_docs_per_second": round(len(results) / wall, 4) if wall else 0.0,
-        "avg_score_percent": round(sum(score.overall for score in scores) / len(scores) * 100, 1) if scores else 0.0,
-        "avg_converter_elapsed_seconds": round(sum(score.elapsed_seconds for score in scores) / len(scores), 4) if scores else 0.0,
+        "avg_score_percent": round(sum(score.overall for score in scores) / scored_count * 100, 1) if scores else 0.0,
+        "avg_converter_elapsed_seconds": round(sum(score.elapsed_seconds for score in scores) / scored_count, 4) if scores else 0.0,
         "load_average_before": before_load,
         "load_average_after": after_load,
         "documents": [
@@ -119,6 +137,7 @@ def run_mode(docs: list[dict], corpus: Path, pipeline: str, pathway: str, repeat
                 "id": score.doc_id,
                 "file": score.file,
                 "category": score.category.split("/")[0],
+                "status": "scored",
                 "overall_percent": round(score.overall * 100, 1),
                 "elapsed_seconds": round(score.elapsed_seconds, 3),
                 "elapsed_runs_seconds": [round(value, 3) for value in score.elapsed_runs_seconds],
@@ -130,10 +149,25 @@ def run_mode(docs: list[dict], corpus: Path, pipeline: str, pathway: str, repeat
                 "id": item["doc"].get("id", "unknown"),
                 "file": item["doc"].get("file", ""),
                 "category": item["doc"].get("category", "unknown"),
+                "status": "expected_blocked",
+                "overall_percent": 0.0,
+                "elapsed_seconds": 0.0,
+                "elapsed_runs_seconds": item.get("elapsed_runs_seconds", []),
+                "error": None,
+                "blocked_reason": item.get("blocked_reason"),
+            }
+            for item in blocked
+        ] + [
+            {
+                "id": item["doc"].get("id", "unknown"),
+                "file": item["doc"].get("file", ""),
+                "category": item["doc"].get("category", "unknown"),
+                "status": "failed",
                 "overall_percent": 0.0,
                 "elapsed_seconds": 0.0,
                 "elapsed_runs_seconds": item.get("elapsed_runs_seconds", []),
                 "error": item["error"],
+                "blocked_reason": None,
             }
             for item in failures
         ],
@@ -148,14 +182,14 @@ def write_markdown(report: dict, path: Path) -> None:
         f"Documents: {report['document_count']}",
         f"Repeat count: {report['repeat_count']}",
         "",
-        "| Mode | Workers | Docs | Failures | Avg Score | Converter Avg | Wall Time | Throughput | Load Before | Load After |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |",
+        "| Mode | Workers | Docs | Blocked | Failures | Avg Score | Converter Avg | Wall Time | Throughput | Load Before | Load After |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |",
     ]
     for result in report["results"]:
         before = ", ".join(f"{value:.2f}" for value in result["load_average_before"] or [])
         after = ", ".join(f"{value:.2f}" for value in result["load_average_after"] or [])
         lines.append(
-            f"| {result['mode']} | {result['workers']} | {result['document_count']} | {result['failed_count']} | "
+            f"| {result['mode']} | {result['workers']} | {result['document_count']} | {result['expected_blocked_count']} | {result['failed_count']} | "
             f"{result['avg_score_percent']}% | {result['avg_converter_elapsed_seconds']}s | "
             f"{result['wall_time_seconds']}s | {result['throughput_docs_per_second']} | {before} | {after} |"
         )
