@@ -1,8 +1,8 @@
-# Upmarket release-current Python dependencies.
+# Upmarket release-candidate Python dependencies.
 #
-# This file is the current release state. Every runtime dependency listed here
-# must use an exact == pin. Do not use >=, ~=, <, >, or unbounded specifiers.
-# Proposed updates go in requirements-candidate.txt first.
+# Keep this file exact-pinned too. Update this file when evaluating upstream
+# releases, then run dependency audit, packaged import/offline smoke, and
+# corpus validation before promoting the same pins to requirements.txt.
 
 # Core conversion
 docling==2.96.0

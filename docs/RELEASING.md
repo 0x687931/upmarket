@@ -13,10 +13,15 @@ Key repos to watch:
 - **BeeWare Python**: https://github.com/beeware/Python-Apple-support/releases
 - **Feature flags**: `docs/public/flags.json` (language support changes)
 
-### 2. Apply updates
+### 2. Stage candidate updates
+
+Edit `requirements-candidate.txt` with exact pins only. Do not edit `requirements.txt` until the candidate has passed validation and human review.
+
 ```bash
-./scripts/update_dependencies.sh
+./scripts/update_dependencies.sh --install-candidate
 ```
+
+If accepted, promote by copying the exact candidate pins to `requirements.txt` in the same reviewed change.
 
 ### 3. Test conversion quality
 ```bash

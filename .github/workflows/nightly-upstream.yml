@@ -45,7 +45,8 @@ jobs:
               { name: 'upstream-candidate', color: 'fbca04', description: 'Upstream change is ready for local validation' },
               { name: 'upstream-adopted', color: '0e8a16', description: 'Validated upstream change has been adopted' },
               { name: 'upstream-rejected', color: 'b60205', description: 'Upstream change was rejected for this app' },
-              { name: 'upstream-blocked', color: 'd93f0b', description: 'Waiting on upstream, security, license, or release review' }
+              { name: 'upstream-blocked', color: 'd93f0b', description: 'Waiting on upstream, security, license, or release review' },
+              { name: 'upstream-fork', color: '5319e7', description: 'Temporary fork or cherry-pick under validation' }
             ];
             for (const label of labels) {
               try {
@@ -55,15 +56,16 @@ jobs:
                 await github.rest.issues.createLabel({ owner, repo, ...label });
               }
             }
-            const candidates = report.packages.filter((pkg) => pkg.status === 'upstream-candidate');
+            const candidates = report.packages.filter((pkg) => pkg.status === 'candidate' || pkg.status === 'latest-upstream');
             const blocked = report.packages.filter((pkg) => pkg.status === 'blocked');
             const rows = candidates.map((pkg) => {
-              const declared = pkg.declared_version || pkg.specifier || 'unbounded';
-              return `| \`${pkg.name}\` | ${pkg.upstream_project} | \`${declared}\` | \`${pkg.latest_version}\` |`;
+              const current = pkg.current_version || pkg.specifier || 'unbounded';
+              const candidate = pkg.candidate_version || current;
+              return `| \`${pkg.name}\` | ${pkg.upstream_project} | \`${current}\` | \`${candidate}\` | \`${pkg.latest_version}\` | \`${pkg.status}\` |`;
             }).join('\n');
             const blockedRows = blocked.map((pkg) => {
-              const declared = pkg.declared_version || pkg.specifier || 'unbounded';
-              return `| \`${pkg.name}\` | ${pkg.upstream_project} | \`${declared}\` | ${pkg.error || 'unknown error'} |`;
+              const current = pkg.current_version || pkg.specifier || 'unbounded';
+              return `| \`${pkg.name}\` | ${pkg.upstream_project} | \`${current}\` | ${pkg.error || 'unknown error'} |`;
             }).join('\n');
             const body = [
               'Scheduled upstream watch found dependency candidates or blocked checks.',
@@ -72,9 +74,9 @@ jobs:
               '',
               '## Candidates',
               '',
-              '| Package | Project | Declared | Latest |',
-              '| --- | --- | --- | --- |',
-              rows || '| _None_ | | | |',
+              '| Package | Project | Current | Candidate | Latest | Status |',
+              '| --- | --- | --- | --- | --- | --- |',
+              rows || '| _None_ | | | | | |',
               '',
               '## Blocked Checks',
               '',

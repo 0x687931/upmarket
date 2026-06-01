@@ -69,19 +69,21 @@ Runs weekly and when Python dependencies change.
 Checks:
 
 - exact pinned versions;
-- lockfile/constraints consistency;
+- current/candidate lock consistency;
 - `pip check`;
 - license generation;
 - vulnerability review where practical;
 - no undeclared runtime binary dependency such as `ffprobe` or `exiftool`.
 
+The dependency policy is `docs/release/DEPENDENCY_POLICY.md`. `requirements.txt` is the release-current state; `requirements-candidate.txt` is the only place proposed Python runtime updates may be staged before validation.
+
 ## Dependency States
 
 Use three states:
 
-- `current`: known-good versions used for release.
-- `candidate`: proposed updates under validation.
-- `latest-upstream`: exploratory nightly check only.
+- `current`: exact pins in `requirements.txt`, used for release.
+- `candidate`: exact pins in `requirements-candidate.txt`, under validation.
+- `latest-upstream`: exploratory nightly check only, reported by upstream watch.
 
 Promotion rule:
 
@@ -89,7 +91,7 @@ Promotion rule:
 latest-upstream -> candidate -> current
 ```
 
-No dependency moves to `current` without corpus smoke, packaged import, and offline conversion validation.
+No dependency moves to `current` without corpus smoke, packaged import, offline conversion validation, license review, rollback notes, and human review.
 
 ## Upstream Issue and Patch Intake
 
@@ -102,6 +104,7 @@ Track upstream inputs as one of:
 - `upstream-adopted`: validated and merged into Upmarket.
 - `upstream-rejected`: not relevant, too risky, or replaced by local mitigation.
 - `upstream-blocked`: waiting on upstream release, clarification, or license/security review.
+- `upstream-fork`: temporary Upmarket fork/cherry-pick under validation.
 
 Required intake fields:
 
@@ -109,6 +112,7 @@ Required intake fields:
 - affected Upmarket feature or pipeline;
 - expected user impact;
 - affected dependency version or model revision;
+- fork URL, base version, branch, commit SHA, and checksum when a fork/cherry-pick is involved;
 - local reproduction case or corpus document;
 - security/privacy/App Store impact;
 - rollback plan.
@@ -123,6 +127,8 @@ upstream-watch
   -> run packaged import/offline smoke
   -> run relevant corpus benchmark
   -> compare output and performance against current
+  -> add an ADR for any local upstream patch
+  -> pin fork/cherry-pick candidates to immutable commits or packaged artifacts
   -> promote to current or reject
 ```
 
@@ -132,6 +138,7 @@ Local patches to upstream code are allowed only when:
 
 - the patch is small and isolated;
 - the upstream issue/PR is linked;
+- any fork branch is pinned to an immutable commit before release;
 - the patch is documented in an ADR;
 - a removal condition is defined;
 - CI proves the patch is present in the packaged app.

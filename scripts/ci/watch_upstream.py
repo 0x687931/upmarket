@@ -23,6 +23,8 @@ UPSTREAM_PROJECTS = {
     "docling": "Docling",
     "docling-core": "Docling",
     "docling-parse": "Docling",
+    "docling-ibm-models": "Docling",
+    "markitdown": "MarkItDown",
     "torch": "Torch / MLX",
     "torchvision": "Torch / MLX",
     "mlx": "Torch / MLX",
@@ -30,8 +32,14 @@ UPSTREAM_PROJECTS = {
     "huggingface_hub": "Hugging Face Hub",
     "transformers": "Transformers",
     "pypdfium2": "pypdfium2 / PyMuPDF",
+    "PyMuPDF": "pypdfium2 / PyMuPDF",
+    "pymupdf4llm": "pypdfium2 / PyMuPDF",
+    "mammoth": "Other",
+    "python-pptx": "Other",
+    "openpyxl": "Other",
     "pydantic": "Other",
     "Pillow": "Other",
+    "numpy": "Other",
 }
 
 
@@ -73,6 +81,10 @@ def load_requirements(path: Path) -> list[Requirement]:
     return requirements
 
 
+def by_name(requirements: list[Requirement]) -> dict[str, Requirement]:
+    return {requirement.name.lower().replace("_", "-"): requirement for requirement in requirements}
+
+
 def fetch_latest_version(package: str) -> str:
     url = f"https://pypi.org/pypi/{package}/json"
     request = urllib.request.Request(url, headers={"User-Agent": "upmarket-upstream-watch"})
@@ -81,17 +93,22 @@ def fetch_latest_version(package: str) -> str:
     return str(payload["info"]["version"])
 
 
-def build_report(requirements: list[Requirement]) -> dict:
+def build_report(requirements: list[Requirement], candidate_requirements: list[Requirement]) -> dict:
     packages = []
     has_candidates = False
+    candidates_by_name = by_name(candidate_requirements)
 
     for requirement in requirements:
+        normalized_name = requirement.name.lower().replace("_", "-")
+        candidate = candidates_by_name.get(normalized_name)
         package = {
             "name": requirement.name,
             "upstream_project": UPSTREAM_PROJECTS.get(requirement.name, "Other"),
             "specifier": requirement.specifier,
             "declared_version": requirement.declared_version,
             "tracking_mode": requirement.tracking_mode,
+            "current_version": requirement.declared_version,
+            "candidate_version": candidate.declared_version if candidate else None,
             "latest_version": None,
             "status": "unknown",
             "error": None,
@@ -100,10 +117,13 @@ def build_report(requirements: list[Requirement]) -> dict:
         try:
             latest = fetch_latest_version(requirement.name)
             package["latest_version"] = latest
-            if requirement.declared_version and latest == requirement.declared_version:
+            if candidate and candidate.declared_version != requirement.declared_version:
+                package["status"] = "candidate"
+                has_candidates = True
+            elif requirement.declared_version and latest == requirement.declared_version:
                 package["status"] = "current"
             else:
-                package["status"] = "upstream-candidate"
+                package["status"] = "latest-upstream"
                 has_candidates = True
         except (KeyError, TimeoutError, urllib.error.URLError, urllib.error.HTTPError) as exc:
             package["status"] = "blocked"
@@ -114,6 +134,7 @@ def build_report(requirements: list[Requirement]) -> dict:
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source": "requirements.txt",
+        "candidate_source": "requirements-candidate.txt",
         "has_candidates": has_candidates,
         "has_findings": has_candidates or any(package["status"] == "blocked" for package in packages),
         "packages": packages,
@@ -127,16 +148,17 @@ def write_markdown(report: dict, path: Path) -> None:
         f"Generated: `{report['generated_at']}`",
         f"Source: `{report['source']}`",
         "",
-        "| Package | Project | Declared | Latest | Status |",
-        "| --- | --- | --- | --- | --- |",
+        "| Package | Project | Current | Candidate | Latest | Status |",
+        "| --- | --- | --- | --- | --- | --- |",
     ]
 
     for package in report["packages"]:
-        declared = package["declared_version"] or package["specifier"] or "unbounded"
+        current = package["current_version"] or package["specifier"] or "unbounded"
+        candidate = package["candidate_version"] or current
         latest = package["latest_version"] or "unknown"
         lines.append(
             f"| `{package['name']}` | {package['upstream_project']} | "
-            f"`{declared}` | `{latest}` | `{package['status']}` |"
+            f"`{current}` | `{candidate}` | `{latest}` | `{package['status']}` |"
         )
 
     lines.extend(
@@ -144,7 +166,7 @@ def write_markdown(report: dict, path: Path) -> None:
             "",
             "## Required Next Steps",
             "",
-            "For each `upstream-candidate`, create or update an upstream intake issue before adoption.",
+            "For each `latest-upstream` or `candidate`, create or update an upstream intake issue before adoption.",
             "Do not promote a candidate without a reproduction/corpus case, dependency audit, offline smoke, rollback plan, and security/privacy review.",
         ]
     )
@@ -154,17 +176,20 @@ def write_markdown(report: dict, path: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--requirements", default="requirements.txt")
+    parser.add_argument("--candidate-requirements", default="requirements-candidate.txt")
     parser.add_argument("--json-out", default="reports/upstream-watch.json")
     parser.add_argument("--markdown-out", default="reports/upstream-watch.md")
     parser.add_argument("--fail-on-blocked", action="store_true")
     args = parser.parse_args()
 
     requirements_path = Path(args.requirements)
-    if not requirements_path.exists():
-        print(f"error: requirements file not found: {requirements_path}", file=sys.stderr)
-        return 2
+    candidate_requirements_path = Path(args.candidate_requirements)
+    for path in (requirements_path, candidate_requirements_path):
+        if not path.exists():
+            print(f"error: requirements file not found: {path}", file=sys.stderr)
+            return 2
 
-    report = build_report(load_requirements(requirements_path))
+    report = build_report(load_requirements(requirements_path), load_requirements(candidate_requirements_path))
 
     json_path = Path(args.json_out)
     markdown_path = Path(args.markdown_out)
@@ -173,7 +198,7 @@ def main() -> int:
     json_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     write_markdown(report, markdown_path)
 
-    candidate_count = sum(1 for package in report["packages"] if package["status"] == "upstream-candidate")
+    candidate_count = sum(1 for package in report["packages"] if package["status"] in {"candidate", "latest-upstream"})
     blocked_count = sum(1 for package in report["packages"] if package["status"] == "blocked")
     print(f"ok: upstream watch wrote {json_path} and {markdown_path}")
     print(f"summary: {candidate_count} candidate(s), {blocked_count} blocked check(s)")

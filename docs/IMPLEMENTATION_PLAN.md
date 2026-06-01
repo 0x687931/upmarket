@@ -111,14 +111,15 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Add PR CI checks for build, unit tests, effective `Info.plist`, entitlements, Python bundle imports, and offline smoke conversion.
 - [x] Add release-candidate workflow for archive validation, signing/entitlements inspection, StoreKit checks, packaged app launch/import, and corpus smoke tests.
 - [x] Add nightly upstream validation for BeeWare Python, Docling, MarkItDown, pypdfium2/PyMuPDF, Hugging Face Hub, Transformers, Torch/MLX, and Xcode SDK changes.
-- [ ] Introduce locked Python dependency management with current, candidate, and latest-upstream validation states.
+- [x] Introduce locked Python dependency management with current, candidate, and latest-upstream validation states.
 - [x] Add scheduled upstream watch automation that reports candidate dependency drift without promotion.
-- [x] Add upstream issue/patch intake labels in GitHub: watch, candidate, adopted, rejected, blocked.
+- [x] Add upstream issue/patch intake labels in GitHub: watch, candidate, adopted, rejected, blocked, fork.
 - [x] Require upstream candidates to link issue/PR/release URL, local reproduction or corpus case, user impact, security/privacy review, and rollback plan.
-- [ ] Require corpus fixture or benchmark coverage before adopting upstream conversion-quality changes.
-- [ ] Require ADRs for local patches to upstream behavior, including removal condition and packaged-app validation.
+- [x] Require corpus fixture or benchmark coverage before adopting upstream conversion-quality changes.
+- [x] Require ADRs for local patches to upstream behavior, including removal condition and packaged-app validation.
+- [x] Require fork/cherry-pick candidates to be temporary, upstream-linked, pinned to immutable commits or packaged artifacts, covered by corpus validation, and removable once upstream releases.
 - [x] Add dependency audit workflow for exact pins, `pip check`, license generation, vulnerability review where practical, and undeclared runtime tool detection.
-- [ ] Add release docs: release policy, release checklist, upstream validation guide, and test matrix.
+- [ ] Add release docs: release policy, release checklist, and test matrix.
 - [x] Add CI helper scripts for Xcode project validation, effective plist checks, entitlement checks, Python bundle validation, offline conversion, model validation, and corpus validation.
 
 ### P0 - Agent Task Tracking and Pipeline Hooks

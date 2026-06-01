@@ -1313,7 +1313,7 @@
       "expected_features": {}
     },
     {
-      "id": "docling_equations",
+      "id": "docling_latex_equations",
       "file": "tests/data/latex/2501.00089/equations.pdf",
       "ground_truth": null,
       "category": "pdf",
@@ -1613,7 +1613,7 @@
       "expected_features": {}
     },
     {
-      "id": "docling_2206.01062",
+      "id": "docling_2206.01062_tiff",
       "file": "tests/data/tiff/2206.01062.tif",
       "ground_truth": "tests/data/groundtruth/docling_v2/2206.01062.md",
       "category": "image",

@@ -7,6 +7,8 @@ on:
   pull_request:
     paths:
       - "requirements.txt"
+      - "requirements-candidate.txt"
+      - "scripts/ci/validate_dependency_lock.py"
       - "scripts/build_python_env.sh"
       - "scripts/update_dependencies.sh"
       - "UpmarketPython/**"
@@ -18,25 +20,16 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Check Python dependency pins
+        run: scripts/ci/validate_dependency_lock.py
+
+      - name: Create audit virtualenv
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          bad = []
-          for line in Path("requirements.txt").read_text().splitlines():
-              raw = line.strip()
-              if not raw or raw.startswith("#"):
-                  continue
-              pkg = raw.split("#", 1)[0].strip()
-              if not re.search(r"==|===", pkg):
-                  bad.append(pkg)
-          if bad:
-              print("error: runtime dependencies must be exactly pinned:")
-              for item in bad:
-                  print(f"  {item}")
-              raise SystemExit(1)
-          print("ok: requirements are exactly pinned")
-          PY
+          python3 -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
+
+      - name: Check installed dependency consistency
+        run: .venv/bin/pip check
 
       - name: Check for undeclared PATH tools
         run: |

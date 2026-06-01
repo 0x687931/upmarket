@@ -246,10 +246,13 @@
       "owner": "Security/Privacy",
       "scope": [
         "requirements.txt",
+        "requirements-candidate.txt",
         "scripts/update_dependencies.sh",
+        "scripts/ci/validate_dependency_lock.py",
         "scripts/ci/watch_upstream.py",
         "scripts/ci/validate_corpus.py",
         "docs/release/RELEASE_PIPELINE.md",
+        "docs/release/DEPENDENCY_POLICY.md",
         ".github/workflows/nightly-upstream.yml",
         ".github/ISSUE_TEMPLATE/upstream-intake.yml"
       ],
@@ -262,7 +265,10 @@
         "Runtime dependencies are exactly pinned for release.",
         "Current, candidate, and latest-upstream states are documented and enforced by scripts.",
         "Scheduled upstream watch creates/updates a tracking issue.",
-        "Upstream candidates require URL, local reproduction/corpus case, impact, security review, and rollback plan."
+        "Upstream candidates require URL, local reproduction/corpus case, impact, security review, and rollback plan.",
+        "Conversion-quality upstream changes require corpus fixture or benchmark coverage before adoption.",
+        "Local patches to upstream behavior require ADRs with removal conditions and packaged-app validation.",
+        "Forks and cherry-picks are tracked as temporary candidates pinned to immutable commits or packaged artifacts with upstream PR context and rollback plans."
       ],
       "release_gate": "P0 - Release Engineering and Upstream Validation",
       "risk": ["security", "Python/upstream", "operability"],

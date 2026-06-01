@@ -16,6 +16,7 @@ body:
         - Transformers
         - Torch / MLX
         - Xcode / macOS SDK
+        - Upmarket fork/cherry-pick
         - Other
     validations:
       required: true
@@ -40,6 +41,20 @@ body:
       placeholder: "Conversion pipeline, Python packaging, model download, sandbox, App Store review, etc."
     validations:
       required: true
+  - type: input
+    id: dependency_state
+    attributes:
+      label: Dependency or Model State
+      description: Current pin/revision and proposed candidate pin/revision.
+      placeholder: "current: docling==2.96.0; candidate: docling==2.97.0"
+    validations:
+      required: true
+  - type: textarea
+    id: fork_state
+    attributes:
+      label: Fork or Cherry-Pick State
+      description: Required if using a fork, local patch, or unreleased upstream commit.
+      placeholder: "base: docling==2.96.0; fork: <url>; branch: upmarket/p0-fix; commit: <sha>; checksum/artifact: <value>; upstream PR: <url>"
   - type: textarea
     id: reproduction
     attributes:
@@ -60,11 +75,17 @@ body:
       label: Required Review
       options:
         - label: Conversion quality benchmark required
+        - label: Corpus fixture or benchmark case linked before adoption
         - label: Packaged Python import/offline smoke required
+        - label: Dependency lock validation required
+        - label: License inventory review required
         - label: Security/privacy review required
         - label: App Store entitlement/plist review required
         - label: Model manifest/checksum validation required
         - label: ADR required for local patch
+        - label: Fork/cherry-pick pinned to immutable commit or packaged artifact
+        - label: Upstream PR submitted or reason documented
+        - label: Removal condition and review/expiry date documented
   - type: textarea
     id: rollback
     attributes:
