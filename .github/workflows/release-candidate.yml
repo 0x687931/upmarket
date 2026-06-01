@@ -38,15 +38,10 @@ jobs:
             -derivedDataPath "$DERIVED_DATA_DIR" \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Verify archived app plist and entitlements
+      - name: Verify archived app package gates
         run: |
           APP="$ARCHIVE_PATH/Products/Applications/Upmarket.app"
-          scripts/ci/verify_effective_plist.sh "$APP"
-          scripts/ci/verify_entitlements.sh "$APP"
-          scripts/ci/validate_runtime_helper.py "$APP"
-
-      - name: Offline conversion smoke test
-        run: scripts/ci/smoke_convert_offline.sh
+          scripts/ci/verify_release_app.sh "$APP"
 
       - name: Corpus benchmark baseline
         run: |

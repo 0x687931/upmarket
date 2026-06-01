@@ -62,11 +62,8 @@ jobs:
             -derivedDataPath "$DERIVED_DATA_DIR" \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Verify packaged runtime helper
-        run: scripts/ci/validate_runtime_helper.py "$DERIVED_DATA_DIR/Build/Products/Debug/Upmarket.app"
-
-      - name: Verify effective Info.plist
-        run: scripts/ci/verify_effective_plist.sh
+      - name: Verify built app package gates
+        run: scripts/ci/verify_release_app.sh "$DERIVED_DATA_DIR/Build/Products/Debug/Upmarket.app"
 
       - name: Unit tests
         run: |
@@ -77,6 +74,3 @@ jobs:
             -derivedDataPath "$DERIVED_DATA_DIR" \
             -only-testing:UpmarketTests \
             CODE_SIGNING_ALLOWED=NO
-
-      - name: Offline conversion smoke test
-        run: scripts/ci/smoke_convert_offline.sh

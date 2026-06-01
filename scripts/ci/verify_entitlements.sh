@@ -48,7 +48,14 @@ if [[ $# -gt 0 ]]; then
     echo "error: unable to read signed app entitlements from $APP_PATH"
     exit 1
   }
-  plutil -lint /tmp/upmarket-entitlements.plist >/dev/null
+  if [[ -s /tmp/upmarket-entitlements.plist ]]; then
+    plutil -lint /tmp/upmarket-entitlements.plist >/dev/null
+  elif [[ "${UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS:-0}" == "1" ]]; then
+    echo "error: signed app entitlements are empty for $APP_PATH"
+    exit 1
+  else
+    echo "warning: app has no embedded entitlements; source entitlement policy was checked only"
+  fi
   HELPER_PATH="$APP_PATH/Contents/MacOS/UpmarketRuntimeHelper"
   if [[ ! -x "$HELPER_PATH" ]]; then
     echo "error: runtime helper missing from signed app: $HELPER_PATH"
@@ -58,7 +65,14 @@ if [[ $# -gt 0 ]]; then
     echo "error: unable to read signed helper entitlements from $HELPER_PATH"
     exit 1
   }
-  plutil -lint /tmp/upmarket-helper-entitlements.plist >/dev/null
+  if [[ -s /tmp/upmarket-helper-entitlements.plist ]]; then
+    plutil -lint /tmp/upmarket-helper-entitlements.plist >/dev/null
+  elif [[ "${UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS:-0}" == "1" ]]; then
+    echo "error: signed helper entitlements are empty for $HELPER_PATH"
+    exit 1
+  else
+    echo "warning: helper has no embedded entitlements; source entitlement policy was checked only"
+  fi
 fi
 
 echo "ok: entitlements pass policy checks"

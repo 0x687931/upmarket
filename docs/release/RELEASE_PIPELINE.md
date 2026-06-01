@@ -44,6 +44,8 @@ Checks:
 - Diagnostic bundle generation.
 - Privacy-sensitive logs are redacted.
 
+`scripts/ci/verify_release_app.sh <Upmarket.app>` is the shared app-package gate for PR and release-candidate CI. It verifies the effective plist, entitlement policy, embedded runtime imports, runtime helper boundary, offline smoke conversion, and model-missing behavior against the built app bundle. Unsigned local/CI builds validate source entitlement policy; signed release verification must run with `UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS=1` so missing embedded entitlements fail.
+
 ### Nightly Upstream Validation
 
 Runs on a schedule.

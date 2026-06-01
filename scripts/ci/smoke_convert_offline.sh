@@ -1,10 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SITE="Upmarket/Python/Python.xcframework/macos-arm64_x86_64/Python.framework/Versions/3.12/lib/python3.12/site-packages"
+APP_PATH="${1:-}"
+if [[ -n "$APP_PATH" ]]; then
+  SITE="$APP_PATH/Contents/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages"
+else
+  SITE="Upmarket/Python/Python.xcframework/macos-arm64_x86_64/Python.framework/Versions/3.12/lib/python3.12/site-packages"
+fi
 TMP_DIR="/tmp/upmarket-ci-smoke-$$"
 mkdir -p "$TMP_DIR"
 trap 'rm -rf "$TMP_DIR"' EXIT
+
+if [[ ! -d "$SITE" ]]; then
+  echo "error: bundled Python site-packages not found at $SITE"
+  exit 1
+fi
 
 MODELS_DIR="$TMP_DIR/models"
 INPUT="$TMP_DIR/smoke.md"
