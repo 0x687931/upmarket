@@ -351,6 +351,36 @@
       "labels": ["p0-blocker", "area-swift", "area-python", "gate-b-conversion", "gate-c-stability", "agent-ready"]
     },
     {
+      "id": "P0-014",
+      "title": "Automatic repository documentation",
+      "objective": "Keep source, conversion flow, and release-process documentation generated from the repository so a non-programming maintainer can orient quickly.",
+      "owner": "Codex main",
+      "scope": [
+        "scripts/docs/generate_repo_docs.py",
+        "docs/generated/SOURCE_MAP.md",
+        "docs/generated/CONVERSION_FLOW.md",
+        "docs/generated/RELEASE_AUTOMATION.md",
+        "README.md",
+        ".github/workflows/ci.yml",
+        "docs/IMPLEMENTATION_PLAN.md",
+        "docs/release/p0_task_registry.json"
+      ],
+      "non_goals": [
+        "Do not add a heavyweight documentation framework.",
+        "Do not generate user-facing marketing copy.",
+        "Do not replace hand-written runbooks, release policy, or architecture decisions."
+      ],
+      "acceptance": [
+        "A local generator creates source map, conversion flow, and release automation documentation.",
+        "Generated docs are checked in and linked from the repository README.",
+        "CI fails when generated docs are stale.",
+        "The generated docs identify conversion pathways, CI scripts, dependency locks, and main Swift/Python source entry points."
+      ],
+      "release_gate": "P0 - Agent Task Tracking and Pipeline Hooks",
+      "risk": ["maintainability", "operability", "area-release"],
+      "labels": ["p0-blocker", "area-release", "agent-ready"]
+    },
+    {
       "id": "P0-013",
       "title": "Apple storage semantics and user-facing abstraction",
       "objective": "Make document access reliable across Apple storage locations while keeping implementation toolkit details out of normal user-facing copy.",

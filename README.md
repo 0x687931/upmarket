@@ -50,6 +50,7 @@ Models are downloaded on first use and cached in `~/Library/Application Support/
 ## Development
 
 See [IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for the full technical plan and [USER_FLOW.md](docs/USER_FLOW.md) for the app journey.
+Generated repository documentation lives in [docs/generated](docs/generated/) and is refreshed by `scripts/docs/generate_repo_docs.py`.
 
 ## Current Benchmarks
 

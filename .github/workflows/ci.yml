@@ -32,6 +32,9 @@ jobs:
       - name: Validate user-facing copy
         run: scripts/ci/validate_user_facing_copy.py
 
+      - name: Validate generated repository docs
+        run: scripts/docs/generate_repo_docs.py --check
+
       - name: Verify source entitlements
         run: scripts/ci/verify_entitlements.sh
 

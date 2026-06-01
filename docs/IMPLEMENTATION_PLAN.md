@@ -136,6 +136,7 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Define local hook scripts before wiring GitHub Actions: plist, entitlements, Python bundle, offline conversion, model validation, corpus validation, and archive checks.
 - [x] Make every release hook runnable locally, nonzero on failure, and explicit about whether network is permitted.
 - [x] Add GitHub label and issue sync automation for P0 task registry items.
+- [x] Add generated repository/source/process documentation with a CI stale-docs gate.
 - [x] Require the main Codex session to integrate multi-agent outputs and update the implementation plan when P0 scope changes.
 
 ## Verified Complete
