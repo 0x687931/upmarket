@@ -44,6 +44,9 @@ jobs:
       - name: Validate corpus baseline
         run: scripts/ci/validate_corpus_baseline.py
 
+      - name: Validate corpus conversion pathways
+        run: scripts/ci/validate_corpus_pathways.py
+
       - name: Validate local model manifests
         run: scripts/ci/validate_models.py
 

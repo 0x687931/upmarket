@@ -117,7 +117,11 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Require upstream candidates to link issue/PR/release URL, local reproduction or corpus case, user impact, security/privacy review, and rollback plan.
 - [x] Require corpus fixture or benchmark coverage before adopting upstream conversion-quality changes.
 - [x] Add a stored corpus quality baseline and release gate that blocks future releases when benchmark output fails or downgrades against baseline.
+- [x] Add a document x conversion-pathway baseline ledger so every corpus file can be measured against every valid Markdown pathway, including unused/internal reference pathways.
 - [x] Remove PyMuPDF/pymupdf4llm from release dependency locks and block AGPL/commercial-only PDF packages from the paid-app runtime unless a commercial-license ADR is approved.
+- [x] Permit PyMuPDF only as an internal benchmark/reference pathway; promotion to a shipping path requires a commercial-license ADR and packaged-runtime validation.
+- [x] Add PyMuPDF, Poppler, RapidOCR, and PaddleOCR as internal/reference benchmark pathways so future uplift can be measured before any licensing or packaging decision.
+- [x] Publish release-candidate corpus pathway comparison artifacts for owner review before shipping.
 - [x] Require ADRs for local patches to upstream behavior, including removal condition and packaged-app validation.
 - [x] Require fork/cherry-pick candidates to be temporary, upstream-linked, pinned to immutable commits or packaged artifacts, covered by corpus validation, and removable once upstream releases.
 - [x] Add dependency audit workflow for exact pins, `pip check`, license generation, vulnerability review where practical, and undeclared runtime tool detection.
@@ -184,6 +188,7 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 ### Gate B - Conversion Reliability
 - [ ] Create a 20-document smoke corpus covering PDF, scanned PDF, DOCX, PPTX, XLSX, HTML, image, and audio
 - [ ] For each corpus document, record expected status: success, unsupported, password required, or degraded output
+- [ ] Bootstrap `docs/release/corpus_pathway_baseline.json` with per-document scores for every valid conversion pathway before the first release candidate
 - [ ] Run fast path with no downloaded models
 - [ ] Run enhanced/AI paths after model download where supported
 - [ ] Verify temp files are cleaned after success, failure, cancellation, and app quit

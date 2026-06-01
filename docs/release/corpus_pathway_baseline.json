@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "manifest": "tests/corpus/manifest.json",
+  "pathways": "docs/release/conversion_pathways.json",
+  "policy": {
+    "document_regression_block_percent": 5.0,
+    "large_regression_block_percent": 25.0,
+    "category_regression_block_percent": 3.0,
+    "uplift_review_percent": 3.0
+  },
+  "baseline_state": "bootstrap",
+  "notes": [
+    "This file is the release ledger for corpus document x conversion pathway quality.",
+    "A pathway result below its stored document baseline by document_regression_block_percent blocks release unless the baseline is corrected with review notes.",
+    "A pathway result above baseline by uplift_review_percent should be called out in release notes after the baseline is intentionally updated.",
+    "PyMuPDF, Poppler, RapidOCR, and PaddleOCR are allowed only as developer/reference pathways and must not ship in release locks or the packaged runtime without explicit promotion approval."
+  ],
+  "document_baselines": {}
+}

@@ -12,6 +12,49 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+PATHWAYS = {
+    "python-fast-pdfium": {
+        "pipeline": "fast",
+        "valid_categories": {"pdf"},
+        "release_status": "shipping",
+    },
+    "python-fast-markitdown": {
+        "pipeline": "fast",
+        "valid_categories": {"asciidoc", "csv", "docx", "html", "image", "pptx", "webvtt", "xlsx", "xml"},
+        "release_status": "shipping",
+    },
+    "python-enhanced-docling": {
+        "pipeline": "enhanced",
+        "valid_categories": {"asciidoc", "csv", "docx", "html", "image", "pdf", "pptx", "webvtt", "xlsx", "xml"},
+        "release_status": "shipping",
+    },
+    "python-ai-docling": {
+        "pipeline": "ai",
+        "valid_categories": {"asciidoc", "csv", "docx", "html", "image", "pdf", "pptx", "webvtt", "xlsx", "xml"},
+        "release_status": "shipping",
+    },
+    "internal-reference-pymupdf": {
+        "pipeline": "pymupdf-reference",
+        "valid_categories": {"pdf"},
+        "release_status": "internal-reference-only",
+    },
+    "internal-reference-poppler": {
+        "pipeline": "poppler-reference",
+        "valid_categories": {"pdf"},
+        "release_status": "internal-reference-only",
+    },
+    "internal-reference-rapidocr": {
+        "pipeline": "rapidocr-reference",
+        "valid_categories": {"image", "pdf"},
+        "release_status": "internal-reference-only",
+    },
+    "internal-reference-paddleocr": {
+        "pipeline": "paddleocr-reference",
+        "valid_categories": {"image", "pdf"},
+        "release_status": "internal-reference-only",
+    },
+}
+
 
 # ── Scoring ───────────────────────────────────────────────────────────────────
 
@@ -193,9 +236,18 @@ def count_artifacts(md: str) -> int:
 
 # ── Conversion ────────────────────────────────────────────────────────────────
 
-def convert_document(doc_path: Path, pipeline: str) -> tuple[str, float]:
+def convert_document(doc_path: Path, pipeline: str, pathway: str | None = None) -> tuple[str, float]:
     """Convert a document and return (markdown, elapsed_seconds)."""
     import sys
+
+    if pathway == "internal-reference-pymupdf":
+        return _convert_via_pymupdf_reference(doc_path)
+    if pathway == "internal-reference-poppler":
+        return _convert_via_poppler_reference(doc_path)
+    if pathway == "internal-reference-rapidocr":
+        return _convert_via_rapidocr_reference(doc_path)
+    if pathway == "internal-reference-paddleocr":
+        return _convert_via_paddleocr_reference(doc_path)
 
     if pipeline in ("enhanced", "ai"):
         # Use venv directly — has Docling + cached models
@@ -212,6 +264,137 @@ def convert_document(doc_path: Path, pipeline: str) -> tuple[str, float]:
         if result.get("success"):
             return result["markdown"], elapsed
         raise RuntimeError(result.get("error", "Unknown error"))
+
+
+def _convert_via_pymupdf_reference(doc_path: Path) -> tuple[str, float]:
+    """Developer-only PDF reference pathway. This must never ship in the app."""
+    start = time.time()
+    try:
+        import fitz  # type: ignore
+    except Exception as exc:
+        raise RuntimeError("PyMuPDF reference package is not installed in this developer environment") from exc
+
+    parts: list[str] = []
+    with fitz.open(str(doc_path)) as document:
+        for index, page in enumerate(document, start=1):
+            text = page.get_text("text").strip()
+            if text:
+                parts.append(f"## Page {index}\n\n{text}")
+    return "\n\n".join(parts), time.time() - start
+
+
+def _convert_via_poppler_reference(doc_path: Path) -> tuple[str, float]:
+    """Developer-only Poppler reference pathway. This must never ship in the app."""
+    import shutil
+    import subprocess
+
+    pdftotext = shutil.which("pdftotext")
+    if not pdftotext:
+        raise RuntimeError("Poppler pdftotext is not installed in this developer environment")
+    start = time.time()
+    proc = subprocess.run(
+        [pdftotext, "-layout", str(doc_path), "-"],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr[-500:] if proc.stderr else "Poppler pdftotext failed")
+    return proc.stdout.strip(), time.time() - start
+
+
+def _convert_via_rapidocr_reference(doc_path: Path) -> tuple[str, float]:
+    """Developer-only RapidOCR reference pathway. This must never ship in the app."""
+    start = time.time()
+    try:
+        from rapidocr_onnxruntime import RapidOCR  # type: ignore
+    except Exception:
+        try:
+            from rapidocr import RapidOCR  # type: ignore
+        except Exception as exc:
+            raise RuntimeError("RapidOCR reference package is not installed in this developer environment") from exc
+
+    engine = RapidOCR()
+    pages = _ocr_input_images(doc_path)
+    parts = []
+    for index, image_path in enumerate(pages, start=1):
+        result, _ = engine(str(image_path))
+        text = _rapidocr_text(result)
+        if text:
+            parts.append(f"## Page {index}\n\n{text}")
+    return "\n\n".join(parts), time.time() - start
+
+
+def _convert_via_paddleocr_reference(doc_path: Path) -> tuple[str, float]:
+    """Developer-only PaddleOCR reference pathway. This must never ship in the app."""
+    start = time.time()
+    try:
+        from paddleocr import PaddleOCR  # type: ignore
+    except Exception as exc:
+        raise RuntimeError("PaddleOCR reference package is not installed in this developer environment") from exc
+
+    engine = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
+    pages = _ocr_input_images(doc_path)
+    parts = []
+    for index, image_path in enumerate(pages, start=1):
+        result = engine.ocr(str(image_path), cls=True)
+        text = _paddleocr_text(result)
+        if text:
+            parts.append(f"## Page {index}\n\n{text}")
+    return "\n\n".join(parts), time.time() - start
+
+
+def _ocr_input_images(doc_path: Path) -> list[Path]:
+    if doc_path.suffix.lower() != ".pdf":
+        return [doc_path]
+
+    import tempfile
+
+    try:
+        import pypdfium2 as pdfium  # type: ignore
+    except Exception as exc:
+        raise RuntimeError("pypdfium2 is required to render PDFs for OCR reference pathways") from exc
+
+    out_dir = Path(tempfile.mkdtemp(prefix="upmarket-ocr-reference-"))
+    images: list[Path] = []
+    document = pdfium.PdfDocument(str(doc_path))
+    try:
+        for index in range(len(document)):
+            page = document[index]
+            bitmap = page.render(scale=1.5)
+            image = bitmap.to_pil()
+            image.thumbnail((1600, 1600))
+            image_path = out_dir / f"page-{index + 1}.png"
+            image.save(image_path)
+            images.append(image_path)
+    finally:
+        document.close()
+    return images
+
+
+def _rapidocr_text(result) -> str:
+    lines = []
+    for item in result or []:
+        if isinstance(item, (list, tuple)) and len(item) >= 2:
+            text = item[1]
+            if isinstance(text, str):
+                lines.append(text)
+            elif isinstance(text, (list, tuple)) and text:
+                lines.append(str(text[0]))
+    return "\n".join(lines)
+
+
+def _paddleocr_text(result) -> str:
+    lines = []
+    for page in result or []:
+        for item in page or []:
+            if isinstance(item, (list, tuple)) and len(item) >= 2:
+                text_info = item[1]
+                if isinstance(text_info, (list, tuple)) and text_info:
+                    lines.append(str(text_info[0]))
+                elif isinstance(text_info, str):
+                    lines.append(text_info)
+    return "\n".join(lines)
 
 
 def _convert_via_venv(doc_path: Path, pipeline: str) -> tuple[str, float]:
@@ -253,7 +436,14 @@ print(json.dumps(result))
 
 # ── Runner ────────────────────────────────────────────────────────────────────
 
-def run_benchmark(corpus_dir: Path, pipeline: str, category_filter: str, fail_below: int, json_output: Path | None = None) -> int:
+def run_benchmark(
+    corpus_dir: Path,
+    pipeline: str,
+    pathway: str,
+    category_filter: str,
+    fail_below: int,
+    json_output: Path | None = None
+) -> int:
     scores: list[DocScore] = []
     manifest_path = corpus_dir / "manifest.json"
     corpus_root = str(corpus_dir.resolve())
@@ -271,6 +461,17 @@ def run_benchmark(corpus_dir: Path, pipeline: str, category_filter: str, fail_be
     manifest = json.loads(manifest_path.read_text())
     docs = manifest.get("documents", [])
 
+    selected_pathway = None
+    if pathway:
+        selected_pathway = PATHWAYS.get(pathway)
+        if selected_pathway is None:
+            print(f"Unknown pathway: {pathway}")
+            print("Known pathways: " + ", ".join(sorted(PATHWAYS)))
+            return 1
+        pipeline = selected_pathway["pipeline"]
+        valid_categories = selected_pathway["valid_categories"]
+        docs = [d for d in docs if d.get("category") in valid_categories]
+
     if category_filter:
         docs = [d for d in docs if d.get("category", "").startswith(category_filter)]
 
@@ -278,7 +479,8 @@ def run_benchmark(corpus_dir: Path, pipeline: str, category_filter: str, fail_be
         print(f"No documents found{' for category: ' + category_filter if category_filter else ''}")
         return 0
 
-    print(f"Running {len(docs)} documents | pipeline: {pipeline or 'auto'}\n")
+    label = f"pathway: {pathway}" if pathway else f"pipeline: {pipeline or 'auto'}"
+    print(f"Running {len(docs)} documents | {label}\n")
 
     for doc_meta in docs:
         doc_id = doc_meta["id"]
@@ -312,7 +514,7 @@ def run_benchmark(corpus_dir: Path, pipeline: str, category_filter: str, fail_be
             signal.signal(signal.SIGALRM, _timeout_handler)
             signal.alarm(30)
             try:
-                markdown, elapsed = convert_document(file_path, pipeline or "fast")
+                markdown, elapsed = convert_document(file_path, pipeline or "fast", pathway or None)
             finally:
                 signal.alarm(0)
 
@@ -339,7 +541,7 @@ def run_benchmark(corpus_dir: Path, pipeline: str, category_filter: str, fail_be
     print(f"\nOverall: {overall_avg*100:.1f}%  ({len(scores)} documents)")
 
     if json_output:
-        write_json_report(json_output, pipeline or "fast", scores, corpus_dir, category_filter)
+        write_json_report(json_output, pipeline or "fast", pathway or None, scores, corpus_dir, category_filter)
         print(f"JSON report: {json_output}")
 
     if fail_below > 0 and overall_avg * 100 < fail_below:
@@ -374,7 +576,7 @@ def print_summary(scores: list[DocScore]):
         )
 
 
-def write_json_report(path: Path, pipeline: str, scores: list[DocScore], corpus_dir: Path, category_filter: str) -> None:
+def write_json_report(path: Path, pipeline: str, pathway: str | None, scores: list[DocScore], corpus_dir: Path, category_filter: str) -> None:
     by_category: dict[str, list[DocScore]] = {}
     for score in scores:
         category = score.category.split("/")[0]
@@ -391,6 +593,7 @@ def write_json_report(path: Path, pipeline: str, scores: list[DocScore], corpus_
     report = {
         "version": 1,
         "pipeline": pipeline,
+        "pathway": pathway,
         "corpus": str(corpus_dir),
         "category_filter": category_filter or None,
         "document_count": len(scores),
@@ -422,6 +625,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Upmarket benchmark scorer")
     parser.add_argument("--corpus", required=True)
     parser.add_argument("--pipeline", default="")
+    parser.add_argument("--pathway", default="")
     parser.add_argument("--category", default="")
     parser.add_argument("--fail-below", type=int, default=0)
     parser.add_argument("--json-output", type=Path)
@@ -430,6 +634,7 @@ if __name__ == "__main__":
     sys.exit(run_benchmark(
         corpus_dir=Path(args.corpus),
         pipeline=args.pipeline,
+        pathway=args.pathway,
         category_filter=args.category,
         fail_below=args.fail_below,
         json_output=args.json_output,

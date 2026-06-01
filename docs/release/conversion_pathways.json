@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "manifest": "tests/corpus/manifest.json",
+  "principle": "Every corpus document must run through every valid convert-to-Markdown pathway. Release decisions compare current pathway results against stored pathway baselines.",
+  "pathways": {
+    "swift-pdfkit": {
+      "owner": "Services/PDFConverter.swift",
+      "runner": "xcode-test",
+      "release_status": "shipping",
+      "valid_categories": ["pdf"],
+      "baseline_required": true,
+      "notes": "Apple-native digital PDF extraction path."
+    },
+    "swift-vision-document": {
+      "owner": "Services/VisionDocumentExtractor.swift",
+      "runner": "xcode-test",
+      "release_status": "shipping",
+      "valid_categories": ["pdf", "image"],
+      "availability": "macOS/Vision availability gated",
+      "baseline_required": true,
+      "notes": "Apple-native OCR and structured document extraction path."
+    },
+    "swift-speech": {
+      "owner": "Services/SpeechTranscriber.swift",
+      "runner": "xcode-test",
+      "release_status": "shipping",
+      "valid_categories": ["audio"],
+      "availability": "Speech authorization and recognizer availability gated",
+      "baseline_required": true,
+      "notes": "Apple-native audio-to-Markdown transcription path."
+    },
+    "swift-imageio-metadata": {
+      "owner": "Services/NativeMetadataExtractor.swift",
+      "runner": "xcode-test",
+      "release_status": "shipping",
+      "valid_categories": ["image"],
+      "baseline_required": true,
+      "notes": "Apple-native image metadata Markdown path."
+    },
+    "swift-avfoundation-metadata": {
+      "owner": "Services/NativeMetadataExtractor.swift",
+      "runner": "xcode-test",
+      "release_status": "shipping",
+      "valid_categories": ["audio", "video"],
+      "baseline_required": true,
+      "notes": "Apple-native media metadata Markdown path."
+    },
+    "python-fast-pdfium": {
+      "owner": "UpmarketPython/docling_bridge",
+      "runner": "scripts/benchmark.sh --pathway python-fast-pdfium",
+      "release_status": "shipping",
+      "valid_categories": ["pdf"],
+      "baseline_required": true,
+      "notes": "Bundled Python fast PDF fallback using pypdfium2, not PyMuPDF."
+    },
+    "python-fast-markitdown": {
+      "owner": "UpmarketPython/docling_bridge",
+      "runner": "scripts/benchmark.sh --pathway python-fast-markitdown",
+      "release_status": "shipping",
+      "valid_categories": ["asciidoc", "csv", "docx", "html", "image", "pptx", "webvtt", "xlsx", "xml"],
+      "baseline_required": true,
+      "notes": "Bundled Python fast non-PDF conversion path."
+    },
+    "python-enhanced-docling": {
+      "owner": "UpmarketPython/docling_bridge",
+      "runner": "scripts/benchmark.sh --pathway python-enhanced-docling",
+      "release_status": "shipping",
+      "valid_categories": ["asciidoc", "csv", "docx", "html", "image", "pdf", "pptx", "webvtt", "xlsx", "xml"],
+      "baseline_required": true,
+      "notes": "Enhanced Docling conversion path used when advanced conversion is enabled."
+    },
+    "python-ai-docling": {
+      "owner": "UpmarketPython/docling_bridge",
+      "runner": "scripts/benchmark.sh --pathway python-ai-docling",
+      "release_status": "shipping",
+      "valid_categories": ["asciidoc", "csv", "docx", "html", "image", "pdf", "pptx", "webvtt", "xlsx", "xml"],
+      "baseline_required": true,
+      "notes": "AI-assisted Docling path for advanced conversion experiments and release gates."
+    },
+    "internal-reference-pymupdf": {
+      "owner": "developer benchmark environment only",
+      "runner": "scripts/benchmark.sh --pathway internal-reference-pymupdf",
+      "release_status": "internal-reference-only",
+      "valid_categories": ["pdf"],
+      "baseline_required": false,
+      "license_gate": "May be promoted only after a commercial-license ADR and packaged-runtime validation.",
+      "notes": "Reference pathway for measuring possible uplift. It must not appear in release locks or the packaged app."
+    },
+    "internal-reference-poppler": {
+      "owner": "developer benchmark environment only",
+      "runner": "scripts/benchmark.sh --pathway internal-reference-poppler",
+      "release_status": "internal-reference-only",
+      "valid_categories": ["pdf"],
+      "baseline_required": false,
+      "license_gate": "May be promoted only after license review, App Store packaging review, and packaged-runtime validation.",
+      "notes": "Reference pathway using Poppler pdftotext-style extraction. It must not appear in release locks or the packaged app."
+    },
+    "internal-reference-rapidocr": {
+      "owner": "developer benchmark environment only",
+      "runner": "scripts/benchmark.sh --pathway internal-reference-rapidocr",
+      "release_status": "internal-reference-only",
+      "valid_categories": ["image", "pdf"],
+      "baseline_required": false,
+      "license_gate": "May be promoted only after dependency/model license review, offline model packaging review, and packaged-runtime validation.",
+      "notes": "Reference OCR pathway for comparing Apple Vision OCR against RapidOCR output."
+    },
+    "internal-reference-paddleocr": {
+      "owner": "developer benchmark environment only",
+      "runner": "scripts/benchmark.sh --pathway internal-reference-paddleocr",
+      "release_status": "internal-reference-only",
+      "valid_categories": ["image", "pdf"],
+      "baseline_required": false,
+      "license_gate": "May be promoted only after dependency/model license review, offline model packaging review, and packaged-runtime validation.",
+      "notes": "Reference OCR pathway for comparing Apple Vision OCR against PaddleOCR output."
+    }
+  }
+}

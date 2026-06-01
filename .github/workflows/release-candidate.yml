@@ -25,6 +25,7 @@ jobs:
           scripts/ci/verify_python_bundle.sh
           scripts/ci/validate_corpus.py
           scripts/ci/validate_corpus_baseline.py
+          scripts/ci/validate_corpus_pathways.py
           scripts/ci/validate_models.py
 
       - name: Archive
@@ -51,6 +52,21 @@ jobs:
           mkdir -p reports
           scripts/benchmark.sh --pipeline fast --json-output reports/corpus-fast.json --fail-below 76
           scripts/ci/validate_corpus_baseline.py --results reports/corpus-fast.json
+
+      - name: Corpus pathway benchmark baseline
+        run: |
+          mkdir -p reports
+          scripts/benchmark.sh --pathway python-fast-pdfium --json-output reports/corpus-python-fast-pdfium.json --fail-below 80
+          scripts/ci/validate_corpus_pathways.py --results reports/corpus-python-fast-pdfium.json
+          scripts/ci/summarize_corpus_pathway_reports.py reports/corpus-*.json --pathways docs/release/conversion_pathways.json --output reports/corpus-pathway-comparison.md
+
+      - name: Upload corpus benchmark comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: corpus-pathway-comparison
+          path: |
+            reports/corpus-*.json
+            reports/corpus-pathway-comparison.md
 
       - name: UI automation tests
         run: |

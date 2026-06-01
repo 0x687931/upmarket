@@ -16,6 +16,12 @@ FORBIDDEN_PACKAGES = {
     "pymupdf": "PyMuPDF is AGPL/commercial and must not ship in the paid release runtime without a commercial license ADR.",
     "pymupdf4llm": "pymupdf4llm depends on PyMuPDF licensing and must not ship in the paid release runtime without a commercial license ADR.",
     "fitz": "fitz/PyMuPDF must not ship in the paid release runtime without a commercial license ADR.",
+    "rapidocr": "RapidOCR is an internal/reference benchmark pathway only until an ADR approves release packaging.",
+    "rapidocr-onnxruntime": "RapidOCR is an internal/reference benchmark pathway only until an ADR approves release packaging.",
+    "paddleocr": "PaddleOCR is an internal/reference benchmark pathway only until an ADR approves release packaging.",
+    "paddlepaddle": "PaddleOCR/PaddlePaddle is an internal/reference benchmark pathway only until an ADR approves release packaging.",
+    "python-poppler": "Poppler is an internal/reference benchmark pathway only until an ADR approves release packaging.",
+    "poppler": "Poppler is an internal/reference benchmark pathway only until an ADR approves release packaging.",
 }
 
 

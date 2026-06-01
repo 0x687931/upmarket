@@ -37,6 +37,8 @@ Checks:
 - UI automation tests, including launch and appearance coverage.
 - Corpus smoke benchmark.
 - Corpus benchmark output must meet `docs/release/corpus_baseline.json`; downgrades block release.
+- Pathway benchmark output must meet `docs/release/corpus_pathway_baseline.json`; each corpus file is measured against every valid convert-to-Markdown pathway before release.
+- Release-candidate CI uploads `corpus-pathway-comparison`, containing the Markdown comparison and JSON document-level results for owner review before shipping.
 - Model missing/corrupt behavior.
 - Diagnostic bundle generation.
 - Privacy-sensitive logs are redacted.
@@ -158,6 +160,8 @@ scripts/ci/smoke_convert_offline.sh
 scripts/ci/validate_models.py
 scripts/ci/validate_corpus.py
 scripts/ci/validate_corpus_baseline.py
+scripts/ci/validate_corpus_pathways.py
+scripts/ci/summarize_corpus_pathway_reports.py
 scripts/ci/validate_task_registry.py
 scripts/ci/validate_p0_plan_sync.py
 scripts/ci/validate_architecture_boundaries.py

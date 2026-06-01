@@ -6,6 +6,7 @@
 # Usage:
 #   ./scripts/benchmark.sh                        # full run
 #   ./scripts/benchmark.sh --pipeline fast        # specific pipeline
+#   ./scripts/benchmark.sh --pathway python-fast-pdfium
 #   ./scripts/benchmark.sh --category pdf_digital # specific category
 #   ./scripts/benchmark.sh --fail-below 85        # fail if score < 85%
 #   ./scripts/benchmark.sh --json-output reports/corpus-fast.json
@@ -17,6 +18,7 @@ CORPUS_DIR="tests/corpus"
 VENV=".venv"
 FAIL_BELOW=0
 PIPELINE=""
+PATHWAY=""
 CATEGORY=""
 COMPARE_MODE=false
 JSON_OUTPUT=""
@@ -25,6 +27,7 @@ JSON_OUTPUT=""
 while [[ $# -gt 0 ]]; do
     case $1 in
         --pipeline) PIPELINE="$2"; shift 2 ;;
+        --pathway) PATHWAY="$2"; shift 2 ;;
         --category) CATEGORY="$2"; shift 2 ;;
         --fail-below) FAIL_BELOW="$2"; shift 2 ;;
         --json-output) JSON_OUTPUT="$2"; shift 2 ;;
@@ -43,6 +46,7 @@ echo "════════════════════════�
 echo "  Upmarket Benchmark"
 echo "  Corpus: $CORPUS_DIR"
 [ -n "$PIPELINE" ] && echo "  Pipeline: $PIPELINE"
+[ -n "$PATHWAY" ] && echo "  Pathway: $PATHWAY"
 [ -n "$CATEGORY" ] && echo "  Category: $CATEGORY"
 echo "═══════════════════════════════════════════════"
 echo ""
@@ -56,6 +60,7 @@ fi
 "$PYTHON" scripts/benchmark_scorer.py \
     --corpus "$CORPUS_DIR" \
     ${PIPELINE:+--pipeline "$PIPELINE"} \
+    ${PATHWAY:+--pathway "$PATHWAY"} \
     ${CATEGORY:+--category "$CATEGORY"} \
     ${JSON_OUTPUT:+--json-output "$JSON_OUTPUT"} \
     --fail-below "$FAIL_BELOW"
