@@ -53,6 +53,9 @@ jobs:
       - name: Validate local model manifests
         run: scripts/ci/validate_models.py
 
+      - name: Validate model fault states
+        run: scripts/ci/test_model_faults.py
+
       - name: Build
         run: |
           xcodebuild build \

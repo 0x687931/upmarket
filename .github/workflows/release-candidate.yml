@@ -27,6 +27,7 @@ jobs:
           scripts/ci/validate_corpus_baseline.py
           scripts/ci/validate_corpus_pathways.py
           scripts/ci/validate_models.py
+          scripts/ci/test_model_faults.py
 
       - name: Archive
         run: |

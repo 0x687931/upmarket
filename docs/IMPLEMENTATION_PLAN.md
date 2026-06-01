@@ -99,7 +99,7 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 - [x] Replace Swift service `print` diagnostics with structured `OSLog` categories, per-job correlation IDs, and privacy-redacted diagnostic bundles.
 - [x] Add fault-injection tests for Python bridge setup failure, stalled conversion, temp cleanup, and huge input rejection.
 - [x] Add first release memory-pressure safeguard: reject oversized input before workspace copy with an actionable “document too large” error.
-- [ ] Add deeper conversion-corpus fault tests for partial model download, password PDFs, corrupt files, and Python stderr handling.
+- [x] Add deeper conversion-corpus fault tests for partial model download, password PDFs, corrupt files, and Python stderr handling.
 - [ ] Add deeper Vision/OCR safeguards: page/pixel limits, streaming page processing, and autorelease pools.
 
 ### P0 - Crash and Bug Reporting

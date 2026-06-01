@@ -100,6 +100,61 @@ final class PythonBridgeTests: XCTestCase {
         }
     }
 
+    func testHelperDrainsLargeStderrWithoutDeadlock() async throws {
+        let helper = try makeHelperScript("""
+        #!/bin/sh
+        cat >/dev/null
+        i=0
+        while [ "$i" -lt 6000 ]; do
+          printf 'runtime warning line %04d with enough bytes to exceed the pipe buffer\\n' "$i" >&2
+          i=$((i + 1))
+        done
+        printf '{"success":true,"needsPassword":false,"output":{"markdown":"# Converted","pages":1,"format":"TXT","title":"Fixture","pipeline":"enhanced"}}\\n'
+        """)
+        let client = RuntimeHelperClient(executableURL: helper, livenessInterval: 2)
+
+        let result = try await client.convert(
+            fileURL: URL(fileURLWithPath: "/tmp/input.txt"),
+            title: "Fixture",
+            useAI: false,
+            password: nil,
+            workspaceURL: URL(fileURLWithPath: "/tmp")
+        )
+
+        XCTAssertEqual(result.output?.markdown, "# Converted")
+    }
+
+    func testPasswordProtectedCorpusPDFReturnsPasswordFailure() async throws {
+        let fixture = corpusFixture("docling/docling/tests/data/pdf_password/2206.01062_pg3.pdf")
+        guard FileManager.default.fileExists(atPath: fixture.path) else {
+            throw XCTSkip("Password PDF corpus fixture is not present")
+        }
+
+        let result = await ConversionRunner().run(ConversionJob(sourceURL: fixture))
+
+        XCTAssertEqual(result.errorMessage, ConversionError.passwordRequired.errorDescription)
+    }
+
+    func testCorruptPDFReturnsSanitizedFailure() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketCorruptPDFTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: directory)
+        }
+        let corrupt = directory.appendingPathComponent("corrupt.pdf")
+        try Data("%PDF-1.7\nnot a valid document\n%%EOF".utf8).write(to: corrupt)
+
+        let result = await ConversionRunner().run(ConversionJob(sourceURL: corrupt))
+
+        guard let message = result.errorMessage else {
+            return XCTFail("Expected corrupt PDF conversion to fail")
+        }
+        XCTAssertFalse(message.lowercased().contains("python"))
+        XCTAssertFalse(message.lowercased().contains("pdfkit"))
+        XCTAssertFalse(message.lowercased().contains("docling"))
+    }
+
     @MainActor
     func testCancellationDoesNotLeaveQueueWedged() async throws {
         let queue = ConversionQueue { _, progress in
@@ -150,11 +205,7 @@ final class PythonBridgeTests: XCTestCase {
         guard Bundle.main.url(forAuxiliaryExecutable: "UpmarketRuntimeHelper") != nil else {
             throw XCTSkip("Runtime helper is not embedded in this test bundle")
         }
-        let fixture = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("tests/corpus/docling/docling/tests/data/pdf/right_to_left_01.pdf")
+        let fixture = corpusFixture("docling/docling/tests/data/pdf/right_to_left_01.pdf")
         guard FileManager.default.fileExists(atPath: fixture.path) else {
             throw XCTSkip("Corpus fixture is not present")
         }
@@ -179,5 +230,14 @@ final class PythonBridgeTests: XCTestCase {
             try? FileManager.default.removeItem(at: directory)
         }
         return url
+    }
+
+    private func corpusFixture(_ relativePath: String) -> URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("tests/corpus")
+            .appendingPathComponent(relativePath)
     }
 }
