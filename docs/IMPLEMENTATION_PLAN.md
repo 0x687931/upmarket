@@ -129,6 +129,7 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Add a native PDFKit corpus benchmark and clean-room inspection plan for improving Apple-native PDF extraction without adopting GPL/incompatible PDF engines.
 - [x] Document Vision/Core ML/CoreGraphics native inspection options for OCR, document structure, image classification, page quality, and OS-managed Apple silicon acceleration.
 - [x] Add an availability-gated native document classifier that can recommend PDFKit, Vision OCR, or enhanced conversion without failing when Vision/Core ML are unavailable.
+- [x] Add local Vision/NaturalLanguage-style candidate quality selection for permitted PDF paths using language confidence, coverage, structure, artifact penalties, duplication penalties, and image-text agreement.
 - [x] Record forensic benchmark inventory: package versions, binary versions, corpus source commits, benchmark-only OCR/model cache artifacts, and cache roots.
 - [ ] Add a follow-on serial-vs-parallel processing benchmark using the same corpus/pathway matrix, including accuracy, wall time, failures, and system-load evidence before changing queue concurrency.
 - [x] Require ADRs for local patches to upstream behavior, including removal condition and packaged-app validation.

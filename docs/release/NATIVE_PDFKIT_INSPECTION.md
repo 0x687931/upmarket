@@ -43,6 +43,18 @@ The classifier must remain fail-soft. If Vision or Core ML are unavailable, the 
 
 Runtime logs and support reports must use the neutral component codes in `docs/release/DIAGNOSTIC_COMPONENTS.md`; they must not expose toolkit or package names.
 
+## Candidate Quality Selection
+
+When a PDF is classified as image-heavy, complex, or AI-enabled, the app can run more than one licensed candidate path and select the best local result. `MarkdownQualityScorer` compares candidate Markdown using:
+
+- language confidence from NaturalLanguage;
+- coverage against page count and native classifier evidence;
+- Markdown structure such as headings, lists, tables, and figure text;
+- extraction artifacts and repeated text penalties;
+- image-text agreement when the native image-text path ran.
+
+This is not ground truth. It is a local confidence estimate used to avoid obviously worse output when two permitted conversion paths are available. Internal benchmark-only paths remain excluded from shipping selection unless licensing and release gates change.
+
 ## User-Facing Rule
 
 Do not expose internal toolkit names such as PDFKit, Vision, Core ML, Python, Docling, Poppler, or OCR engines in normal UI copy. Technical names belong in licenses, diagnostics, developer docs, and benchmark artifacts only.

@@ -61,7 +61,14 @@ struct ConversionRunner {
         switch ext {
         case "pdf":
             if job.useAI {
-                return await pythonWorker.convert(fileURL: tempURL, title: title, useAI: true, password: job.password, workspaceURL: workspaceURL)
+                return await runQualitySelectedPDFConversion(
+                    fileURL: tempURL,
+                    title: title,
+                    password: job.password,
+                    workspaceURL: workspaceURL,
+                    classifierEvidence: nil,
+                    secondary: .advanced(useAI: true)
+                )
             }
             if let classification = try? await NativeDocumentClassifier.classify(pdfURL: tempURL, password: job.password) {
                 AppLog.conversion.info(
@@ -69,9 +76,23 @@ struct ConversionRunner {
                 )
                 switch classification.recommendedPathway {
                 case .visionOCR:
-                    return await runVisionExtraction(fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL)
+                    return await runQualitySelectedPDFConversion(
+                        fileURL: tempURL,
+                        title: title,
+                        password: job.password,
+                        workspaceURL: workspaceURL,
+                        classifierEvidence: classification.evidence,
+                        secondary: .imageText
+                    )
                 case .enhanced:
-                    return await runEnhancedPDFConversion(fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL)
+                    return await runQualitySelectedPDFConversion(
+                        fileURL: tempURL,
+                        title: title,
+                        password: job.password,
+                        workspaceURL: workspaceURL,
+                        classifierEvidence: classification.evidence,
+                        secondary: .advanced(useAI: false)
+                    )
                 case .pdfKit:
                     return await runPDFKitConversion(fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL)
                 }
@@ -142,13 +163,81 @@ struct ConversionRunner {
         }
     }
 
-    private func runEnhancedPDFConversion(fileURL: URL, title: String, password: String?, workspaceURL: URL) async -> ConversionResult {
-        let result = await pythonWorker.convert(fileURL: fileURL, title: title, useAI: false, password: password, workspaceURL: workspaceURL)
-        if case .success = result {
-            return result
+    private enum PDFSecondaryCandidate {
+        case imageText
+        case advanced(useAI: Bool)
+    }
+
+    private func runQualitySelectedPDFConversion(
+        fileURL: URL,
+        title: String,
+        password: String?,
+        workspaceURL: URL,
+        classifierEvidence: NativeDocumentClassifier.Evidence?,
+        secondary: PDFSecondaryCandidate
+    ) async -> ConversionResult {
+        var outputs: [(label: String, output: ConversionOutput)] = []
+        var firstFailure: ConversionResult?
+
+        let basic = await runPDFKitConversion(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
+        if case .success(let output) = basic {
+            outputs.append((label: "basic", output: output))
+        } else {
+            firstFailure = basic
         }
-        AppLog.conversion.error("Advanced document extraction failed; using basic extraction")
-        return await runPDFKitConversion(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
+
+        let secondaryResult: ConversionResult
+        let secondaryLabel: String
+        switch secondary {
+        case .imageText:
+            secondaryLabel = "image-text"
+            secondaryResult = await runVisionExtraction(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
+        case .advanced(let useAI):
+            secondaryLabel = useAI ? "ai" : "advanced"
+            secondaryResult = await pythonWorker.convert(fileURL: fileURL, title: title, useAI: useAI, password: password, workspaceURL: workspaceURL)
+        }
+
+        if case .success(let output) = secondaryResult {
+            outputs.append((label: secondaryLabel, output: output))
+        } else if firstFailure == nil {
+            firstFailure = secondaryResult
+        }
+
+        let imageTextReference = outputs.first { $0.label == "image-text" }?.output.markdown
+        let candidates = outputs.map {
+            scoredCandidate(
+                label: $0.label,
+                output: $0.output,
+                evidence: classifierEvidence,
+                imageTextReference: imageTextReference
+            )
+        }
+        guard let best = MarkdownQualityScorer.best(candidates) else {
+            return firstFailure ?? .failure("Upmarket couldn't convert this document.")
+        }
+
+        AppLog.conversion.info(
+            "Selected conversion candidate=\(best.label, privacy: .public) quality=\(best.score.overall, privacy: .public)"
+        )
+        return .success(best.output)
+    }
+
+    private func scoredCandidate(
+        label: String,
+        output: ConversionOutput,
+        evidence: NativeDocumentClassifier.Evidence?,
+        imageTextReference: String?
+    ) -> (label: String, output: ConversionOutput, score: MarkdownQualityScorer.Score) {
+        (
+            label: label,
+            output: output,
+            score: MarkdownQualityScorer.score(
+                markdown: output.markdown,
+                pages: output.pages,
+                classifierEvidence: evidence,
+                imageText: imageTextReference
+            )
+        )
     }
 
     private func postProcess(_ output: ConversionOutput) async -> ConversionOutput {
