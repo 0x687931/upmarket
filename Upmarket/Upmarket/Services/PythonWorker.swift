@@ -133,7 +133,7 @@ struct PythonWorker {
 
     private nonisolated func withWorkspace<T: Sendable>(
         _ workspaceURL: URL?,
-        operation: () throws -> T
+        operation: @escaping () throws -> T
     ) async throws -> T {
         guard let workspaceURL else {
             return try await PythonRuntime.shared.withPython(operation)

@@ -1,4 +1,5 @@
 import XCTest
+import PythonKit
 @testable import Upmarket
 
 final class PythonBridgeTests: XCTestCase {
@@ -29,5 +30,15 @@ final class PythonBridgeTests: XCTestCase {
         } else {
             XCTAssertNotNil(status.error)
         }
+    }
+
+    @MainActor
+    func testEmbeddedRuntimeImportsPackagedConverterOnRuntimeThread() async throws {
+        let moduleName = try await PythonRuntime.shared.withPython {
+            let converter = Python.import("docling_bridge.converter")
+            return String(converter.__name__) ?? "unknown"
+        }
+
+        XCTAssertEqual(moduleName, "docling_bridge.converter")
     }
 }

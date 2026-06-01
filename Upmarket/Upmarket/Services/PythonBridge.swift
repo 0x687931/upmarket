@@ -48,6 +48,7 @@ actor PythonRuntime {
     private var isReady = false
     private var version: String?
     private var lastError: PythonBridgeError?
+    private let pythonThread = PythonRuntimeThread()
 
     func status() -> PythonRuntimeStatus {
         PythonRuntimeStatus(isReady: isReady, version: version, error: lastError)
@@ -57,12 +58,15 @@ actor PythonRuntime {
         guard !isReady else { return }
 
         do {
-            try configurePythonRuntime()
-            let sys = Python.import("sys")
-            version = String(sys.version) ?? "unknown"
+            let detectedVersion = try pythonThread.sync { [self] in
+                try self.configurePythonRuntime()
+                let sys = Python.import("sys")
+                return String(sys.version) ?? "unknown"
+            }
+            version = detectedVersion
             isReady = true
             lastError = nil
-            AppLog.pythonBridge.info("Conversion runtime ready version=\(self.version ?? "unknown", privacy: .public)")
+            AppLog.pythonBridge.info("Conversion runtime ready version=\(detectedVersion, privacy: .public)")
         } catch let error as PythonBridgeError {
             isReady = false
             lastError = error
@@ -79,14 +83,14 @@ actor PythonRuntime {
         setenv("TRANSFORMERS_OFFLINE", enabled ? "0" : "1", 1)
     }
 
-    func withPython<T: Sendable>(_ operation: () throws -> T) async throws -> T {
+    func withPython<T: Sendable>(_ operation: @escaping () throws -> T) async throws -> T {
         if !isReady { setup() }
         guard isReady else {
             throw lastError ?? PythonBridgeError.runtimeUnavailable("Python did not initialise.")
         }
 
         do {
-            return try operation()
+            return try pythonThread.sync(operation)
         } catch let error as PythonBridgeError {
             throw error
         } catch {
@@ -96,32 +100,34 @@ actor PythonRuntime {
 
     func withPythonEnvironment<T: Sendable>(
         _ environment: [String: String],
-        operation: () throws -> T
+        operation: @escaping () throws -> T
     ) async throws -> T {
         if !isReady { setup() }
         guard isReady else {
             throw lastError ?? PythonBridgeError.runtimeUnavailable("Python did not initialise.")
         }
 
-        var previous: [String: String?] = [:]
-        for key in environment.keys {
-            previous[key] = getenv(key).map { String(cString: $0) }
-        }
-        for (key, value) in environment {
-            setenv(key, value, 1)
-        }
-        defer {
-            for (key, value) in previous {
-                if let value {
-                    setenv(key, value, 1)
-                } else {
-                    unsetenv(key)
-                }
-            }
-        }
-
         do {
-            return try operation()
+            return try pythonThread.sync {
+                var previous: [String: String?] = [:]
+                for key in environment.keys {
+                    previous[key] = getenv(key).map { String(cString: $0) }
+                }
+                for (key, value) in environment {
+                    setenv(key, value, 1)
+                }
+                defer {
+                    for (key, value) in previous {
+                        if let value {
+                            setenv(key, value, 1)
+                        } else {
+                            unsetenv(key)
+                        }
+                    }
+                }
+
+                return try operation()
+            }
         } catch let error as PythonBridgeError {
             throw error
         } catch {
@@ -129,17 +135,18 @@ actor PythonRuntime {
         }
     }
 
-    func withPythonDownload<T: Sendable>(_ operation: () throws -> T) async throws -> T {
+    func withPythonDownload<T: Sendable>(_ operation: @escaping () throws -> T) async throws -> T {
         if !isReady { setup() }
         guard isReady else {
             throw lastError ?? PythonBridgeError.runtimeUnavailable("Python did not initialise.")
         }
 
-        setDownloadModeEnabled(true)
-        defer { setDownloadModeEnabled(false) }
-
         do {
-            return try operation()
+            return try pythonThread.sync { [self] in
+                self.setDownloadModeEnabled(true)
+                defer { self.setDownloadModeEnabled(false) }
+                return try operation()
+            }
         } catch let error as PythonBridgeError {
             throw error
         } catch {
@@ -167,6 +174,70 @@ actor PythonRuntime {
         setenv("UPMARKET_MODELS_DIR", appSupport, 1)
         setenv("HF_HUB_CACHE", appSupport, 1)
     }
+}
+
+private final class PythonRuntimeThread: Thread, @unchecked Sendable {
+    private final class Job {
+        nonisolated(unsafe) let body: () -> Void
+
+        nonisolated init(body: @escaping () -> Void) {
+            self.body = body
+        }
+    }
+
+    private let condition = NSCondition()
+    nonisolated(unsafe) private var jobs: [Job] = []
+
+    override nonisolated init() {
+        super.init()
+        name = "Upmarket Python Runtime"
+        qualityOfService = .userInitiated
+        start()
+    }
+
+    nonisolated func sync<T>(_ operation: @escaping () throws -> T) throws -> T {
+        let box = PythonRuntimeResultBox<T>()
+        let done = NSCondition()
+        var isDone = false
+
+        condition.lock()
+        jobs.append(Job {
+            box.result = Result { try operation() }
+            done.lock()
+            isDone = true
+            done.signal()
+            done.unlock()
+        })
+        condition.signal()
+        condition.unlock()
+
+        done.lock()
+        while !isDone {
+            done.wait()
+        }
+        done.unlock()
+
+        return try box.result!.get()
+    }
+
+    override nonisolated func main() {
+        condition.lock()
+        while true {
+            while jobs.isEmpty {
+                condition.wait()
+            }
+            let job = jobs.removeFirst()
+            condition.unlock()
+            job.body()
+            condition.lock()
+        }
+    }
+}
+
+private final class PythonRuntimeResultBox<T>: @unchecked Sendable {
+    nonisolated(unsafe) var result: Result<T, Error>?
+
+    nonisolated init() {}
 }
 
 /// Observable facade for SwiftUI. Python calls must go through PythonRuntime/PythonWorker.
