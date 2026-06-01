@@ -181,12 +181,12 @@
   </g>
 
   <!-- LAYER 2: Glow layer (atmospheric, behind documents) -->
-  <g id="glow_layer" opacity="0.42">
+  <g id="glow_layer" opacity="0.85">
     <g filter="url(#blurGlow)">
       <ellipse cx="650" cy="530" rx="390" ry="260" fill="url(#mainGlow)"/>
       <ellipse cx="355" cy="480" rx="240" ry="220" fill="url(#amberGlow)"/>
     </g>
-    <g filter="url(#fineBlur)" opacity="0.78">
+    <g filter="url(#fineBlur)" opacity="0.92">
       <ellipse cx="420" cy="275" rx="260" ry="120" fill="url(#specularGlow)"/>
     </g>
   </g>
@@ -205,7 +205,7 @@
     </g>
     <path d="M610 222V306C610 322.569 623.431 336 640 336H724L610 222Z" fill="url(#docFoldFill)"/>
     <path d="M610 222V306C610 322.569 623.431 336 640 336H724" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="4"/>
-    <path d="M328 258C328 238.118 344.118 222 364 222H610L724 336V734C724 753.882 707.882 770 688 770H364C344.118 770 328 753.882 328 734V258Z" stroke="url(#docEdge)" stroke-width="5"/>
+    <path d="M328 258C328 238.118 344.118 222 364 222H610L724 336V734C724 753.882 707.882 770 688 770H364C344.118 770 328 753.882 328 734V258Z" stroke="#9B6B28" stroke-opacity="0.85" stroke-width="6"/>
     <path d="M362 258C362 250.268 368.268 244 376 244H592" stroke="#FFFFFF" stroke-opacity="0.72" stroke-width="5" stroke-linecap="round"/>
   </g>
 
@@ -221,7 +221,7 @@
         <path d="M330 472H602C620 472 634 486 634 504" stroke="url(#arrowHighlight)" stroke-width="18" stroke-linecap="round"/>
       </g>
     </g>
-    <path d="M292 482C292 464.327 306.327 450 324 450H608V398C608 384.474 623.682 376.973 634.214 385.458L772.214 496.458C780.064 502.773 780.064 514.727 772.214 521.042L634.214 632.042C623.682 640.527 608 633.026 608 619.5V568H324C306.327 568 292 553.673 292 536V482Z" stroke="url(#arrowEdge)" stroke-width="5"/>
+    <path d="M292 482C292 464.327 306.327 450 324 450H608V398C608 384.474 623.682 376.973 634.214 385.458L772.214 496.458C780.064 502.773 780.064 514.727 772.214 521.042L634.214 632.042C623.682 640.527 608 633.026 608 619.5V568H324C306.327 568 292 553.673 292 536V482Z" stroke="#6B7882" stroke-opacity="0.85" stroke-width="6"/>
   </g>
 
   <!-- LAYER 5: Output document (white/glass, right, dominant) -->
@@ -239,7 +239,7 @@
     </g>
     <path d="M622 179V280C622 299.33 637.67 315 657 315H758L622 179Z" fill="url(#outputFoldFill)"/>
     <path d="M622 179V280C622 299.33 637.67 315 657 315H758" stroke="#FFFFFF" stroke-opacity="0.62" stroke-width="5"/>
-    <path d="M292 218C292 196.461 309.461 179 331 179H622L758 315V806C758 827.539 740.539 845 719 845H331C309.461 845 292 827.539 292 806V218Z" stroke="url(#outputEdge)" stroke-width="5"/>
+    <path d="M292 218C292 196.461 309.461 179 331 179H622L758 315V806C758 827.539 740.539 845 719 845H331C309.461 845 292 827.539 292 806V218Z" stroke="#6B7D91" stroke-opacity="0.85" stroke-width="6"/>
     <path d="M326 218C326 210.268 332.268 204 340 204H596" stroke="#FFFFFF" stroke-opacity="0.78" stroke-width="5" stroke-linecap="round"/>
   </g>
 

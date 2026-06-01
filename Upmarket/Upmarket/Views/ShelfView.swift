@@ -21,7 +21,7 @@ struct ShelfView: View {
     // Closed state: two-column panel
     // Left col: 3 buttons stacked [X][+][>]  |  Right col: [↓] drop arrow
     private let colWidth:     CGFloat = 48   // wider columns for proper padding
-    private let closedHeight: CGFloat = 108  // 3 × 36pt buttons — room to breathe
+    private let closedHeight: CGFloat = 135  // 3 × 45pt buttons — meets 44pt HIG minimum
     private let itemWidth:    CGFloat = 64
     private let itemSpacing:  CGFloat = 8
     private let maxVisible:   Int     = 5
@@ -134,7 +134,7 @@ struct ShelfView: View {
                     .frame(width: buttonHeight - 10, height: buttonHeight - 10)
                 Image(systemName: symbol)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(isHovered ? hoverColor : .primary.opacity(0.45))
+                    .foregroundStyle(isHovered ? hoverColor : .primary.opacity(0.7))
                     .symbolRenderingMode(.hierarchical)
             }
             .frame(width: colWidth, height: buttonHeight)
@@ -153,12 +153,12 @@ struct ShelfView: View {
             if #available(macOS 14.0, *) {
                 Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
                     .font(.system(size: 18))
-                    .foregroundStyle(isTargeted || hoverDrop ? Color.accentColor : .primary.opacity(0.4))
+                    .foregroundStyle(isTargeted || hoverDrop ? Color.accentColor : .primary.opacity(0.7))
                     .contentTransition(.symbolEffect(.replace.offUp))
             } else {
                 Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
                     .font(.system(size: 18))
-                    .foregroundStyle(isTargeted || hoverDrop ? Color.accentColor : .primary.opacity(0.4))
+                    .foregroundStyle(isTargeted || hoverDrop ? Color.accentColor : .primary.opacity(0.7))
             }
         }
         .animation(.easeInOut(duration: 0.12), value: isTargeted)
@@ -189,17 +189,17 @@ struct ShelfView: View {
             if #available(macOS 14.0, *) {
                 Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
                     .font(.system(size: 32))
-                    .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.25))
+                    .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.6))
                     .contentTransition(.symbolEffect(.replace.offUp))
                     .animation(.easeInOut(duration: 0.12), value: isTargeted)
             } else {
                 Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
                     .font(.system(size: 32))
-                    .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.25))
+                    .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.6))
             }
             Text(isTargeted ? "Release to convert" : "Drop documents here")
                 .font(.system(size: 12))
-                .foregroundStyle(.primary.opacity(0.35))
+                .foregroundStyle(.primary.opacity(0.6))
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 16)
@@ -333,6 +333,7 @@ struct ShelfItemView: View {
     let onRemove: () -> Void
     @State private var showActions = false
     @State private var now = Date()
+    @State private var showCopied = false
 
     private var isStalled: Bool {
         item.isStalled || item.hasNoRecentProgress(referenceDate: now, threshold: 60)
@@ -345,12 +346,13 @@ struct ShelfItemView: View {
                     fileIcon.frame(width: 36, height: 36)
                     stateIndicator
                 }
-                Text(item.name)
-                    .font(.system(size: 9))
-                    .foregroundStyle(.primary.opacity(0.7))
+                Text(showCopied ? "Copied!" : item.name)
+                    .font(.system(size: 9, weight: showCopied ? .semibold : .regular))
+                    .foregroundStyle(showCopied ? Color.accentColor : .primary.opacity(0.7))
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .frame(width: 56)
+                    .animation(.easeInOut(duration: 0.15), value: showCopied)
                 statusText
             }
             .padding(.vertical, 6)
@@ -476,37 +478,41 @@ struct ShelfItemView: View {
     @ViewBuilder private var statusText: some View {
         if isStalled {
             Text("No progress")
-                .font(.system(size: 7))
+                .font(.system(size: 9))
                 .foregroundStyle(.yellow)
                 .lineLimit(1)
-                .frame(width: 56, height: 8)
+                .frame(width: 56, height: 10)
                 .help("No progress detected. Conversion is still running; you can cancel and retry.")
         } else if let message = item.result?.errorMessage {
             Text(message)
-                .font(.system(size: 7))
-                .foregroundStyle(.red.opacity(0.85))
+                .font(.system(size: 9))
+                .foregroundStyle(.red)
                 .lineLimit(1)
                 .truncationMode(.tail)
-                .frame(width: 56, height: 8)
+                .frame(width: 56, height: 10)
         } else if item.isRunning {
             Text("Working")
-                .font(.system(size: 7))
-                .foregroundStyle(.primary.opacity(0.4))
+                .font(.system(size: 9))
+                .foregroundStyle(.primary.opacity(0.65))
                 .lineLimit(1)
-                .frame(width: 56, height: 8)
+                .frame(width: 56, height: 10)
                 .help("Still working: \(stageLabel)")
         } else {
             Text(stageLabel)
-                .font(.system(size: 7))
-                .foregroundStyle(.primary.opacity(0.4))
+                .font(.system(size: 9))
+                .foregroundStyle(.primary.opacity(0.65))
                 .lineLimit(1)
-                .frame(width: 56, height: 8)
+                .frame(width: 56, height: 10)
         }
     }
 
     private func handleSingleClick() {
         if let output = item.result?.output {
             FileAccessService.shared.copyMarkdown(output.markdown)
+            showCopied = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                showCopied = false
+            }
         }
     }
 

@@ -70,4 +70,4 @@ If this policy changes materially, the updated version will be posted here with 
 
 ## Contact
 
-Questions about this policy: **ajmcardle@gmail.com**
+Use the support link in the App.
