@@ -233,7 +233,7 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 - [ ] Test StoreKit sandbox with App Store Connect products before submission
 
 ### Gate E - Legal, Privacy, and Listing
-- [ ] Write and host privacy policy
+- [ ] Host privacy policy at the public URL; draft exists at `docs/public/privacy.md`
 - [ ] Write and host EULA / terms
 - [ ] Verify App Privacy answers match actual data collection: no analytics, no document upload, local processing
 - [ ] Link privacy policy and terms in Preferences/About and App Store Connect
