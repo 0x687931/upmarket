@@ -57,10 +57,10 @@ struct PythonWorker {
             }
         } catch let error as PythonBridgeError {
             AppLog.pythonBridge.error("Python conversion bridge failure: \(error.localizedDescription, privacy: .private)")
-            return .failure(error.localizedDescription)
+            return .failure(ConversionError.pythonRuntime(error.localizedDescription).errorDescription ?? "Conversion failed.")
         } catch {
             AppLog.pythonBridge.error("Python conversion failure: \(error.localizedDescription, privacy: .private)")
-            return .failure(ConversionError.pythonRuntime(error.localizedDescription).errorDescription ?? error.localizedDescription)
+            return .failure(ConversionError.pythonRuntime(error.localizedDescription).errorDescription ?? "Conversion failed.")
         }
     }
 

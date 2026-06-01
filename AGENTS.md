@@ -30,6 +30,7 @@ Large fixtures and upstream corpus material live in `tests/corpus/`; avoid editi
 - Native Apple APIs are preferred where practical: `PDFKit`, `Vision`, `NaturalLanguage`, `StoreKit`, `OSLog`, `AVFoundation`, `ImageIO`.
 - Runtime conversion must not require cloud access. Model download is the only expected network-dependent conversion setup path.
 - Diagnostics must be privacy-redacted by default.
+- User-facing UI, errors, onboarding, support copy, and App Store text must not expose implementation toolkit names such as Python or internal converter packages except in licenses or explicit diagnostic previews.
 
 ## Build, Test, and Development Commands
 

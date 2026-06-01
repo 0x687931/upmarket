@@ -546,7 +546,7 @@ struct ShelfItemView: View {
         case .queued: return "Queued"
         case .copying: return "Copying"
         case .extracting: return "Reading"
-        case .python: return "Python"
+        case .python: return "Processing"
         case .postProcessing: return "Refining"
         case .complete: return "Done"
         case .failed: return "Failed"

@@ -56,6 +56,7 @@ Rules:
 - StoreKit is behind one boundary.
 - File access is behind one boundary.
 - Diagnostics are privacy-redacted by default.
+- User-facing copy describes product behavior, not implementation toolkits. Internal engines and third-party components belong in logs, diagnostics, and licenses, not normal UI.
 
 The detailed boundary map is `docs/release/ARCHITECTURE_BOUNDARIES.md`.
 
@@ -69,6 +70,7 @@ Keep:
 - Python/Docling value proposition.
 - Native Apple APIs where they reduce risk.
 - Release pipeline and diagnostics.
+- Apple storage correctness for iCloud Drive, File Provider locations, security-scoped URLs, app containers, and App Group handoff.
 
 Challenge or defer:
 
@@ -77,6 +79,7 @@ Challenge or defer:
 - Remote behavior switches.
 - Background magic users cannot see.
 - New dependencies without a release/rollback story.
+- Exposing toolkit names or implementation internals to end users outside licenses and explicit diagnostic previews.
 
 ## Maintainer Model
 

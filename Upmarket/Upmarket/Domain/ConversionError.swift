@@ -21,7 +21,9 @@ enum ConversionError: Error, Equatable, LocalizedError {
             return "Conversion made no progress."
         case .fileTooLarge:
             return "This document is too large to convert safely."
-        case .pythonRuntime(let message), .failed(let message):
+        case .pythonRuntime:
+            return "The conversion engine couldn't start. Please try again."
+        case .failed(let message):
             return message
         }
     }

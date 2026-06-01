@@ -333,6 +333,37 @@
       "release_gate": "P0 - Minimalist Core Rewrite",
       "risk": ["maintainability", "operability", "UX", "Python/upstream"],
       "labels": ["p0-blocker", "area-swift", "area-python", "gate-b-conversion", "gate-c-stability", "agent-ready"]
+    },
+    {
+      "id": "P0-013",
+      "title": "Apple storage semantics and user-facing abstraction",
+      "objective": "Make document access reliable across Apple storage locations while keeping implementation toolkit details out of normal user-facing copy.",
+      "owner": "Swift/App Store",
+      "scope": [
+        "Upmarket/Upmarket/Services/FileAccessService.swift",
+        "Upmarket/Upmarket/Services/AppWorkspace.swift",
+        "Upmarket/Upmarket/Services/ConversionQueue.swift",
+        "Upmarket/Upmarket/Services/ConversionRunner.swift",
+        "Upmarket/UpmarketQuickAction/**",
+        "Upmarket/Upmarket/Views/**",
+        "docs/IMPLEMENTATION_PLAN.md",
+        "docs/release/**"
+      ],
+      "non_goals": [
+        "Do not add cloud conversion or iCloud document storage as a product feature.",
+        "Do not expose internal converter/toolkit names in user-facing UI, errors, onboarding, paywall, App Store copy, or support copy except licenses and explicit diagnostic previews.",
+        "Do not add a new architecture layer; keep storage handling behind concrete file/storage services."
+      ],
+      "acceptance": [
+        "iCloud Drive, Desktop/Documents-in-iCloud, external drives, network volumes, File Provider locations, read-only sources, and denied save locations are validated.",
+        "Delayed conversion and Quick Action handoff use security-scoped access/bookmarks or copied app-owned files instead of raw paths.",
+        "Evicted or unavailable cloud-backed files fail with actionable product-level errors.",
+        "Release validation includes storage scenario checks and a user-facing copy audit for implementation-detail leaks.",
+        "Any Apple-native-only extraction mode is documented as a deferred product option unless explicitly promoted to v1 scope."
+      ],
+      "release_gate": "P0 - Apple Storage and User-Facing Abstraction",
+      "risk": ["security", "App Store", "UX", "operability"],
+      "labels": ["p0-blocker", "area-swift", "area-security", "area-ux", "gate-a-build", "gate-b-conversion", "agent-ready"]
     }
   ]
 }

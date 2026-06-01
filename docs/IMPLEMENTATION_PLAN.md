@@ -72,6 +72,15 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Restrict Python input validation to Swift-created per-job workspaces rather than broad home-directory and temp roots.
 - [x] Wrap delayed document reads/writes in security-scoped access or persist security-scoped bookmarks when user interaction can delay conversion.
 
+### P0 - Apple Storage and User-Facing Abstraction
+- [ ] Validate iCloud Drive, Desktop/Documents-in-iCloud, external drives, network volumes, File Provider locations, and app sandbox container behavior.
+- [ ] Centralize all user-selected file reads, delayed reads, saves, bookmarks, pasteboard operations, Quick Action handoff, temp workspaces, and cleanup in concrete file/storage services.
+- [ ] Use security-scoped access/bookmarks when conversion can be delayed or handed off; do not rely on raw paths for app, extension, or queued conversion handoff.
+- [ ] Detect unavailable/evicted iCloud or File Provider files before conversion and show an action-oriented message without exposing implementation internals.
+- [ ] Add storage fixtures/manual release checks for local file, iCloud downloaded, iCloud evicted, File Provider, external volume, read-only source, and save-location denial.
+- [ ] Keep user-facing copy product-level: do not mention Python, Docling, pdfium, model package names, or other implementation toolkits outside licenses and explicit diagnostic previews.
+- [ ] Add a UI copy audit to release validation for shelf stages, errors, preferences, paywall, support reports, App Store text, and onboarding.
+
 ### P0 - App Store Metadata and Entitlements
 - [x] Merge URL scheme and Services registration into the effective app `Info.plist`, not a copied resource plist.
 - [x] Add `NSSpeechRecognitionUsageDescription` to the effective app `Info.plist` before any Speech framework authorization call.
@@ -259,6 +268,7 @@ This is a launch requirement, not post-launch polish.
 - [ ] Output format options: Markdown / plain text
 - [ ] OCR toggle in drop zone
 - [ ] First-launch onboarding
+- [ ] Optional “Apple-native only” extraction mode: local-only, lower-quality fallback using Apple APIs only; do not position as Basic or Advanced unless quality and format coverage justify it.
 
 ### P2 - UX/HIG Audit Findings
 - [ ] Remove automatic paywall display at tour completion; let users experience a conversion before purchase prompts.
@@ -308,3 +318,4 @@ Manual validation remains required for Xcode Archive, App Store Connect setup, S
 - [ ] How prominently to position Intel Mac as CPU-only / Apple Silicon recommended
 - [ ] Whether batch conversion belongs in v1.0 or v1.1
 - [ ] Whether enhanced/AI model downloads should be available from Preferences before first complex document
+- [ ] Whether Apple-native-only extraction should be a visible tool mode, a troubleshooting fallback, or remain internal.
