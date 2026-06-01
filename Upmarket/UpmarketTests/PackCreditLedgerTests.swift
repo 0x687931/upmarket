@@ -59,6 +59,20 @@ final class PackCreditLedgerTests: XCTestCase {
         XCTAssertEqual(try ledger.snapshot().availableCredits, 5)
     }
 
+    func testLegacyCreditsMigrateOnce() throws {
+        let ledger = makeLedger()
+
+        try ledger.migrateLegacyCredits(credits: 3, packsEverPurchased: 2)
+        try ledger.migrateLegacyCredits(credits: 9, packsEverPurchased: 4)
+
+        let snapshot = try ledger.snapshot()
+        XCTAssertTrue(snapshot.legacyMigrationComplete)
+        XCTAssertEqual(snapshot.migratedCreditCount, 3)
+        XCTAssertEqual(snapshot.migratedPackCount, 2)
+        XCTAssertEqual(snapshot.purchasedPackCount, 2)
+        XCTAssertEqual(snapshot.availableCredits, 3)
+    }
+
     func testCorruptLedgerFailsClosed() throws {
         let fileURL = temporaryLedgerURL()
         try FileManager.default.createDirectory(

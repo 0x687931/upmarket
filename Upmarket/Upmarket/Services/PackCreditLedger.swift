@@ -7,10 +7,14 @@ final class PackCreditLedger {
         let purchasedPackCount: Int
         let revokedPackCount: Int
         let revokedCreditCount: Int
+        let migratedCreditCount: Int
+        let migratedPackCount: Int
+        let legacyMigrationComplete: Bool
         let consumedCreditCount: Int
 
         var availableCredits: Int {
-            max(0, (purchasedPackCount * PackCreditLedger.creditsPerPack) - revokedCreditCount - consumedCreditCount)
+            let verifiedPackCount = purchasedPackCount - migratedPackCount
+            return max(0, (verifiedPackCount * PackCreditLedger.creditsPerPack) + migratedCreditCount - revokedCreditCount - consumedCreditCount)
         }
     }
 
@@ -18,12 +22,18 @@ final class PackCreditLedger {
         var creditedTransactionIDs: [String] = []
         var revokedTransactionIDs: [String] = []
         var revokedCreditCount: Int = 0
+        var migratedCreditCount: Int = 0
+        var migratedPackCount: Int = 0
+        var legacyMigrationComplete = false
         var consumedCreditCount: Int = 0
 
         private enum CodingKeys: String, CodingKey {
             case creditedTransactionIDs
             case revokedTransactionIDs
             case revokedCreditCount
+            case migratedCreditCount
+            case migratedPackCount
+            case legacyMigrationComplete
             case consumedCreditCount
         }
 
@@ -34,6 +44,9 @@ final class PackCreditLedger {
             creditedTransactionIDs = try container.decodeIfPresent([String].self, forKey: .creditedTransactionIDs) ?? []
             revokedTransactionIDs = try container.decodeIfPresent([String].self, forKey: .revokedTransactionIDs) ?? []
             revokedCreditCount = try container.decodeIfPresent(Int.self, forKey: .revokedCreditCount) ?? 0
+            migratedCreditCount = try container.decodeIfPresent(Int.self, forKey: .migratedCreditCount) ?? 0
+            migratedPackCount = try container.decodeIfPresent(Int.self, forKey: .migratedPackCount) ?? 0
+            legacyMigrationComplete = try container.decodeIfPresent(Bool.self, forKey: .legacyMigrationComplete) ?? false
             consumedCreditCount = try container.decodeIfPresent(Int.self, forKey: .consumedCreditCount) ?? 0
         }
     }
@@ -48,6 +61,17 @@ final class PackCreditLedger {
 
     func snapshot() throws -> Snapshot {
         snapshot(from: try loadLedger())
+    }
+
+    @discardableResult
+    func migrateLegacyCredits(credits: Int, packsEverPurchased: Int) throws -> Snapshot {
+        var ledger = try loadLedger()
+        guard !ledger.legacyMigrationComplete else { return snapshot(from: ledger) }
+        ledger.migratedCreditCount = max(0, credits)
+        ledger.migratedPackCount = max(0, packsEverPurchased)
+        ledger.legacyMigrationComplete = true
+        try save(ledger)
+        return snapshot(from: ledger)
     }
 
     @discardableResult
@@ -108,9 +132,12 @@ final class PackCreditLedger {
 
     private func snapshot(from ledger: Ledger) -> Snapshot {
         Snapshot(
-            purchasedPackCount: ledger.creditedTransactionIDs.count,
+            purchasedPackCount: ledger.creditedTransactionIDs.count + ledger.migratedPackCount,
             revokedPackCount: ledger.revokedTransactionIDs.count,
             revokedCreditCount: ledger.revokedCreditCount,
+            migratedCreditCount: ledger.migratedCreditCount,
+            migratedPackCount: ledger.migratedPackCount,
+            legacyMigrationComplete: ledger.legacyMigrationComplete,
             consumedCreditCount: ledger.consumedCreditCount
         )
     }

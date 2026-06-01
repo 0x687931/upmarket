@@ -16,7 +16,9 @@ final class ConversionQueue: ObservableObject {
 
     private let runHandler: RunHandler
     private let analyseHandler: AnalyseHandler
-    private var lastOperation: Task<Void, Never>?
+    private var pendingJobIDs: [UUID] = []
+    private var activeJobID: UUID?
+    private var activeTask: Task<Void, Never>?
     private var continuations: [UUID: CheckedContinuation<ConversionResult, Never>] = [:]
     private var cancelledJobIDs: Set<UUID> = []
 
@@ -75,6 +77,13 @@ final class ConversionQueue: ObservableObject {
 
     func cancel(_ id: UUID) {
         cancelledJobIDs.insert(id)
+        pendingJobIDs.removeAll { $0 == id }
+        if activeJobID == id {
+            activeTask?.cancel()
+            activeTask = nil
+            activeJobID = nil
+            startNextJob()
+        }
         finish(id, result: .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled."), stage: .cancelled)
     }
 
@@ -89,27 +98,42 @@ final class ConversionQueue: ObservableObject {
     }
 
     private func enqueue(_ id: UUID) {
-        let previous = lastOperation
-        let task = Task { [weak self] in
-            await previous?.value
-            await self?.runJob(id)
+        pendingJobIDs.append(id)
+        startNextJob()
+    }
+
+    private func startNextJob() {
+        guard activeTask == nil else { return }
+        while !pendingJobIDs.isEmpty {
+            let id = pendingJobIDs.removeFirst()
+            guard !cancelledJobIDs.contains(id) else { continue }
+            activeJobID = id
+            activeTask = Task { [weak self] in
+                await self?.runJob(id)
+                await MainActor.run {
+                    guard self?.activeJobID == id else { return }
+                    self?.activeTask = nil
+                    self?.activeJobID = nil
+                    self?.startNextJob()
+                }
+            }
+            return
         }
-        lastOperation = task
     }
 
     private func runJob(_ id: UUID) async {
         guard let job = jobs.first(where: { $0.id == id }) else { return }
-        guard !cancelledJobIDs.contains(id) else { return }
+        guard !cancelledJobIDs.contains(id), !Task.isCancelled else { return }
         update(id, stage: .copying)
 
         let result = await runHandler(job) { [weak self] stage in
             Task { @MainActor in
-                guard self?.cancelledJobIDs.contains(id) == false else { return }
+                guard self?.cancelledJobIDs.contains(id) == false, !Task.isCancelled else { return }
                 self?.update(id, stage: stage)
             }
         }
 
-        guard !cancelledJobIDs.contains(id) else { return }
+        guard !cancelledJobIDs.contains(id), !Task.isCancelled else { return }
 
         let stage: ConversionStage
         switch result {

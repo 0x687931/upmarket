@@ -60,6 +60,34 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.result?.errorMessage, ConversionError.cancelled.errorDescription)
     }
 
+    func testCancelRunningJobStartsNextQueuedJob() async {
+        var started: [String] = []
+        let queue = ConversionQueue { job, _ in
+            started.append(job.name)
+            if job.name == "first" {
+                try? await Task.sleep(nanoseconds: 200_000_000)
+            }
+            return .success(ConversionOutput(
+                markdown: job.name,
+                pages: 1,
+                format: job.ext,
+                title: job.name,
+                pipeline: .fast
+            ))
+        }
+
+        let first = queue.add(URL(fileURLWithPath: "/tmp/first.pdf"))
+        let second = queue.add(URL(fileURLWithPath: "/tmp/second.pdf"))
+        await waitUntil { started == ["first"] }
+
+        queue.cancel(first)
+        await waitForResult(second, in: queue)
+
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == first })?.stage, .cancelled)
+        XCTAssertTrue(started.contains("second"))
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.stage, .complete)
+    }
+
     func testRunningJobCanBeClassifiedAsStalledWithoutCancellingIt() {
         let job = ConversionJob(
             sourceURL: URL(fileURLWithPath: "/tmp/stalled.pdf"),
@@ -123,5 +151,13 @@ final class ConversionQueueTests: XCTestCase {
             try? await Task.sleep(nanoseconds: 10_000_000)
         }
         XCTFail("Timed out waiting for conversion job \(id)")
+    }
+
+    private func waitUntil(_ predicate: @escaping () -> Bool) async {
+        for _ in 0..<100 {
+            if predicate() { return }
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTFail("Timed out waiting for condition")
     }
 }

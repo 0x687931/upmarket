@@ -47,6 +47,8 @@ final class StoreManager: ObservableObject {
     }
 
     private let lastTrialPromptKey = "upmarket.lastTrialPaywallPromptRemaining"
+    private let legacyPackCreditsKey = "upmarket.packCredits"
+    private let legacyPacksEverPurchasedKey = "upmarket.packsEverPurchased"
     private let packLedger = PackCreditLedger()
 
     private var transactionListener: Task<Void, Error>?
@@ -56,6 +58,7 @@ final class StoreManager: ObservableObject {
         Task { await loadProducts() }
         Task { await refreshEntitlement() }
         freeDocsRemaining  = UserDefaults.standard.object(forKey: "upmarket.freeDocsRemaining") as? Int ?? 3
+        migrateLegacyPackCreditsIfNeeded()
         loadPackSnapshot()
     }
 
@@ -230,7 +233,15 @@ final class StoreManager: ObservableObject {
             for await result in Transaction.updates {
                 guard let transaction = try? self.checkVerified(result) else { continue }
                 if transaction.productID == Self.packID {
-                    try? await self.recordPackTransaction(transaction)
+                    do {
+                        try await self.recordPackTransaction(transaction)
+                    } catch {
+                        await MainActor.run {
+                            self.productLoadError = "A document pack purchase could not be recorded. Keep Upmarket open and try Restore Purchases."
+                        }
+                        print("[StoreManager] Failed to record pack transaction \(transaction.id): \(error)")
+                        continue
+                    }
                 } else {
                     await self.refreshEntitlement()
                 }
@@ -268,6 +279,27 @@ final class StoreManager: ObservableObject {
             packCredits = 0
             productLoadError = "Purchase records could not be read. Please contact support before buying another document pack."
             print("[StoreManager] Failed to read pack credit ledger: \(error)")
+        }
+    }
+
+    private func migrateLegacyPackCreditsIfNeeded() {
+        do {
+            let snapshot = try packLedger.snapshot()
+            guard !snapshot.legacyMigrationComplete else { return }
+            let credits = UserDefaults.standard.integer(forKey: legacyPackCreditsKey)
+            let packs = UserDefaults.standard.integer(forKey: legacyPacksEverPurchasedKey)
+            guard credits > 0 || packs > 0 else {
+                _ = try packLedger.migrateLegacyCredits(credits: 0, packsEverPurchased: 0)
+                return
+            }
+            let migrated = try packLedger.migrateLegacyCredits(credits: credits, packsEverPurchased: packs)
+            applyPackSnapshot(migrated)
+            UserDefaults.standard.removeObject(forKey: legacyPackCreditsKey)
+            UserDefaults.standard.removeObject(forKey: legacyPacksEverPurchasedKey)
+        } catch {
+            packCredits = 0
+            productLoadError = "Purchase records could not be migrated. Please contact support before buying another document pack."
+            print("[StoreManager] Failed to migrate legacy pack credits: \(error)")
         }
     }
 }

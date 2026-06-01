@@ -18,6 +18,8 @@ Keep v1 serverless, but make the local app derive pack balance from a small ledg
 - Transaction IDs are recorded once so duplicate purchase callbacks do not double-credit.
 - Credit consumption records debits instead of mutating a remaining-balance counter.
 - Revoked StoreKit transactions are recorded and remove remaining credits.
+- StoreKit consumable transactions are finished only after the ledger write succeeds.
+- Legacy `UserDefaults` pack balances are migrated once into the ledger before the old keys are removed.
 - `UserDefaults` remains acceptable for free trial counters and UI preferences, but not paid pack credit balances.
 
 The ledger is not an anti-tamper system. It is an audit trail for a single-device, pre-account v1 that avoids accidental double-crediting and makes support behavior explainable.

@@ -74,6 +74,8 @@ struct ShelfView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .upmarketReprocessItem)) { note in
             guard let req = note.object as? ReprocessRequest else { return }
+            guard conversion.jobs.contains(where: { $0.id == req.itemID }) else { return }
+            guard consumeConversionOrShowPaywall() else { return }
             _ = conversion.retry(req.itemID, useAI: req.useAI)
         }
         .onReceive(NotificationCenter.default.publisher(for: .upmarketSetShelfExpanded)) { note in
@@ -285,7 +287,7 @@ struct ShelfView: View {
 
     private func addToQueue(_ url: URL) {
         guard !conversion.jobs.contains(where: { $0.sourceURL == url && $0.isRunning }) else { return }
-        store.consumeConversion()
+        guard consumeConversionOrShowPaywall() else { return }
         NotificationCenter.default.post(name: .upmarketConversionStarted, object: nil)
         let id = conversion.add(url)
         Task { @MainActor in
@@ -301,6 +303,14 @@ struct ShelfView: View {
                 }
             }
         }
+    }
+
+    private func consumeConversionOrShowPaywall() -> Bool {
+        guard store.consumeConversion() else {
+            showPaywall = true
+            return false
+        }
+        return true
     }
 }
 
