@@ -93,7 +93,7 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 - [x] Reassess consumable document packs: avoid client-authoritative `UserDefaults` balances or move consumable accounting to a verifiable App Store/server-backed model.
 
 ### P0 - Observability, CI, and Release Validation
-- [ ] Fix CI to build and test `Upmarket/Upmarket.xcodeproj`.
+- [x] Fix CI to build and test `Upmarket/Upmarket.xcodeproj`.
 - [ ] Add CI/release checks for archive, entitlements, effective `Info.plist`, embedded Python imports, offline conversion smoke tests, and model-missing behavior.
 - [x] Add local validation for the embedded runtime helper target and optional built-app readiness smoke.
 - [x] Replace Swift service `print` diagnostics with structured `OSLog` categories, per-job correlation IDs, and privacy-redacted diagnostic bundles.
@@ -194,10 +194,10 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 ## Release Gates
 
 ### Gate A - Build and Packaging
-- [ ] Build cleanly with `xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' build`
+- [x] Build cleanly with `xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' build`
 - [ ] Archive successfully in Xcode with the release team selected
 - [ ] Verify sandbox entitlements in the archived app
-- [ ] Confirm bundled Python runtime imports required modules from inside the app bundle
+- [x] Confirm bundled Python runtime imports required modules from inside the app bundle
 - [ ] Confirm app works after deleting downloaded models
 
 ### Gate B - Conversion Reliability
