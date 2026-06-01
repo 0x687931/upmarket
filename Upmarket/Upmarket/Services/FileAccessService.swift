@@ -1,10 +1,39 @@
 import AppKit
 import Foundation
+import OSLog
 import UniformTypeIdentifiers
+
+enum StorageLocationKind: String, Equatable {
+    case local
+    case iCloudDrive
+    case fileProvider
+    case externalVolume
+    case networkVolume
+}
+
+enum FileAccessError: Error, Equatable, LocalizedError {
+    case unavailable
+    case unreadable
+    case notAFile
+    case tooLarge
+
+    var errorDescription: String? {
+        switch self {
+        case .unavailable:
+            return "This document is not available on this Mac. Download it and try again."
+        case .unreadable:
+            return "Upmarket couldn't access this file. Please try again."
+        case .notAFile:
+            return "Choose a document file to convert."
+        case .tooLarge:
+            return "This document is too large to convert safely."
+        }
+    }
+}
 
 /// AppKit file and pasteboard operations kept out of SwiftUI views.
 final class FileAccessService {
-    static let shared = FileAccessService()
+    nonisolated static let shared = FileAccessService()
 
     private init() {}
 
@@ -64,6 +93,60 @@ final class FileAccessService {
 
     func revealInFinder(_ url: URL) {
         NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
+    nonisolated func validateReadableInput(_ url: URL, maxBytes: Int64 = AppWorkspace.maxInputBytes) throws {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer {
+            if scoped {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        guard (try? url.checkResourceIsReachable()) == true else {
+            AppLog.fileAccess.error("Input unavailable before copy; kind=\(Self.storageKind(for: url).rawValue, privacy: .public)")
+            throw FileAccessError.unavailable
+        }
+
+        let values = try url.resourceValues(forKeys: [
+            .isRegularFileKey,
+            .isReadableKey,
+            .fileSizeKey,
+            .isUbiquitousItemKey,
+            .ubiquitousItemDownloadingStatusKey
+        ])
+
+        guard values.isRegularFile != false else { throw FileAccessError.notAFile }
+        guard values.isReadable != false else { throw FileAccessError.unreadable }
+        if let fileSize = values.fileSize, Int64(fileSize) > maxBytes {
+            AppLog.fileAccess.error("Rejected oversized input: bytes=\(fileSize, privacy: .public)")
+            throw FileAccessError.tooLarge
+        }
+
+        if values.isUbiquitousItem == true,
+           let status = values.ubiquitousItemDownloadingStatus,
+           status != .current,
+           status != .downloaded {
+            AppLog.fileAccess.error("Cloud-backed input is not local; status=\(String(describing: status), privacy: .public)")
+            throw FileAccessError.unavailable
+        }
+    }
+
+    nonisolated static func storageKind(for url: URL) -> StorageLocationKind {
+        let path = url.standardizedFileURL.path
+        if path.contains("/Library/Mobile Documents/") || path.contains("/Mobile Documents/") {
+            return .iCloudDrive
+        }
+        if path.contains("/Library/CloudStorage/") {
+            return .fileProvider
+        }
+        if path.hasPrefix("/Volumes/") {
+            return .externalVolume
+        }
+        if path.hasPrefix("/Network/") || path.hasPrefix("/net/") {
+            return .networkVolume
+        }
+        return .local
     }
 
     static let supportedInputTypes: [UTType] = [

@@ -17,6 +17,7 @@ Checks:
 - Xcode project path is valid.
 - App builds with `Upmarket/Upmarket.xcodeproj`.
 - Unit tests pass. PR CI intentionally skips UI automation because launch/UI tests change system appearance during automation.
+- User-facing copy hides internal toolkit names outside licenses and explicit diagnostic previews.
 - Effective `Info.plist` contains required keys.
 - Entitlements match App Store policy.
 - Python bundle imports first-party modules.
@@ -157,6 +158,7 @@ scripts/ci/validate_models.py
 scripts/ci/validate_corpus.py
 scripts/ci/validate_task_registry.py
 scripts/ci/validate_architecture_boundaries.py
+scripts/ci/validate_user_facing_copy.py
 ```
 
 Each script must:

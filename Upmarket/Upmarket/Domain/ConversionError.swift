@@ -6,6 +6,7 @@ enum ConversionError: Error, Equatable, LocalizedError {
     case cancelled
     case noProgress
     case fileTooLarge
+    case sourceUnavailable
     case pythonRuntime(String)
     case failed(String)
 
@@ -21,6 +22,8 @@ enum ConversionError: Error, Equatable, LocalizedError {
             return "Conversion made no progress."
         case .fileTooLarge:
             return "This document is too large to convert safely."
+        case .sourceUnavailable:
+            return "This document is not available on this Mac. Download it and try again."
         case .pythonRuntime:
             return "The conversion engine couldn't start. Please try again."
         case .failed(let message):

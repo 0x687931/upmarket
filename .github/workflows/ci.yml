@@ -26,6 +26,9 @@ jobs:
       - name: Validate architecture boundaries
         run: scripts/ci/validate_architecture_boundaries.py
 
+      - name: Validate user-facing copy
+        run: scripts/ci/validate_user_facing_copy.py
+
       - name: Verify source entitlements
         run: scripts/ci/verify_entitlements.sh
 

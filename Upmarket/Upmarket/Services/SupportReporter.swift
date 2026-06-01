@@ -2,13 +2,13 @@ import Foundation
 
 enum SupportReportCategory: String, CaseIterable, Identifiable {
     case crash = "Crash"
-    case pythonHelper = "Python helper crash or stall"
+    case conversionEngine = "Conversion engine crash or stall"
     case stalledConversion = "Stalled conversion"
     case conversionFailure = "Conversion failure"
-    case modelDownloadFailure = "Model download failure"
-    case storeKitIssue = "StoreKit or payment issue"
-    case appStoreRegression = "App Store/release regression"
-    case featureFlagRegression = "Feature flag regression"
+    case enhancedConversionDownload = "Enhanced conversion download issue"
+    case purchaseIssue = "Purchase or payment issue"
+    case appUpdateIssue = "App update issue"
+    case unexpectedFeatureBehavior = "Unexpected feature behavior"
     case uiAccessibility = "UI/accessibility bug"
 
     var id: String { rawValue }

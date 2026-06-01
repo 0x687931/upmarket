@@ -1,5 +1,5 @@
 name: Crash or Bug Report
-description: Track crashes, conversion failures, StoreKit issues, and release regressions
+description: Track crashes, conversion failures, purchase issues, and release regressions
 title: "[Bug] "
 labels: ["bug"]
 body:
@@ -9,13 +9,13 @@ body:
       label: Failure Type
       options:
         - Crash
-        - Python helper crash or stall
+        - Conversion engine crash or stall
         - Stalled conversion
         - Conversion failure or wrong output
-        - Model download failure
-        - StoreKit or payment issue
-        - App Store/release regression
-        - Feature flag regression
+        - Enhanced conversion download issue
+        - Purchase or payment issue
+        - App update issue
+        - Unexpected feature behavior
         - UI/accessibility bug
         - Other
     validations:

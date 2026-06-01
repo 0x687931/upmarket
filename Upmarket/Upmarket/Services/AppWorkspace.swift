@@ -18,10 +18,17 @@ enum AppWorkspace {
     }
 
     nonisolated static func copy(_ fileURL: URL, into workspace: URL) throws -> URL {
-        let values = try fileURL.resourceValues(forKeys: [.fileSizeKey])
-        if let fileSize = values.fileSize, Int64(fileSize) > maxInputBytes {
-            AppLog.fileAccess.error("Rejected oversized input: bytes=\(fileSize, privacy: .public)")
+        do {
+            try FileAccessService.shared.validateReadableInput(fileURL, maxBytes: maxInputBytes)
+        } catch FileAccessError.tooLarge {
             throw ConversionError.fileTooLarge
+        } catch FileAccessError.unavailable {
+            throw ConversionError.sourceUnavailable
+        } catch FileAccessError.notAFile, FileAccessError.unreadable {
+            throw ConversionError.inaccessible
+        } catch {
+            AppLog.fileAccess.error("Input validation failed before workspace copy: \(error.localizedDescription, privacy: .private)")
+            throw ConversionError.inaccessible
         }
 
         let destination = workspace
@@ -34,7 +41,7 @@ enum AppWorkspace {
             }
         }
         try FileManager.default.copyItem(at: fileURL, to: destination)
-        AppLog.fileAccess.info("Copied input into app workspace; ext=\(fileURL.pathExtension, privacy: .public)")
+        AppLog.fileAccess.info("Copied input into app workspace; ext=\(fileURL.pathExtension, privacy: .public) kind=\(FileAccessService.storageKind(for: fileURL).rawValue, privacy: .public)")
         return destination
     }
 

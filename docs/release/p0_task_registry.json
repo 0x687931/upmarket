@@ -352,6 +352,7 @@
         "Upmarket/Upmarket/Services/ConversionRunner.swift",
         "Upmarket/UpmarketQuickAction/**",
         "Upmarket/Upmarket/Views/**",
+        "scripts/ci/validate_user_facing_copy.py",
         "docs/IMPLEMENTATION_PLAN.md",
         "docs/release/**"
       ],

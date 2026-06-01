@@ -30,6 +30,9 @@ struct ConversionRunner {
         } catch ConversionError.fileTooLarge {
             AppLog.conversion.error("Conversion rejected oversized file correlationID=\(job.correlationID, privacy: .public)")
             return .failure(ConversionError.fileTooLarge.errorDescription ?? "This document is too large to convert safely.")
+        } catch ConversionError.sourceUnavailable {
+            AppLog.conversion.error("Conversion source unavailable correlationID=\(job.correlationID, privacy: .public)")
+            return .failure(ConversionError.sourceUnavailable.errorDescription ?? "This document is not available on this Mac.")
         } catch {
             AppLog.conversion.error("Conversion input copy failed correlationID=\(job.correlationID, privacy: .public) error=\(error.localizedDescription, privacy: .private)")
             return .failure(ConversionError.inaccessible.errorDescription ?? "Upmarket couldn't access this file.")

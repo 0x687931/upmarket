@@ -73,13 +73,13 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Wrap delayed document reads/writes in security-scoped access or persist security-scoped bookmarks when user interaction can delay conversion.
 
 ### P0 - Apple Storage and User-Facing Abstraction
-- [ ] Validate iCloud Drive, Desktop/Documents-in-iCloud, external drives, network volumes, File Provider locations, and app sandbox container behavior.
-- [ ] Centralize all user-selected file reads, delayed reads, saves, bookmarks, pasteboard operations, Quick Action handoff, temp workspaces, and cleanup in concrete file/storage services.
-- [ ] Use security-scoped access/bookmarks when conversion can be delayed or handed off; do not rely on raw paths for app, extension, or queued conversion handoff.
-- [ ] Detect unavailable/evicted iCloud or File Provider files before conversion and show an action-oriented message without exposing implementation internals.
-- [ ] Add storage fixtures/manual release checks for local file, iCloud downloaded, iCloud evicted, File Provider, external volume, read-only source, and save-location denial.
-- [ ] Keep user-facing copy product-level: do not mention Python, Docling, pdfium, model package names, or other implementation toolkits outside licenses and explicit diagnostic previews.
-- [ ] Add a UI copy audit to release validation for shelf stages, errors, preferences, paywall, support reports, App Store text, and onboarding.
+- [x] Validate iCloud Drive, Desktop/Documents-in-iCloud, external drives, network volumes, File Provider locations, and app sandbox container behavior.
+- [x] Centralize all user-selected file reads, delayed reads, saves, bookmarks, pasteboard operations, Quick Action handoff, temp workspaces, and cleanup in concrete file/storage services.
+- [x] Use security-scoped access/bookmarks when conversion can be delayed or handed off; do not rely on raw paths for app, extension, or queued conversion handoff.
+- [x] Detect unavailable/evicted iCloud or File Provider files before conversion and show an action-oriented message without exposing implementation internals.
+- [x] Add storage fixtures/manual release checks for local file, iCloud downloaded, iCloud evicted, File Provider, external volume, read-only source, and save-location denial.
+- [x] Keep user-facing copy product-level: do not mention Python, Docling, pdfium, model package names, or other implementation toolkits outside licenses and explicit diagnostic previews.
+- [x] Add a UI copy audit to release validation for shelf stages, errors, preferences, paywall, support reports, App Store text, and onboarding.
 
 ### P0 - App Store Metadata and Entitlements
 - [x] Merge URL scheme and Services registration into the effective app `Info.plist`, not a copied resource plist.
