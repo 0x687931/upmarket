@@ -23,6 +23,9 @@ jobs:
       - name: Validate P0 task registry
         run: scripts/ci/validate_task_registry.py
 
+      - name: Validate P0 implementation plan sync
+        run: scripts/ci/validate_p0_plan_sync.py
+
       - name: Validate architecture boundaries
         run: scripts/ci/validate_architecture_boundaries.py
 

@@ -35,6 +35,7 @@ LABELS = {
     "upstream-adopted": ("0e8a16", "Validated upstream change has been adopted"),
     "upstream-rejected": ("b60205", "Upstream change was rejected for this app"),
     "upstream-blocked": ("d93f0b", "Waiting on upstream, security, license, or release review"),
+    "upstream-fork": ("5319e7", "Temporary fork or cherry-pick under validation"),
 }
 
 

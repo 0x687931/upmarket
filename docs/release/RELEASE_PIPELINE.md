@@ -157,6 +157,7 @@ scripts/ci/smoke_convert_offline.sh
 scripts/ci/validate_models.py
 scripts/ci/validate_corpus.py
 scripts/ci/validate_task_registry.py
+scripts/ci/validate_p0_plan_sync.py
 scripts/ci/validate_architecture_boundaries.py
 scripts/ci/validate_user_facing_copy.py
 ```

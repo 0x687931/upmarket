@@ -281,8 +281,10 @@
       "owner": "Codex main",
       "scope": [
         "docs/release/AGENT_TASK_ORCHESTRATION.md",
+        "docs/IMPLEMENTATION_PLAN.md",
         "docs/release/p0_task_registry.json",
         "scripts/ci/validate_task_registry.py",
+        "scripts/ci/validate_p0_plan_sync.py",
         "scripts/github/sync_task_issues.py",
         ".github/workflows/**"
       ],

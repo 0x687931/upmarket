@@ -40,6 +40,7 @@ KNOWN_LABELS = {
     "upstream-adopted",
     "upstream-rejected",
     "upstream-blocked",
+    "upstream-fork",
 }
 
 

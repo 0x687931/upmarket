@@ -80,6 +80,7 @@ P0 implementation work is tracked in `docs/release/p0_task_registry.json`. Valid
 
 ```sh
 scripts/ci/validate_task_registry.py
+scripts/ci/validate_p0_plan_sync.py
 ```
 
 Create or update GitHub labels and task issues with:
@@ -89,6 +90,18 @@ scripts/github/sync_task_issues.py --apply
 ```
 
 Run without `--apply` first to preview the labels and issues that would be touched.
+
+## Main Codex Integration Gate
+
+The main Codex session owns final integration. Worker output, audit findings, and GitHub issue changes are not done until the main session has:
+
+- reconciled changed scope with `docs/release/p0_task_registry.json`;
+- updated `docs/IMPLEMENTATION_PLAN.md` when P0 scope, acceptance, or completion state changes;
+- run `scripts/ci/validate_task_registry.py` and `scripts/ci/validate_p0_plan_sync.py`;
+- synced GitHub task issues when registry content changes;
+- recorded validation evidence in the commit, issue comment, or handoff.
+
+This gate is intentionally small: it prevents the implementation plan, registry, and GitHub issues from drifting while still keeping tasks lightweight.
 
 ## Release Hooks
 
