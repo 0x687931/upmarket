@@ -56,6 +56,10 @@ PATHWAYS = {
     },
 }
 
+_RAPIDOCR_ENGINE = None
+_PADDLEOCR_ENGINE = None
+ISOLATED_REFERENCE_PATHWAYS = {"internal-reference-paddleocr"}
+
 
 # ── Scoring ───────────────────────────────────────────────────────────────────
 
@@ -308,20 +312,19 @@ def _convert_via_poppler_reference(doc_path: Path) -> tuple[str, float]:
 
 def _convert_via_rapidocr_reference(doc_path: Path) -> tuple[str, float]:
     """Developer-only RapidOCR reference pathway. This must never ship in the app."""
+    global _RAPIDOCR_ENGINE
     start = time.time()
-    try:
-        from rapidocr_onnxruntime import RapidOCR  # type: ignore
-    except Exception:
+    if _RAPIDOCR_ENGINE is None:
         try:
             from rapidocr import RapidOCR  # type: ignore
         except Exception as exc:
             raise RuntimeError("RapidOCR reference package is not installed in this developer environment") from exc
+        _RAPIDOCR_ENGINE = RapidOCR()
 
-    engine = RapidOCR()
     pages = _ocr_input_images(doc_path)
     parts = []
     for index, image_path in enumerate(pages, start=1):
-        result, _ = engine(str(image_path))
+        result = _RAPIDOCR_ENGINE(str(image_path))
         text = _rapidocr_text(result)
         if text:
             parts.append(f"## Page {index}\n\n{text}")
@@ -330,17 +333,24 @@ def _convert_via_rapidocr_reference(doc_path: Path) -> tuple[str, float]:
 
 def _convert_via_paddleocr_reference(doc_path: Path) -> tuple[str, float]:
     """Developer-only PaddleOCR reference pathway. This must never ship in the app."""
+    global _PADDLEOCR_ENGINE
     start = time.time()
-    try:
-        from paddleocr import PaddleOCR  # type: ignore
-    except Exception as exc:
-        raise RuntimeError("PaddleOCR reference package is not installed in this developer environment") from exc
+    if _PADDLEOCR_ENGINE is None:
+        try:
+            from paddleocr import PaddleOCR  # type: ignore
+        except Exception as exc:
+            raise RuntimeError("PaddleOCR reference package is not installed in this developer environment") from exc
 
-    engine = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
+        _PADDLEOCR_ENGINE = PaddleOCR(
+            lang="en",
+            use_doc_orientation_classify=False,
+            use_doc_unwarping=False,
+            use_textline_orientation=False,
+        )
     pages = _ocr_input_images(doc_path)
     parts = []
     for index, image_path in enumerate(pages, start=1):
-        result = engine.ocr(str(image_path), cls=True)
+        result = _PADDLEOCR_ENGINE.predict(str(image_path))
         text = _paddleocr_text(result)
         if text:
             parts.append(f"## Page {index}\n\n{text}")
@@ -376,6 +386,12 @@ def _ocr_input_images(doc_path: Path) -> list[Path]:
 
 
 def _rapidocr_text(result) -> str:
+    if hasattr(result, "txts"):
+        return "\n".join(str(text) for text in (result.txts or []) if text)
+    if hasattr(result, "to_markdown"):
+        markdown = result.to_markdown()
+        if markdown:
+            return str(markdown)
     lines = []
     for item in result or []:
         if isinstance(item, (list, tuple)) and len(item) >= 2:
@@ -390,6 +406,19 @@ def _rapidocr_text(result) -> str:
 def _paddleocr_text(result) -> str:
     lines = []
     for page in result or []:
+        if isinstance(page, dict):
+            rec_texts = page.get("rec_texts") or page.get("text") or []
+            if isinstance(rec_texts, str):
+                lines.append(rec_texts)
+            else:
+                lines.extend(str(text) for text in rec_texts if text)
+            continue
+        if hasattr(page, "json"):
+            data = page.json
+            if isinstance(data, dict):
+                rec_texts = data.get("rec_texts") or []
+                lines.extend(str(text) for text in rec_texts if text)
+            continue
         for item in page or []:
             if isinstance(item, (list, tuple)) and len(item) >= 2:
                 text_info = item[1]
@@ -435,6 +464,37 @@ print(json.dumps(result))
     if result.get("success"):
         return result["markdown"], result.get("elapsed", elapsed)
     raise RuntimeError(result.get("error", "Unknown error"))
+
+
+def convert_document_isolated(doc_path: Path, pipeline: str, pathway: str, timeout_seconds: int) -> tuple[str, float]:
+    """Run crash-prone benchmark-only converters out of process."""
+    import subprocess
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(Path(__file__).resolve()),
+            "--convert-one",
+            str(doc_path),
+            "--pipeline",
+            pipeline,
+            "--pathway",
+            pathway,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=timeout_seconds,
+    )
+    lines = [line for line in proc.stdout.splitlines() if line.startswith("{")]
+    if proc.returncode != 0:
+        detail = proc.stderr.strip() or proc.stdout.strip() or f"worker exited {proc.returncode}"
+        raise RuntimeError(detail[-500:])
+    if not lines:
+        raise RuntimeError("isolated converter produced no JSON result")
+    result = json.loads(lines[-1])
+    if not result.get("success"):
+        raise RuntimeError(result.get("error", "isolated converter failed"))
+    return result.get("markdown", ""), float(result.get("elapsed_seconds", 0.0))
 
 
 # ── Runner ────────────────────────────────────────────────────────────────────
@@ -484,6 +544,14 @@ def run_benchmark(
     )
     os.environ.setdefault("TMPDIR", str((Path.cwd() / "build" / "benchmark-tmp").resolve()))
     os.environ["UPMARKET_BENCHMARK_COMPUTE_MODE"] = compute_mode
+    benchmark_cache = Path.cwd() / "reports" / "benchmark-cache"
+    benchmark_cache.mkdir(parents=True, exist_ok=True)
+    os.environ.setdefault("PADDLE_PDX_CACHE_HOME", str((benchmark_cache / "paddlex").resolve()))
+    os.environ.setdefault("PADDLE_HOME", str((benchmark_cache / "paddle").resolve()))
+    os.environ.setdefault("HF_HOME", str((benchmark_cache / "huggingface").resolve()))
+    os.environ.setdefault("MODELSCOPE_CACHE", str((benchmark_cache / "modelscope").resolve()))
+    os.environ.setdefault("XDG_CACHE_HOME", str((benchmark_cache / "xdg").resolve()))
+    os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
 
     if not manifest_path.exists():
         print(f"No manifest.json found in {corpus_dir}")
@@ -542,19 +610,29 @@ def run_benchmark(
         try:
             import signal
 
-            def _timeout_handler(signum, frame):
-                raise TimeoutError("Conversion timed out after 30s")
-
-            signal.signal(signal.SIGALRM, _timeout_handler)
-            signal.alarm(30)
-            try:
-                elapsed_runs = []
-                markdown = ""
+            elapsed_runs = []
+            markdown = ""
+            if pathway in ISOLATED_REFERENCE_PATHWAYS:
                 for _ in range(repeat_count):
-                    markdown, elapsed = convert_document(file_path, pipeline or "fast", pathway or None)
+                    markdown, elapsed = convert_document_isolated(
+                        file_path,
+                        pipeline or "fast",
+                        pathway,
+                        timeout_seconds=45,
+                    )
                     elapsed_runs.append(elapsed)
-            finally:
-                signal.alarm(0)
+            else:
+                def _timeout_handler(signum, frame):
+                    raise TimeoutError("Conversion timed out after 30s")
+
+                signal.signal(signal.SIGALRM, _timeout_handler)
+                signal.alarm(30)
+                try:
+                    for _ in range(repeat_count):
+                        markdown, elapsed = convert_document(file_path, pipeline or "fast", pathway or None)
+                        elapsed_runs.append(elapsed)
+                finally:
+                    signal.alarm(0)
 
             score = score_document(markdown, doc_meta, ground_truth_md)
             score.file = doc_meta.get("file", "")
@@ -674,7 +752,8 @@ def write_json_report(path: Path, pipeline: str, pathway: str | None, scores: li
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Upmarket benchmark scorer")
-    parser.add_argument("--corpus", required=True)
+    parser.add_argument("--corpus")
+    parser.add_argument("--convert-one", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--pipeline", default="")
     parser.add_argument("--pathway", default="")
     parser.add_argument("--category", default="")
@@ -683,6 +762,18 @@ if __name__ == "__main__":
     parser.add_argument("--compute-mode", choices=("auto", "cpu", "gpu", "ane"), default="auto", help="requested compute mode for pathways that support CPU/GPU/Apple Neural Engine selection")
     parser.add_argument("--json-output", type=Path)
     args = parser.parse_args()
+
+    if args.convert_one:
+        try:
+            markdown, elapsed = convert_document(args.convert_one, args.pipeline or "fast", args.pathway or None)
+            print(json.dumps({"success": True, "markdown": markdown, "elapsed_seconds": elapsed}))
+            sys.exit(0)
+        except Exception as exc:
+            print(json.dumps({"success": False, "error": str(exc)}))
+            sys.exit(1)
+
+    if not args.corpus:
+        parser.error("--corpus is required unless --convert-one is used")
 
     sys.exit(run_benchmark(
         corpus_dir=Path(args.corpus),

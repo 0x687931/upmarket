@@ -1,0 +1,10 @@
+# Upmarket forensic benchmark-only dependencies.
+#
+# These packages are for local comparison runs only. They must not be copied
+# into the app bundle or added to requirements.txt without an ADR/license review.
+
+PyMuPDF==1.27.2.3
+rapidocr==3.8.1
+onnxruntime==1.26.0
+paddleocr==3.6.0
+paddlepaddle==3.3.1

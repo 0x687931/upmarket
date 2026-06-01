@@ -39,6 +39,7 @@ Checks:
 - Corpus benchmark output must meet `docs/release/corpus_baseline.json`; downgrades block release.
 - Pathway benchmark output must meet `docs/release/corpus_pathway_baseline.json`; each corpus file is measured against every valid convert-to-Markdown pathway before release.
 - Release-candidate CI uploads `corpus-pathway-comparison`, containing the Markdown comparison and JSON document-level results for owner review before shipping.
+- Forensic benchmark inventory records exact benchmark package versions, binary versions, corpus source commits, benchmark-only model cache artifacts, and cache roots.
 - Model missing/corrupt behavior.
 - Diagnostic bundle generation.
 - Privacy-sensitive logs are redacted.
@@ -96,6 +97,16 @@ latest-upstream -> candidate -> current
 ```
 
 No dependency moves to `current` without corpus smoke, packaged import, offline conversion validation, license review, rollback notes, and human review.
+
+## Benchmark Optimisation Loop
+
+Do not change conversion queue concurrency from intuition. Use the corpus/pathway benchmark matrix to compare serial and parallel execution separately from converter quality:
+
+- run the same corpus, pathway, dependency versions, and model cache;
+- record accuracy, average wall time, total wall time, failures, timeouts, and system load;
+- separate CPU-only, OS-managed Apple acceleration, and explicit GPU-capable paths;
+- treat large OCR/model paths as isolated work so a stall or native crash cannot block the app;
+- only promote a concurrency change when it improves throughput without quality downgrade, UI responsiveness loss, memory pressure risk, or worse failure recovery.
 
 ## Upstream Issue and Patch Intake
 

@@ -87,7 +87,14 @@ def main() -> int:
         "| --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |",
     ])
 
-    pathway_ids = sorted(set(pathways) | set(reports_by_pathway))
+    pathway_ids = sorted(
+        set(reports_by_pathway)
+        | {
+            pathway
+            for pathway in pathways
+            if not any(report == pathway or report.startswith(f"{pathway}@") for report in reports_by_pathway)
+        }
+    )
     for pathway_id in pathway_ids:
         report = reports_by_pathway.get(pathway_id)
         config = pathways.get(pathway_id.split("@", 1)[0], {})

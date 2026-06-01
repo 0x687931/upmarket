@@ -246,8 +246,10 @@
       "owner": "Security/Privacy",
       "scope": [
         "requirements.txt",
+        "requirements-benchmark.txt",
         "requirements-candidate.txt",
         "scripts/update_dependencies.sh",
+        "scripts/benchmark_inventory.py",
         "scripts/ci/validate_dependency_lock.py",
         "scripts/ci/watch_upstream.py",
         "scripts/ci/validate_corpus.py",
@@ -257,6 +259,8 @@
         "docs/release/corpus_baseline.json",
         "docs/release/corpus_pathway_baseline.json",
         "docs/release/conversion_pathways.json",
+        "docs/release/BENCHMARK_INVENTORY.md",
+        "docs/release/CORPUS_BENCHMARKS.md",
         "docs/release/RELEASE_PIPELINE.md",
         "docs/release/DEPENDENCY_POLICY.md",
         ".github/workflows/nightly-upstream.yml",
@@ -276,6 +280,8 @@
         "Conversion-quality upstream changes require corpus fixture or benchmark coverage before adoption and cannot downgrade the stored corpus baseline.",
         "Release-candidate corpus comparison artifacts expose pathway-level results before shipping.",
         "Corpus benchmark reports include accuracy, repeat-count average wall time, requested compute mode, and documented CPU/GPU/Apple Neural Engine capability per pathway.",
+        "Forensic benchmark inventory records package versions, binary versions, corpus source commits, benchmark-only model cache artifacts, and cache roots before a release decision.",
+        "Future optimisation decisions compare serial versus parallel document processing using the same corpus, pathway, accuracy, wall-time, failure, and system-load evidence.",
         "Local patches to upstream behavior require ADRs with removal conditions and packaged-app validation.",
         "Forks and cherry-picks are tracked as temporary candidates pinned to immutable commits or packaged artifacts with upstream PR context and rollback plans."
       ],
