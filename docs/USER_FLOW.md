@@ -73,6 +73,5 @@ bar recovery.
 - `upmarket.tourComplete`: first-launch tour state.
 - `upmarket.shelfAnchor`: saved shelf corner.
 - `upmarket.freeDocsRemaining`: free conversion count.
-- `upmarket.packCredits`: remaining pack credits.
-- `upmarket.packsEverPurchased`: upgrade nudge history.
+- `~/Library/Application Support/Upmarket/PackCreditLedger.json`: verified pack credits and conversion debits.
 - Model files live under `~/Library/Application Support/Upmarket/models/`.

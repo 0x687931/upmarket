@@ -77,7 +77,7 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Add `NSSpeechRecognitionUsageDescription` to the effective app `Info.plist` before any Speech framework authorization call.
 - [x] Fix App Group identifiers to a registered `group.com.upmarket.app` style value across app and extension.
 - [x] Redesign Quick Action handoff using App Group storage plus security-scoped bookmarks or copied files; do not trust arbitrary custom-URL file paths.
-- [ ] Reassess consumable document packs: avoid client-authoritative `UserDefaults` balances or move consumable accounting to a verifiable App Store/server-backed model.
+- [x] Reassess consumable document packs: avoid client-authoritative `UserDefaults` balances or move consumable accounting to a verifiable App Store/server-backed model.
 
 ### P0 - Observability, CI, and Release Validation
 - [ ] Fix CI to build and test `Upmarket/Upmarket.xcodeproj`.
@@ -235,6 +235,7 @@ This is a launch requirement, not post-launch polish.
 - [ ] Liveness monitor state transitions
 - [ ] ModelManager check/download/delete error handling
 - [ ] StoreManager product loading, entitlement refresh, pack credit consumption, restore
+  - [x] Pack credits are derived from a verified transaction/debit ledger instead of a `UserDefaults` balance.
 - [ ] XCUITest for drop zone, conversion result, paywall, preferences, and model download prompt
 
 ## Product Workstream

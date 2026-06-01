@@ -47,6 +47,7 @@ final class StoreManager: ObservableObject {
     }
 
     private let lastTrialPromptKey = "upmarket.lastTrialPaywallPromptRemaining"
+    private let packLedger = PackCreditLedger()
 
     private var transactionListener: Task<Void, Error>?
 
@@ -55,8 +56,7 @@ final class StoreManager: ObservableObject {
         Task { await loadProducts() }
         Task { await refreshEntitlement() }
         freeDocsRemaining  = UserDefaults.standard.object(forKey: "upmarket.freeDocsRemaining") as? Int ?? 3
-        packCredits        = UserDefaults.standard.integer(forKey: "upmarket.packCredits")
-        packsEverPurchased = UserDefaults.standard.integer(forKey: "upmarket.packsEverPurchased")
+        loadPackSnapshot()
     }
 
     deinit { transactionListener?.cancel() }
@@ -124,9 +124,14 @@ final class StoreManager: ObservableObject {
         }
 
         if packCredits > 0 {
-            packCredits -= 1
-            UserDefaults.standard.set(packCredits, forKey: "upmarket.packCredits")
-            return true
+            do {
+                guard try packLedger.consumeCredit() else { return false }
+                loadPackSnapshot()
+                return true
+            } catch {
+                print("[StoreManager] Failed to consume pack credit: \(error)")
+                return false
+            }
         }
 
         return false
@@ -150,12 +155,7 @@ final class StoreManager: ObservableObject {
         case .success(let verification):
             let transaction = try checkVerified(verification)
             if transaction.productID == Self.packID {
-                await MainActor.run {
-                    self.packCredits += 5
-                    self.packsEverPurchased += 1
-                    UserDefaults.standard.set(self.packCredits, forKey: "upmarket.packCredits")
-                    UserDefaults.standard.set(self.packsEverPurchased, forKey: "upmarket.packsEverPurchased")
-                }
+                try await recordPackTransaction(transaction)
             } else {
                 await refreshEntitlement()
             }
@@ -230,12 +230,7 @@ final class StoreManager: ObservableObject {
             for await result in Transaction.updates {
                 guard let transaction = try? self.checkVerified(result) else { continue }
                 if transaction.productID == Self.packID {
-                    await MainActor.run {
-                        self.packCredits += 5
-                        self.packsEverPurchased += 1
-                        UserDefaults.standard.set(self.packCredits, forKey: "upmarket.packCredits")
-                        UserDefaults.standard.set(self.packsEverPurchased, forKey: "upmarket.packsEverPurchased")
-                    }
+                    try? await self.recordPackTransaction(transaction)
                 } else {
                     await self.refreshEntitlement()
                 }
@@ -248,6 +243,31 @@ final class StoreManager: ObservableObject {
         switch result {
         case .unverified: throw StoreError.failedVerification
         case .verified(let value): return value
+        }
+    }
+
+    private func recordPackTransaction(_ transaction: Transaction) async throws {
+        let snapshot: PackCreditLedger.Snapshot
+        if transaction.revocationDate == nil {
+            snapshot = try packLedger.recordPackPurchase(transactionID: transaction.id)
+        } else {
+            snapshot = try packLedger.revokePackPurchase(transactionID: transaction.id)
+        }
+        await MainActor.run { self.applyPackSnapshot(snapshot) }
+    }
+
+    private func applyPackSnapshot(_ snapshot: PackCreditLedger.Snapshot) {
+        packCredits = snapshot.availableCredits
+        packsEverPurchased = snapshot.purchasedPackCount
+    }
+
+    private func loadPackSnapshot() {
+        do {
+            applyPackSnapshot(try packLedger.snapshot())
+        } catch {
+            packCredits = 0
+            productLoadError = "Purchase records could not be read. Please contact support before buying another document pack."
+            print("[StoreManager] Failed to read pack credit ledger: \(error)")
         }
     }
 }

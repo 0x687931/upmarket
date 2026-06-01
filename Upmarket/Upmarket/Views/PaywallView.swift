@@ -26,6 +26,7 @@ struct PaywallView: View {
                     }
                     packCard
                     productStatus
+                    purchaseStatus
                     restoreButton
                 }
                 .padding(24)
@@ -267,6 +268,27 @@ struct PaywallView: View {
         }
     }
 
+    @ViewBuilder private var purchaseStatus: some View {
+        if let errorMessage {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundStyle(.orange)
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Dismiss") {
+                    self.errorMessage = nil
+                }
+                .buttonStyle(.plain)
+                .font(.caption)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(10)
+            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        }
+    }
+
     private var legalFooter: some View {
         Text(L("paywall.footer"))
             .font(.caption2)
@@ -297,7 +319,7 @@ struct PaywallView: View {
             onPurchaseComplete?()
             dismiss()
         } catch {
-            errorMessage = "Purchase failed. Please try again."
+            errorMessage = "Purchase could not be completed. Please try again or use Restore Purchases."
         }
         isPurchasing = nil
     }
