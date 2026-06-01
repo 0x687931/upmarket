@@ -123,8 +123,8 @@ def _convert_fast_other(path: Path) -> dict:
     """
     Fast path for non-PDF formats.
     Routes by extension to the best available handler:
-      - Images (WEBP, TIF, BMP, GIF): Pillow metadata + OCR description
-      - Audio/Video (FLAC, AVI, MOV + all others): ffprobe metadata + pydub waveform info
+      - Images: handled in Swift with ImageIO before Python fallback
+      - Audio/Video: handled in Swift with AVFoundation before Python fallback
       - Everything else: markitdown (MIT, Microsoft) — DOCX, PPTX, XLSX, HTML, CSV, EPUB
     """
     suffix = path.suffix.lower()
@@ -133,11 +133,10 @@ def _convert_fast_other(path: Path) -> dict:
     if suffix in ('.webp', '.tif', '.tiff', '.bmp', '.gif'):
         return _convert_image_pillow(path)
 
-    # Audio/video — always use ffprobe for metadata (never markitdown's whisper/SR path)
-    # markitdown's audio transcription requires whisper/speech_recognition and fails on silence
+    # Audio/video metadata is a native Swift responsibility.
     if suffix in ('.flac', '.avi', '.mov', '.ogg', '.aac', '.wma', '.wmv', '.mkv', '.m4v',
                   '.wav', '.mp3', '.m4a', '.mp4', '.mpeg', '.webm'):
-        return _convert_media_ffprobe(path)
+        return _error("Upmarket couldn't read this media file.")
 
     # Everything else: markitdown — with graceful partial-content fallback
     try:
@@ -214,10 +213,9 @@ def _convert_pptx_safe(path: Path) -> dict:
 
 
 def _convert_image_pillow(path: Path) -> dict:
-    """Extract image metadata and description via Pillow + optional exiftool."""
+    """Basic image fallback. Primary image metadata extraction is native Swift ImageIO."""
     try:
         from PIL import Image
-        import subprocess, json
 
         img = Image.open(str(path))
         width, height = img.size
@@ -232,94 +230,15 @@ def _convert_image_pillow(path: Path) -> dict:
             f"**Color mode:** {mode}  ",
         ]
 
-        # Try exiftool for rich metadata
-        try:
-            result = subprocess.run(
-                ['exiftool', '-json', '-q', str(path)],
-                capture_output=True, text=True, timeout=5
-            )
-            if result.returncode == 0:
-                meta = json.loads(result.stdout)[0]
-                interesting = ['Make', 'Model', 'DateTimeOriginal', 'GPSLatitude', 'GPSLongitude',
-                               'Title', 'Description', 'Author', 'Copyright', 'Software']
-                exif_lines = []
-                for key in interesting:
-                    if key in meta:
-                        exif_lines.append(f"**{key}:** {meta[key]}")
-                if exif_lines:
-                    lines.append("")
-                    lines.append("## Metadata")
-                    lines.extend(exif_lines)
-        except Exception:
-            pass
-
         return _success("\n".join(lines), 1, path, pipeline="fast")
     except Exception as e:
         print(f"[Upmarket] Pillow error: {e}", file=sys.stderr)
         return _error(f"Upmarket couldn't read this image file.")
 
 
-def _convert_media_ffprobe(path: Path) -> dict:
-    """Extract audio/video metadata using ffprobe."""
-    import subprocess, json
-
-    try:
-        result = subprocess.run(
-            ['ffprobe', '-v', 'quiet', '-print_format', 'json',
-             '-show_format', '-show_streams', str(path)],
-            capture_output=True, text=True, timeout=10
-        )
-        if result.returncode != 0:
-            raise RuntimeError(result.stderr)
-
-        data = json.loads(result.stdout)
-        fmt = data.get('format', {})
-        streams = data.get('streams', [])
-
-        duration = float(fmt.get('duration', 0))
-        mins, secs = divmod(int(duration), 60)
-        format_name = fmt.get('format_long_name', fmt.get('format_name', 'Unknown'))
-        size_mb = int(fmt.get('size', 0)) / 1024 / 1024
-        bitrate = int(fmt.get('bit_rate', 0)) // 1000
-
-        lines = [
-            f"# Media: {path.name}",
-            "",
-            f"**Format:** {format_name}  ",
-            f"**Duration:** {mins}:{secs:02d}  ",
-            f"**Size:** {size_mb:.1f} MB  ",
-        ]
-        if bitrate:
-            lines.append(f"**Bitrate:** {bitrate} kbps  ")
-
-        # Stream details
-        for stream in streams:
-            codec = stream.get('codec_type', 'unknown')
-            codec_name = stream.get('codec_name', 'unknown')
-            if codec == 'audio':
-                sample_rate = stream.get('sample_rate', '?')
-                channels = stream.get('channels', '?')
-                lines.append(f"**Audio:** {codec_name}, {sample_rate}Hz, {channels}ch  ")
-            elif codec == 'video':
-                w = stream.get('width', '?')
-                h = stream.get('height', '?')
-                fps = stream.get('avg_frame_rate', '?')
-                lines.append(f"**Video:** {codec_name}, {w}×{h}, {fps}fps  ")
-
-        # Tags (title, artist, album etc)
-        tags = fmt.get('tags', {})
-        tag_keys = ['title', 'artist', 'album', 'date', 'comment', 'description']
-        tag_lines = [f"**{k.title()}:** {tags[k]}" for k in tag_keys if k in tags]
-        if tag_lines:
-            lines.append("")
-            lines.append("## Tags")
-            lines.extend(tag_lines)
-
-        return _success("\n".join(lines), 1, path, pipeline="fast")
-
-    except Exception as e:
-        print(f"[Upmarket] ffprobe error: {e}", file=sys.stderr)
-        return _error(f"Upmarket couldn't read this media file.")
+def _convert_media_native_only(path: Path) -> dict:
+    """Deprecated compatibility shim. Media metadata is extracted with AVFoundation."""
+    return _error(f"Upmarket couldn't read this media file.")
 
 
 def _convert_enhanced(path: Path, opts: dict) -> dict:

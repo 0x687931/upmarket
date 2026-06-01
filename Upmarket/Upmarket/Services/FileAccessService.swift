@@ -30,6 +30,12 @@ final class FileAccessService {
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
 
         do {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer {
+                if scoped {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
             try markdown.write(to: url, atomically: true, encoding: .utf8)
             return url
         } catch {

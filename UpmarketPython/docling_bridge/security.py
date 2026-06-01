@@ -32,14 +32,16 @@ def validate_file_path(file_path: str) -> str:
     """
     path = Path(file_path).resolve()
 
-    # Reject path traversal attempts
-    # The resolved path must be within the user's home or /tmp
+    # Reject path traversal attempts. Swift copies user-selected files into an
+    # app-owned per-job workspace and passes that root through the environment.
+    configured_roots = os.environ.get("UPMARKET_ALLOWED_INPUT_ROOTS", "")
     allowed_roots = [
-        Path.home(),
-        Path("/tmp"),
-        Path("/private/tmp"),
-        Path("/var/folders"),
+        Path(root)
+        for root in configured_roots.split(os.pathsep)
+        if root
     ]
+    if not allowed_roots:
+        raise ValueError("No allowed input workspace configured")
     if not any(_is_within(path, root) for root in allowed_roots):
         raise ValueError(f"File path outside allowed directories: {path}")
 
@@ -85,8 +87,8 @@ class SafeRegex:
     Prevents ReDoS by ensuring worst-case runtime is bounded.
 
     Rules for safe regex patterns (enforced by code review, not this class):
-    - No nested quantifiers: never `(\s*\.\s*)+` or `(a+)+`
-    - Use character classes `[. ]+` not grouped alternation `(\.|\ )+`
+    - No nested quantifiers: never `(\\s*\\.\\s*)+` or `(a+)+`
+    - Use character classes `[. ]+` not grouped alternation `(\\.|\\ )+`
     - Anchor patterns where possible: `^` and `$`
     - Prefer `re.match` (anchored) over `re.search` for validation
     """

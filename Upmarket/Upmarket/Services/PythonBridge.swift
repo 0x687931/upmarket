@@ -77,6 +77,41 @@ actor PythonRuntime {
         }
     }
 
+    func withPythonEnvironment<T: Sendable>(
+        _ environment: [String: String],
+        operation: () throws -> T
+    ) async throws -> T {
+        if !isReady { setup() }
+        guard isReady else {
+            throw lastError ?? PythonBridgeError.runtimeUnavailable("Python did not initialise.")
+        }
+
+        var previous: [String: String?] = [:]
+        for key in environment.keys {
+            previous[key] = getenv(key).map { String(cString: $0) }
+        }
+        for (key, value) in environment {
+            setenv(key, value, 1)
+        }
+        defer {
+            for (key, value) in previous {
+                if let value {
+                    setenv(key, value, 1)
+                } else {
+                    unsetenv(key)
+                }
+            }
+        }
+
+        do {
+            return try operation()
+        } catch let error as PythonBridgeError {
+            throw error
+        } catch {
+            throw PythonBridgeError.callFailed(error.localizedDescription)
+        }
+    }
+
     func withPythonDownload<T: Sendable>(_ operation: () throws -> T) async throws -> T {
         if !isReady { setup() }
         guard isReady else {

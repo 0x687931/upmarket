@@ -56,13 +56,14 @@ struct ConvertDocumentIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        // Write to temp file for conversion
-        let tempURL = FileManager.default.temporaryDirectory
+        let workspace = try AppWorkspace.create(prefix: "intent")
+        defer { AppWorkspace.remove(workspace) }
+
+        let tempURL = workspace
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension(document.filename.components(separatedBy: ".").last ?? "pdf")
 
         try document.data.write(to: tempURL)
-        defer { try? FileManager.default.removeItem(at: tempURL) }
 
         let result = await ConversionQueue.shared.convert(tempURL, useAI: useAI)
         guard case .success(let output) = result else {
@@ -101,7 +102,9 @@ struct ConvertAndSaveIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult & ReturnsValue<IntentFile> {
-        let tempURL = FileManager.default.temporaryDirectory
+        let workspace = try AppWorkspace.create(prefix: "intent")
+
+        let tempURL = workspace
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension(document.filename.components(separatedBy: ".").last ?? "pdf")
 
@@ -115,7 +118,7 @@ struct ConvertAndSaveIntent: AppIntent {
 
         // Save the markdown
         let baseName = document.filename.components(separatedBy: ".").dropLast().joined(separator: ".")
-        let saveURL = FileManager.default.temporaryDirectory
+        let saveURL = workspace
             .appendingPathComponent(baseName.isEmpty ? "converted" : baseName)
             .appendingPathExtension("md")
 

@@ -141,7 +141,17 @@ final class ModelManager: ObservableObject {
     }
 
     private func downloadSingleModel(key: String) async {
-        let progressFile = FileManager.default.temporaryDirectory
+        let workspace = try? AppWorkspace.create(prefix: "model-download")
+        if workspace == nil {
+            try? FileManager.default.createDirectory(at: AppWorkspace.baseDirectory, withIntermediateDirectories: true)
+        }
+        defer {
+            if let workspace {
+                AppWorkspace.remove(workspace)
+            }
+        }
+
+        let progressFile = (workspace ?? AppWorkspace.baseDirectory)
             .appendingPathComponent("upmarket_\(key)_progress.jsonl")
             .path
 

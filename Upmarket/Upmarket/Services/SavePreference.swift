@@ -71,6 +71,13 @@ final class SavePreference {
                 return showSavePanel(defaultName: fileName, markdown: markdown)
             }
             let saveURL = sourceURL.deletingLastPathComponent().appendingPathComponent(fileName)
+            let folder = sourceURL.deletingLastPathComponent()
+            let scoped = folder.startAccessingSecurityScopedResource()
+            defer {
+                if scoped {
+                    folder.stopAccessingSecurityScopedResource()
+                }
+            }
             do {
                 try markdown.write(to: saveURL, atomically: true, encoding: .utf8)
                 return saveURL
@@ -105,6 +112,12 @@ final class SavePreference {
         panel.nameFieldStringValue = defaultName
         panel.orderFrontRegardless()
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer {
+            if scoped {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
         try? markdown.write(to: url, atomically: true, encoding: .utf8)
         return url
     }

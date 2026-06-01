@@ -10,25 +10,28 @@ struct ConversionRunner {
     }
 
     func analyse(fileURL: URL) async -> ComplexityAdvice? {
-        guard let tempURL = try? copyToTemp(fileURL: fileURL) else { return nil }
-        defer { try? FileManager.default.removeItem(at: tempURL) }
-        return try? await pythonWorker.analyse(fileURL: tempURL)
+        guard let workspace = try? AppWorkspace.create(prefix: "analyse"),
+              let tempURL = try? AppWorkspace.copy(fileURL, into: workspace) else { return nil }
+        defer { AppWorkspace.remove(workspace) }
+        return try? await pythonWorker.analyse(fileURL: tempURL, workspaceURL: workspace)
     }
 
     func run(_ job: ConversionJob, progress: ProgressHandler? = nil) async -> ConversionResult {
         guard !Task.isCancelled else { return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.") }
 
         progress?(.copying)
+        let workspace: URL
         let tempURL: URL
         do {
-            tempURL = try copyToTemp(fileURL: job.sourceURL)
+            workspace = try AppWorkspace.create(prefix: "conversion")
+            tempURL = try AppWorkspace.copy(job.sourceURL, into: workspace)
         } catch {
             return .failure(ConversionError.inaccessible.errorDescription ?? "Upmarket couldn't access this file.")
         }
-        defer { try? FileManager.default.removeItem(at: tempURL) }
+        defer { AppWorkspace.remove(workspace) }
 
         progress?(.extracting)
-        let raw = await extract(job: job, tempURL: tempURL)
+        let raw = await extract(job: job, tempURL: tempURL, workspaceURL: workspace)
         guard !Task.isCancelled else { return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.") }
         guard case .success(let output) = raw else { return raw }
 
@@ -38,35 +41,31 @@ struct ConversionRunner {
         return .success(refined)
     }
 
-    private func copyToTemp(fileURL: URL) throws -> URL {
-        let tempURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension(fileURL.pathExtension)
-        try FileManager.default.copyItem(at: fileURL, to: tempURL)
-        return tempURL
-    }
-
-    private func extract(job: ConversionJob, tempURL: URL) async -> ConversionResult {
+    private func extract(job: ConversionJob, tempURL: URL, workspaceURL: URL) async -> ConversionResult {
         let ext = job.sourceURL.pathExtension.lowercased()
         let title = job.sourceURL.deletingPathExtension().lastPathComponent
 
         switch ext {
         case "pdf":
             if job.useAI {
-                return await pythonWorker.convert(fileURL: tempURL, title: title, useAI: true, password: job.password)
+                return await pythonWorker.convert(fileURL: tempURL, title: title, useAI: true, password: job.password, workspaceURL: workspaceURL)
             }
             if VisionDocumentExtractor.isAvailable {
-                return await runVisionExtraction(fileURL: tempURL, title: title, password: job.password)
+                return await runVisionExtraction(fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL)
             }
-            return await runPDFKitConversion(fileURL: tempURL, title: title, password: job.password)
+            return await runPDFKitConversion(fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL)
         case "mp3", "m4a", "wav", "aiff", "opus":
             return await runSpeechTranscription(fileURL: tempURL, title: title)
+        case _ where NativeMetadataExtractor.handlesImage(ext):
+            return NativeMetadataExtractor.imageMetadata(url: tempURL, title: title)
+        case _ where NativeMetadataExtractor.handlesMedia(ext):
+            return await NativeMetadataExtractor.mediaMetadata(url: tempURL, title: title)
         default:
-            return await pythonWorker.convert(fileURL: tempURL, title: title, useAI: job.useAI, password: job.password)
+            return await pythonWorker.convert(fileURL: tempURL, title: title, useAI: job.useAI, password: job.password, workspaceURL: workspaceURL)
         }
     }
 
-    private func runVisionExtraction(fileURL: URL, title: String, password: String?) async -> ConversionResult {
+    private func runVisionExtraction(fileURL: URL, title: String, password: String?, workspaceURL: URL) async -> ConversionResult {
         do {
             let result = try await VisionDocumentExtractor.extract(pdfURL: fileURL, password: password)
             return .success(ConversionOutput(
@@ -79,7 +78,7 @@ struct ConversionRunner {
         } catch VisionDocumentExtractor.ExtractionError.passwordRequired {
             return .failure(ConversionError.passwordRequired.errorDescription ?? "This PDF is password-protected.")
         } catch {
-            return await runPDFKitConversion(fileURL: fileURL, title: title, password: password)
+            return await runPDFKitConversion(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
         }
     }
 
@@ -103,7 +102,7 @@ struct ConversionRunner {
         }
     }
 
-    private func runPDFKitConversion(fileURL: URL, title: String, password: String?) async -> ConversionResult {
+    private func runPDFKitConversion(fileURL: URL, title: String, password: String?, workspaceURL: URL) async -> ConversionResult {
         do {
             let result = try PDFConverter.convert(url: fileURL, password: password)
             return .success(ConversionOutput(
@@ -116,7 +115,7 @@ struct ConversionRunner {
         } catch PDFConverter.ConversionError.passwordRequired {
             return .failure(ConversionError.passwordRequired.errorDescription ?? "This PDF is password-protected.")
         } catch {
-            return await pythonWorker.convert(fileURL: fileURL, title: title, useAI: false, password: password)
+            return await pythonWorker.convert(fileURL: fileURL, title: title, useAI: false, password: password, workspaceURL: workspaceURL)
         }
     }
 

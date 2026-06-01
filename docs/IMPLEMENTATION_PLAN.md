@@ -66,11 +66,11 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Treat partial, corrupt, stale, or unexpected model directories as unavailable.
 
 ### P0 - Native Apple Replacements and Sandbox Safety
-- [ ] Replace Python `exiftool` image metadata usage with ImageIO/CoreGraphics.
-- [ ] Replace Python `ffprobe` media metadata usage with AVFoundation.
-- [ ] Remove the `/private/tmp` sandbox temporary exception and force app-owned temp directories, including Python `TMPDIR`.
-- [ ] Restrict Python input validation to Swift-created per-job workspaces rather than broad home-directory and temp roots.
-- [ ] Wrap delayed document reads/writes in security-scoped access or persist security-scoped bookmarks when user interaction can delay conversion.
+- [x] Replace Python `exiftool` image metadata usage with ImageIO/CoreGraphics.
+- [x] Replace Python `ffprobe` media metadata usage with AVFoundation.
+- [x] Remove the `/private/tmp` sandbox temporary exception and force app-owned temp directories, including Python `TMPDIR`.
+- [x] Restrict Python input validation to Swift-created per-job workspaces rather than broad home-directory and temp roots.
+- [x] Wrap delayed document reads/writes in security-scoped access or persist security-scoped bookmarks when user interaction can delay conversion.
 
 ### P0 - App Store Metadata and Entitlements
 - [ ] Merge URL scheme and Services registration into the effective app `Info.plist`, not a copied resource plist.

@@ -9,8 +9,8 @@ struct ModelDownloadResult: Sendable {
 struct PythonWorker {
     nonisolated init() {}
 
-    nonisolated func analyse(fileURL: URL) async throws -> ComplexityAdvice? {
-        try await PythonRuntime.shared.withPython {
+    nonisolated func analyse(fileURL: URL, workspaceURL: URL? = nil) async throws -> ComplexityAdvice? {
+        try await withWorkspace(workspaceURL) {
             let analyser = Python.import("docling_bridge.analyser")
             let pyResult = analyser.analyse(fileURL.path)
 
@@ -34,9 +34,9 @@ struct PythonWorker {
         }
     }
 
-    nonisolated func convert(fileURL: URL, title: String, useAI: Bool, password: String?) async -> ConversionResult {
+    nonisolated func convert(fileURL: URL, title: String, useAI: Bool, password: String?, workspaceURL: URL? = nil) async -> ConversionResult {
         do {
-            return try await PythonRuntime.shared.withPython {
+            return try await withWorkspace(workspaceURL) {
                 let converter = Python.import("docling_bridge.converter")
                 var opts: [String: PythonObject] = [
                     "use_ai": PythonObject(useAI),
@@ -124,5 +124,19 @@ struct PythonWorker {
         }
 
         return .failure(String(pyResult["error"]) ?? "Upmarket couldn't convert this document.")
+    }
+
+    private nonisolated func withWorkspace<T: Sendable>(
+        _ workspaceURL: URL?,
+        operation: () throws -> T
+    ) async throws -> T {
+        guard let workspaceURL else {
+            return try await PythonRuntime.shared.withPython(operation)
+        }
+
+        return try await PythonRuntime.shared.withPythonEnvironment([
+            "TMPDIR": workspaceURL.path,
+            "UPMARKET_ALLOWED_INPUT_ROOTS": workspaceURL.path
+        ], operation: operation)
     }
 }

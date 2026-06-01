@@ -14,7 +14,7 @@ cat > "$INPUT" <<'MD'
 This is a local offline conversion smoke test.
 MD
 
-PYTHONPATH="$SITE" HF_HUB_CACHE="$MODELS_DIR" UPMARKET_MODELS_DIR="$MODELS_DIR" HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python3 - "$INPUT" <<'PY'
+PYTHONPATH="$SITE" HF_HUB_CACHE="$MODELS_DIR" UPMARKET_MODELS_DIR="$MODELS_DIR" UPMARKET_ALLOWED_INPUT_ROOTS="$TMP_DIR" TMPDIR="$TMP_DIR" HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python3 - "$INPUT" <<'PY'
 import sys
 from docling_bridge.converter import check_pipelines, convert
 from upmarket_models.model_manager import check_models
