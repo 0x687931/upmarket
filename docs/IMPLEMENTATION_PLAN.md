@@ -61,9 +61,9 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 
 ### P0 - Offline and Model Integrity
 - [x] Default conversion runtime to offline mode: `HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`, and local-files-only model loading.
-- [ ] Permit network only inside the explicit model download flow; conversion must fail locally with a clear model-missing or model-corrupt error.
-- [ ] Pin immutable model revisions, download to staging directories, verify expected files/checksums, write a validation manifest, and atomically promote completed downloads.
-- [ ] Treat partial, corrupt, stale, or unexpected model directories as unavailable.
+- [x] Permit network only inside the explicit model download flow; AI conversion now fails locally with a clear model-missing or model-corrupt error.
+- [x] Pin immutable model revisions, download to staging directories, verify expected files/checksums, write a validation manifest, and atomically promote completed downloads.
+- [x] Treat partial, corrupt, stale, or unexpected model directories as unavailable.
 
 ### P0 - Native Apple Replacements and Sandbox Safety
 - [ ] Replace Python `exiftool` image metadata usage with ImageIO/CoreGraphics.

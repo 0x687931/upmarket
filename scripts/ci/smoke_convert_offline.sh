@@ -6,6 +6,7 @@ TMP_DIR="/tmp/upmarket-ci-smoke-$$"
 mkdir -p "$TMP_DIR"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+MODELS_DIR="$TMP_DIR/models"
 INPUT="$TMP_DIR/smoke.md"
 cat > "$INPUT" <<'MD'
 # Smoke Test
@@ -13,19 +14,28 @@ cat > "$INPUT" <<'MD'
 This is a local offline conversion smoke test.
 MD
 
-PYTHONPATH="$SITE" HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python3 - "$INPUT" <<'PY'
+PYTHONPATH="$SITE" HF_HUB_CACHE="$MODELS_DIR" UPMARKET_MODELS_DIR="$MODELS_DIR" HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python3 - "$INPUT" <<'PY'
 import sys
-from docling_bridge.converter import convert
+from docling_bridge.converter import check_pipelines, convert
+from upmarket_models.model_manager import check_models
 
 path = sys.argv[1]
-result = convert(path, {"use_enhanced": False, "use_ai": False, "ocr": False})
+pipelines = check_pipelines()
+if pipelines.get("enhanced") or pipelines.get("ai"):
+    raise SystemExit(f"offline smoke expected no validated models, got: {pipelines}")
 
-if not result.get("success"):
-    raise SystemExit(f"offline smoke conversion failed: {result.get('error')}")
+models = check_models()
+unexpected = [key for key, value in models.items() if value.get("downloaded")]
+if unexpected:
+    raise SystemExit(f"offline smoke expected no downloaded models, got: {unexpected}")
 
-markdown = result.get("markdown", "")
-if "Smoke Test" not in markdown:
-    raise SystemExit("offline smoke conversion output did not contain expected text")
+result = convert(path, {"use_ai": True, "ocr": False})
+if result.get("success"):
+    raise SystemExit("offline smoke expected AI conversion to fail without a validated model")
 
-print("ok: offline smoke conversion passed")
+message = result.get("error") or ""
+if "not downloaded or failed validation" not in message:
+    raise SystemExit(f"offline smoke did not return a clear model-missing error: {message}")
+
+print("ok: offline model-missing smoke passed")
 PY

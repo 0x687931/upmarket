@@ -85,8 +85,6 @@ final class ModelManager: ObservableObject {
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Upmarket/models")
         try? FileManager.default.removeItem(at: cacheURL)
-        // Reset offline mode so models can be re-downloaded
-        setenv("HF_HUB_OFFLINE", "0", 1)
         checkModels()
     }
 

@@ -67,7 +67,9 @@ def convert(file_path: str, options: dict | None = None) -> dict:
 
     # Route to appropriate pipeline
     try:
-        if use_ai and _ai_available() and can_use_enhanced:
+        if use_ai and can_use_enhanced:
+            if not _ai_available():
+                return _error("Upmarket AI model is not downloaded or failed validation. Download it again from Settings > Models.")
             return _convert_ai(path, opts)
 
         if suffix == ".pdf" and use_enhanced and _enhanced_available():
@@ -353,30 +355,27 @@ def _convert_enhanced(path: Path, opts: dict) -> dict:
 
 def _convert_ai(path: Path, opts: dict) -> dict:
     """Upmarket AI — Pro tier, best results for complex and scanned documents."""
-    was_offline = os.environ.get("HF_HUB_OFFLINE", "0")
-    os.environ["HF_HUB_OFFLINE"] = "0"
-    try:
-        result = _convert_enhanced(path, {**opts, "use_vlm": True})
-        result["pipeline"] = "ai"
-        return result
-    finally:
-        os.environ["HF_HUB_OFFLINE"] = was_offline
+    result = _convert_enhanced(path, {**opts, "use_vlm": True})
+    result["pipeline"] = "ai"
+    return result
 
 
 # MARK: - Availability checks
 
 def _enhanced_available() -> bool:
-    cache = Path(os.environ.get("HF_HUB_CACHE",
-        Path.home() / "Library" / "Application Support" / "Upmarket" / "models"))
-    layout_dir = cache / "layout"
-    return layout_dir.exists() and any(layout_dir.iterdir())
+    try:
+        from upmarket_models.model_manager import model_available
+        return model_available("layout")
+    except Exception:
+        return False
 
 
 def _ai_available() -> bool:
-    cache = Path(os.environ.get("HF_HUB_CACHE",
-        Path.home() / "Library" / "Application Support" / "Upmarket" / "models"))
-    ai_dir = cache / "upmarket_ai"
-    return ai_dir.exists() and any(ai_dir.iterdir())
+    try:
+        from upmarket_models.model_manager import model_available
+        return model_available("upmarket_ai")
+    except Exception:
+        return False
 
 
 # MARK: - Helpers
