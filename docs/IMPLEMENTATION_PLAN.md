@@ -122,6 +122,7 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Permit PyMuPDF only as an internal benchmark/reference pathway; promotion to a shipping path requires a commercial-license ADR and packaged-runtime validation.
 - [x] Add PyMuPDF, Poppler, RapidOCR, and PaddleOCR as internal/reference benchmark pathways so future uplift can be measured before any licensing or packaging decision.
 - [x] Publish release-candidate corpus pathway comparison artifacts for owner review before shipping.
+- [x] Document each conversion pathway's CPU/GPU/Apple Neural Engine behavior and whether benchmark compute mode can be explicitly controlled.
 - [x] Require ADRs for local patches to upstream behavior, including removal condition and packaged-app validation.
 - [x] Require fork/cherry-pick candidates to be temporary, upstream-linked, pinned to immutable commits or packaged artifacts, covered by corpus validation, and removable once upstream releases.
 - [x] Add dependency audit workflow for exact pins, `pip check`, license generation, vulnerability review where practical, and undeclared runtime tool detection.

@@ -6,10 +6,11 @@ Converts corpus documents and scores against ground truth (.expected.md).
 import argparse
 import json
 import os
+import platform
 import re
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 PATHWAYS = {
@@ -69,6 +70,7 @@ class DocScore:
     markdown_valid: bool = True
     artifacts_found: int = 0
     elapsed_seconds: float = 0.0
+    elapsed_runs_seconds: list[float] = field(default_factory=list)
     error: str | None = None
 
     @property
@@ -437,12 +439,40 @@ print(json.dumps(result))
 
 # ── Runner ────────────────────────────────────────────────────────────────────
 
+def benchmark_host(compute_mode: str) -> dict:
+    host = {
+        "system": platform.system(),
+        "release": platform.release(),
+        "machine": platform.machine(),
+        "processor": platform.processor(),
+        "mac_version": platform.mac_ver()[0],
+        "requested_compute_mode": compute_mode,
+    }
+    if platform.system() == "Darwin":
+        try:
+            import subprocess
+
+            proc = subprocess.run(
+                ["sysctl", "-n", "machdep.cpu.brand_string"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+            if proc.returncode == 0:
+                host["cpu_brand"] = proc.stdout.strip()
+        except Exception:
+            pass
+    return host
+
+
 def run_benchmark(
     corpus_dir: Path,
     pipeline: str,
     pathway: str,
     category_filter: str,
     fail_below: int,
+    repeat_count: int,
+    compute_mode: str,
     json_output: Path | None = None
 ) -> int:
     scores: list[DocScore] = []
@@ -453,6 +483,7 @@ def run_benchmark(
         corpus_root if not existing_roots else existing_roots + os.pathsep + corpus_root
     )
     os.environ.setdefault("TMPDIR", str((Path.cwd() / "build" / "benchmark-tmp").resolve()))
+    os.environ["UPMARKET_BENCHMARK_COMPUTE_MODE"] = compute_mode
 
     if not manifest_path.exists():
         print(f"No manifest.json found in {corpus_dir}")
@@ -480,8 +511,10 @@ def run_benchmark(
         print(f"No documents found{' for category: ' + category_filter if category_filter else ''}")
         return 0
 
+    repeat_count = max(1, repeat_count)
     label = f"pathway: {pathway}" if pathway else f"pipeline: {pipeline or 'auto'}"
-    print(f"Running {len(docs)} documents | {label}\n")
+    repeat_label = f" | repeats: {repeat_count}" if repeat_count > 1 else ""
+    print(f"Running {len(docs)} documents | {label}{repeat_label} | compute: {compute_mode}\n")
 
     for doc_meta in docs:
         doc_id = doc_meta["id"]
@@ -515,17 +548,22 @@ def run_benchmark(
             signal.signal(signal.SIGALRM, _timeout_handler)
             signal.alarm(30)
             try:
-                markdown, elapsed = convert_document(file_path, pipeline or "fast", pathway or None)
+                elapsed_runs = []
+                markdown = ""
+                for _ in range(repeat_count):
+                    markdown, elapsed = convert_document(file_path, pipeline or "fast", pathway or None)
+                    elapsed_runs.append(elapsed)
             finally:
                 signal.alarm(0)
 
             score = score_document(markdown, doc_meta, ground_truth_md)
             score.file = doc_meta.get("file", "")
-            score.elapsed_seconds = elapsed
+            score.elapsed_runs_seconds = elapsed_runs
+            score.elapsed_seconds = sum(elapsed_runs) / len(elapsed_runs)
             scores.append(score)
             gt_indicator = "GT" if ground_truth_md else "  "
             status = "✓" if score.overall >= 0.8 else "⚠" if score.overall >= 0.6 else "✗"
-            print(f"[{gt_indicator}] {status}  {score.overall*100:.0f}%  ({elapsed:.1f}s)")
+            print(f"[{gt_indicator}] {status}  {score.overall*100:.0f}%  ({score.elapsed_seconds:.3f}s avg)")
         except TimeoutError:
             score = DocScore(doc_id=doc_id, category=category, file=doc_meta.get("file", ""), error="Timed out after 30s")
             scores.append(score)
@@ -540,10 +578,11 @@ def run_benchmark(
     print_summary(scores)
 
     overall_avg = sum(s.overall for s in scores) / len(scores) if scores else 0
-    print(f"\nOverall: {overall_avg*100:.1f}%  ({len(scores)} documents)")
+    elapsed_avg = sum(s.elapsed_seconds for s in scores) / len(scores) if scores else 0
+    print(f"\nOverall: {overall_avg*100:.1f}%  ({len(scores)} documents, {elapsed_avg:.3f}s avg/document)")
 
     if json_output:
-        write_json_report(json_output, pipeline or "fast", pathway or None, scores, corpus_dir, category_filter)
+        write_json_report(json_output, pipeline or "fast", pathway or None, scores, corpus_dir, category_filter, repeat_count, compute_mode)
         print(f"JSON report: {json_output}")
 
     if fail_below > 0 and overall_avg * 100 < fail_below:
@@ -560,7 +599,7 @@ def print_summary(scores: list[DocScore]):
         cat = s.category.split("/")[0]
         by_category.setdefault(cat, []).append(s)
 
-    header = f"{'Category':<25} {'Docs':>4} {'Headings':>8} {'Tables':>7} {'Content':>8} {'Overall':>8}"
+    header = f"{'Category':<25} {'Docs':>4} {'Headings':>8} {'Tables':>7} {'Content':>8} {'Overall':>8} {'Avg Sec':>8}"
     print(header)
     print("-" * 65)
 
@@ -574,11 +613,12 @@ def print_summary(scores: list[DocScore]):
             f"{avg('heading_recall')*100:>7.0f}% "
             f"{avg('table_accuracy')*100:>6.0f}% "
             f"{avg('content_completeness')*100:>7.0f}% "
-            f"{sum(s.overall for s in valid)/len(valid)*100:>7.0f}%"
+            f"{sum(s.overall for s in valid)/len(valid)*100:>7.0f}% "
+            f"{sum(s.elapsed_seconds for s in valid)/len(valid):>7.3f}"
         )
 
 
-def write_json_report(path: Path, pipeline: str, pathway: str | None, scores: list[DocScore], corpus_dir: Path, category_filter: str) -> None:
+def write_json_report(path: Path, pipeline: str, pathway: str | None, scores: list[DocScore], corpus_dir: Path, category_filter: str, repeat_count: int, compute_mode: str) -> None:
     by_category: dict[str, list[DocScore]] = {}
     for score in scores:
         category = score.category.split("/")[0]
@@ -589,6 +629,8 @@ def write_json_report(path: Path, pipeline: str, pathway: str | None, scores: li
         categories[category] = {
             "document_count": len(category_scores),
             "overall_percent": round(sum(score.overall for score in category_scores) / len(category_scores) * 100, 1),
+            "avg_elapsed_seconds": round(sum(score.elapsed_seconds for score in category_scores) / len(category_scores), 4),
+            "total_elapsed_seconds": round(sum(score.elapsed_seconds for score in category_scores), 4),
             "failed_count": sum(1 for score in category_scores if score.error),
         }
 
@@ -596,10 +638,15 @@ def write_json_report(path: Path, pipeline: str, pathway: str | None, scores: li
         "version": 1,
         "pipeline": pipeline,
         "pathway": pathway,
+        "repeat_count": repeat_count,
+        "compute_mode": compute_mode,
+        "benchmark_host": benchmark_host(compute_mode),
         "corpus": str(corpus_dir),
         "category_filter": category_filter or None,
         "document_count": len(scores),
         "overall_percent": round(sum(score.overall for score in scores) / len(scores) * 100, 1) if scores else 0.0,
+        "avg_elapsed_seconds": round(sum(score.elapsed_seconds for score in scores) / len(scores), 4) if scores else 0.0,
+        "total_elapsed_seconds": round(sum(score.elapsed_seconds for score in scores), 4),
         "categories": categories,
         "documents": [
             {
@@ -613,6 +660,7 @@ def write_json_report(path: Path, pipeline: str, pathway: str | None, scores: li
                 "markdown_valid": score.markdown_valid,
                 "artifacts_found": score.artifacts_found,
                 "elapsed_seconds": round(score.elapsed_seconds, 3),
+                "elapsed_runs_seconds": [round(value, 3) for value in score.elapsed_runs_seconds],
                 "error": score.error,
             }
             for score in scores
@@ -631,6 +679,8 @@ if __name__ == "__main__":
     parser.add_argument("--pathway", default="")
     parser.add_argument("--category", default="")
     parser.add_argument("--fail-below", type=int, default=0)
+    parser.add_argument("--repeat", type=int, default=1, help="number of conversion runs per document for average wall-time")
+    parser.add_argument("--compute-mode", choices=("auto", "cpu", "gpu", "ane"), default="auto", help="requested compute mode for pathways that support CPU/GPU/Apple Neural Engine selection")
     parser.add_argument("--json-output", type=Path)
     args = parser.parse_args()
 
@@ -640,5 +690,7 @@ if __name__ == "__main__":
         pathway=args.pathway,
         category_filter=args.category,
         fail_below=args.fail_below,
+        repeat_count=args.repeat,
+        compute_mode=args.compute_mode,
         json_output=args.json_output,
     ))

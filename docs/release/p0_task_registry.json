@@ -275,6 +275,7 @@
         "Upstream candidates require URL, local reproduction/corpus case, impact, security review, and rollback plan.",
         "Conversion-quality upstream changes require corpus fixture or benchmark coverage before adoption and cannot downgrade the stored corpus baseline.",
         "Release-candidate corpus comparison artifacts expose pathway-level results before shipping.",
+        "Corpus benchmark reports include accuracy, repeat-count average wall time, requested compute mode, and documented CPU/GPU/Apple Neural Engine capability per pathway.",
         "Local patches to upstream behavior require ADRs with removal conditions and packaged-app validation.",
         "Forks and cherry-picks are tracked as temporary candidates pinned to immutable commits or packaged artifacts with upstream PR context and rollback plans."
       ],

@@ -114,6 +114,7 @@ def validate_results(results: dict, baseline: dict) -> list[str]:
     document_limit = float(policy.get("document_regression_block_percent", 5.0))
     large_limit = float(policy.get("large_regression_block_percent", 25.0))
     uplift_review = float(policy.get("uplift_review_percent", 3.0))
+    speed_limit = float(policy.get("document_speed_regression_multiplier", 1.5))
     document_baselines = baseline.get("document_baselines", {})
     pathway_baseline = document_baselines.get(pathway, {})
 
@@ -131,6 +132,8 @@ def validate_results(results: dict, baseline: dict) -> list[str]:
             continue
         actual = float(result.get("overall_percent", 0))
         expected_score = float(expected.get("overall_percent", 0))
+        expected_elapsed = expected.get("avg_elapsed_seconds", expected.get("elapsed_seconds"))
+        actual_elapsed = result.get("elapsed_seconds")
         delta = actual - expected_score
         if delta <= -large_limit:
             errors.append(f"{pathway}/{doc_id}: large regression {delta:.1f}% from baseline {expected_score:.1f}% to {actual:.1f}%")
@@ -138,6 +141,14 @@ def validate_results(results: dict, baseline: dict) -> list[str]:
             errors.append(f"{pathway}/{doc_id}: regression {delta:.1f}% from baseline {expected_score:.1f}% to {actual:.1f}%")
         elif delta >= uplift_review:
             uplifts.append(f"{doc_id} +{delta:.1f}%")
+        if expected_elapsed is not None and actual_elapsed is not None:
+            expected_seconds = float(expected_elapsed)
+            actual_seconds = float(actual_elapsed)
+            if expected_seconds > 0 and actual_seconds > expected_seconds * speed_limit:
+                errors.append(
+                    f"{pathway}/{doc_id}: speed regression {actual_seconds:.3f}s from baseline {expected_seconds:.3f}s "
+                    f"(limit {speed_limit:.2f}x)"
+                )
 
     if missing:
         errors.append(f"{pathway}: missing stored baselines for {len(missing)} result document(s): {', '.join(missing[:10])}")

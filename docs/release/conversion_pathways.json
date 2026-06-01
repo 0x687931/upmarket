@@ -8,6 +8,8 @@
       "runner": "xcode-test",
       "release_status": "shipping",
       "valid_categories": ["pdf"],
+      "compute_modes": ["cpu"],
+      "accelerator_control": "none",
       "baseline_required": true,
       "notes": "Apple-native digital PDF extraction path."
     },
@@ -16,6 +18,8 @@
       "runner": "xcode-test",
       "release_status": "shipping",
       "valid_categories": ["pdf", "image"],
+      "compute_modes": ["os-managed-cpu-gpu-ane"],
+      "accelerator_control": "none; Vision chooses available Apple hardware internally",
       "availability": "macOS/Vision availability gated",
       "baseline_required": true,
       "notes": "Apple-native OCR and structured document extraction path."
@@ -25,6 +29,8 @@
       "runner": "xcode-test",
       "release_status": "shipping",
       "valid_categories": ["audio"],
+      "compute_modes": ["os-managed-cpu-gpu-ane"],
+      "accelerator_control": "none; Speech framework chooses available Apple hardware internally",
       "availability": "Speech authorization and recognizer availability gated",
       "baseline_required": true,
       "notes": "Apple-native audio-to-Markdown transcription path."
@@ -34,6 +40,8 @@
       "runner": "xcode-test",
       "release_status": "shipping",
       "valid_categories": ["image"],
+      "compute_modes": ["cpu", "hardware-codec"],
+      "accelerator_control": "none",
       "baseline_required": true,
       "notes": "Apple-native image metadata Markdown path."
     },
@@ -42,6 +50,8 @@
       "runner": "xcode-test",
       "release_status": "shipping",
       "valid_categories": ["audio", "video"],
+      "compute_modes": ["cpu", "hardware-codec"],
+      "accelerator_control": "none",
       "baseline_required": true,
       "notes": "Apple-native media metadata Markdown path."
     },
@@ -50,6 +60,8 @@
       "runner": "scripts/benchmark.sh --pathway python-fast-pdfium",
       "release_status": "shipping",
       "valid_categories": ["pdf"],
+      "compute_modes": ["cpu"],
+      "accelerator_control": "none",
       "baseline_required": true,
       "notes": "Bundled Python fast PDF fallback using pypdfium2, not PyMuPDF."
     },
@@ -58,6 +70,8 @@
       "runner": "scripts/benchmark.sh --pathway python-fast-markitdown",
       "release_status": "shipping",
       "valid_categories": ["asciidoc", "csv", "docx", "html", "image", "pptx", "webvtt", "xlsx", "xml"],
+      "compute_modes": ["cpu"],
+      "accelerator_control": "none for current fast non-PDF path",
       "baseline_required": true,
       "notes": "Bundled Python fast non-PDF conversion path."
     },
@@ -66,6 +80,8 @@
       "runner": "scripts/benchmark.sh --pathway python-enhanced-docling",
       "release_status": "shipping",
       "valid_categories": ["asciidoc", "csv", "docx", "html", "image", "pdf", "pptx", "webvtt", "xlsx", "xml"],
+      "compute_modes": ["cpu", "gpu-metal-mps"],
+      "accelerator_control": "partial; Python model stack may use PyTorch MPS/MLX when available",
       "baseline_required": true,
       "notes": "Enhanced Docling conversion path used when advanced conversion is enabled."
     },
@@ -74,6 +90,8 @@
       "runner": "scripts/benchmark.sh --pathway python-ai-docling",
       "release_status": "shipping",
       "valid_categories": ["asciidoc", "csv", "docx", "html", "image", "pdf", "pptx", "webvtt", "xlsx", "xml"],
+      "compute_modes": ["cpu", "gpu-metal-mps"],
+      "accelerator_control": "partial; Python model stack may use PyTorch MPS/MLX when available",
       "baseline_required": true,
       "notes": "AI-assisted Docling path for advanced conversion experiments and release gates."
     },
@@ -82,6 +100,8 @@
       "runner": "scripts/benchmark.sh --pathway internal-reference-pymupdf",
       "release_status": "internal-reference-only",
       "valid_categories": ["pdf"],
+      "compute_modes": ["cpu"],
+      "accelerator_control": "none",
       "baseline_required": false,
       "license_gate": "May be promoted only after a commercial-license ADR and packaged-runtime validation.",
       "notes": "Reference pathway for measuring possible uplift. It must not appear in release locks or the packaged app."
@@ -91,6 +111,8 @@
       "runner": "scripts/benchmark.sh --pathway internal-reference-poppler",
       "release_status": "internal-reference-only",
       "valid_categories": ["pdf"],
+      "compute_modes": ["cpu"],
+      "accelerator_control": "none",
       "baseline_required": false,
       "license_gate": "May be promoted only after license review, App Store packaging review, and packaged-runtime validation.",
       "notes": "Reference pathway using Poppler pdftotext-style extraction. It must not appear in release locks or the packaged app."
@@ -100,6 +122,8 @@
       "runner": "scripts/benchmark.sh --pathway internal-reference-rapidocr",
       "release_status": "internal-reference-only",
       "valid_categories": ["image", "pdf"],
+      "compute_modes": ["cpu"],
+      "accelerator_control": "none for rapidocr-onnxruntime default package",
       "baseline_required": false,
       "license_gate": "May be promoted only after dependency/model license review, offline model packaging review, and packaged-runtime validation.",
       "notes": "Reference OCR pathway for comparing Apple Vision OCR against RapidOCR output."
@@ -109,6 +133,8 @@
       "runner": "scripts/benchmark.sh --pathway internal-reference-paddleocr",
       "release_status": "internal-reference-only",
       "valid_categories": ["image", "pdf"],
+      "compute_modes": ["cpu", "gpu"],
+      "accelerator_control": "environment-dependent; developer reference only",
       "baseline_required": false,
       "license_gate": "May be promoted only after dependency/model license review, offline model packaging review, and packaged-runtime validation.",
       "notes": "Reference OCR pathway for comparing Apple Vision OCR against PaddleOCR output."

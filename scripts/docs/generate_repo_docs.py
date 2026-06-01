@@ -104,6 +104,8 @@ def conversion_flow() -> str:
             f"`{name}`",
             config.get("release_status", "-"),
             ", ".join(config.get("valid_categories", [])),
+            ", ".join(config.get("compute_modes", [])) or "-",
+            config.get("accelerator_control", "-"),
             config.get("runner", "-"),
             config.get("owner", "-"),
         ])
@@ -124,7 +126,7 @@ def conversion_flow() -> str:
         "",
         "## Conversion Pathway Registry",
         "",
-        *table(["Pathway", "Status", "Valid Categories", "Runner", "Owner"], pathway_rows),
+        *table(["Pathway", "Status", "Valid Categories", "Compute Modes", "Control", "Runner", "Owner"], pathway_rows),
         "",
         "## Benchmark Outputs",
         "",
