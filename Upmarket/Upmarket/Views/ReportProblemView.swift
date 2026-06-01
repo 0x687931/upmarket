@@ -6,12 +6,16 @@ struct ReportProblemView: View {
     @State private var summary = ""
     @State private var includeDiagnostics = true
     @State private var copied = false
+    @State private var diagnosticSnapshot = Diagnostics.makeSnapshot()
+    @State private var logExport = Diagnostics.recentLogExport()
 
     private var preview: SupportReportPreview {
         SupportReporter.makePreview(
             category: category,
             summary: summary,
-            includeDiagnostics: includeDiagnostics
+            includeDiagnostics: includeDiagnostics,
+            snapshot: diagnosticSnapshot,
+            logExport: logExport
         )
     }
 
@@ -72,6 +76,16 @@ struct ReportProblemView: View {
         .padding(20)
         .frame(width: 620, height: 560)
         .background(Color(nsColor: .windowBackgroundColor))
+        .onChange(of: includeDiagnostics) { enabled in
+            if enabled {
+                refreshDiagnostics()
+            }
+        }
+    }
+
+    private func refreshDiagnostics() {
+        diagnosticSnapshot = Diagnostics.makeSnapshot()
+        logExport = Diagnostics.recentLogExport()
     }
 }
 

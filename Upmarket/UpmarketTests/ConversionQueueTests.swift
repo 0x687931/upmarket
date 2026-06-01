@@ -126,7 +126,7 @@ final class ConversionQueueTests: XCTestCase {
 
         let job = queue.jobs.first { $0.id == id }
         XCTAssertEqual(job?.stage, .failed)
-        XCTAssertEqual(job?.result?.errorMessage, "Bridge unavailable")
+        XCTAssertEqual(job?.result?.errorMessage, "The conversion engine couldn't start. Please try again.")
     }
 
     func testRetryCreatesNewJobForOriginalSource() async {
