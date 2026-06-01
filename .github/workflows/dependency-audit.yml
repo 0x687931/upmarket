@@ -1,0 +1,50 @@
+name: Dependency Audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 9 * * 1"
+  pull_request:
+    paths:
+      - "requirements.txt"
+      - "scripts/build_python_env.sh"
+      - "scripts/update_dependencies.sh"
+      - "UpmarketPython/**"
+
+jobs:
+  dependency-audit:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Python dependency pins
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          bad = []
+          for line in Path("requirements.txt").read_text().splitlines():
+              raw = line.strip()
+              if not raw or raw.startswith("#"):
+                  continue
+              pkg = raw.split("#", 1)[0].strip()
+              if not re.search(r"==|===", pkg):
+                  bad.append(pkg)
+          if bad:
+              print("error: runtime dependencies must be exactly pinned:")
+              for item in bad:
+                  print(f"  {item}")
+              raise SystemExit(1)
+          print("ok: requirements are exactly pinned")
+          PY
+
+      - name: Check for undeclared PATH tools
+        run: |
+          if rg -n "subprocess\\.run\\(\\s*\\[\\s*['\\\"](ffprobe|ffmpeg|exiftool)" UpmarketPython; then
+            echo "error: runtime must not depend on undeclared PATH tools"
+            exit 1
+          fi
+          echo "ok: no undeclared PATH tool usage detected"
+
+      - name: Generate license inventory
+        run: scripts/generate_licenses.sh

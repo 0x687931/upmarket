@@ -1,196 +1,305 @@
-# Upmarket — Implementation Plan
+# Upmarket Implementation Plan
 
-## Overview
+## Product Goal
 
-Upmarket converts documents to Markdown using on-device AI. Fully offline on Apple Silicon after first model download. Sold on the Mac App Store with 3 free conversions, then Basic ($4.99), 5-doc pack ($0.99), and Pro + AI ($9.99).
+Upmarket converts documents to clean Markdown on macOS with a privacy-first, local-first architecture. The app should work immediately with native/fast conversion, offer optional local model downloads for harder documents, and remain understandable when conversion is slow, blocked, unsupported, or degraded.
 
----
+## Release Principle
 
-## Architecture
+Ship v1.0 only when the core conversion path is reliable under real documents. Prefer Apple-native APIs, Xcode diagnostics, StoreKit tooling, and system privacy/security behavior over third-party services unless a native option is unavailable.
 
+## Current Architecture
+
+```text
+SwiftUI app and shelf UI
+  -> Apple-native conversion paths where available
+     - PDFKit for fast digital PDF extraction on macOS 13-15
+     - Vision structured extraction when available
+     - Speech framework for local audio transcription where supported
+  -> Embedded CPython through PythonKit
+     - docling_bridge for Docling, markitdown, pdfium, fallback handlers
+     - upmarket_models for on-demand model checks/downloads
+  -> StoreKit 2 for trial, paid unlocks, pack credits, restore purchases
+  -> Models cached in ~/Library/Application Support/Upmarket/models/
 ```
-SwiftUI (animation-first UI, 400px portrait → 640px output)
-    ↓
-Tiered Python pipeline:
-  Fast path  — PyMuPDF4LLM, bundled, zero download
-  Enhanced   — Layout models, 172MB on demand
-  Upmarket AI — SmolDocling MLX, 500MB on demand, Pro only
-    ↓
-Models cached in ~/Library/Application Support/Upmarket/models/
-    ↓
-100% offline after first model download
-```
 
----
+Runtime conversion must not require cloud inference. Network access is limited to model download, StoreKit/App Store flows, and remote feature flags.
 
-## What's Done ✅
+## P0 Audit Blockers
 
-### Core
-- [x] SwiftUI app shell with MenuBarExtra (liquid glass popover)
-- [x] BeeWare CPython 3.12 embedded and running (Python 3.12.10)
-- [x] PythonBridge service — PYTHONHOME/PYTHONPATH/HF_HUB_CACHE configured
-- [x] Tiered conversion pipeline (fast/enhanced/AI)
-- [x] PyMuPDF4LLM bundled — zero download for clean digital docs
-- [x] Docling + PyTorch/MPS for Enhanced pipeline (on-demand)
-- [x] MPS float32 patch for Apple Silicon compatibility
-- [x] Document complexity analyser — detects scanned, complex, multi-column
-- [x] Language detection — Unicode block analysis, warns on low-quality langs
-- [x] Sandbox file access — copy to temp dir before Python conversion
-- [x] Password-protected PDF detection and prompt
+These items block mission-critical use, TestFlight confidence, and App Store submission. They must be resolved before v1.0 release gates can pass.
+
+### P0 - Minimalist Monolith Architecture
+- [x] Adopt the project philosophy in `docs/PROJECT_VISION.md`: Linus-style minimalism plus DHH-style coherent monolith.
+- [x] Define the target source layout with small hard boundaries: Views, Domain, Services, Infrastructure, Resources, and release docs.
+- [x] Keep file access behind a concrete service; views must not own file picker, save panel, or pasteboard mechanics.
+- [x] Remove speculative architecture, duplicate conversion entry points, and unused product surfaces that do not support conversion, monetization, diagnostics, or release safety.
+- [x] Add a lightweight architecture decision record whenever a P0 decision adds a new dependency, new process boundary, new entitlement, or new release hook.
+- [ ] Complete the P0 minimalist core rewrite: `ConversionQueue`, `ConversionRunner`, `PythonWorker`, and small `Domain/` models with no TCA, no enterprise layers, no protocol forests, and no speculative abstractions.
+- [ ] Move remaining StoreKit accounting and diagnostics behind the P0-007 and P0-008 service boundaries.
+
+### P0 - Minimalist Core Rewrite
+- [ ] Add `Domain/ConversionJob.swift`, `Domain/ConversionResult.swift`, `Domain/ConversionError.swift`, and `Domain/Entitlement.swift` or document why any file remains unnecessary.
+- [ ] Add `@MainActor final class ConversionQueue: ObservableObject` with `jobs`, `add(_:)`, `cancel(_:)`, and `retry(_:)`.
+- [ ] Add `ConversionRunner` with `run(_ job: ConversionJob) async -> ConversionResult`.
+- [ ] Add `PythonWorker` as the single Python conversion/model call boundary; no view, queue, runner, or model service should import `PythonKit` directly after this rewrite.
+- [ ] Deprecate or remove `ConversionService.shared.result` polling from shelf, intents, and views.
+- [ ] Keep existing UI, shelf, paywall, product IDs, and monetization behavior intact unless the task explicitly proves a change is required.
+- [ ] Add small tests for queue correctness, cancellation, retry, Python error mapping, temp cleanup, and no-progress classification without a hard five-minute timeout.
+
+### P0 - Python Runtime Isolation
+- [ ] Move Python conversion/model execution out of the main app process into a signed helper, preferably XPC; map helper crashes, hangs, and exits to typed Swift errors.
+- [ ] Gate every Python call behind `PythonWorker` or a lower-level bootstrap bridge that verifies Python readiness, serializes interpreter access, catches bridge failures, and disables conversion/model UI when unavailable.
+- [ ] Make the Python packaging path reproducible: copy first-party bridge packages into the embedded runtime, pin dependencies, run `pip check`, and smoke-test imports from the packaged app.
+
+### P0 - Conversion Job Correctness
+- [ ] Replace singleton `ConversionService.result` polling with `ConversionQueue` and `ConversionRunner`.
+- [ ] Serialize shelf/app-intent conversions through `ConversionQueue`; each queued item must own its own result, error, progress, and cancellation state.
+- [ ] Add per-job IDs, stage updates, progress/heartbeat signals, Cancel/Retry UI, and stuck-state classification based on missing progress rather than elapsed time alone.
+- [ ] Guarantee conversion state reset and temp cleanup on success, failure, cancellation, helper crash, app quit, and startup cleanup of stale job directories.
+
+### P0 - Offline and Model Integrity
+- [ ] Default conversion runtime to offline mode: `HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`, and local-files-only model loading.
+- [ ] Permit network only inside the explicit model download flow; conversion must fail locally with a clear model-missing or model-corrupt error.
+- [ ] Pin immutable model revisions, download to staging directories, verify expected files/checksums, write a validation manifest, and atomically promote completed downloads.
+- [ ] Treat partial, corrupt, stale, or unexpected model directories as unavailable.
+
+### P0 - Native Apple Replacements and Sandbox Safety
+- [ ] Replace Python `exiftool` image metadata usage with ImageIO/CoreGraphics.
+- [ ] Replace Python `ffprobe` media metadata usage with AVFoundation.
+- [ ] Remove the `/private/tmp` sandbox temporary exception and force app-owned temp directories, including Python `TMPDIR`.
+- [ ] Restrict Python input validation to Swift-created per-job workspaces rather than broad home-directory and temp roots.
+- [ ] Wrap delayed document reads/writes in security-scoped access or persist security-scoped bookmarks when user interaction can delay conversion.
+
+### P0 - App Store Metadata and Entitlements
+- [ ] Merge URL scheme and Services registration into the effective app `Info.plist`, not a copied resource plist.
+- [ ] Add `NSSpeechRecognitionUsageDescription` to the effective app `Info.plist` before any Speech framework authorization call.
+- [ ] Fix App Group identifiers to a registered `group.com.upmarket.app` style value across app and extension.
+- [ ] Redesign Quick Action handoff using App Group storage plus security-scoped bookmarks or copied files; do not trust arbitrary custom-URL file paths.
+- [ ] Reassess consumable document packs: avoid client-authoritative `UserDefaults` balances or move consumable accounting to a verifiable App Store/server-backed model.
+
+### P0 - Observability, CI, and Release Validation
+- [ ] Fix CI to build and test `Upmarket/Upmarket.xcodeproj`.
+- [ ] Add CI/release checks for archive, entitlements, effective `Info.plist`, embedded Python imports, offline conversion smoke tests, and model-missing behavior.
+- [ ] Replace Swift `print` and Python stderr diagnostics with structured `OSLog` categories, signposts, per-job correlation IDs, and privacy-redacted diagnostic bundles.
+- [ ] Add fault-injection tests for Python bridge setup failure, conversion helper failure, stalled conversion, temp cleanup, partial model download, password PDFs, corrupt files, and huge files.
+- [ ] Add memory-pressure safeguards for Vision/OCR paths: page/pixel/file limits, streaming page processing, autorelease pools, and actionable “document too large” errors.
+
+### P0 - Crash and Bug Reporting
+- [ ] Define a privacy-first support policy: no automatic telemetry, no document contents, no extracted text, no passwords, and no full local file paths in reports.
+- [ ] Add Apple-native crash triage process using TestFlight/App Store crash reports in Xcode Organizer, including ownership, severity labels, and release-blocking criteria.
+- [ ] Add `Help > Report a Problem...` flow that creates a user-approved email or support package rather than silently uploading diagnostics.
+- [ ] Add a redacted diagnostic bundle generator with app version, build number, macOS version, hardware class, locale, entitlement/plist sanity results, model manifest status, last conversion stage, error code, and correlation ID.
+- [ ] Add OSLog retrieval/export for recent Upmarket subsystem logs with privacy annotations; exclude document contents, extracted Markdown, passwords, and unredacted paths.
+- [ ] Add user-facing controls to preview, include, or omit diagnostics before sending a bug report.
+- [x] Add GitHub/support issue templates for crashes, conversion failures, model download failures, StoreKit issues, and App Store review regressions.
+- [ ] Add incident runbook for crash spikes, Python helper crashes, corrupt model rollouts, broken feature flags, and StoreKit product failures.
+
+### P0 - Release Engineering and Upstream Validation
+- [x] Add PR CI checks for build, unit tests, effective `Info.plist`, entitlements, Python bundle imports, and offline smoke conversion.
+- [x] Add release-candidate workflow for archive validation, signing/entitlements inspection, StoreKit checks, packaged app launch/import, and corpus smoke tests.
+- [x] Add nightly upstream validation for BeeWare Python, Docling, MarkItDown, pypdfium2/PyMuPDF, Hugging Face Hub, Transformers, Torch/MLX, and Xcode SDK changes.
+- [ ] Introduce locked Python dependency management with current, candidate, and latest-upstream validation states.
+- [x] Add scheduled upstream watch automation that reports candidate dependency drift without promotion.
+- [x] Add upstream issue/patch intake labels in GitHub: watch, candidate, adopted, rejected, blocked.
+- [x] Require upstream candidates to link issue/PR/release URL, local reproduction or corpus case, user impact, security/privacy review, and rollback plan.
+- [ ] Require corpus fixture or benchmark coverage before adopting upstream conversion-quality changes.
+- [ ] Require ADRs for local patches to upstream behavior, including removal condition and packaged-app validation.
+- [x] Add dependency audit workflow for exact pins, `pip check`, license generation, vulnerability review where practical, and undeclared runtime tool detection.
+- [ ] Add release docs: release policy, release checklist, upstream validation guide, test matrix, and incident runbook.
+- [x] Add CI helper scripts for Xcode project validation, effective plist checks, entitlement checks, Python bundle validation, offline conversion, model validation, and corpus validation.
+
+### P0 - Agent Task Tracking and Pipeline Hooks
+- [x] Use `docs/release/AGENT_TASK_ORCHESTRATION.md` as the required workflow for multi-agent tasks.
+- [x] Track implementation work with a validated P0 registry using objective, owner, scope, non-goals, acceptance criteria, release gate, and risk area.
+- [x] Use `.github/ISSUE_TEMPLATE/agent-task.yml` for agent-owned work and `.github/ISSUE_TEMPLATE/crash-bug-report.yml` for failure reports.
+- [x] Use `.github/PULL_REQUEST_TEMPLATE.md` for every PR, including release gate, validation, risk review, and agent handoff.
+- [x] Define local hook scripts before wiring GitHub Actions: plist, entitlements, Python bundle, offline conversion, model validation, corpus validation, and archive checks.
+- [x] Make every release hook runnable locally, nonzero on failure, and explicit about whether network is permitted.
+- [x] Add GitHub label and issue sync automation for P0 task registry items.
+- [ ] Require the main Codex session to integrate multi-agent outputs and update the implementation plan when P0 scope changes.
+
+## Verified Complete
+
+### Core App
+- [x] SwiftUI app shell, menu bar extra, shelf UI, and preferences window
+- [x] File drop/open/save/copy/new flows
+- [x] App phase state for idle, analysing, converting, result, and error
+- [x] Password-protected PDF prompt path
+- [x] Sandbox-friendly file copy to temp before Python conversion
+
+### Conversion
+- [x] Swift `ConversionService` routing by format and capability
+- [x] Apple-native PDFKit fast path
+- [x] Vision document extraction availability gate
+- [x] Speech transcription service using Speech framework
+- [x] Python bridge for Docling, markitdown, pdfium, image/media fallbacks
+- [x] NaturalLanguage post-processing and metadata extraction
+- [x] Writing Tools / Foundation Models adapters with graceful availability checks
 
 ### Monetisation
-- [x] StoreKit 2 — trial (3 free docs), Basic $4.99, Pro $9.99, 5-doc pack $0.99
-- [x] Smart upgrade nudge — escalates after 1/2/3+ packs purchased
-- [x] Paywall — Pro as hero, Basic secondary, pack as last resort
-- [x] AI credit / pack consumption tracking in UserDefaults
-- [x] Trial banner showing remaining free conversions
+- [x] StoreKit 2 product loading, purchase, restore, and transaction listener
+- [x] Three free conversions, Basic, Pro, and 5-doc pack product IDs
+- [x] Pack credit tracking and upgrade nudges
+- [x] StoreKit configuration wired into the shared Xcode scheme
 
-### Models & Download
-- [x] ModelManager — check, download, offline mode, delete/offload
-- [x] ModelDownloadView — shows model sizes, progress, Pro-gated AI models
-- [x] No download on first launch — app works immediately with fast path
-- [x] Enhanced models prompted only when complexity detected
-- [x] Model deletion / offloading support (user and OS)
-
-### Device & Feature Intelligence
-- [x] DeviceCapability — Apple Silicon detection, Tahoe detection
-- [x] FeatureFlags — remote JSON config for AI language gating
-- [x] Language-aware AI gating — CJK/Arabic/Hebrew excluded from AI
-- [x] Language quality warning shown for low-support languages
-- [x] Intel Mac — AI hidden, clear explanation shown
-
-### UI
-- [x] Animation-first drop zone — breathing # symbol, glow, ripple on drop
-- [x] AppPhase state machine — idle/analysing/converting/result/error
-- [x] Progress ring around # during conversion
-- [x] Spring transitions between phases
-- [x] Format chips (PDF · DOCX · PPTX · XLSX · HTML)
-- [x] Icon-only output toolbar (copy/save/new with tooltips)
-- [x] Word count in output
-- [x] Cmd+O, Cmd+S, Cmd+N, Cmd+Shift+C keyboard shortcuts
-- [x] AI suggestion sheet when complexity detected
-- [x] Language warning banner (dismissible, slides from bottom)
-- [x] Password prompt sheet
-- [x] Accent colour set (#4f46e5 indigo)
-- [x] Menu bar with liquid glass popover
-- [x] Window resizes: 400px portrait → 640px for output
+### Models and Feature Gating
+- [x] ModelManager download/check/delete/offload flow
+- [x] On-demand model prompts instead of first-launch downloads
+- [x] Device capability checks for Apple Silicon and OS features
+- [x] Remote feature flags at `docs/public/flags.json`
+- [x] Language quality warnings and AI gating
 
 ### App Store Technical
-- [x] PrivacyInfo.xcprivacy — Privacy Manifest
-- [x] Upmarket.entitlements — App Sandbox, network client, user files
-- [x] Bundle stripped to 102MB (was 1.3GB — removed PyTorch/Docling)
-- [x] Apple compresses to ~47MB download automatically
+- [x] Bundle ID set to `com.upmarket.app`
+- [x] `Upmarket.entitlements` wired via `CODE_SIGN_ENTITLEMENTS`
+- [x] Privacy manifest present
+- [x] App icon assets present through 1024 px
+- [x] Open source license resource present
 
-### Tooling
-- [x] update_dependencies.sh — one-command dependency update + sync
-- [x] patch_mps.sh — MPS float32 patch after transformers updates
-- [x] strip_stdlib.sh — reduces Python stdlib size
-- [x] RELEASING.md — release process documentation
-- [x] docs/public/flags.json — remote feature flag file
+## Release Gates
 
----
+### Gate A - Build and Packaging
+- [ ] Build cleanly with `xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' build`
+- [ ] Archive successfully in Xcode with the release team selected
+- [ ] Verify sandbox entitlements in the archived app
+- [ ] Confirm bundled Python runtime imports required modules from inside the app bundle
+- [ ] Confirm app works after deleting downloaded models
 
-## Outstanding — P0 (Blocks App Store Submission)
+### Gate B - Conversion Reliability
+- [ ] Create a 20-document smoke corpus covering PDF, scanned PDF, DOCX, PPTX, XLSX, HTML, image, and audio
+- [ ] For each corpus document, record expected status: success, unsupported, password required, or degraded output
+- [ ] Run fast path with no downloaded models
+- [ ] Run enhanced/AI paths after model download where supported
+- [ ] Verify temp files are cleaned after success, failure, cancellation, and app quit
+- [ ] Verify conversion result state always resolves to result, actionable error, password prompt, or explicit in-progress state
 
-### Must be done by you (requires Apple ID / Xcode GUI)
-- [ ] Wire `Upmarket.entitlements` in Xcode Build Settings → Code Signing Entitlements
-- [ ] Register bundle ID `com.upmarket.app` in App Store Connect
-- [ ] Set Team ID in Xcode project settings (General → Signing)
-- [ ] Register app record in App Store Connect (name, category, age rating)
-- [ ] Create IAP products in App Store Connect:
-  - `com.upmarket.app.basic` — $4.99
-  - `com.upmarket.app.pro` — $9.99
-  - `com.upmarket.app.doc_pack` — $0.99
-- [ ] Test purchase flow with StoreKit sandbox
+### Gate C - Stability and Diagnostics
+- [ ] Replace `print` diagnostics in Swift services with `OSLog.Logger`
+- [ ] Add OSLog categories: conversion, pythonBridge, modelDownload, storeKit, fileAccess, featureFlags
+- [ ] Add signposts around conversion stages: copyToTemp, analyse, nativeExtract, pythonConvert, postProcess, saveOutput
+- [ ] Add conversion liveness monitor based on progress/heartbeat updates, not fixed elapsed duration
+- [ ] Surface stalled conversion state with "still working" vs "no progress detected" messaging
+- [ ] Add memory pressure handling using Apple-native process/system signals where practical
+- [ ] Run Instruments: Allocations, Leaks, Time Profiler, Main Thread Checker
+- [ ] Run Thread Sanitizer on conversion, model download, and StoreKit flows
+- [ ] Verify TestFlight/App Store crash diagnostics appear in Xcode Organizer
 
-### App Icon (required — App Store rejects without it)
-- [ ] Design icon — `#` symbol, indigo on white, Tahoe style (see prompt in docs)
-- [ ] Export all sizes (16, 32, 64, 128, 256, 512, 1024px @1x and @2x)
-- [ ] Add to `Assets.xcassets/AppIcon.appiconset`
+### Gate D - StoreKit and App Store
+- [ ] Register bundle ID `com.upmarket.app` in Apple Developer/App Store Connect
+- [ ] Set release Team ID in Xcode signing settings
+- [ ] Register App Store app record: name, category, age rating, pricing
+- [ ] Create App Store Connect IAP products:
+  - [ ] `com.upmarket.app.basic` - $4.99
+  - [ ] `com.upmarket.app.pro` - $9.99
+  - [ ] `com.upmarket.app.doc_pack` - $0.99
+- [ ] Test purchases, pending purchases, restore, refunds/revocations, and interrupted network in StoreKit testing
+- [ ] Test StoreKit sandbox with App Store Connect products before submission
 
-### GitHub Pages (for feature flags)
-- [ ] Enable GitHub Pages on `0x687931/upmarket` repo → serve from `/docs/public`
-- [ ] Verify `https://0x687931.github.io/upmarket/flags.json` is accessible
+### Gate E - Legal, Privacy, and Listing
+- [ ] Write and host privacy policy
+- [ ] Write and host EULA / terms
+- [ ] Verify App Privacy answers match actual data collection: no analytics, no document upload, local processing
+- [ ] Link privacy policy and terms in Preferences/About and App Store Connect
+- [ ] Finalize app description, subtitle, keywords, support URL, and marketing URL
+- [ ] Capture 5 App Store screenshots at required sizes
 
----
+## Stability Workstream
 
-## Outstanding — P1 (Required for Paid Product)
+This is a launch requirement, not post-launch polish.
 
-### Preferences Window
-- [ ] Cmd+, opens preferences
-- [ ] Models tab — show downloaded models, storage used, delete button
-- [ ] Account tab — current plan, upgrade, restore purchases
-- [ ] About tab — version, open source licenses, privacy policy link
+### Conversion Liveness
+- [ ] Define stage enum: queued, copying, analysing, extracting, python, postProcessing, saving, complete, failed
+- [ ] Emit stage updates from Swift paths and Python bridge boundaries
+- [ ] Add Python progress callback or progress file for long Docling/model operations
+- [ ] Track last progress heartbeat and current stage in `ConversionService`
+- [ ] If no progress is observed, keep the job running but show a recoverable stalled-state UI with cancel/retry options
+- [ ] Log stage, file type, file size, pipeline, OS version, and failure class without logging file contents
 
-### Legal
-- [ ] Write privacy policy (1 page, host on GitHub Pages)
-- [ ] Write EULA / Terms (1 page, host alongside)
-- [ ] Open source attribution screen (generate from pip-licenses)
-- [ ] Link both in App Store listing and in-app About tab
+### Error Taxonomy
+- [ ] Unsupported format
+- [ ] Password required
+- [ ] File inaccessible / sandbox denied
+- [ ] File too large or memory pressure
+- [ ] Model unavailable / download required
+- [ ] Model download failed
+- [ ] Python bridge import/runtime failure
+- [ ] Conversion made no progress
+- [ ] Conversion failed with partial output available
 
-### App Store Listing
-- [ ] App description (4000 chars) — lead with offline + privacy
-- [ ] Subtitle (30 chars): "Document to Markdown, On-Device"
-- [ ] Keywords (100 chars): pdf markdown, document converter, offline ai
-- [ ] 5 screenshots at 1440×900 or 2560×1600
-- [ ] Support URL
-- [ ] Privacy policy URL
+### Native Test Coverage
+- [ ] `ConversionService` routing and state transitions
+- [ ] PDF password path
+- [ ] Python bridge success/failure parsing
+- [ ] Liveness monitor state transitions
+- [ ] ModelManager check/download/delete error handling
+- [ ] StoreManager product loading, entitlement refresh, pack credit consumption, restore
+- [ ] XCUITest for drop zone, conversion result, paywall, preferences, and model download prompt
 
-### Quality
-- [ ] Friendly error messages — categorise: unsupported format, too large, failed
-- [ ] Conversion timeout — 5 min max, show clear error
-- [ ] Dark mode — test and fix any contrast issues
-- [ ] Test on macOS 13.3, 14.x, 15.x, 26.x
+## Product Workstream
 
----
+### v1.0 Must-Haves
+- [ ] Friendly categorized errors using the error taxonomy above
+- [ ] Preferences/About links to licenses, privacy policy, support, and version
+- [ ] Dark mode pass for drop zone, shelf, output, paywall, and preferences
+- [ ] macOS compatibility pass on 13.3, 14.x, 15.x, and current beta where available
+- [ ] GitHub Pages enabled for `/docs/public`
+- [ ] Verify `https://0x687931.github.io/upmarket/flags.json`
 
-## Outstanding — P2 (Polish / Post-Launch)
-
-### UI Polish
-- [ ] Rendered Markdown preview toggle (raw ↔ rendered)
-- [ ] Share button (macOS share sheet)
-- [ ] Onboarding flow — 3-step welcome for first launch
-- [ ] Dark mode drop zone and output polish
-- [ ] Animated checkmarks in paywall feature list
-
-### Features
-- [ ] Batch conversion (multiple files, queue UI)
-- [ ] Conversion history (recent files list)
-- [ ] Output format options (Markdown / plain text)
+### v1.1 Candidates
+- [ ] Rendered Markdown preview toggle
+- [ ] Share button using macOS share sheet
+- [ ] Batch conversion queue UX
+- [ ] Conversion history
+- [ ] Output format options: Markdown / plain text
 - [ ] OCR toggle in drop zone
+- [ ] First-launch onboarding
 
-### Localisation (#10)
-- [ ] Localizable.strings — English baseline
-- [ ] German, French, Japanese (v1.1)
-- [ ] Spanish, Italian, Portuguese, Korean, Chinese (v1.2)
-- [ ] App Store listing translated per locale
+### P2 - UX/HIG Audit Findings
+- [ ] Remove automatic paywall display at tour completion; let users experience a conversion before purchase prompts.
+- [ ] Make shelf control hit targets at least 44x44 pt, with 48x48 preferred for pointer and accessibility comfort.
+- [ ] Improve shelf discoverability with visible labels in expanded state and accessibility labels/hints for icon-only controls.
+- [ ] Surface trial state at decision points: shelf, menu bar, paywall, and conversion-complete moments.
+- [ ] Adapt paywall headline and actions to context: full trial, 1 conversion remaining, trial expired, AI upgrade, or pack upsell.
+- [ ] Add a low-pressure "Continue Trial" or "Not Now" action when free conversions remain.
+- [ ] Replace disabled priced purchase buttons during product loading with explicit "Loading purchase options" CTAs and recoverable retry messaging.
+- [ ] Expand menu bar dropdown actions to include Add Document, Upgrade/Manage License, and Open Last Result when available.
+- [ ] Rewrite onboarding copy to describe actions, not symbols; use "Choose Add Files" instead of "Tap +".
+- [ ] Add Preferences controls for shelf position, auto-hide behavior, and whether the shelf appears only during drag/drop workflows.
+- [ ] Ensure transient onboarding/paywall panels support expected dismissal behavior, including Escape where appropriate.
+- [ ] Keep the idle menu bar icon template-like and reserve accent color/animation for meaningful status changes.
 
-### Stability
-- [ ] Unit tests — ConversionService, StoreManager, ModelManager
-- [ ] UI tests — drop zone, conversion flow, paywall
-- [ ] Crash reporting (Apple-native or Sentry)
-- [ ] Memory monitor — warn if >2GB during conversion
+### Localisation
+- [x] Localized string files exist for English, German, French, Japanese, Spanish, Italian, Portuguese, Korean, and Chinese
+- [ ] Audit English baseline for final v1.0 copy
+- [ ] Validate translations for truncation and tone
+- [ ] Translate App Store listing per launch locale
 
-### Launch
-- [ ] TestFlight internal beta
-- [ ] TestFlight external beta (5-10 testers)
-- [ ] ProductHunt submission
-- [ ] Reddit r/macapps launch post
+## Release Milestones
 
----
+| Milestone | Exit Criteria |
+|---|---|
+| M0 - P0 Audit Remediation | Every P0 Audit Blocker above is resolved or explicitly removed from v1.0 scope |
+| M1 - Stability Baseline | Gates A, B, and C pass on local machine |
+| M2 - App Store Ready | Gates D and E pass; TestFlight build uploaded |
+| M3 - v1.0 Launch | Internal beta signed off; external beta issues triaged; listing complete |
+| M4 - v1.1 | Post-launch candidates prioritized from user feedback |
 
-## Milestone Summary
+## Validation Commands
 
-| Milestone | Scope | Est. |
-|---|---|---|
-| **M1 — Submittable** | P0 items above + app icon | 1 week |
-| **M2 — v1.0 Launch** | P1 items + screenshots + legal | 1 week |
-| **M3 — Post-launch** | P2 polish based on user feedback | ongoing |
+```bash
+xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' build
+xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' test -only-testing:UpmarketTests
+./scripts/update_dependencies.sh --check-only
+./scripts/generate_licenses.sh
+```
 
----
+Manual validation remains required for Xcode Archive, App Store Connect setup, StoreKit sandbox, privacy answers, screenshots, TestFlight, and UI automation unless the task explicitly changes UI behavior.
 
 ## Open Questions
-- [ ] Domain: upmarket.app vs upmarketapp.com — check availability
-- [ ] Landing page: before or after App Store submission?
-- [ ] Intel Mac: document as "Apple Silicon recommended" in listing?
-- [ ] Batch conversion: v1.0 or v1.1?
+
+- [ ] Domain: `upmarket.app` vs `upmarketapp.com`
+- [ ] Landing page before App Store submission or after TestFlight
+- [ ] How prominently to position Intel Mac as CPU-only / Apple Silicon recommended
+- [ ] Whether batch conversion belongs in v1.0 or v1.1
+- [ ] Whether enhanced/AI model downloads should be available from Preferences before first complex document

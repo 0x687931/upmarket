@@ -80,6 +80,12 @@ struct ShelfView: View {
                 reprocessItem(queue[idx], useAI: req.useAI)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .upmarketSetShelfExpanded)) { note in
+            guard let expanded = note.object as? Bool else { return }
+            withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
+                isExpanded = expanded
+            }
+        }
         .onChange(of: totalWidth) { w in
             ShelfWindowController.shared.resizeToContent(width: w)
         }
@@ -254,37 +260,10 @@ struct ShelfView: View {
 
     private func openFilePicker() {
         guard store.canConvert else { showPaywall = true; return }
-
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = true
-        panel.canChooseDirectories = false
-        panel.allowedContentTypes = [
-            .pdf, .html, .png, .jpeg,
-            UTType(filenameExtension: "docx") ?? .data,
-            UTType(filenameExtension: "pptx") ?? .data,
-            UTType(filenameExtension: "xlsx") ?? .data,
-            UTType(filenameExtension: "epub") ?? .data,
-            UTType(filenameExtension: "csv")  ?? .data,
-            UTType(filenameExtension: "mp3")  ?? .data,
-            UTType(filenameExtension: "m4a")  ?? .data,
-        ]
-
-        // Position panel near the shelf window
-        if let shelfWindow = ShelfWindowController.shared.window {
-            let shelfFrame = shelfWindow.frame
-            panel.setFrameOrigin(NSPoint(
-                x: shelfFrame.maxX + 8,
-                y: shelfFrame.minY
-            ))
-        }
-        panel.orderFrontRegardless()
-
-        // Expand shelf smoothly while picker is open
         withAnimation(.spring(duration: 0.35, bounce: 0.1)) { isExpanded = true }
-
-        if panel.runModal() == .OK {
-            panel.urls.forEach { addToQueue($0) }
-        }
+        FileAccessService.shared
+            .chooseDocuments(allowsMultipleSelection: true, positioningNear: ShelfWindowController.shared.window)
+            .forEach { addToQueue($0) }
     }
 
     // MARK: - Drop handler
@@ -338,6 +317,11 @@ struct ShelfView: View {
                 }
                 if !self.queue.contains(where: { $0.state == .converting }) {
                     NotificationCenter.default.post(name: .upmarketConversionEnded, object: nil)
+                }
+                if self.store.shouldShowTrialPaywallAfterConversion() {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        NotificationCenter.default.post(name: .showPaywall, object: nil)
+                    }
                 }
             }
         }
@@ -451,8 +435,7 @@ struct ShelfItemView: View {
         HStack(spacing: 3) {
             if case .done(let markdown, _) = item.state {
                 Button {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(markdown, forType: .string)
+                    FileAccessService.shared.copyMarkdown(markdown)
                 } label: { Image(systemName: "doc.on.doc").font(.system(size: 9)) }
                 .buttonStyle(ShelfActionButtonStyle()).help("Copy Markdown")
             }
@@ -469,12 +452,10 @@ struct ShelfItemView: View {
             Button("Open in Markdown Editor") { openInDefaultApp(markdown, title: title) }
             Divider()
             Button("Copy Markdown") {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(markdown, forType: .string)
+                FileAccessService.shared.copyMarkdown(markdown)
             }
             Button("Copy File Path") {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(item.url.path, forType: .string)
+                FileAccessService.shared.copyFilePath(item.url)
             }
             Divider()
             Button("Save As…") { saveMarkdown(markdown, title: title) }
@@ -486,7 +467,7 @@ struct ShelfItemView: View {
             Divider()
         }
         Button("Show Original in Finder") {
-            NSWorkspace.shared.activateFileViewerSelecting([item.url])
+            FileAccessService.shared.revealInFinder(item.url)
         }
         Divider()
         Button("Remove from Shelf", role: .destructive) { onRemove() }
@@ -494,8 +475,7 @@ struct ShelfItemView: View {
 
     private func handleSingleClick() {
         if case .done(let markdown, _) = item.state {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(markdown, forType: .string)
+            FileAccessService.shared.copyMarkdown(markdown)
         }
     }
 
@@ -508,21 +488,13 @@ struct ShelfItemView: View {
     private func openInDefaultApp(_ markdown: String, title: String) {
         Task { @MainActor in
             let savedURL = SavePreference.shared.save(markdown: markdown, title: title, sourceURL: item.url)
-            if let url = savedURL { NSWorkspace.shared.open(url) }
+            if let url = savedURL { FileAccessService.shared.open(url) }
         }
     }
 
     private func saveMarkdown(_ markdown: String, title: String) {
-        Task {
-            let panel = NSSavePanel()
-            panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
-            panel.nameFieldStringValue = (title.isEmpty ? "converted" : title) + ".md"
-            await MainActor.run {
-                panel.orderFrontRegardless()
-                if panel.runModal() == .OK, let url = panel.url {
-                    try? markdown.write(to: url, atomically: true, encoding: .utf8)
-                }
-            }
+        Task { @MainActor in
+            _ = FileAccessService.shared.saveMarkdown(markdown, title: title)
         }
     }
 

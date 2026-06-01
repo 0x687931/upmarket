@@ -1,0 +1,56 @@
+name: Release Candidate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "release/**"
+
+jobs:
+  release-candidate:
+    runs-on: macos-14
+    env:
+      DERIVED_DATA_DIR: build/DerivedData
+      ARCHIVE_PATH: build/Upmarket.xcarchive
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Preflight hooks
+        run: |
+          scripts/ci/verify_xcode_project.sh
+          scripts/ci/verify_entitlements.sh
+          scripts/ci/verify_python_bundle.sh
+          scripts/ci/validate_corpus.py
+          scripts/ci/validate_models.py
+
+      - name: Archive
+        run: |
+          xcodebuild archive \
+            -project Upmarket/Upmarket.xcodeproj \
+            -scheme Upmarket \
+            -destination "generic/platform=macOS" \
+            -archivePath "$ARCHIVE_PATH" \
+            -derivedDataPath "$DERIVED_DATA_DIR" \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Verify archived app plist and entitlements
+        run: |
+          APP="$ARCHIVE_PATH/Products/Applications/Upmarket.app"
+          scripts/ci/verify_effective_plist.sh "$APP"
+          scripts/ci/verify_entitlements.sh "$APP"
+
+      - name: Offline conversion smoke test
+        run: scripts/ci/smoke_convert_offline.sh
+
+      - name: UI automation tests
+        run: |
+          xcodebuild test \
+            -project Upmarket/Upmarket.xcodeproj \
+            -scheme Upmarket \
+            -destination "platform=macOS" \
+            -derivedDataPath "$DERIVED_DATA_DIR" \
+            -only-testing:UpmarketUITests \
+            CODE_SIGNING_ALLOWED=NO

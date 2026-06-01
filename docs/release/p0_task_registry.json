@@ -1,0 +1,337 @@
+{
+  "version": 1,
+  "source_of_truth": "docs/IMPLEMENTATION_PLAN.md",
+  "tasks": [
+    {
+      "id": "P0-001",
+      "title": "Minimalist monolith source boundaries",
+      "objective": "Make the app structure small, explicit, and understandable without introducing a framework-heavy architecture.",
+      "owner": "Architect",
+      "scope": [
+        "docs/PROJECT_VISION.md",
+        "docs/IMPLEMENTATION_PLAN.md",
+        "AGENTS.md",
+        "Upmarket/Upmarket/**"
+      ],
+      "non_goals": [
+        "Do not introduce TCA, Clean Architecture layers, dependency-injection frameworks, or protocol-heavy abstractions.",
+        "Do not remove monetization, shelf usability, StoreKit, or the core conversion primitive."
+      ],
+      "acceptance": [
+        "Target source layout is documented.",
+        "Duplicate or speculative entry points are identified or removed.",
+        "Views call concrete services instead of owning conversion, StoreKit, Python, diagnostics, or file-access logic.",
+        "Any new dependency, entitlement, process boundary, or release hook has an ADR."
+      ],
+      "release_gate": "P0 - Minimalist Monolith Architecture",
+      "risk": ["maintainability", "UX", "App Store"],
+      "labels": ["p0-blocker", "area-swift", "area-release", "agent-ready"]
+    },
+    {
+      "id": "P0-002",
+      "title": "Python runtime isolation and bridge contract",
+      "objective": "Ensure Python conversion cannot freeze or crash the Swift app process and has one typed bridge contract.",
+      "owner": "Python Runtime",
+      "scope": [
+        "Upmarket/Upmarket/Services/PythonBridge.swift",
+        "Upmarket/Upmarket/Services/ConversionService.swift",
+        "UpmarketPython/**",
+        "scripts/build_python_env.sh",
+        "scripts/ci/verify_python_bundle.sh"
+      ],
+      "non_goals": [
+        "Do not add cloud conversion.",
+        "Do not add a hard five-minute conversion timeout.",
+        "Do not broaden network access during conversion."
+      ],
+      "acceptance": [
+        "All Python calls are behind one readiness-gated bridge API.",
+        "Bridge failures map to typed Swift errors.",
+        "Python access is serialized or moved behind a signed helper/XPC process.",
+        "Packaged Python import smoke passes from the built app."
+      ],
+      "release_gate": "P0 - Python Runtime Isolation",
+      "risk": ["operability", "safety", "Python/upstream"],
+      "labels": ["p0-blocker", "area-python", "area-swift", "gate-c-stability", "agent-ready"]
+    },
+    {
+      "id": "P0-003",
+      "title": "Conversion job queue, state, and liveness",
+      "objective": "Replace singleton conversion result behavior with per-job state, progress, cancellation, retry, and no-progress detection.",
+      "owner": "Swift/App Store",
+      "scope": [
+        "Upmarket/Upmarket/Services/ConversionService.swift",
+        "Upmarket/Upmarket/Views/ContentView.swift",
+        "Upmarket/Upmarket/Views/ShelfView.swift",
+        "Upmarket/UpmarketTests/**"
+      ],
+      "non_goals": [
+        "Do not change pricing or product IDs.",
+        "Do not introduce batch conversion UX beyond the queue needed for correctness.",
+        "Do not use elapsed time alone as stalled-conversion detection."
+      ],
+      "acceptance": [
+        "Each conversion has a job ID, stage, progress heartbeat, result, error, and cancellation state.",
+        "Two queued conversions cannot overwrite each other.",
+        "Cancel and retry are represented in service state and UI.",
+        "Tests cover success, failure, cancellation, and no-progress classification."
+      ],
+      "release_gate": "P0 - Conversion Job Correctness",
+      "risk": ["operability", "UX", "maintainability"],
+      "labels": ["p0-blocker", "area-swift", "gate-b-conversion", "gate-c-stability", "agent-ready"]
+    },
+    {
+      "id": "P0-004",
+      "title": "Offline model integrity",
+      "objective": "Make conversion offline by default and treat missing, partial, corrupt, or unexpected model directories as unavailable.",
+      "owner": "Security/Privacy",
+      "scope": [
+        "Upmarket/Upmarket/Services/ModelManager.swift",
+        "UpmarketPython/models/**",
+        "scripts/ci/validate_models.py",
+        "scripts/ci/smoke_convert_offline.sh"
+      ],
+      "non_goals": [
+        "Do not download models implicitly during conversion.",
+        "Do not trust nonempty model directories as valid.",
+        "Do not use mutable model revisions for release builds."
+      ],
+      "acceptance": [
+        "Conversion runtime sets offline environment variables.",
+        "Model downloads use staging, manifest validation, and atomic promotion.",
+        "Validated manifests include repo, revision, expected files, and checksums where practical.",
+        "Offline smoke fails clearly when required models are unavailable."
+      ],
+      "release_gate": "P0 - Offline and Model Integrity",
+      "risk": ["security", "operability", "Python/upstream"],
+      "labels": ["p0-blocker", "area-python", "area-security", "gate-b-conversion", "agent-ready"]
+    },
+    {
+      "id": "P0-005",
+      "title": "Native metadata extraction and sandbox temp safety",
+      "objective": "Replace external metadata tools with Apple APIs and remove broad temporary-directory sandbox exceptions.",
+      "owner": "Swift/App Store",
+      "scope": [
+        "Upmarket/Upmarket/Services/**",
+        "UpmarketPython/docling_bridge/**",
+        "Upmarket/Upmarket/Upmarket.entitlements",
+        "scripts/ci/verify_entitlements.sh"
+      ],
+      "non_goals": [
+        "Do not depend on PATH tools such as exiftool, ffprobe, or ffmpeg.",
+        "Do not keep /private/tmp sandbox exceptions.",
+        "Do not widen Python file access roots."
+      ],
+      "acceptance": [
+        "Image metadata uses ImageIO/CoreGraphics.",
+        "Media metadata uses AVFoundation.",
+        "Python TMPDIR points to an app-owned per-job workspace.",
+        "Entitlement check fails on temporary absolute-path exceptions."
+      ],
+      "release_gate": "P0 - Native Apple Replacements and Sandbox Safety",
+      "risk": ["security", "App Store", "maintainability"],
+      "labels": ["p0-blocker", "area-swift", "area-security", "gate-a-build", "agent-ready"]
+    },
+    {
+      "id": "P0-006",
+      "title": "Effective plist, entitlements, and Quick Action handoff",
+      "objective": "Make App Store metadata, services, URL schemes, speech permissions, app groups, and Quick Action handoff valid in the built app.",
+      "owner": "Swift/App Store",
+      "scope": [
+        "Upmarket/Upmarket/Info.plist",
+        "Upmarket/Upmarket/Upmarket.entitlements",
+        "Upmarket/UpmarketQuickAction/**",
+        "scripts/ci/verify_effective_plist.sh",
+        "scripts/ci/verify_entitlements.sh"
+      ],
+      "non_goals": [
+        "Do not trust arbitrary custom-URL file paths.",
+        "Do not add new entitlements without an ADR.",
+        "Do not require Apple account credentials for local checks."
+      ],
+      "acceptance": [
+        "Effective built Info.plist contains required URL, Services, and speech keys.",
+        "App Group identifiers use registered group-style names.",
+        "Quick Action handoff uses App Group storage plus copied files or security-scoped bookmarks.",
+        "CI checks plist and source entitlements."
+      ],
+      "release_gate": "P0 - App Store Metadata and Entitlements",
+      "risk": ["App Store", "security", "operability"],
+      "labels": ["p0-blocker", "area-swift", "area-security", "gate-a-build", "gate-d-storekit", "agent-ready"]
+    },
+    {
+      "id": "P0-007",
+      "title": "Consumable pack accounting review",
+      "objective": "Ensure paid document pack credits are not client-authoritative in a way that creates support, refund, or review risk.",
+      "owner": "Swift/App Store",
+      "scope": [
+        "Upmarket/Upmarket/Services/StoreManager.swift",
+        "Upmarket/Upmarket/Views/PaywallView.swift",
+        "Upmarket/UpmarketTests/**",
+        "docs/IMPLEMENTATION_PLAN.md"
+      ],
+      "non_goals": [
+        "Do not remove monetization or the paid conversion primitive.",
+        "Do not add a server unless the ADR proves it is necessary.",
+        "Do not change product IDs without App Store review notes."
+      ],
+      "acceptance": [
+        "Pack credit accounting has an ADR.",
+        "Refund/revocation/interrupted purchase behavior is tested or explicitly blocked from release.",
+        "StoreKit restore and transaction listener behavior is covered.",
+        "User-facing purchase failure messages are recoverable."
+      ],
+      "release_gate": "P0 - App Store Metadata and Entitlements",
+      "risk": ["Monetization/StoreKit", "App Store", "UX"],
+      "labels": ["p0-blocker", "area-swift", "gate-d-storekit", "agent-ready"]
+    },
+    {
+      "id": "P0-008",
+      "title": "Observability, diagnostics, and fault injection",
+      "objective": "Replace ad hoc diagnostics with OSLog, signposts, correlation IDs, redacted bundles, and failure-mode tests.",
+      "owner": "Operability",
+      "scope": [
+        "Upmarket/Upmarket/Services/**",
+        "Upmarket/UpmarketTests/**",
+        "scripts/ci/**",
+        "docs/release/**"
+      ],
+      "non_goals": [
+        "Do not collect automatic telemetry.",
+        "Do not log document contents, extracted Markdown, passwords, or full local paths.",
+        "Do not add third-party crash analytics before Apple-native crash triage is proven insufficient."
+      ],
+      "acceptance": [
+        "Core services use OSLog categories and per-job correlation IDs.",
+        "Conversion stages have signposts or equivalent structured stage logs.",
+        "Fault-injection tests cover bridge failure, stalled conversion, temp cleanup, partial model download, corrupt files, and huge files.",
+        "Diagnostic bundle generation is redacted and user-approved."
+      ],
+      "release_gate": "P0 - Observability, CI, and Release Validation",
+      "risk": ["operability", "security", "maintainability"],
+      "labels": ["p0-blocker", "area-swift", "area-release", "gate-c-stability", "agent-ready"]
+    },
+    {
+      "id": "P0-009",
+      "title": "Crash and bug reporting runbook",
+      "objective": "Define and implement the privacy-first support path for crashes, conversion failures, model failures, and StoreKit issues.",
+      "owner": "Operability",
+      "scope": [
+        "docs/release/**",
+        ".github/ISSUE_TEMPLATE/**",
+        "Upmarket/Upmarket/Services/**",
+        "Upmarket/Upmarket/Views/PreferencesView.swift"
+      ],
+      "non_goals": [
+        "Do not silently upload diagnostics.",
+        "Do not include source documents or extracted text in support bundles.",
+        "Do not add Sentry or another service unless Apple-native crash reporting is documented as insufficient."
+      ],
+      "acceptance": [
+        "Incident runbook exists for crash spikes, helper crashes, corrupt model rollouts, feature flag mistakes, and StoreKit failures.",
+        "Help > Report a Problem flow is specified or implemented.",
+        "User can preview and omit diagnostics before sending.",
+        "GitHub/support templates match the runbook categories."
+      ],
+      "release_gate": "P0 - Crash and Bug Reporting",
+      "risk": ["operability", "security", "UX", "App Store"],
+      "labels": ["p0-blocker", "area-release", "area-ux", "gate-c-stability", "agent-ready"]
+    },
+    {
+      "id": "P0-010",
+      "title": "Release dependency lock and upstream intake",
+      "objective": "Make upstream adoption explicit, reproducible, and gated by local validation instead of ad hoc package upgrades.",
+      "owner": "Security/Privacy",
+      "scope": [
+        "requirements.txt",
+        "scripts/update_dependencies.sh",
+        "scripts/ci/watch_upstream.py",
+        "scripts/ci/validate_corpus.py",
+        "docs/release/RELEASE_PIPELINE.md",
+        ".github/workflows/nightly-upstream.yml",
+        ".github/ISSUE_TEMPLATE/upstream-intake.yml"
+      ],
+      "non_goals": [
+        "Do not auto-upgrade dependencies from scheduled jobs.",
+        "Do not adopt upstream conversion changes without a corpus case.",
+        "Do not accept local upstream patches without an ADR and removal condition."
+      ],
+      "acceptance": [
+        "Runtime dependencies are exactly pinned for release.",
+        "Current, candidate, and latest-upstream states are documented and enforced by scripts.",
+        "Scheduled upstream watch creates/updates a tracking issue.",
+        "Upstream candidates require URL, local reproduction/corpus case, impact, security review, and rollback plan."
+      ],
+      "release_gate": "P0 - Release Engineering and Upstream Validation",
+      "risk": ["security", "Python/upstream", "operability"],
+      "labels": ["p0-blocker", "area-python", "area-security", "area-release", "upstream-watch", "agent-ready"]
+    },
+    {
+      "id": "P0-011",
+      "title": "Agent task automation and release hooks",
+      "objective": "Make multi-agent task tracking executable through a validated registry and GitHub issue/label sync.",
+      "owner": "Codex main",
+      "scope": [
+        "docs/release/AGENT_TASK_ORCHESTRATION.md",
+        "docs/release/p0_task_registry.json",
+        "scripts/ci/validate_task_registry.py",
+        "scripts/github/sync_task_issues.py",
+        ".github/workflows/**"
+      ],
+      "non_goals": [
+        "Do not replace the implementation plan.",
+        "Do not create duplicate issues for the same task.",
+        "Do not mark a task complete without validation evidence."
+      ],
+      "acceptance": [
+        "Task registry validates locally and in CI.",
+        "Labels can be created or updated from the registry.",
+        "GitHub issues can be created or updated from the registry using the GitHub CLI.",
+        "Implementation plan is updated when P0 scope changes."
+      ],
+      "release_gate": "P0 - Agent Task Tracking and Pipeline Hooks",
+      "risk": ["maintainability", "operability", "area-release"],
+      "labels": ["p0-blocker", "area-release", "agent-ready"]
+    },
+    {
+      "id": "P0-012",
+      "title": "Minimalist core conversion rewrite",
+      "objective": "Replace the fragile singleton conversion path with ConversionQueue, ConversionRunner, and PythonWorker while keeping the existing UI and monetization intact.",
+      "owner": "Codex main",
+      "scope": [
+        "Upmarket/Upmarket/Domain/**",
+        "Upmarket/Upmarket/Services/ConversionQueue.swift",
+        "Upmarket/Upmarket/Services/ConversionRunner.swift",
+        "Upmarket/Upmarket/Services/PythonWorker.swift",
+        "Upmarket/Upmarket/Services/ConversionService.swift",
+        "Upmarket/Upmarket/Services/ModelManager.swift",
+        "Upmarket/Upmarket/Views/ContentView.swift",
+        "Upmarket/Upmarket/Views/ShelfView.swift",
+        "Upmarket/Upmarket/Intents/**",
+        "Upmarket/UpmarketTests/**",
+        "scripts/ci/validate_architecture_boundaries.py",
+        "docs/IMPLEMENTATION_PLAN.md",
+        "docs/release/ARCHITECTURE_BOUNDARIES.md"
+      ],
+      "non_goals": [
+        "Do not introduce TCA, heavyweight MVVM frameworks, enterprise layers, protocol forests, or speculative abstractions.",
+        "Do not redesign the shelf, paywall, product IDs, pricing, or App Store business model.",
+        "Do not move Python to XPC in this task unless the small worker boundary is already passing; deeper helper isolation remains P0-002.",
+        "Do not add batch conversion features beyond the queue correctness required for one source of truth."
+      ],
+      "acceptance": [
+        "Add Domain/ConversionJob.swift, Domain/ConversionResult.swift, Domain/ConversionError.swift, and Domain/Entitlement.swift or document why any one remains unnecessary.",
+        "Add @MainActor ConversionQueue with jobs, add(url:), cancel(id:), retry(id:), and one source of truth for progress/result/error state.",
+        "Add ConversionRunner with run(_:) async -> ConversionResult and no UI ownership.",
+        "Add PythonWorker so only PythonWorker or the lower-level bootstrap bridge imports PythonKit for conversion/model Python calls.",
+        "Deprecate or remove ConversionService singleton result polling from shelf, intents, and views.",
+        "Views render queue state and send actions; they do not poll global conversion result or copy files for conversion.",
+        "Architecture boundary CI enforces no PythonKit imports outside the approved worker/bootstrap boundary and no AppKit file/pasteboard mechanics in views.",
+        "Tests cover two queued jobs, cancellation, retry, Python error mapping, temp cleanup, and no-progress classification without a hard five-minute timeout."
+      ],
+      "release_gate": "P0 - Minimalist Core Rewrite",
+      "risk": ["maintainability", "operability", "UX", "Python/upstream"],
+      "labels": ["p0-blocker", "area-swift", "area-python", "gate-b-conversion", "gate-c-stability", "agent-ready"]
+    }
+  ]
+}

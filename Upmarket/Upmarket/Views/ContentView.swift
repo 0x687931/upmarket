@@ -285,8 +285,7 @@ struct ContentView: View {
                 // Icon-only actions
                 Group {
                     Button {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(output.markdown, forType: .string)
+                        FileAccessService.shared.copyMarkdown(output.markdown)
                     } label: {
                         Image(symbol: UpmarketSymbols.copy)
                     }
@@ -486,6 +485,11 @@ struct ContentView: View {
         withAnimation(.spring(duration: 0.5, bounce: 0.2)) {
             phase = .result(result)
         }
+        if store.shouldShowTrialPaywallAfterConversion() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                NotificationCenter.default.post(name: .showPaywall, object: nil)
+            }
+        }
     }
 
     private func resetToIdle() {
@@ -503,23 +507,7 @@ struct ContentView: View {
 
     private func openFilePicker() {
         guard store.canConvert else { showPaywall = true; return }
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [
-            .pdf, .html, .png, .jpeg, .gif, .tiff,
-            UTType(filenameExtension: "docx") ?? .data,
-            UTType(filenameExtension: "pptx") ?? .data,
-            UTType(filenameExtension: "xlsx") ?? .data,
-            UTType(filenameExtension: "epub") ?? .data,
-            UTType(filenameExtension: "csv")  ?? .data,
-            UTType(filenameExtension: "json") ?? .data,
-            UTType(filenameExtension: "xml")  ?? .data,
-            UTType(filenameExtension: "zip")  ?? .data,
-            UTType(filenameExtension: "mp3")  ?? .data,
-            UTType(filenameExtension: "m4a")  ?? .data,
-            UTType(filenameExtension: "wav")  ?? .data,
-        ]
-        panel.allowsMultipleSelection = false
-        if panel.runModal() == .OK, let url = panel.url {
+        if let url = FileAccessService.shared.chooseDocuments(allowsMultipleSelection: false).first {
             handleFile(url)
         }
     }
@@ -559,12 +547,7 @@ struct ContentView: View {
     }
 
     private func saveMarkdown(_ output: ConversionOutput) {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
-        panel.nameFieldStringValue = output.title + ".md"
-        if panel.runModal() == .OK, let url = panel.url {
-            try? output.markdown.write(to: url, atomically: true, encoding: .utf8)
-        }
+        _ = FileAccessService.shared.saveMarkdown(output.markdown, title: output.title)
     }
 
     private func wordCount(_ text: String) -> String {

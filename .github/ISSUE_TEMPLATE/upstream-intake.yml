@@ -1,0 +1,74 @@
+name: Upstream Intake
+description: Track upstream issues, releases, or patches before adopting them
+title: "[Upstream] "
+labels: ["upstream-blocked", "upstream-watch"]
+body:
+  - type: dropdown
+    id: upstream_project
+    attributes:
+      label: Upstream Project
+      options:
+        - BeeWare Python Apple support
+        - Docling
+        - MarkItDown
+        - pypdfium2 / PyMuPDF
+        - Hugging Face Hub
+        - Transformers
+        - Torch / MLX
+        - Xcode / macOS SDK
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: upstream_url
+    attributes:
+      label: Upstream URL
+      description: Issue, pull request, release note, commit, or advisory URL.
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What changed upstream and why it may matter to Upmarket.
+    validations:
+      required: true
+  - type: textarea
+    id: affected_area
+    attributes:
+      label: Affected Upmarket Area
+      placeholder: "Conversion pipeline, Python packaging, model download, sandbox, App Store review, etc."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Local Reproduction or Corpus Case
+      description: Link a corpus fixture, failing document class, or command that shows the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: User Impact
+      description: What users gain or avoid if we adopt this.
+    validations:
+      required: true
+  - type: checkboxes
+    id: review
+    attributes:
+      label: Required Review
+      options:
+        - label: Conversion quality benchmark required
+        - label: Packaged Python import/offline smoke required
+        - label: Security/privacy review required
+        - label: App Store entitlement/plist review required
+        - label: Model manifest/checksum validation required
+        - label: ADR required for local patch
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Rollback Plan
+      description: How to revert or disable this if adoption fails.
+    validations:
+      required: true

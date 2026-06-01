@@ -1,0 +1,67 @@
+name: Agent Task
+description: Track a scoped task for Codex or a specialist agent
+title: "[Task] "
+labels: ["agent-ready"]
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: One sentence describing the desired outcome.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Files or modules the agent may edit.
+      placeholder: "Allowed files:\n- Upmarket/Upmarket/Services/...\n\nDo not edit:\n- ..."
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: What should not be changed.
+    validations:
+      required: true
+  - type: dropdown
+    id: gate
+    attributes:
+      label: Release Gate
+      options:
+        - P0 blocker
+        - Gate A - Build and Packaging
+        - Gate B - Conversion Reliability
+        - Gate C - Stability and Diagnostics
+        - Gate D - StoreKit and App Store
+        - Gate E - Legal, Privacy, and Listing
+        - v1.1 / post-launch
+    validations:
+      required: true
+  - type: checkboxes
+    id: risk
+    attributes:
+      label: Risk Areas
+      options:
+        - label: Safety
+        - label: Operability
+        - label: Security/privacy
+        - label: Maintainability
+        - label: UX/accessibility
+        - label: App Store/release
+        - label: Monetization/StoreKit
+        - label: Python/upstream
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Commands, tests, screenshots, or manual checks needed.
+    validations:
+      required: true
+  - type: textarea
+    id: handoff
+    attributes:
+      label: Agent Handoff Notes
+      description: Fill in after completion.
+      placeholder: "Files changed:\nValidation run:\nValidation not run:\nRisks:\nNext task:"

@@ -49,3 +49,6 @@ Upmarket/Python/Python.xcframework/
 # Archives
 *.xcarchive
 .venv/
+
+# Generated CI/local reports
+reports/
