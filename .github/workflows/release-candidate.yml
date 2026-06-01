@@ -24,6 +24,7 @@ jobs:
           scripts/ci/verify_entitlements.sh
           scripts/ci/verify_python_bundle.sh
           scripts/ci/validate_corpus.py
+          scripts/ci/validate_corpus_baseline.py
           scripts/ci/validate_models.py
 
       - name: Archive
@@ -44,6 +45,12 @@ jobs:
 
       - name: Offline conversion smoke test
         run: scripts/ci/smoke_convert_offline.sh
+
+      - name: Corpus benchmark baseline
+        run: |
+          mkdir -p reports
+          scripts/benchmark.sh --pipeline fast --json-output reports/corpus-fast.json --fail-below 76
+          scripts/ci/validate_corpus_baseline.py --results reports/corpus-fast.json
 
       - name: UI automation tests
         run: |

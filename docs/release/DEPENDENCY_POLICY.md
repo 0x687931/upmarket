@@ -24,7 +24,7 @@ Before a candidate can become current:
 4. Run `scripts/update_dependencies.sh --install-candidate`.
 5. Run `scripts/ci/verify_python_bundle.sh` from the packaged app state.
 6. Run `scripts/ci/smoke_convert_offline.sh`.
-7. Run `scripts/ci/validate_corpus.py` and the relevant benchmark/corpus comparison.
+7. Run `scripts/ci/validate_corpus.py`, `scripts/ci/validate_corpus_baseline.py`, and the relevant benchmark/corpus comparison.
 8. Run `scripts/generate_licenses.sh` and review license changes.
 9. Document rollback and security/privacy/App Store impact in the upstream intake issue.
 10. Add an ADR for any local upstream patch, including a removal condition.

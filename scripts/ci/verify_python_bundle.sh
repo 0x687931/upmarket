@@ -25,6 +25,7 @@ done
 
 PYTHONPATH="$SITE" HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python3 - <<'PY'
 import importlib
+import importlib.util
 
 modules = [
     "docling_bridge.converter",
@@ -34,6 +35,10 @@ modules = [
 
 for module in modules:
     importlib.import_module(module)
+
+for forbidden in ("fitz", "pymupdf", "pymupdf4llm"):
+    if importlib.util.find_spec(forbidden) is not None:
+        raise SystemExit(f"error: forbidden AGPL/commercial package present in bundled runtime: {forbidden}")
 
 print("ok: bundled Python bridge imports")
 PY

@@ -41,7 +41,7 @@ final class ModelManager: ObservableObject {
 
     private init() {}
 
-    // Fast path (PyMuPDF4LLM) always works — no download required
+    // Fast local conversion works without downloaded models.
     var allRequiredDownloaded: Bool { true }
 
     var enhancedDownloaded: Bool {

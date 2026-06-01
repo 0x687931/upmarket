@@ -119,7 +119,9 @@ jobs:
         run: scripts/update_dependencies.sh --check-only
 
       - name: Validate current corpus manifest
-        run: scripts/ci/validate_corpus.py
+        run: |
+          scripts/ci/validate_corpus.py
+          scripts/ci/validate_corpus_baseline.py
 
       - name: Validate Python bundle imports
         run: scripts/ci/verify_python_bundle.sh

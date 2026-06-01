@@ -226,13 +226,21 @@ This is time-consuming but only needs doing once per document.
 
 ## CI Integration
 
-Run benchmark on every PR:
+Validate the manifest and release baseline on every PR:
 ```yaml
-# .github/workflows/benchmark.yml
-- name: Run corpus benchmark
-  run: ./scripts/benchmark.sh --fail-below 85
-  # Fails CI if overall score drops below 85%
+- name: Validate corpus baseline
+  run: scripts/ci/validate_corpus_baseline.py
 ```
+
+Run the benchmark before every release and fail if the score falls below the stored baseline:
+```yaml
+- name: Run corpus benchmark
+  run: |
+    ./scripts/benchmark.sh --pipeline fast --json-output reports/corpus-fast.json --fail-below 76
+    scripts/ci/validate_corpus_baseline.py --results reports/corpus-fast.json
+```
+
+Baseline values live in `docs/release/corpus_baseline.json`. A lower score is a release blocker unless the baseline is intentionally updated with review notes explaining the quality tradeoff.
 
 ---
 

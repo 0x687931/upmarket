@@ -12,6 +12,11 @@ from pathlib import Path
 NAME_RE = re.compile(r"^\s*([A-Za-z0-9_.-]+)\s*(.*)$")
 EXACT_RE = re.compile(r"^==\s*([^,\s]+)$")
 FORBIDDEN = (">=", "<=", "~=", "!=", ">", "<", "*")
+FORBIDDEN_PACKAGES = {
+    "pymupdf": "PyMuPDF is AGPL/commercial and must not ship in the paid release runtime without a commercial license ADR.",
+    "pymupdf4llm": "pymupdf4llm depends on PyMuPDF licensing and must not ship in the paid release runtime without a commercial license ADR.",
+    "fitz": "fitz/PyMuPDF must not ship in the paid release runtime without a commercial license ADR.",
+}
 
 
 def parse(path: Path) -> tuple[dict[str, str], list[str]]:
@@ -30,6 +35,9 @@ def parse(path: Path) -> tuple[dict[str, str], list[str]]:
             continue
         name, specifier = match.group(1), match.group(2).strip()
         normalized = name.lower().replace("_", "-")
+        if normalized in FORBIDDEN_PACKAGES:
+            errors.append(f"{path}:{number}: forbidden dependency {name}: {FORBIDDEN_PACKAGES[normalized]}")
+            continue
         if normalized in packages:
             errors.append(f"{path}:{number}: duplicate dependency {name}")
             continue

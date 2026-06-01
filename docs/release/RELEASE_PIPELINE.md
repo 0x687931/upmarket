@@ -36,6 +36,7 @@ Checks:
 - StoreKit configuration tests.
 - UI automation tests, including launch and appearance coverage.
 - Corpus smoke benchmark.
+- Corpus benchmark output must meet `docs/release/corpus_baseline.json`; downgrades block release.
 - Model missing/corrupt behavior.
 - Diagnostic bundle generation.
 - Privacy-sensitive logs are redacted.
@@ -49,7 +50,7 @@ Checks current and candidate upstream sources:
 - BeeWare Python Apple support
 - Docling
 - MarkItDown
-- pypdfium2 / PyMuPDF
+- pypdfium2
 - Hugging Face Hub
 - Transformers
 - Torch / MLX
@@ -156,6 +157,7 @@ scripts/ci/verify_python_bundle.sh
 scripts/ci/smoke_convert_offline.sh
 scripts/ci/validate_models.py
 scripts/ci/validate_corpus.py
+scripts/ci/validate_corpus_baseline.py
 scripts/ci/validate_task_registry.py
 scripts/ci/validate_p0_plan_sync.py
 scripts/ci/validate_architecture_boundaries.py

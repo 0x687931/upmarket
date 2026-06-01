@@ -251,6 +251,8 @@
         "scripts/ci/validate_dependency_lock.py",
         "scripts/ci/watch_upstream.py",
         "scripts/ci/validate_corpus.py",
+        "scripts/ci/validate_corpus_baseline.py",
+        "docs/release/corpus_baseline.json",
         "docs/release/RELEASE_PIPELINE.md",
         "docs/release/DEPENDENCY_POLICY.md",
         ".github/workflows/nightly-upstream.yml",
@@ -263,10 +265,11 @@
       ],
       "acceptance": [
         "Runtime dependencies are exactly pinned for release.",
+        "AGPL/commercial-only dependencies such as PyMuPDF and pymupdf4llm are blocked from release locks and packaged runtime unless a commercial-license ADR is approved.",
         "Current, candidate, and latest-upstream states are documented and enforced by scripts.",
         "Scheduled upstream watch creates/updates a tracking issue.",
         "Upstream candidates require URL, local reproduction/corpus case, impact, security review, and rollback plan.",
-        "Conversion-quality upstream changes require corpus fixture or benchmark coverage before adoption.",
+        "Conversion-quality upstream changes require corpus fixture or benchmark coverage before adoption and cannot downgrade the stored corpus baseline.",
         "Local patches to upstream behavior require ADRs with removal conditions and packaged-app validation.",
         "Forks and cherry-picks are tracked as temporary candidates pinned to immutable commits or packaged artifacts with upstream PR context and rollback plans."
       ],

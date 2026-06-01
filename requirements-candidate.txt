@@ -13,8 +13,6 @@ markitdown==0.1.6
 
 # Fast PDF and Office fallbacks
 pypdfium2==5.8.0
-PyMuPDF==1.27.2.3
-pymupdf4llm==1.27.2.3
 mammoth==1.11.0
 python-pptx==1.0.2
 openpyxl==3.1.5

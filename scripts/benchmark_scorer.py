@@ -5,10 +5,11 @@ Converts corpus documents and scores against ground truth (.expected.md).
 
 import argparse
 import json
+import os
 import re
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -252,9 +253,15 @@ print(json.dumps(result))
 
 # ── Runner ────────────────────────────────────────────────────────────────────
 
-def run_benchmark(corpus_dir: Path, pipeline: str, category_filter: str, fail_below: int) -> int:
+def run_benchmark(corpus_dir: Path, pipeline: str, category_filter: str, fail_below: int, json_output: Path | None = None) -> int:
     scores: list[DocScore] = []
     manifest_path = corpus_dir / "manifest.json"
+    corpus_root = str(corpus_dir.resolve())
+    existing_roots = os.environ.get("UPMARKET_ALLOWED_INPUT_ROOTS")
+    os.environ["UPMARKET_ALLOWED_INPUT_ROOTS"] = (
+        corpus_root if not existing_roots else existing_roots + os.pathsep + corpus_root
+    )
+    os.environ.setdefault("TMPDIR", str((Path.cwd() / "build" / "benchmark-tmp").resolve()))
 
     if not manifest_path.exists():
         print(f"No manifest.json found in {corpus_dir}")
@@ -331,6 +338,10 @@ def run_benchmark(corpus_dir: Path, pipeline: str, category_filter: str, fail_be
     overall_avg = sum(s.overall for s in scores) / len(scores) if scores else 0
     print(f"\nOverall: {overall_avg*100:.1f}%  ({len(scores)} documents)")
 
+    if json_output:
+        write_json_report(json_output, pipeline or "fast", scores, corpus_dir, category_filter)
+        print(f"JSON report: {json_output}")
+
     if fail_below > 0 and overall_avg * 100 < fail_below:
         print(f"\nFAIL: score {overall_avg*100:.1f}% below threshold {fail_below}%")
         return 1
@@ -363,6 +374,48 @@ def print_summary(scores: list[DocScore]):
         )
 
 
+def write_json_report(path: Path, pipeline: str, scores: list[DocScore], corpus_dir: Path, category_filter: str) -> None:
+    by_category: dict[str, list[DocScore]] = {}
+    for score in scores:
+        category = score.category.split("/")[0]
+        by_category.setdefault(category, []).append(score)
+
+    categories = {}
+    for category, category_scores in sorted(by_category.items()):
+        categories[category] = {
+            "document_count": len(category_scores),
+            "overall_percent": round(sum(score.overall for score in category_scores) / len(category_scores) * 100, 1),
+            "failed_count": sum(1 for score in category_scores if score.error),
+        }
+
+    report = {
+        "version": 1,
+        "pipeline": pipeline,
+        "corpus": str(corpus_dir),
+        "category_filter": category_filter or None,
+        "document_count": len(scores),
+        "overall_percent": round(sum(score.overall for score in scores) / len(scores) * 100, 1) if scores else 0.0,
+        "categories": categories,
+        "documents": [
+            {
+                "id": score.doc_id,
+                "category": score.category.split("/")[0],
+                "overall_percent": round(score.overall * 100, 1),
+                "heading_recall_percent": round(score.heading_recall * 100, 1),
+                "table_accuracy_percent": round(score.table_accuracy * 100, 1),
+                "content_completeness_percent": round(score.content_completeness * 100, 1),
+                "markdown_valid": score.markdown_valid,
+                "artifacts_found": score.artifacts_found,
+                "elapsed_seconds": round(score.elapsed_seconds, 3),
+                "error": score.error,
+            }
+            for score in scores
+        ],
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
@@ -371,6 +424,7 @@ if __name__ == "__main__":
     parser.add_argument("--pipeline", default="")
     parser.add_argument("--category", default="")
     parser.add_argument("--fail-below", type=int, default=0)
+    parser.add_argument("--json-output", type=Path)
     args = parser.parse_args()
 
     sys.exit(run_benchmark(
@@ -378,4 +432,5 @@ if __name__ == "__main__":
         pipeline=args.pipeline,
         category_filter=args.category,
         fail_below=args.fail_below,
+        json_output=args.json_output,
     ))

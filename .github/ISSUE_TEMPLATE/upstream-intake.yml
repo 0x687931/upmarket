@@ -11,7 +11,7 @@ body:
         - BeeWare Python Apple support
         - Docling
         - MarkItDown
-        - pypdfium2 / PyMuPDF
+        - pypdfium2
         - Hugging Face Hub
         - Transformers
         - Torch / MLX

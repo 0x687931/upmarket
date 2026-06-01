@@ -9,7 +9,7 @@
 
 Key repos to watch:
 - **Docling**: https://github.com/docling-project/docling/releases
-- **PyMuPDF**: https://github.com/pymupdf/PyMuPDF/releases  
+- **pypdfium2**: https://github.com/pypdfium2-team/pypdfium2/releases
 - **BeeWare Python**: https://github.com/beeware/Python-Apple-support/releases
 - **Feature flags**: `docs/public/flags.json` (language support changes)
 
@@ -71,9 +71,9 @@ When Docling improves support for a language (e.g. Japanese):
 
 ## Dependency Version History
 
-| Version | Docling | PyMuPDF | PyTorch | Notes |
+| Version | Docling | pypdfium2 | PyTorch | Notes |
 |---|---|---|---|---|
-| 1.0.0 | 2.96.0 | 1.27.2 | 2.12.0 | Initial release |
+| 1.0.0 | 2.96.0 | 5.8.0 | 2.12.0 | Initial release; PyMuPDF/pymupdf4llm excluded |
 
 ---
 
