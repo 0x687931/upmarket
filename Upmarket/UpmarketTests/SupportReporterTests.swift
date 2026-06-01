@@ -49,7 +49,7 @@ final class SupportReporterTests: XCTestCase {
             localeIdentifier: "en_US",
             correlationID: "job-123",
             lastConversionStage: "python",
-            lastErrorCode: "pythonRuntime",
+            lastErrorCode: "runtime.bridge",
             plistStatus: "ok",
             entitlementStatus: "sandboxed",
             modelManifestStatus: "manifest-present"

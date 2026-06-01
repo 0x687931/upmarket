@@ -63,8 +63,18 @@ struct ConversionRunner {
             if job.useAI {
                 return await pythonWorker.convert(fileURL: tempURL, title: title, useAI: true, password: job.password, workspaceURL: workspaceURL)
             }
-            if VisionDocumentExtractor.isAvailable {
-                return await runVisionExtraction(fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL)
+            if let classification = try? await NativeDocumentClassifier.classify(pdfURL: tempURL, password: job.password) {
+                AppLog.conversion.info(
+                    "Document classifier recommendation=\(classification.recommendedPathway.diagnosticLabel, privacy: .public) confidence=\(classification.confidence, privacy: .public)"
+                )
+                switch classification.recommendedPathway {
+                case .visionOCR:
+                    return await runVisionExtraction(fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL)
+                case .enhanced:
+                    return await runEnhancedPDFConversion(fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL)
+                case .pdfKit:
+                    return await runPDFKitConversion(fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL)
+                }
             }
             return await runPDFKitConversion(fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL)
         case "mp3", "m4a", "wav", "aiff", "opus":
@@ -130,6 +140,15 @@ struct ConversionRunner {
         } catch {
             return await pythonWorker.convert(fileURL: fileURL, title: title, useAI: false, password: password, workspaceURL: workspaceURL)
         }
+    }
+
+    private func runEnhancedPDFConversion(fileURL: URL, title: String, password: String?, workspaceURL: URL) async -> ConversionResult {
+        let result = await pythonWorker.convert(fileURL: fileURL, title: title, useAI: false, password: password, workspaceURL: workspaceURL)
+        if case .success = result {
+            return result
+        }
+        AppLog.conversion.error("Advanced document extraction failed; using basic extraction")
+        return await runPDFKitConversion(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
     }
 
     private func postProcess(_ output: ConversionOutput) async -> ConversionOutput {

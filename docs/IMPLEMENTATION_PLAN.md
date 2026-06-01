@@ -79,6 +79,7 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Detect unavailable/evicted iCloud or File Provider files before conversion and show an action-oriented message without exposing implementation internals.
 - [x] Add storage fixtures/manual release checks for local file, iCloud downloaded, iCloud evicted, File Provider, external volume, read-only source, and save-location denial.
 - [x] Keep user-facing copy product-level: do not mention Python, Docling, pdfium, model package names, or other implementation toolkits outside licenses and explicit diagnostic previews.
+- [x] Use neutral diagnostic component codes for runtime logs and support reports, with developer-only mappings in release docs.
 - [x] Add a UI copy audit to release validation for shelf stages, errors, preferences, paywall, support reports, App Store text, and onboarding.
 
 ### P0 - App Store Metadata and Entitlements
@@ -127,6 +128,7 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Document each conversion pathway's CPU/GPU/Apple Neural Engine behavior and whether benchmark compute mode can be explicitly controlled.
 - [x] Add a native PDFKit corpus benchmark and clean-room inspection plan for improving Apple-native PDF extraction without adopting GPL/incompatible PDF engines.
 - [x] Document Vision/Core ML/CoreGraphics native inspection options for OCR, document structure, image classification, page quality, and OS-managed Apple silicon acceleration.
+- [x] Add an availability-gated native document classifier that can recommend PDFKit, Vision OCR, or enhanced conversion without failing when Vision/Core ML are unavailable.
 - [x] Record forensic benchmark inventory: package versions, binary versions, corpus source commits, benchmark-only OCR/model cache artifacts, and cache roots.
 - [ ] Add a follow-on serial-vs-parallel processing benchmark using the same corpus/pathway matrix, including accuracy, wall time, failures, and system-load evidence before changing queue concurrency.
 - [x] Require ADRs for local patches to upstream behavior, including removal condition and packaged-app validation.

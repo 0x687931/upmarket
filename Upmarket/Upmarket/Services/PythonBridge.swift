@@ -12,13 +12,26 @@ enum PythonBridgeError: Error, Equatable, LocalizedError, Sendable {
     var errorDescription: String? {
         switch self {
         case .frameworkNotFound:
-            return "Python.framework not found in app bundle."
+            return "Conversion runtime is missing from the app bundle."
         case .runtimeUnavailable(let message):
-            return "Python runtime unavailable: \(message)"
+            return "Conversion runtime unavailable: \(message)"
         case .moduleUnavailable(let name):
-            return "Python module unavailable: \(name)"
+            return "Conversion component unavailable: \(name)"
         case .callFailed(let message):
-            return "Python call failed: \(message)"
+            return "Conversion component failed: \(message)"
+        }
+    }
+
+    var diagnosticCode: String {
+        switch self {
+        case .frameworkNotFound:
+            return "runtime.bridge.missing"
+        case .runtimeUnavailable:
+            return "runtime.bridge.unavailable"
+        case .moduleUnavailable:
+            return "runtime.bridge.component-unavailable"
+        case .callFailed:
+            return "runtime.bridge.call-failed"
         }
     }
 }
@@ -49,15 +62,15 @@ actor PythonRuntime {
             version = String(sys.version) ?? "unknown"
             isReady = true
             lastError = nil
-            AppLog.pythonBridge.info("Python runtime ready version=\(self.version ?? "unknown", privacy: .public)")
+            AppLog.pythonBridge.info("Conversion runtime ready version=\(self.version ?? "unknown", privacy: .public)")
         } catch let error as PythonBridgeError {
             isReady = false
             lastError = error
-            AppLog.pythonBridge.error("Python runtime setup failed: \(error.localizedDescription, privacy: .private)")
+            AppLog.pythonBridge.error("Conversion runtime setup failed: \(error.localizedDescription, privacy: .private)")
         } catch {
             isReady = false
             lastError = .runtimeUnavailable(error.localizedDescription)
-            AppLog.pythonBridge.error("Python runtime setup failed: \(error.localizedDescription, privacy: .private)")
+            AppLog.pythonBridge.error("Conversion runtime setup failed: \(error.localizedDescription, privacy: .private)")
         }
     }
 

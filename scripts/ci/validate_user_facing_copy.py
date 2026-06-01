@@ -13,6 +13,10 @@ FORBIDDEN_TERMS = [
     "python",
     "pythonkit",
     "docling",
+    "pdfkit",
+    "vision",
+    "core ml",
+    "coreml",
     "pdfium",
     "pymupdf",
     "pypdfium",
@@ -28,6 +32,11 @@ FORBIDDEN_TERMS = [
 SWIFT_COPY_FILES = [
     Path("Upmarket/Upmarket/Domain/ConversionError.swift"),
     Path("Upmarket/Upmarket/Services/SupportReporter.swift"),
+]
+SWIFT_RUNTIME_LOG_FILES = [
+    Path("Upmarket/Upmarket/Services/ConversionRunner.swift"),
+    Path("Upmarket/Upmarket/Services/PythonBridge.swift"),
+    Path("Upmarket/Upmarket/Services/PythonWorker.swift"),
 ]
 SWIFT_COPY_DIRS = [
     Path("Upmarket/Upmarket/Views"),
@@ -72,6 +81,17 @@ def main() -> int:
         for line_number, value in swift_strings(path):
             if term := has_forbidden_term(value):
                 errors.append(f"{path}:{line_number}: user-facing string exposes '{term}'")
+
+    for path in SWIFT_RUNTIME_LOG_FILES:
+        if not path.exists():
+            continue
+        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            if "AppLog." not in line:
+                continue
+            for match in SWIFT_STRING_RE.finditer(line):
+                value = match.group(0)
+                if term := has_forbidden_term(value):
+                    errors.append(f"{path}:{line_number}: diagnostic log exposes '{term}'")
 
     for path in TEXT_COPY_FILES:
         if not path.exists():

@@ -11,7 +11,7 @@ final class DiagnosticsTests: XCTestCase {
             localeIdentifier: "en_US",
             correlationID: UUID().uuidString,
             lastConversionStage: ConversionStage.failed.rawValue,
-            lastErrorCode: "pythonRuntime",
+            lastErrorCode: "runtime.bridge",
             plistStatus: "ok",
             entitlementStatus: "sandboxed",
             modelManifestStatus: "not-installed"

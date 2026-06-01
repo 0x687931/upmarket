@@ -31,6 +31,18 @@ This note defines the native Apple lane for improving PDF-to-Markdown quality wi
 5. Use Vision OCR for scanned or image-heavy pages, with user-facing copy that says only "advanced extraction" or "image text extraction".
 6. Benchmark each mode separately and record accuracy, wall time, and measured CPU/GPU/Neural Engine use before changing release defaults.
 
+## Classifier Contract
+
+`NativeDocumentClassifier` is the routing evidence service for PDFs. It samples representative pages and returns:
+
+- `pdfkit` for simple digital text and short figure text.
+- `vision_ocr` for image-heavy/scanned PDFs when Vision text recognition is available.
+- `enhanced` for dense tables, RTL text, or likely multi-column layout.
+
+The classifier must remain fail-soft. If Vision or Core ML are unavailable, the evidence records that capability state and the recommendation must not require that framework. If an enhanced or Vision route fails during conversion, the app falls back to the native PDFKit path where possible.
+
+Runtime logs and support reports must use the neutral component codes in `docs/release/DIAGNOSTIC_COMPONENTS.md`; they must not expose toolkit or package names.
+
 ## User-Facing Rule
 
 Do not expose internal toolkit names such as PDFKit, Vision, Core ML, Python, Docling, Poppler, or OCR engines in normal UI copy. Technical names belong in licenses, diagnostics, developer docs, and benchmark artifacts only.

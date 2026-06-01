@@ -5,16 +5,17 @@ final class PythonBridgeTests: XCTestCase {
     func testBridgeErrorsAreTypedAndUserReadable() {
         XCTAssertEqual(
             PythonBridgeError.frameworkNotFound.localizedDescription,
-            "Python.framework not found in app bundle."
+            "Conversion runtime is missing from the app bundle."
         )
         XCTAssertEqual(
             PythonBridgeError.moduleUnavailable("docling_bridge.converter").localizedDescription,
-            "Python module unavailable: docling_bridge.converter"
+            "Conversion component unavailable: docling_bridge.converter"
         )
         XCTAssertEqual(
             PythonBridgeError.callFailed("boom").localizedDescription,
-            "Python call failed: boom"
+            "Conversion component failed: boom"
         )
+        XCTAssertEqual(PythonBridgeError.frameworkNotFound.diagnosticCode, "runtime.bridge.missing")
     }
 
     @MainActor

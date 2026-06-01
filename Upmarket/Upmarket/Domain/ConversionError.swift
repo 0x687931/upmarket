@@ -10,6 +10,27 @@ enum ConversionError: Error, Equatable, LocalizedError {
     case pythonRuntime(String)
     case failed(String)
 
+    var diagnosticCode: String {
+        switch self {
+        case .inaccessible:
+            return "file.access"
+        case .passwordRequired:
+            return "file.password"
+        case .cancelled:
+            return "job.cancelled"
+        case .noProgress:
+            return "job.no-progress"
+        case .fileTooLarge:
+            return "file.too-large"
+        case .sourceUnavailable:
+            return "file.unavailable"
+        case .pythonRuntime:
+            return "runtime.bridge"
+        case .failed:
+            return "conversion.failed"
+        }
+    }
+
     var errorDescription: String? {
         switch self {
         case .inaccessible:
