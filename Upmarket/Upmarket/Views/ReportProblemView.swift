@@ -6,8 +6,8 @@ struct ReportProblemView: View {
     @State private var summary = ""
     @State private var includeDiagnostics = true
     @State private var copied = false
-    @State private var diagnosticSnapshot = Diagnostics.makeSnapshot()
-    @State private var logExport = Diagnostics.recentLogExport()
+    @State private var diagnosticSnapshot = DiagnosticsService.shared.makeSnapshot()
+    @State private var logExport = DiagnosticsService.shared.recentLogExport()
 
     private var preview: SupportReportPreview {
         SupportReporter.makePreview(
@@ -84,8 +84,8 @@ struct ReportProblemView: View {
     }
 
     private func refreshDiagnostics() {
-        diagnosticSnapshot = Diagnostics.makeSnapshot()
-        logExport = Diagnostics.recentLogExport()
+        diagnosticSnapshot = DiagnosticsService.shared.makeSnapshot()
+        logExport = DiagnosticsService.shared.recentLogExport()
     }
 }
 

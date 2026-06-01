@@ -47,10 +47,7 @@ final class StoreManager: ObservableObject {
         willSet { objectWillChange.send() }
     }
 
-    private let lastTrialPromptKey = "upmarket.lastTrialPaywallPromptRemaining"
-    private let legacyPackCreditsKey = "upmarket.packCredits"
-    private let legacyPacksEverPurchasedKey = "upmarket.packsEverPurchased"
-    private let packLedger = PackCreditLedger()
+    private let accounting = StoreAccountingService()
 
     private var transactionListener: Task<Void, Error>?
 
@@ -58,9 +55,7 @@ final class StoreManager: ObservableObject {
         transactionListener = listenForTransactions()
         Task { await loadProducts() }
         Task { await refreshEntitlement() }
-        freeDocsRemaining  = UserDefaults.standard.object(forKey: "upmarket.freeDocsRemaining") as? Int ?? 3
-        migrateLegacyPackCreditsIfNeeded()
-        loadPackSnapshot()
+        applyAccountingSnapshot(accounting.loadInitialState())
     }
 
     deinit { transactionListener?.cancel() }
@@ -121,34 +116,28 @@ final class StoreManager: ObservableObject {
     func consumeConversion() -> Bool {
         if hasBasicOrAbove { return true }  // unlimited — nothing to consume
 
-        if freeDocsRemaining > 0 {
-            freeDocsRemaining -= 1
-            UserDefaults.standard.set(freeDocsRemaining, forKey: "upmarket.freeDocsRemaining")
-            return true
+        do {
+            let result = try accounting.consumeConversion(
+                freeDocsRemaining: freeDocsRemaining,
+                packCredits: packCredits
+            )
+            applyAccountingSnapshot(result.snapshot)
+            return result.consumed
+        } catch {
+            productLoadError = "Purchase records could not be read. Please contact support before buying another document pack."
+            AppLog.storeKit.error("Failed to consume conversion accounting: \(error.localizedDescription, privacy: .private)")
+            return false
         }
-
-        if packCredits > 0 {
-            do {
-                guard try packLedger.consumeCredit() else { return false }
-                loadPackSnapshot()
-                return true
-            } catch {
-                AppLog.storeKit.error("Failed to consume pack credit: \(error.localizedDescription, privacy: .private)")
-                return false
-            }
-        }
-
-        return false
     }
 
     /// Trial is document-count based: 3 free conversions, then paid access.
     /// Prompt at good moments after a conversion finishes: 1 remaining, then 0.
     func shouldShowTrialPaywallAfterConversion() -> Bool {
-        guard !hasBasicOrAbove, packCredits == 0, freeDocsRemaining <= 1 else { return false }
-        let lastPrompted = UserDefaults.standard.object(forKey: lastTrialPromptKey) as? Int
-        guard lastPrompted != freeDocsRemaining else { return false }
-        UserDefaults.standard.set(freeDocsRemaining, forKey: lastTrialPromptKey)
-        return true
+        accounting.shouldShowTrialPaywallAfterConversion(
+            hasPaidEntitlement: hasBasicOrAbove,
+            freeDocsRemaining: freeDocsRemaining,
+            packCredits: packCredits
+        )
     }
 
     // MARK: - Purchasing
@@ -259,48 +248,20 @@ final class StoreManager: ObservableObject {
     }
 
     private func recordPackTransaction(_ transaction: Transaction) async throws {
-        let snapshot: PackCreditLedger.Snapshot
-        if transaction.revocationDate == nil {
-            snapshot = try packLedger.recordPackPurchase(transactionID: transaction.id)
-        } else {
-            snapshot = try packLedger.revokePackPurchase(transactionID: transaction.id)
-        }
-        await MainActor.run { self.applyPackSnapshot(snapshot) }
+        let snapshot = try accounting.recordPackTransaction(
+            transactionID: transaction.id,
+            isRevoked: transaction.revocationDate != nil,
+            freeDocsRemaining: freeDocsRemaining
+        )
+        await MainActor.run { self.applyAccountingSnapshot(snapshot) }
     }
 
-    private func applyPackSnapshot(_ snapshot: PackCreditLedger.Snapshot) {
-        packCredits = snapshot.availableCredits
-        packsEverPurchased = snapshot.purchasedPackCount
-    }
-
-    private func loadPackSnapshot() {
-        do {
-            applyPackSnapshot(try packLedger.snapshot())
-        } catch {
-            packCredits = 0
-            productLoadError = "Purchase records could not be read. Please contact support before buying another document pack."
-            AppLog.storeKit.error("Failed to read pack credit ledger: \(error.localizedDescription, privacy: .private)")
-        }
-    }
-
-    private func migrateLegacyPackCreditsIfNeeded() {
-        do {
-            let snapshot = try packLedger.snapshot()
-            guard !snapshot.legacyMigrationComplete else { return }
-            let credits = UserDefaults.standard.integer(forKey: legacyPackCreditsKey)
-            let packs = UserDefaults.standard.integer(forKey: legacyPacksEverPurchasedKey)
-            guard credits > 0 || packs > 0 else {
-                _ = try packLedger.migrateLegacyCredits(credits: 0, packsEverPurchased: 0)
-                return
-            }
-            let migrated = try packLedger.migrateLegacyCredits(credits: credits, packsEverPurchased: packs)
-            applyPackSnapshot(migrated)
-            UserDefaults.standard.removeObject(forKey: legacyPackCreditsKey)
-            UserDefaults.standard.removeObject(forKey: legacyPacksEverPurchasedKey)
-        } catch {
-            packCredits = 0
-            productLoadError = "Purchase records could not be migrated. Please contact support before buying another document pack."
-            AppLog.storeKit.error("Failed to migrate legacy pack credits: \(error.localizedDescription, privacy: .private)")
+    private func applyAccountingSnapshot(_ snapshot: StoreAccountingSnapshot) {
+        freeDocsRemaining = snapshot.freeDocsRemaining
+        packCredits = snapshot.packCredits
+        packsEverPurchased = snapshot.packsEverPurchased
+        if let userVisibleError = snapshot.userVisibleError {
+            productLoadError = userVisibleError
         }
     }
 }
