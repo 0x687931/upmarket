@@ -121,7 +121,7 @@ def conversion_flow() -> str:
         "2. `ConversionQueue` owns job state, entitlement-gated enqueue, retry, cancellation, progress, and result/error state.",
         "3. `ConversionRunner` copies the source into an app-owned workspace and chooses the concrete extraction path.",
         "4. Apple-native paths are attempted where valid: PDFKit, Vision, Speech, ImageIO, and AVFoundation.",
-        "5. Python paths go through `PythonWorker`; views and queue code do not import or call Python directly.",
+        "5. Advanced/model paths go through `PythonWorker` into the isolated runtime helper; views and queue code do not import or call runtime packages directly.",
         "6. Post-processing refines Markdown through native language/writing adapters with graceful availability checks.",
         "",
         "## Conversion Pathway Registry",

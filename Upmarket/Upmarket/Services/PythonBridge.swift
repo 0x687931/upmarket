@@ -1,37 +1,52 @@
 import Combine
 import Foundation
 import OSLog
-import PythonKit
 
 enum PythonBridgeError: Error, Equatable, LocalizedError, Sendable {
-    case frameworkNotFound
+    case helperUnavailable(String)
+    case helperCrashed(String)
+    case helperBadExit(Int32)
+    case helperStalled
+    case invalidResponse(String)
     case runtimeUnavailable(String)
     case moduleUnavailable(String)
     case callFailed(String)
 
     var errorDescription: String? {
         switch self {
-        case .frameworkNotFound:
-            return "Conversion runtime is missing from the app bundle."
-        case .runtimeUnavailable(let message):
-            return "Conversion runtime unavailable: \(message)"
-        case .moduleUnavailable(let name):
-            return "Conversion component unavailable: \(name)"
-        case .callFailed(let message):
-            return "Conversion component failed: \(message)"
+        case .helperUnavailable:
+            return "Conversion engine is unavailable."
+        case .helperCrashed, .helperBadExit, .helperStalled:
+            return "Conversion engine stopped unexpectedly. Please try again."
+        case .invalidResponse:
+            return "Conversion engine returned an unreadable result."
+        case .runtimeUnavailable:
+            return "Conversion engine is unavailable."
+        case .moduleUnavailable:
+            return "Conversion component is unavailable."
+        case .callFailed:
+            return "Conversion component failed."
         }
     }
 
     var diagnosticCode: String {
         switch self {
-        case .frameworkNotFound:
-            return "runtime.bridge.missing"
+        case .helperUnavailable:
+            return "runtime.helper.unavailable"
+        case .helperCrashed:
+            return "runtime.helper.crashed"
+        case .helperBadExit:
+            return "runtime.helper.bad-exit"
+        case .helperStalled:
+            return "runtime.helper.stalled"
+        case .invalidResponse:
+            return "runtime.helper.invalid-response"
         case .runtimeUnavailable:
-            return "runtime.bridge.unavailable"
+            return "runtime.helper.runtime-unavailable"
         case .moduleUnavailable:
-            return "runtime.bridge.component-unavailable"
+            return "runtime.helper.component-unavailable"
         case .callFailed:
-            return "runtime.bridge.call-failed"
+            return "runtime.helper.call-failed"
         }
     }
 }
@@ -42,205 +57,7 @@ struct PythonRuntimeStatus: Equatable, Sendable {
     let error: PythonBridgeError?
 }
 
-actor PythonRuntime {
-    static let shared = PythonRuntime()
-
-    private var isReady = false
-    private var version: String?
-    private var lastError: PythonBridgeError?
-    private let pythonThread = PythonRuntimeThread()
-
-    func status() -> PythonRuntimeStatus {
-        PythonRuntimeStatus(isReady: isReady, version: version, error: lastError)
-    }
-
-    func setup() {
-        guard !isReady else { return }
-
-        do {
-            let detectedVersion = try pythonThread.sync { [self] in
-                try self.configurePythonRuntime()
-                let sys = Python.import("sys")
-                return String(sys.version) ?? "unknown"
-            }
-            version = detectedVersion
-            isReady = true
-            lastError = nil
-            AppLog.pythonBridge.info("Conversion runtime ready version=\(detectedVersion, privacy: .public)")
-        } catch let error as PythonBridgeError {
-            isReady = false
-            lastError = error
-            AppLog.pythonBridge.error("Conversion runtime setup failed: \(error.localizedDescription, privacy: .private)")
-        } catch {
-            isReady = false
-            lastError = .runtimeUnavailable(error.localizedDescription)
-            AppLog.pythonBridge.error("Conversion runtime setup failed: \(error.localizedDescription, privacy: .private)")
-        }
-    }
-
-    func setDownloadModeEnabled(_ enabled: Bool) {
-        setenv("HF_HUB_OFFLINE", enabled ? "0" : "1", 1)
-        setenv("TRANSFORMERS_OFFLINE", enabled ? "0" : "1", 1)
-    }
-
-    func withPython<T: Sendable>(_ operation: @escaping () throws -> T) async throws -> T {
-        if !isReady { setup() }
-        guard isReady else {
-            throw lastError ?? PythonBridgeError.runtimeUnavailable("Python did not initialise.")
-        }
-
-        do {
-            return try pythonThread.sync(operation)
-        } catch let error as PythonBridgeError {
-            throw error
-        } catch {
-            throw PythonBridgeError.callFailed(error.localizedDescription)
-        }
-    }
-
-    func withPythonEnvironment<T: Sendable>(
-        _ environment: [String: String],
-        operation: @escaping () throws -> T
-    ) async throws -> T {
-        if !isReady { setup() }
-        guard isReady else {
-            throw lastError ?? PythonBridgeError.runtimeUnavailable("Python did not initialise.")
-        }
-
-        do {
-            return try pythonThread.sync {
-                var previous: [String: String?] = [:]
-                for key in environment.keys {
-                    previous[key] = getenv(key).map { String(cString: $0) }
-                }
-                for (key, value) in environment {
-                    setenv(key, value, 1)
-                }
-                defer {
-                    for (key, value) in previous {
-                        if let value {
-                            setenv(key, value, 1)
-                        } else {
-                            unsetenv(key)
-                        }
-                    }
-                }
-
-                return try operation()
-            }
-        } catch let error as PythonBridgeError {
-            throw error
-        } catch {
-            throw PythonBridgeError.callFailed(error.localizedDescription)
-        }
-    }
-
-    func withPythonDownload<T: Sendable>(_ operation: @escaping () throws -> T) async throws -> T {
-        if !isReady { setup() }
-        guard isReady else {
-            throw lastError ?? PythonBridgeError.runtimeUnavailable("Python did not initialise.")
-        }
-
-        do {
-            return try pythonThread.sync { [self] in
-                self.setDownloadModeEnabled(true)
-                defer { self.setDownloadModeEnabled(false) }
-                return try operation()
-            }
-        } catch let error as PythonBridgeError {
-            throw error
-        } catch {
-            throw PythonBridgeError.callFailed(error.localizedDescription)
-        }
-    }
-
-    private func configurePythonRuntime() throws {
-        guard let frameworkPath = Bundle.main.privateFrameworksPath else {
-            throw PythonBridgeError.frameworkNotFound
-        }
-
-        let pythonHome = "\(frameworkPath)/Python.framework/Versions/3.12"
-        let stdlibPath = "\(pythonHome)/lib/python3.12"
-        let sitePackages = "\(stdlibPath)/site-packages"
-
-        setenv("PYTHONHOME", pythonHome, 1)
-        setenv("PYTHONPATH", "\(stdlibPath):\(sitePackages)", 1)
-        setDownloadModeEnabled(false)
-
-        let appSupport = FileManager.default
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Upmarket/models")
-            .path
-        setenv("UPMARKET_MODELS_DIR", appSupport, 1)
-        setenv("HF_HUB_CACHE", appSupport, 1)
-    }
-}
-
-private final class PythonRuntimeThread: Thread, @unchecked Sendable {
-    private final class Job {
-        nonisolated(unsafe) let body: () -> Void
-
-        nonisolated init(body: @escaping () -> Void) {
-            self.body = body
-        }
-    }
-
-    private let condition = NSCondition()
-    nonisolated(unsafe) private var jobs: [Job] = []
-
-    override nonisolated init() {
-        super.init()
-        name = "Upmarket Python Runtime"
-        qualityOfService = .userInitiated
-        start()
-    }
-
-    nonisolated func sync<T>(_ operation: @escaping () throws -> T) throws -> T {
-        let box = PythonRuntimeResultBox<T>()
-        let done = NSCondition()
-        var isDone = false
-
-        condition.lock()
-        jobs.append(Job {
-            box.result = Result { try operation() }
-            done.lock()
-            isDone = true
-            done.signal()
-            done.unlock()
-        })
-        condition.signal()
-        condition.unlock()
-
-        done.lock()
-        while !isDone {
-            done.wait()
-        }
-        done.unlock()
-
-        return try box.result!.get()
-    }
-
-    override nonisolated func main() {
-        condition.lock()
-        while true {
-            while jobs.isEmpty {
-                condition.wait()
-            }
-            let job = jobs.removeFirst()
-            condition.unlock()
-            job.body()
-            condition.lock()
-        }
-    }
-}
-
-private final class PythonRuntimeResultBox<T>: @unchecked Sendable {
-    nonisolated(unsafe) var result: Result<T, Error>?
-
-    nonisolated init() {}
-}
-
-/// Observable facade for SwiftUI. Python calls must go through PythonRuntime/PythonWorker.
+/// Observable facade for SwiftUI. Runtime calls must go through PythonWorker.
 final class PythonBridge: ObservableObject {
     static let shared = PythonBridge()
 
@@ -258,12 +75,25 @@ final class PythonBridge: ObservableObject {
         willSet { objectWillChange.send() }
     }
 
+    private let helperClient = RuntimeHelperClient()
+
     private init() {}
 
     func setup() {
-        Task {
-            await PythonRuntime.shared.setup()
-            let status = await PythonRuntime.shared.status()
+        Task.detached(priority: .userInitiated) {
+            let status: PythonRuntimeStatus
+            do {
+                status = try await self.helperClient.readiness()
+                AppLog.pythonBridge.info("Runtime helper ready")
+            } catch let error as PythonBridgeError {
+                status = PythonRuntimeStatus(isReady: false, version: nil, error: error)
+                AppLog.pythonBridge.error("Runtime helper setup failed code=\(error.diagnosticCode, privacy: .public)")
+            } catch {
+                let bridgeError = PythonBridgeError.callFailed(error.localizedDescription)
+                status = PythonRuntimeStatus(isReady: false, version: nil, error: bridgeError)
+                AppLog.pythonBridge.error("Runtime helper setup failed code=\(bridgeError.diagnosticCode, privacy: .public)")
+            }
+
             await MainActor.run {
                 self.isReady = status.isReady
                 self.version = status.version

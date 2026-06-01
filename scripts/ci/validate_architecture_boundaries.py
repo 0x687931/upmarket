@@ -9,11 +9,9 @@ from pathlib import Path
 
 ROOT = Path("Upmarket/Upmarket")
 VIEW_DIR = ROOT / "Views"
-APPROVED_PYTHONKIT_IMPORTS = {
-    ROOT / "Services" / "PythonBridge.swift",
-    ROOT / "Services" / "PythonWorker.swift",
-}
+APPROVED_PYTHONKIT_IMPORTS: set[Path] = set()
 APPROVED_PYTHON_CALLS = APPROVED_PYTHONKIT_IMPORTS
+HELPER_SOURCE = Path("Upmarket/UpmarketRuntimeHelper/main.swift")
 REQUIRED_CORE_FILES = {
     ROOT / "Domain" / "ConversionJob.swift",
     ROOT / "Domain" / "ConversionResult.swift",
@@ -61,6 +59,11 @@ def main() -> int:
 
     if not (ROOT / "Services" / "FileAccessService.swift").exists():
         errors.append("Services/FileAccessService.swift is required for AppKit file/pasteboard operations")
+
+    if not HELPER_SOURCE.exists():
+        errors.append("UpmarketRuntimeHelper/main.swift is required for isolated runtime work")
+    elif "import PythonKit" not in HELPER_SOURCE.read_text(encoding="utf-8"):
+        errors.append("UpmarketRuntimeHelper/main.swift must own the only PythonKit import")
 
     if errors:
         for error in errors:

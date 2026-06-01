@@ -177,6 +177,7 @@ scripts/ci/validate_task_registry.py
 scripts/ci/validate_p0_plan_sync.py
 scripts/ci/validate_architecture_boundaries.py
 scripts/ci/validate_user_facing_copy.py
+scripts/ci/validate_runtime_helper.py
 ```
 
 Each script must:
@@ -188,7 +189,7 @@ Each script must:
 
 ## Release Gate Mapping
 
-- Gate A: build, archive, plist, entitlements, Python bundle.
+- Gate A: build, archive, plist, entitlements, runtime helper, Python bundle.
 - Gate B: corpus, offline conversion, model states, temp cleanup.
 - Gate C: OSLog, diagnostics, liveness, fault injection, memory pressure.
 - Gate D: StoreKit, App Store Connect, signing, products.

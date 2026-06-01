@@ -16,9 +16,10 @@ SwiftUI app and shelf UI
      - PDFKit for fast digital PDF extraction on macOS 13-15
      - Vision structured extraction when available
      - Speech framework for local audio transcription where supported
-  -> Embedded CPython through PythonKit
-     - docling_bridge for Docling, markitdown, pdfium, fallback handlers
-     - upmarket_models for on-demand model checks/downloads
+  -> Signed helper process for advanced/model conversion
+     - Codable request/response and heartbeat events over standard I/O
+     - packaged runtime imports isolated from the main app process
+     - helper crashes, bad exits, invalid responses, and stalls map to typed Swift errors
   -> StoreKit 2 for trial, paid unlocks, pack credits, restore purchases
   -> Models cached in ~/Library/Application Support/Upmarket/models/
 ```
@@ -48,9 +49,11 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Add small tests for queue correctness, cancellation, and no-progress classification without a hard five-minute timeout; deeper Python failure injection remains under P0-002/P0-008.
 
 ### P0 - Python Runtime Isolation
-- [ ] Move Python conversion/model execution out of the main app process into a signed helper, preferably XPC; map helper crashes, hangs, and exits to typed Swift errors.
+- [x] Move Python conversion/model execution out of the main app process into a signed helper, preferably XPC; map helper crashes, hangs, and exits to typed Swift errors.
 - [x] Gate every Python call behind `PythonWorker` or a lower-level bootstrap bridge that verifies Python readiness, serializes interpreter access, catches bridge failures, and disables conversion/model UI when unavailable.
 - [ ] Make the Python packaging path reproducible: copy first-party bridge packages into the embedded runtime, pin dependencies, run `pip check`, and smoke-test imports from the packaged app.
+
+P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line helper embedded in `Upmarket.app/Contents/MacOS` and launched per advanced/model operation by `RuntimeHelperClient`. This keeps native Apple paths in process while containing packaged runtime imports and execution outside the app process. See `docs/release/adr/0003-isolated-runtime-helper.md`.
 
 ### P0 - Conversion Job Correctness
 - [x] Replace singleton `ConversionService.result` polling with `ConversionQueue` and `ConversionRunner`.
@@ -92,6 +95,7 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 ### P0 - Observability, CI, and Release Validation
 - [ ] Fix CI to build and test `Upmarket/Upmarket.xcodeproj`.
 - [ ] Add CI/release checks for archive, entitlements, effective `Info.plist`, embedded Python imports, offline conversion smoke tests, and model-missing behavior.
+- [x] Add local validation for the embedded runtime helper target and optional built-app readiness smoke.
 - [x] Replace Swift service `print` diagnostics with structured `OSLog` categories, per-job correlation IDs, and privacy-redacted diagnostic bundles.
 - [x] Add fault-injection tests for Python bridge setup failure, stalled conversion, temp cleanup, and huge input rejection.
 - [x] Add first release memory-pressure safeguard: reject oversized input before workspace copy with an actionable “document too large” error.

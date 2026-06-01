@@ -53,4 +53,23 @@ enum AppWorkspace {
             AppLog.fileAccess.error("Failed to remove app workspace: \(error.localizedDescription, privacy: .private)")
         }
     }
+
+    nonisolated static func removeStaleWorkspaces() {
+        let manager = FileManager.default
+        guard let entries = try? manager.contentsOfDirectory(
+            at: baseDirectory,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else { return }
+
+        for entry in entries {
+            let isDirectory = (try? entry.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
+            guard isDirectory else { continue }
+            do {
+                try manager.removeItem(at: entry)
+            } catch {
+                AppLog.fileAccess.error("Failed to remove stale app workspace: \(error.localizedDescription, privacy: .private)")
+            }
+        }
+    }
 }

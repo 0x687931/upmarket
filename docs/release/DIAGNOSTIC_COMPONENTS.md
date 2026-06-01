@@ -13,11 +13,15 @@ Runtime logs, support reports, and user-approved diagnostics use neutral compone
 | `job.cancelled` | User or queue cancelled conversion. | `ConversionQueue` cancellation |
 | `job.no-progress` | Conversion heartbeat stopped advancing. | `ConversionQueue` liveness classification |
 | `conversion.failed` | Generic conversion failure. | See adjacent stage and component logs |
-| `runtime.bridge` | Advanced conversion runtime failed before a typed subcode was available. | Embedded CPython, PythonKit, first-party bridge packages |
-| `runtime.bridge.missing` | Advanced runtime bundle is missing. | BeeWare Python framework packaging |
-| `runtime.bridge.unavailable` | Advanced runtime failed to initialise. | Embedded runtime startup/environment |
-| `runtime.bridge.component-unavailable` | A required advanced runtime component could not load. | `docling_bridge`, model manager, or packaged Python module |
-| `runtime.bridge.call-failed` | Advanced runtime call failed after startup. | Bridge invocation or Python exception |
+| `runtime.bridge` | Advanced conversion runtime failed before a typed subcode was available. | Isolated helper and packaged runtime |
+| `runtime.helper.unavailable` | Advanced runtime helper is missing or cannot launch. | Embedded helper packaging/signing |
+| `runtime.helper.crashed` | Advanced runtime helper terminated by signal. | Helper process crash report |
+| `runtime.helper.bad-exit` | Advanced runtime helper exited nonzero. | Helper exit status and logs |
+| `runtime.helper.invalid-response` | Advanced runtime helper returned unreadable data. | Codable DTO/version mismatch |
+| `runtime.helper.stalled` | Advanced runtime helper stopped heartbeating. | Helper liveness monitor |
+| `runtime.helper.runtime-unavailable` | Advanced runtime failed to initialise inside the helper. | Embedded runtime startup/environment |
+| `runtime.helper.component-unavailable` | A required advanced runtime component could not load. | First-party bridge or model manager package |
+| `runtime.helper.call-failed` | Advanced runtime call failed after startup. | Helper invocation or runtime exception |
 
 ## Rules
 

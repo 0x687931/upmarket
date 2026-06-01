@@ -35,10 +35,13 @@
       "scope": [
         "Upmarket/Upmarket/Services/PythonBridge.swift",
         "Upmarket/Upmarket/Services/PythonWorker.swift",
+        "Upmarket/Upmarket/Services/RuntimeHelperClient.swift",
+        "Upmarket/UpmarketRuntimeHelper/**",
         "Upmarket/Upmarket/Services/ConversionRunner.swift",
         "UpmarketPython/**",
         "scripts/build_python_env.sh",
-        "scripts/ci/verify_python_bundle.sh"
+        "scripts/ci/verify_python_bundle.sh",
+        "scripts/ci/validate_runtime_helper.py"
       ],
       "non_goals": [
         "Do not add cloud conversion.",
@@ -48,7 +51,7 @@
       "acceptance": [
         "All Python calls are behind one readiness-gated bridge API.",
         "Bridge failures map to typed Swift errors.",
-        "Python access is serialized or moved behind a signed helper/XPC process.",
+        "Python access is moved behind a signed helper/XPC process.",
         "Packaged Python import smoke passes from the built app."
       ],
       "release_gate": "P0 - Python Runtime Isolation",

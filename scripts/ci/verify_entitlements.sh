@@ -3,6 +3,7 @@ set -euo pipefail
 
 APP_ENTITLEMENTS="Upmarket/Upmarket/Upmarket.entitlements"
 EXT_ENTITLEMENTS="Upmarket/UpmarketQuickActionSupport/UpmarketQuickAction.entitlements"
+HELPER_ENTITLEMENTS="Upmarket/UpmarketRuntimeHelper/UpmarketRuntimeHelper.entitlements"
 
 check_file() {
   local file="$1"
@@ -15,6 +16,7 @@ check_file() {
 
 check_file "$APP_ENTITLEMENTS"
 check_file "$EXT_ENTITLEMENTS"
+check_file "$HELPER_ENTITLEMENTS"
 
 if /usr/libexec/PlistBuddy -c "Print :com.apple.security.app-sandbox" "$APP_ENTITLEMENTS" 2>/dev/null | grep -qv "true"; then
   echo "error: app sandbox must be enabled in $APP_ENTITLEMENTS"
@@ -26,7 +28,7 @@ if /usr/libexec/PlistBuddy -c "Print :com.apple.security.temporary-exception.fil
   exit 1
 fi
 
-for file in "$APP_ENTITLEMENTS" "$EXT_ENTITLEMENTS"; do
+for file in "$APP_ENTITLEMENTS" "$EXT_ENTITLEMENTS" "$HELPER_ENTITLEMENTS"; do
   if /usr/libexec/PlistBuddy -c "Print :com.apple.security.application-groups" "$file" >/dev/null 2>&1; then
     groups=$(/usr/libexec/PlistBuddy -c "Print :com.apple.security.application-groups" "$file")
     if ! printf "%s\n" "$groups" | grep -q "group\\."; then
@@ -47,6 +49,16 @@ if [[ $# -gt 0 ]]; then
     exit 1
   }
   plutil -lint /tmp/upmarket-entitlements.plist >/dev/null
+  HELPER_PATH="$APP_PATH/Contents/MacOS/UpmarketRuntimeHelper"
+  if [[ ! -x "$HELPER_PATH" ]]; then
+    echo "error: runtime helper missing from signed app: $HELPER_PATH"
+    exit 1
+  fi
+  codesign -d --entitlements :- "$HELPER_PATH" >/tmp/upmarket-helper-entitlements.plist 2>/dev/null || {
+    echo "error: unable to read signed helper entitlements from $HELPER_PATH"
+    exit 1
+  }
+  plutil -lint /tmp/upmarket-helper-entitlements.plist >/dev/null
 fi
 
 echo "ok: entitlements pass policy checks"

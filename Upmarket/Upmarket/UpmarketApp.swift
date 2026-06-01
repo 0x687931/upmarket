@@ -109,6 +109,7 @@ struct UpmarketApp: App {
     }
 
     init() {
+        AppWorkspace.removeStaleWorkspaces()
         Task { @MainActor in
             PythonBridge.shared.setup()
         }

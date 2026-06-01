@@ -38,6 +38,15 @@ final class DiagnosticsTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: workspace.path))
     }
 
+    func testStaleWorkspaceCleanupRemovesStartupLeftovers() throws {
+        let workspace = try AppWorkspace.create(prefix: "diagnostics-stale-test")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: workspace.path))
+
+        AppWorkspace.removeStaleWorkspaces()
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: workspace.path))
+    }
+
     func testOversizedInputIsRejectedBeforeCopy() throws {
         let input = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
