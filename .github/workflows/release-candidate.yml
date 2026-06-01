@@ -43,6 +43,7 @@ jobs:
           APP="$ARCHIVE_PATH/Products/Applications/Upmarket.app"
           scripts/ci/verify_effective_plist.sh "$APP"
           scripts/ci/verify_entitlements.sh "$APP"
+          scripts/ci/validate_runtime_helper.py "$APP"
 
       - name: Offline conversion smoke test
         run: scripts/ci/smoke_convert_offline.sh

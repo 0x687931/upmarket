@@ -64,16 +64,19 @@ echo "==> Installing exact pins from $LOCK into $VENV"
 "$VENV/bin/pip" install --requirement "$LOCK"
 echo ""
 
+echo "==> Checking installed environment consistency after install"
+"$VENV/bin/pip" check
+echo ""
+
 echo "==> Re-applying MPS compatibility patch"
 ./scripts/patch_mps.sh "$VENV"
 echo ""
 
 if [[ -d "$SITE" ]]; then
   echo "==> Syncing first-party bridge files into bundled framework"
-  mkdir -p "$SITE/docling_bridge" "$SITE/upmarket_models"
-  cp UpmarketPython/docling_bridge/*.py "$SITE/docling_bridge/"
-  cp UpmarketPython/models/*.py "$SITE/upmarket_models/"
+  scripts/ci/sync_python_bridge.sh "$SITE"
   ./scripts/patch_mps.sh "$SITE"
+  scripts/ci/verify_python_bundle.sh
 else
   echo "warning: bundled site-packages not found at $SITE; skipped bundle sync"
 fi

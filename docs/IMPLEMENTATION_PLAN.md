@@ -51,7 +51,7 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 ### P0 - Python Runtime Isolation
 - [x] Move Python conversion/model execution out of the main app process into a signed helper, preferably XPC; map helper crashes, hangs, and exits to typed Swift errors.
 - [x] Gate every Python call behind `PythonWorker` or a lower-level bootstrap bridge that verifies Python readiness, serializes interpreter access, catches bridge failures, and disables conversion/model UI when unavailable.
-- [ ] Make the Python packaging path reproducible: copy first-party bridge packages into the embedded runtime, pin dependencies, run `pip check`, and smoke-test imports from the packaged app.
+- [x] Make the Python packaging path reproducible: copy first-party bridge packages into the embedded runtime, pin dependencies, validate the embedded dependency graph, and smoke-test imports from the packaged app.
 
 P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line helper embedded in `Upmarket.app/Contents/MacOS` and launched per advanced/model operation by `RuntimeHelperClient`. This keeps native Apple paths in process while containing packaged runtime imports and execution outside the app process. See `docs/release/adr/0003-isolated-runtime-helper.md`.
 

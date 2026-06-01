@@ -62,6 +62,9 @@ jobs:
             -derivedDataPath "$DERIVED_DATA_DIR" \
             CODE_SIGNING_ALLOWED=NO
 
+      - name: Verify packaged runtime helper
+        run: scripts/ci/validate_runtime_helper.py "$DERIVED_DATA_DIR/Build/Products/Debug/Upmarket.app"
+
       - name: Verify effective Info.plist
         run: scripts/ci/verify_effective_plist.sh
 
