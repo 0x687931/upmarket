@@ -235,7 +235,7 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 ### Gate E - Legal, Privacy, and Listing
 - [x] Finalize privacy policy draft at `docs/public/privacy.md`
 - [ ] Host privacy policy at the public URL
-- [ ] Use Apple's standard EULA; put trial, pack credit, no-subscription, and upgrade pricing details in App Store/App copy
+- [ ] Use Apple's standard EULA with no custom terms
 - [ ] Verify App Privacy answers match actual data collection: no analytics, no document upload, local processing
 - [ ] Link privacy policy and terms in Preferences/About and App Store Connect
 - [ ] Finalize app description, subtitle, keywords, support URL, and marketing URL

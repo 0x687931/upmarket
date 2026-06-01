@@ -349,7 +349,7 @@ struct PreferencesView: View {
 
                     VStack(alignment: .leading, spacing: 6) {
                         linkRow(icon: "lock.shield",   label: "Privacy Policy",    url: "https://0x687931.github.io/upmarket/privacy")
-                        linkRow(icon: "doc.text",      label: "Terms of Use",      url: "https://0x687931.github.io/upmarket/terms")
+                        linkRow(icon: "doc.text",      label: "Terms of Use",      url: "https://www.apple.com/legal/macapps/stdeula/")
                         linkRow(icon: "envelope",      label: "Support",           url: "mailto:support@upmarket.app")
                         linkRow(icon: "star",          label: "Rate Upmarket",     url: "macappstore://")
                         linkRow(icon: "bubble.left",   label: "Report a Bug",      url: "mailto:support@upmarket.app?subject=Bug%20Report")
