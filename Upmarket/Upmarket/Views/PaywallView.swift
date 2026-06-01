@@ -3,6 +3,8 @@ import StoreKit
 
 struct PaywallView: View {
 
+    var onPurchaseComplete: (() -> Void)? = nil
+
     @EnvironmentObject private var store: StoreManager
     @Environment(\.dismiss) private var dismiss
 
@@ -23,6 +25,7 @@ struct PaywallView: View {
                         basicCard
                     }
                     packCard
+                    productStatus
                     restoreButton
                 }
                 .padding(24)
@@ -31,6 +34,9 @@ struct PaywallView: View {
         }
         .frame(width: 460)
         .fixedSize(horizontal: false, vertical: true)
+        .task {
+            await store.loadProducts()
+        }
     }
 
     // MARK: - Header
@@ -237,6 +243,30 @@ struct PaywallView: View {
         .padding(.top, 4)
     }
 
+    @ViewBuilder private var productStatus: some View {
+        if let error = store.productLoadError {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundStyle(.orange)
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(10)
+            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        } else if !store.productsLoaded {
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text("Loading purchase options...")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 4)
+        }
+    }
+
     private var legalFooter: some View {
         Text(L("paywall.footer"))
             .font(.caption2)
@@ -264,6 +294,7 @@ struct PaywallView: View {
         errorMessage = nil
         do {
             try await store.purchase(product)
+            onPurchaseComplete?()
             dismiss()
         } catch {
             errorMessage = "Purchase failed. Please try again."

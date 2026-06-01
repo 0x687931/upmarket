@@ -40,7 +40,7 @@ def validate_file_path(file_path: str) -> str:
         Path("/private/tmp"),
         Path("/var/folders"),
     ]
-    if not any(str(path).startswith(str(root)) for root in allowed_roots):
+    if not any(_is_within(path, root) for root in allowed_roots):
         raise ValueError(f"File path outside allowed directories: {path}")
 
     if not path.exists():
@@ -57,6 +57,14 @@ def validate_file_path(file_path: str) -> str:
         )
 
     return str(path)
+
+
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root.resolve())
+        return True
+    except ValueError:
+        return False
 
 
 def validate_password(password: str | None) -> str | None:

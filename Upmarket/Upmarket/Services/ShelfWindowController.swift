@@ -190,6 +190,24 @@ final class ShelfWindowController: NSWindowController {
         panel.setFrame(frame, display: true)
     }
 
+    func animateTourDragDemo() {
+        guard let panel = window else { return }
+        let originalAnchor = anchor
+        let demoAnchors: [ShelfAnchor] = [.bottomLeft, .topLeft, .topRight, .bottomRight, originalAnchor]
+
+        for (index, demoAnchor) in demoAnchors.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.45) { [weak self] in
+                guard let self else { return }
+                self.anchor = demoAnchor
+                NSAnimationContext.runAnimationGroup { ctx in
+                    ctx.duration = 0.35
+                    ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                    panel.animator().setFrame(self.shelfFrame(), display: true)
+                }
+            }
+        }
+    }
+
     // MARK: - Monitoring
 
     private func startMonitoring() {

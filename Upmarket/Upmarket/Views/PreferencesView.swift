@@ -492,7 +492,3 @@ struct LicenseEntry: Identifiable, Codable {
     let license: String
     let url: String
 }
-
-extension Notification.Name {
-    static let showPaywall = Notification.Name("upmarket.showPaywall")
-}

@@ -55,7 +55,7 @@ struct DocumentIntelligence {
         return Metadata(
             title: extractTitle(from: sample),
             authors: extractEntities(from: sample, tag: .personalName),
-            organisations: extractEntities(from: sample, tag: .organizationName),
+            organisations: extractOrganisations(from: sample),
             locations: extractEntities(from: sample, tag: .placeName),
             language: language,
             estimatedReadingMinutes: estimateReadingTime(text),
@@ -178,6 +178,29 @@ struct DocumentIntelligence {
             return true
         }
         return Array(entities.prefix(10))
+    }
+
+    private static func extractOrganisations(from text: String) -> [String] {
+        var organisations = extractEntities(from: text, tag: .organizationName)
+
+        let patterns = [
+            #"\b[A-Z][A-Za-z&.-]+(?:\s+[A-Z][A-Za-z&.-]+){0,3}\s+(?:Inc\.?|Corp\.?|Corporation|Company|University|Institute|Laboratory|Labs|LLC|Ltd\.?)\b"#,
+            #"\b(?:University|Institute|Laboratory|Labs)\s+of\s+[A-Z][A-Za-z&.-]+(?:\s+[A-Z][A-Za-z&.-]+){0,2}\b"#,
+        ]
+
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern) else { continue }
+            let range = NSRange(text.startIndex..<text.endIndex, in: text)
+            for match in regex.matches(in: text, range: range) {
+                guard let matchRange = Range(match.range, in: text) else { continue }
+                let entity = String(text[matchRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if entity.count > 2 && !organisations.contains(entity) {
+                    organisations.append(entity)
+                }
+            }
+        }
+
+        return Array(organisations.prefix(10))
     }
 
     private static func extractTitle(from text: String) -> String? {

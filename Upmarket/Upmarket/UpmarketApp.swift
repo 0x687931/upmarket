@@ -110,9 +110,13 @@ struct UpmarketApp: App {
         }
         FeatureFlags.shared.fetchFlags()
 
-        // Always show the shelf — it's the primary UI
+        // Show shelf then start tour on first launch
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            guard !AppRuntime.isRunningTests else { return }
             ShelfWindowController.shared.show(animate: true)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                TourManager.shared.startIfNeeded()
+            }
         }
     }
 }

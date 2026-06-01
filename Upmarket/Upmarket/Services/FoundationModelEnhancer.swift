@@ -5,7 +5,7 @@ import Foundation
 /// Gracefully degrades on unsupported platforms.
 struct FoundationModelEnhancer {
 
-    struct DocumentEnhancement {
+    struct DocumentEnhancement: Codable, Equatable {
         var extractedTitle: String?
         var extractedAuthors: [String]
         var sectionSummaries: [SectionSummary]
@@ -13,7 +13,7 @@ struct FoundationModelEnhancer {
         var wasEnhanced: Bool
     }
 
-    struct SectionSummary {
+    struct SectionSummary: Codable, Equatable {
         let heading: String
         let summary: String
         let keyPoints: [String]
@@ -27,6 +27,14 @@ struct FoundationModelEnhancer {
     }
 
     static func enhance(markdown: String, documentType: String = "general") async -> DocumentEnhancement {
+        if AppRuntime.isRunningTests {
+            return DocumentEnhancement(
+                extractedTitle: titleFallback(from: markdown),
+                extractedAuthors: [], sectionSummaries: [],
+                refinedMarkdown: markdown, wasEnhanced: false
+            )
+        }
+
         if #available(macOS 26, *) {
             do {
                 return try await _FMImpl.enhance(markdown: markdown, documentType: documentType)

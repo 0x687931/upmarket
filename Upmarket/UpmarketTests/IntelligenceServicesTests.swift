@@ -151,16 +151,23 @@ final class IntelligenceServicesTests: XCTestCase {
         XCTAssertEqual(result.extractedTitle, "The Theory of Everything")
     }
 
-    func testGenerableStructsAreCodable() throws {
-        // @Generable structs must be Codable — verify they encode/decode
-        let meta = GenerableDocumentMetadata(
-            title: "Test", authors: ["Alice"], abstract: "Abstract",
-            documentType: "academic", keyTopics: ["ML"], language: "en"
+    func testEnhancementResultIsCodable() throws {
+        let enhancement = FoundationModelEnhancer.DocumentEnhancement(
+            extractedTitle: "Test",
+            extractedAuthors: ["Alice"],
+            sectionSummaries: [
+                FoundationModelEnhancer.SectionSummary(
+                    heading: "Intro",
+                    summary: "Short summary",
+                    keyPoints: ["Point"]
+                ),
+            ],
+            refinedMarkdown: "# Test",
+            wasEnhanced: true
         )
-        let data = try JSONEncoder().encode(meta)
-        let decoded = try JSONDecoder().decode(GenerableDocumentMetadata.self, from: data)
-        XCTAssertEqual(decoded.title, "Test")
-        XCTAssertEqual(decoded.language, "en")
+        let data = try JSONEncoder().encode(enhancement)
+        let decoded = try JSONDecoder().decode(FoundationModelEnhancer.DocumentEnhancement.self, from: data)
+        XCTAssertEqual(decoded, enhancement)
     }
 
     // MARK: - #25 VisionDocumentExtractor

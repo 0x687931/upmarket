@@ -21,6 +21,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self, selector: #selector(conversionEnded),
             name: .upmarketConversionEnded, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(showPaywall),
+            name: .showPaywall, object: nil
+        )
     }
 
     @objc private func conversionStarted() {
@@ -29,6 +33,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func conversionEnded() {
         ConversionIconLayerView.stopDockAnimation()
+    }
+
+    @objc private func showPaywall() {
+        Task { @MainActor in
+            PaywallWindowController.shared.show()
+        }
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {

@@ -39,9 +39,20 @@
                BuildableName = "UpmarketTests.xctest"
                BlueprintName = "UpmarketTests"
                ReferencedContainer = "container:Upmarket.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
-      </Testables>
+         </BuildableReference>
+      </TestableReference>
+      <TestableReference
+         skipped = "NO"
+         parallelizable = "NO">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "81A3B7412FCB0F91004A488D"
+            BuildableName = "UpmarketUITests.xctest"
+            BlueprintName = "UpmarketUITests"
+            ReferencedContainer = "container:Upmarket.xcodeproj">
+         </BuildableReference>
+      </TestableReference>
+   </Testables>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -64,6 +75,9 @@
             ReferencedContainer = "container:Upmarket.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <StoreKitConfigurationFileReference
+         identifier = "container:Upmarket/Store.storekit">
+      </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"

@@ -17,6 +17,16 @@ final class StoreManager: ObservableObject {
     private(set) var proProduct:   Product?
     private(set) var packProduct:  Product?
 
+    private(set) var productsLoaded = false {
+        willSet { objectWillChange.send() }
+    }
+
+    private(set) var productLoadError: String? {
+        willSet { objectWillChange.send() }
+    }
+
+    private var isLoadingProducts = false
+
     private(set) var entitlement: Entitlement = .none {
         willSet { objectWillChange.send() }
     }
@@ -35,6 +45,8 @@ final class StoreManager: ObservableObject {
     private(set) var packsEverPurchased: Int = 0 {
         willSet { objectWillChange.send() }
     }
+
+    private let lastTrialPromptKey = "upmarket.lastTrialPaywallPromptRemaining"
 
     private var transactionListener: Task<Void, Error>?
 
@@ -120,6 +132,16 @@ final class StoreManager: ObservableObject {
         return false
     }
 
+    /// Trial is document-count based: 3 free conversions, then paid access.
+    /// Prompt at good moments after a conversion finishes: 1 remaining, then 0.
+    func shouldShowTrialPaywallAfterConversion() -> Bool {
+        guard !hasBasicOrAbove, packCredits == 0, freeDocsRemaining <= 1 else { return false }
+        let lastPrompted = UserDefaults.standard.object(forKey: lastTrialPromptKey) as? Int
+        guard lastPrompted != freeDocsRemaining else { return false }
+        UserDefaults.standard.set(freeDocsRemaining, forKey: lastTrialPromptKey)
+        return true
+    }
+
     // MARK: - Purchasing
 
     func purchase(_ product: Product) async throws {
@@ -150,15 +172,34 @@ final class StoreManager: ObservableObject {
 
     // MARK: - Private
 
-    private func loadProducts() async {
+    func loadProducts() async {
+        guard !isLoadingProducts else { return }
+        await MainActor.run {
+            self.isLoadingProducts = true
+            self.productLoadError = nil
+        }
+        defer {
+            Task { @MainActor in
+                self.isLoadingProducts = false
+            }
+        }
+
         do {
             let products = try await Product.products(for: [Self.basicID, Self.proID, Self.packID])
             await MainActor.run {
                 self.basicProduct = products.first { $0.id == Self.basicID }
                 self.proProduct   = products.first { $0.id == Self.proID }
                 self.packProduct  = products.first { $0.id == Self.packID }
+                self.productsLoaded = true
+                if self.basicProduct == nil || self.proProduct == nil || self.packProduct == nil {
+                    self.productLoadError = "Some purchase options are unavailable. Check StoreKit configuration or App Store Connect product IDs."
+                }
             }
         } catch {
+            await MainActor.run {
+                self.productsLoaded = true
+                self.productLoadError = "Purchase options could not be loaded."
+            }
             print("[StoreManager] Failed to load products: \(error)")
         }
     }
