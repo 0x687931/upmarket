@@ -41,6 +41,7 @@ Icon?
 # Environment
 .env
 .env.local
+.claude/
 
 # Dependencies
 Upmarket/Python/python-stdlib/

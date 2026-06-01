@@ -55,6 +55,19 @@ echo "==> Copying first-party bridge packages"
 scripts/ci/sync_python_bridge.sh "$STAGING_SITE"
 echo ""
 
+echo "==> Normalizing package markers that confuse Xcode bundle scanners"
+for marker in \
+  "$STAGING_SITE/google/protobuf/compiler/__init__.py" \
+  "$STAGING_SITE/google/protobuf/pyext/__init__.py" \
+  "$STAGING_SITE/google/protobuf/testdata/__init__.py" \
+  "$STAGING_SITE/google/protobuf/util/__init__.py"
+do
+  if [[ -f "$marker" && ! -s "$marker" ]]; then
+    printf '# Package marker for Xcode bundle scanning.\n' > "$marker"
+  fi
+done
+echo ""
+
 echo "==> Replacing bundled site-packages"
 rm -rf "$SITE"
 mv "$STAGING_SITE" "$SITE"
