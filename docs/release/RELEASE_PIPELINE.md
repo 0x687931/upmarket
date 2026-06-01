@@ -8,6 +8,12 @@ This pipeline should stay small and explicit. Prefer shell scripts that can run 
 
 ## Required Workflows
 
+Release control documents:
+
+- `docs/release/RELEASE_POLICY.md`
+- `docs/release/RELEASE_CHECKLIST.md`
+- `docs/release/TEST_MATRIX.md`
+
 ### PR CI
 
 Runs on every pull request.

@@ -139,7 +139,7 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 - [x] Require ADRs for local patches to upstream behavior, including removal condition and packaged-app validation.
 - [x] Require fork/cherry-pick candidates to be temporary, upstream-linked, pinned to immutable commits or packaged artifacts, covered by corpus validation, and removable once upstream releases.
 - [x] Add dependency audit workflow for exact pins, `pip check`, license generation, vulnerability review where practical, and undeclared runtime tool detection.
-- [ ] Add release docs: release policy, release checklist, and test matrix.
+- [x] Add release docs: release policy, release checklist, and test matrix.
 - [x] Add CI helper scripts for Xcode project validation, effective plist checks, entitlement checks, Python bundle validation, offline conversion, model validation, and corpus validation.
 
 ### P0 - Agent Task Tracking and Pipeline Hooks
