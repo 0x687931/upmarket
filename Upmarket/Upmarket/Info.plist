@@ -2,7 +2,22 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- URL scheme for Quick Action extension to send files back to main app -->
+    <key>CFBundleDevelopmentRegion</key>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>$(PRODUCT_NAME)</string>
+    <key>CFBundlePackageType</key>
+    <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+    <key>CFBundleShortVersionString</key>
+    <string>$(MARKETING_VERSION)</string>
     <key>CFBundleURLTypes</key>
     <array>
         <dict>
@@ -14,8 +29,14 @@
             </array>
         </dict>
     </array>
-
-    <!-- Services menu: right-click → Services → Convert to Markdown -->
+    <key>CFBundleVersion</key>
+    <string>$(CURRENT_PROJECT_VERSION)</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+    <key>NSHumanReadableCopyright</key>
+    <string></string>
     <key>NSServices</key>
     <array>
         <dict>
@@ -28,6 +49,10 @@
             <string>convertToMarkdown</string>
             <key>NSPortName</key>
             <string>Upmarket</string>
+            <key>NSReturnTypes</key>
+            <array>
+                <string>public.plain-text</string>
+            </array>
             <key>NSSendFileTypes</key>
             <array>
                 <string>public.pdf</string>
@@ -38,11 +63,11 @@
                 <string>public.image</string>
                 <string>public.audio</string>
             </array>
-            <key>NSReturnTypes</key>
-            <array>
-                <string>public.plain-text</string>
-            </array>
         </dict>
     </array>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Upmarket uses Apple Speech to transcribe audio files locally when you choose an audio document.</string>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
 </dict>
 </plist>

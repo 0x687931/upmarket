@@ -8,7 +8,7 @@
     <true/>
     <key>com.apple.security.application-groups</key>
     <array>
-        <string>$(TeamIdentifierPrefix)com.upmarket.app</string>
+        <string>group.com.upmarket.app</string>
     </array>
 </dict>
 </plist>

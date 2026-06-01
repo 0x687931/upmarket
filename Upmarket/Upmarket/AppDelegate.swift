@@ -1,5 +1,11 @@
 import AppKit
 
+private let appGroupID = "group.com.upmarket.app"
+
+private struct QuickActionHandoff: Decodable {
+    let files: [String]
+}
+
 /// AppDelegate handles app lifecycle, URL scheme handling (from Quick Action),
 /// and Services menu integration.
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -47,24 +53,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - URL Scheme handler (from Quick Action extension)
-    // upmarket://convert?files=/path/to/file1.pdf,/path/to/file2.docx
+    // upmarket://convert?handoff=<uuid>
 
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls {
             guard url.scheme == "upmarket", url.host == "convert",
                   let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-                  let filesParam = components.queryItems?.first(where: { $0.name == "files" })?.value
+                  let handoffID = components.queryItems?.first(where: { $0.name == "handoff" })?.value
             else { continue }
 
-            let filePaths = filesParam.components(separatedBy: ",")
-            ShelfWindowController.shared.show()
-            for path in filePaths {
-                let fileURL = URL(fileURLWithPath: path)
-                NotificationCenter.default.post(
-                    name: .upmarketConvertFile,
-                    object: fileURL
-                )
-            }
+            openQuickActionHandoff(id: handoffID)
+        }
+    }
+
+    private func openQuickActionHandoff(id: String) {
+        guard UUID(uuidString: id) != nil,
+              let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID)
+        else { return }
+
+        let handoffDirectory = container
+            .appendingPathComponent("QuickActionHandoffs", isDirectory: true)
+            .appendingPathComponent(id, isDirectory: true)
+        let manifestURL = handoffDirectory.appendingPathComponent("manifest.json")
+        guard let data = try? Data(contentsOf: manifestURL),
+              let handoff = try? JSONDecoder().decode(QuickActionHandoff.self, from: data)
+        else { return }
+
+        ShelfWindowController.shared.show()
+        for fileName in handoff.files where !fileName.contains("/") {
+            NotificationCenter.default.post(
+                name: .upmarketConvertFile,
+                object: handoffDirectory.appendingPathComponent(fileName)
+            )
         }
     }
 

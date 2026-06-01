@@ -73,10 +73,10 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Wrap delayed document reads/writes in security-scoped access or persist security-scoped bookmarks when user interaction can delay conversion.
 
 ### P0 - App Store Metadata and Entitlements
-- [ ] Merge URL scheme and Services registration into the effective app `Info.plist`, not a copied resource plist.
-- [ ] Add `NSSpeechRecognitionUsageDescription` to the effective app `Info.plist` before any Speech framework authorization call.
-- [ ] Fix App Group identifiers to a registered `group.com.upmarket.app` style value across app and extension.
-- [ ] Redesign Quick Action handoff using App Group storage plus security-scoped bookmarks or copied files; do not trust arbitrary custom-URL file paths.
+- [x] Merge URL scheme and Services registration into the effective app `Info.plist`, not a copied resource plist.
+- [x] Add `NSSpeechRecognitionUsageDescription` to the effective app `Info.plist` before any Speech framework authorization call.
+- [x] Fix App Group identifiers to a registered `group.com.upmarket.app` style value across app and extension.
+- [x] Redesign Quick Action handoff using App Group storage plus security-scoped bookmarks or copied files; do not trust arbitrary custom-URL file paths.
 - [ ] Reassess consumable document packs: avoid client-authoritative `UserDefaults` balances or move consumable accounting to a verifiable App Store/server-backed model.
 
 ### P0 - Observability, CI, and Release Validation
