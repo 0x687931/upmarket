@@ -12,7 +12,7 @@ struct ConversionRunner {
     func analyse(fileURL: URL) async -> ComplexityAdvice? {
         guard let tempURL = try? copyToTemp(fileURL: fileURL) else { return nil }
         defer { try? FileManager.default.removeItem(at: tempURL) }
-        return pythonWorker.analyse(fileURL: tempURL)
+        return try? await pythonWorker.analyse(fileURL: tempURL)
     }
 
     func run(_ job: ConversionJob, progress: ProgressHandler? = nil) async -> ConversionResult {
@@ -53,16 +53,16 @@ struct ConversionRunner {
         switch ext {
         case "pdf":
             if job.useAI {
-                return pythonWorker.convert(fileURL: tempURL, title: title, useAI: true, password: job.password)
+                return await pythonWorker.convert(fileURL: tempURL, title: title, useAI: true, password: job.password)
             }
             if VisionDocumentExtractor.isAvailable {
                 return await runVisionExtraction(fileURL: tempURL, title: title, password: job.password)
             }
-            return runPDFKitConversion(fileURL: tempURL, title: title, password: job.password)
+            return await runPDFKitConversion(fileURL: tempURL, title: title, password: job.password)
         case "mp3", "m4a", "wav", "aiff", "opus":
             return await runSpeechTranscription(fileURL: tempURL, title: title)
         default:
-            return pythonWorker.convert(fileURL: tempURL, title: title, useAI: job.useAI, password: job.password)
+            return await pythonWorker.convert(fileURL: tempURL, title: title, useAI: job.useAI, password: job.password)
         }
     }
 
@@ -79,7 +79,7 @@ struct ConversionRunner {
         } catch VisionDocumentExtractor.ExtractionError.passwordRequired {
             return .failure(ConversionError.passwordRequired.errorDescription ?? "This PDF is password-protected.")
         } catch {
-            return runPDFKitConversion(fileURL: fileURL, title: title, password: password)
+            return await runPDFKitConversion(fileURL: fileURL, title: title, password: password)
         }
     }
 
@@ -103,7 +103,7 @@ struct ConversionRunner {
         }
     }
 
-    private func runPDFKitConversion(fileURL: URL, title: String, password: String?) -> ConversionResult {
+    private func runPDFKitConversion(fileURL: URL, title: String, password: String?) async -> ConversionResult {
         do {
             let result = try PDFConverter.convert(url: fileURL, password: password)
             return .success(ConversionOutput(
@@ -116,7 +116,7 @@ struct ConversionRunner {
         } catch PDFConverter.ConversionError.passwordRequired {
             return .failure(ConversionError.passwordRequired.errorDescription ?? "This PDF is password-protected.")
         } catch {
-            return pythonWorker.convert(fileURL: fileURL, title: title, useAI: false, password: password)
+            return await pythonWorker.convert(fileURL: fileURL, title: title, useAI: false, password: password)
         }
     }
 

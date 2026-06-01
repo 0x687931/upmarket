@@ -104,7 +104,7 @@ final class ModelManager: ObservableObject {
 
     func checkModels() {
         Task.detached(priority: .userInitiated) {
-            let result = self.pythonWorker.checkModels()
+            let result = (try? await self.pythonWorker.checkModels()) ?? []
             await MainActor.run {
                 self.models = result
             }
@@ -133,7 +133,7 @@ final class ModelManager: ObservableObject {
                 if await self.downloadError != nil { break }
             }
 
-            self.pythonWorker.setOfflineMode()
+            await self.pythonWorker.setOfflineMode()
 
             await MainActor.run {
                 self.isDownloading = false
@@ -152,7 +152,7 @@ final class ModelManager: ObservableObject {
 
         // Start download in a separate task so we can poll progress
         let downloadTask = Task.detached {
-            self.pythonWorker.downloadModel(key: key, progressFile: progressFile)
+            await self.pythonWorker.downloadModel(key: key, progressFile: progressFile)
         }
 
         // Poll progress file every 500ms

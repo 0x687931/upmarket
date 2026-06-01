@@ -34,7 +34,8 @@
       "owner": "Python Runtime",
       "scope": [
         "Upmarket/Upmarket/Services/PythonBridge.swift",
-        "Upmarket/Upmarket/Services/ConversionService.swift",
+        "Upmarket/Upmarket/Services/PythonWorker.swift",
+        "Upmarket/Upmarket/Services/ConversionRunner.swift",
         "UpmarketPython/**",
         "scripts/build_python_env.sh",
         "scripts/ci/verify_python_bundle.sh"
@@ -60,7 +61,8 @@
       "objective": "Replace singleton conversion result behavior with per-job state, progress, cancellation, retry, and no-progress detection.",
       "owner": "Swift/App Store",
       "scope": [
-        "Upmarket/Upmarket/Services/ConversionService.swift",
+        "Upmarket/Upmarket/Services/ConversionQueue.swift",
+        "Upmarket/Upmarket/Services/ConversionRunner.swift",
         "Upmarket/Upmarket/Views/ContentView.swift",
         "Upmarket/Upmarket/Views/ShelfView.swift",
         "Upmarket/UpmarketTests/**"
@@ -303,7 +305,6 @@
         "Upmarket/Upmarket/Services/ConversionQueue.swift",
         "Upmarket/Upmarket/Services/ConversionRunner.swift",
         "Upmarket/Upmarket/Services/PythonWorker.swift",
-        "Upmarket/Upmarket/Services/ConversionService.swift",
         "Upmarket/Upmarket/Services/ModelManager.swift",
         "Upmarket/Upmarket/Views/ContentView.swift",
         "Upmarket/Upmarket/Views/ShelfView.swift",

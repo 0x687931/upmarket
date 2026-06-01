@@ -49,7 +49,7 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 
 ### P0 - Python Runtime Isolation
 - [ ] Move Python conversion/model execution out of the main app process into a signed helper, preferably XPC; map helper crashes, hangs, and exits to typed Swift errors.
-- [ ] Gate every Python call behind `PythonWorker` or a lower-level bootstrap bridge that verifies Python readiness, serializes interpreter access, catches bridge failures, and disables conversion/model UI when unavailable.
+- [x] Gate every Python call behind `PythonWorker` or a lower-level bootstrap bridge that verifies Python readiness, serializes interpreter access, catches bridge failures, and disables conversion/model UI when unavailable.
 - [ ] Make the Python packaging path reproducible: copy first-party bridge packages into the embedded runtime, pin dependencies, run `pip check`, and smoke-test imports from the packaged app.
 
 ### P0 - Conversion Job Correctness
@@ -59,7 +59,7 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [ ] Guarantee conversion state reset and temp cleanup on success, failure, cancellation, helper crash, app quit, and startup cleanup of stale job directories.
 
 ### P0 - Offline and Model Integrity
-- [ ] Default conversion runtime to offline mode: `HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`, and local-files-only model loading.
+- [x] Default conversion runtime to offline mode: `HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`, and local-files-only model loading.
 - [ ] Permit network only inside the explicit model download flow; conversion must fail locally with a clear model-missing or model-corrupt error.
 - [ ] Pin immutable model revisions, download to staging directories, verify expected files/checksums, write a validation manifest, and atomically promote completed downloads.
 - [ ] Treat partial, corrupt, stale, or unexpected model directories as unavailable.

@@ -13,6 +13,7 @@ APPROVED_PYTHONKIT_IMPORTS = {
     ROOT / "Services" / "PythonBridge.swift",
     ROOT / "Services" / "PythonWorker.swift",
 }
+APPROVED_PYTHON_CALLS = APPROVED_PYTHONKIT_IMPORTS
 REQUIRED_CORE_FILES = {
     ROOT / "Domain" / "ConversionJob.swift",
     ROOT / "Domain" / "ConversionResult.swift",
@@ -53,6 +54,8 @@ def main() -> int:
         text = path.read_text(encoding="utf-8")
         if "import PythonKit" in text and path not in APPROVED_PYTHONKIT_IMPORTS:
             errors.append(f"{path}: PythonKit imports must stay behind PythonBridge/PythonWorker")
+        if "Python.import" in text and path not in APPROVED_PYTHON_CALLS:
+            errors.append(f"{path}: Python.import calls must stay behind PythonBridge/PythonWorker")
 
     if not (ROOT / "Services" / "FileAccessService.swift").exists():
         errors.append("Services/FileAccessService.swift is required for AppKit file/pasteboard operations")

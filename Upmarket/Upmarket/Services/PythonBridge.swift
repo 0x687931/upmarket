@@ -1,11 +1,123 @@
-import Foundation
 import Combine
+import Foundation
 import PythonKit
 
-/// Initialises the embedded CPython runtime and exposes it to the app.
-/// Must be set up once at app launch before any Python calls are made.
-final class PythonBridge: ObservableObject {
+enum PythonBridgeError: Error, Equatable, LocalizedError, Sendable {
+    case frameworkNotFound
+    case runtimeUnavailable(String)
+    case moduleUnavailable(String)
+    case callFailed(String)
 
+    var errorDescription: String? {
+        switch self {
+        case .frameworkNotFound:
+            return "Python.framework not found in app bundle."
+        case .runtimeUnavailable(let message):
+            return "Python runtime unavailable: \(message)"
+        case .moduleUnavailable(let name):
+            return "Python module unavailable: \(name)"
+        case .callFailed(let message):
+            return "Python call failed: \(message)"
+        }
+    }
+}
+
+struct PythonRuntimeStatus: Equatable, Sendable {
+    let isReady: Bool
+    let version: String?
+    let error: PythonBridgeError?
+}
+
+actor PythonRuntime {
+    static let shared = PythonRuntime()
+
+    private var isReady = false
+    private var version: String?
+    private var lastError: PythonBridgeError?
+
+    func status() -> PythonRuntimeStatus {
+        PythonRuntimeStatus(isReady: isReady, version: version, error: lastError)
+    }
+
+    func setup() {
+        guard !isReady else { return }
+
+        do {
+            try configurePythonRuntime()
+            let sys = Python.import("sys")
+            version = String(sys.version) ?? "unknown"
+            isReady = true
+            lastError = nil
+        } catch let error as PythonBridgeError {
+            isReady = false
+            lastError = error
+        } catch {
+            isReady = false
+            lastError = .runtimeUnavailable(error.localizedDescription)
+        }
+    }
+
+    func setDownloadModeEnabled(_ enabled: Bool) {
+        setenv("HF_HUB_OFFLINE", enabled ? "0" : "1", 1)
+        setenv("TRANSFORMERS_OFFLINE", enabled ? "0" : "1", 1)
+    }
+
+    func withPython<T: Sendable>(_ operation: () throws -> T) async throws -> T {
+        if !isReady { setup() }
+        guard isReady else {
+            throw lastError ?? PythonBridgeError.runtimeUnavailable("Python did not initialise.")
+        }
+
+        do {
+            return try operation()
+        } catch let error as PythonBridgeError {
+            throw error
+        } catch {
+            throw PythonBridgeError.callFailed(error.localizedDescription)
+        }
+    }
+
+    func withPythonDownload<T: Sendable>(_ operation: () throws -> T) async throws -> T {
+        if !isReady { setup() }
+        guard isReady else {
+            throw lastError ?? PythonBridgeError.runtimeUnavailable("Python did not initialise.")
+        }
+
+        setDownloadModeEnabled(true)
+        defer { setDownloadModeEnabled(false) }
+
+        do {
+            return try operation()
+        } catch let error as PythonBridgeError {
+            throw error
+        } catch {
+            throw PythonBridgeError.callFailed(error.localizedDescription)
+        }
+    }
+
+    private func configurePythonRuntime() throws {
+        guard let frameworkPath = Bundle.main.privateFrameworksPath else {
+            throw PythonBridgeError.frameworkNotFound
+        }
+
+        let pythonHome = "\(frameworkPath)/Python.framework/Versions/3.12"
+        let stdlibPath = "\(pythonHome)/lib/python3.12"
+        let sitePackages = "\(stdlibPath)/site-packages"
+
+        setenv("PYTHONHOME", pythonHome, 1)
+        setenv("PYTHONPATH", "\(stdlibPath):\(sitePackages)", 1)
+        setDownloadModeEnabled(false)
+
+        let appSupport = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Upmarket/models")
+            .path
+        setenv("HF_HUB_CACHE", appSupport, 1)
+    }
+}
+
+/// Observable facade for SwiftUI. Python calls must go through PythonRuntime/PythonWorker.
+final class PythonBridge: ObservableObject {
     static let shared = PythonBridge()
 
     let objectWillChange = PassthroughSubject<Void, Never>()
@@ -18,56 +130,21 @@ final class PythonBridge: ObservableObject {
         willSet { objectWillChange.send() }
     }
 
+    private(set) var version: String? {
+        willSet { objectWillChange.send() }
+    }
+
     private init() {}
 
     func setup() {
-        guard !isReady else { return }
-
-        do {
-            try configurePythonRuntime()
-            validatePython()
-            isReady = true
-        } catch let e {
-            error = e.localizedDescription
-        }
-    }
-
-    // MARK: - Private
-
-    private func configurePythonRuntime() throws {
-        guard let frameworkPath = Bundle.main.privateFrameworksPath else {
-            throw BridgeError.frameworkNotFound
-        }
-
-        let pythonHome = "\(frameworkPath)/Python.framework/Versions/3.12"
-        let stdlibPath = "\(pythonHome)/lib/python3.12"
-        let sitePackages = "\(stdlibPath)/site-packages"
-
-        setenv("PYTHONHOME", pythonHome, 1)
-        setenv("PYTHONPATH", "\(stdlibPath):\(sitePackages)", 1)
-        setenv("HF_HUB_OFFLINE", "0", 1)
-
-        let appSupport = FileManager.default
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Upmarket/models")
-            .path
-        setenv("HF_HUB_CACHE", appSupport, 1)
-    }
-
-    private func validatePython() {
-        let sys = Python.import("sys")
-        let version = String(sys.version) ?? "unknown"
-        print("[PythonBridge] Python \(version) ready")
-    }
-}
-
-enum BridgeError: LocalizedError {
-    case frameworkNotFound
-
-    var errorDescription: String? {
-        switch self {
-        case .frameworkNotFound:
-            return "Python.framework not found in app bundle."
+        Task {
+            await PythonRuntime.shared.setup()
+            let status = await PythonRuntime.shared.status()
+            await MainActor.run {
+                self.isReady = status.isReady
+                self.version = status.version
+                self.error = status.error?.localizedDescription
+            }
         }
     }
 }
