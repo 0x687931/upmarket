@@ -48,6 +48,11 @@ final class FileAccessService {
         NSPasteboard.general.setString(markdown, forType: .string)
     }
 
+    func copySupportReport(_ report: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(report, forType: .string)
+    }
+
     func copyFilePath(_ url: URL) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(url.path, forType: .string)

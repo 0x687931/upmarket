@@ -1,0 +1,100 @@
+import Foundation
+
+enum SupportReportCategory: String, CaseIterable, Identifiable {
+    case crash = "Crash"
+    case pythonHelper = "Python helper crash or stall"
+    case stalledConversion = "Stalled conversion"
+    case conversionFailure = "Conversion failure"
+    case modelDownloadFailure = "Model download failure"
+    case storeKitIssue = "StoreKit or payment issue"
+    case appStoreRegression = "App Store/release regression"
+    case featureFlagRegression = "Feature flag regression"
+    case uiAccessibility = "UI/accessibility bug"
+
+    var id: String { rawValue }
+}
+
+struct SupportReportPreview: Equatable {
+    let subject: String
+    let body: String
+}
+
+enum SupportReporter {
+    static func makePreview(
+        category: SupportReportCategory,
+        summary: String,
+        includeDiagnostics: Bool,
+        snapshot: DiagnosticSnapshot = Diagnostics.makeSnapshot(),
+        logExport: String = Diagnostics.recentLogExport()
+    ) -> SupportReportPreview {
+        let cleanSummary = sanitizeUserText(summary)
+        var sections = [
+            "Upmarket Problem Report",
+            "",
+            "Category: \(category.rawValue)",
+            "Summary:",
+            cleanSummary.isEmpty ? "(not provided)" : cleanSummary,
+            "",
+            "Privacy:",
+            "No source documents, extracted text, passwords, or full file paths are included by Upmarket."
+        ]
+
+        if includeDiagnostics {
+            sections.append(contentsOf: [
+                "",
+                "Diagnostics:",
+                diagnosticText(snapshot),
+                "",
+                "Recent Logs:",
+                logExport
+            ])
+        } else {
+            sections.append(contentsOf: [
+                "",
+                "Diagnostics: omitted by user"
+            ])
+        }
+
+        return SupportReportPreview(
+            subject: "Upmarket \(category.rawValue)",
+            body: sections.joined(separator: "\n")
+        )
+    }
+
+    static func mailURL(for preview: SupportReportPreview) -> URL? {
+        var components = URLComponents()
+        components.scheme = "mailto"
+        components.path = "support@upmarket.app"
+        components.queryItems = [
+            URLQueryItem(name: "subject", value: preview.subject),
+            URLQueryItem(name: "body", value: preview.body)
+        ]
+        return components.url
+    }
+
+    private static func diagnosticText(_ snapshot: DiagnosticSnapshot) -> String {
+        [
+            "App Version: \(snapshot.appVersion)",
+            "Build: \(snapshot.buildNumber)",
+            "macOS: \(snapshot.macOSVersion)",
+            "Hardware: \(snapshot.hardwareModel)",
+            "Locale: \(snapshot.localeIdentifier)",
+            "Correlation ID: \(snapshot.correlationID ?? "none")",
+            "Last Stage: \(snapshot.lastConversionStage ?? "none")",
+            "Last Error: \(snapshot.lastErrorCode ?? "none")",
+            "Plist: \(snapshot.plistStatus)",
+            "Entitlements: \(snapshot.entitlementStatus)",
+            "Models: \(snapshot.modelManifestStatus)"
+        ].joined(separator: "\n")
+    }
+
+    private static func sanitizeUserText(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: NSHomeDirectory(), with: "~")
+            .replacingOccurrences(
+                of: #"/Users/[^/\s]+"#,
+                with: "/Users/[redacted]",
+                options: .regularExpression
+            )
+    }
+}

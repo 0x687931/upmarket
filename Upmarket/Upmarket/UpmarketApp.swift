@@ -53,10 +53,8 @@ struct UpmarketApp: App {
 
             // Help menu additions
             CommandGroup(after: .help) {
-                Button("Report an Issue…") {
-                    if let url = URL(string: "mailto:support@upmarket.app?subject=Upmarket%20Issue") {
-                        NSWorkspace.shared.open(url)
-                    }
+                Button("Report a Problem…") {
+                    openWindow(id: "reportProblem")
                 }
                 Divider()
                 Button("Join Discord Community…") {
@@ -83,6 +81,12 @@ struct UpmarketApp: App {
         }
         .windowResizability(.contentSize)
         .defaultSize(width: 560, height: 440)
+
+        Window("Report a Problem", id: "reportProblem") {
+            ReportProblemView()
+        }
+        .windowResizability(.contentSize)
+        .defaultSize(width: 620, height: 560)
 
         // MARK: Onboarding window — shown on first launch
         Window("Welcome to Upmarket", id: "onboarding") {

@@ -89,14 +89,14 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [ ] Add deeper Vision/OCR safeguards: page/pixel limits, streaming page processing, and autorelease pools.
 
 ### P0 - Crash and Bug Reporting
-- [ ] Define a privacy-first support policy: no automatic telemetry, no document contents, no extracted text, no passwords, and no full local file paths in reports.
-- [ ] Add Apple-native crash triage process using TestFlight/App Store crash reports in Xcode Organizer, including ownership, severity labels, and release-blocking criteria.
-- [ ] Add `Help > Report a Problem...` flow that creates a user-approved email or support package rather than silently uploading diagnostics.
-- [ ] Add a redacted diagnostic bundle generator with app version, build number, macOS version, hardware class, locale, entitlement/plist sanity results, model manifest status, last conversion stage, error code, and correlation ID.
-- [ ] Add OSLog retrieval/export for recent Upmarket subsystem logs with privacy annotations; exclude document contents, extracted Markdown, passwords, and unredacted paths.
-- [ ] Add user-facing controls to preview, include, or omit diagnostics before sending a bug report.
+- [x] Define a privacy-first support policy: no automatic telemetry, no document contents, no extracted text, no passwords, and no full local file paths in reports.
+- [x] Add Apple-native crash triage process using TestFlight/App Store crash reports in Xcode Organizer, including ownership, severity labels, and release-blocking criteria.
+- [x] Add `Help > Report a Problem...` flow that creates a user-approved email or support package rather than silently uploading diagnostics.
+- [x] Add a redacted diagnostic bundle generator with app version, build number, macOS version, hardware class, locale, entitlement/plist sanity results, model manifest status, last conversion stage, error code, and correlation ID.
+- [x] Add OSLog retrieval/export for recent Upmarket subsystem logs with privacy annotations; exclude document contents, extracted Markdown, passwords, and unredacted paths.
+- [x] Add user-facing controls to preview, include, or omit diagnostics before sending a bug report.
 - [x] Add GitHub/support issue templates for crashes, conversion failures, model download failures, StoreKit issues, and App Store review regressions.
-- [ ] Add incident runbook for crash spikes, Python helper crashes, corrupt model rollouts, broken feature flags, and StoreKit product failures.
+- [x] Add incident runbook for crash spikes, Python helper crashes, corrupt model rollouts, broken feature flags, and StoreKit product failures.
 
 ### P0 - Release Engineering and Upstream Validation
 - [x] Add PR CI checks for build, unit tests, effective `Info.plist`, entitlements, Python bundle imports, and offline smoke conversion.
@@ -109,7 +109,7 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [ ] Require corpus fixture or benchmark coverage before adopting upstream conversion-quality changes.
 - [ ] Require ADRs for local patches to upstream behavior, including removal condition and packaged-app validation.
 - [x] Add dependency audit workflow for exact pins, `pip check`, license generation, vulnerability review where practical, and undeclared runtime tool detection.
-- [ ] Add release docs: release policy, release checklist, upstream validation guide, test matrix, and incident runbook.
+- [ ] Add release docs: release policy, release checklist, upstream validation guide, and test matrix.
 - [x] Add CI helper scripts for Xcode project validation, effective plist checks, entitlement checks, Python bundle validation, offline conversion, model validation, and corpus validation.
 
 ### P0 - Agent Task Tracking and Pipeline Hooks
@@ -186,6 +186,7 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [ ] Add memory pressure handling using Apple-native process/system signals where practical
 - [ ] Run Instruments: Allocations, Leaks, Time Profiler, Main Thread Checker
 - [ ] Run Thread Sanitizer on conversion, model download, and StoreKit flows
+- [x] Define Xcode Organizer crash triage process for TestFlight/App Store diagnostics
 - [ ] Verify TestFlight/App Store crash diagnostics appear in Xcode Organizer
 
 ### Gate D - StoreKit and App Store

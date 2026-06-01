@@ -3,7 +3,7 @@ import OSLog
 import Security
 
 enum AppLog {
-    private static let subsystem = "com.upmarket.app"
+    nonisolated static let subsystem = "com.upmarket.app"
 
     nonisolated static let conversion = Logger(subsystem: subsystem, category: "conversion")
     nonisolated static let pythonBridge = Logger(subsystem: subsystem, category: "pythonBridge")
@@ -60,6 +60,27 @@ enum Diagnostics {
         URL(fileURLWithPath: path).lastPathComponent
     }
 
+    static func recentLogExport(limit: Int = 200, since seconds: TimeInterval = 900) -> String {
+        do {
+            let store = try OSLogStore(scope: .currentProcessIdentifier)
+            let position = store.position(date: Date().addingTimeInterval(-seconds))
+            let entries = try store.getEntries(at: position)
+                .compactMap { $0 as? OSLogEntryLog }
+                .filter { $0.subsystem == AppLog.subsystem }
+                .suffix(limit)
+
+            guard !entries.isEmpty else { return "No recent Upmarket logs in this process." }
+            return entries.map { entry in
+                let message = sanitizeLogMessage(entry.composedMessage)
+                return "\(entry.date) [\(entry.category)] \(entry.level): \(message)"
+            }
+            .joined(separator: "\n")
+        } catch {
+            AppLog.diagnostics.error("Failed to export recent logs: \(error.localizedDescription, privacy: .private)")
+            return "Log export unavailable: \(String(describing: type(of: error)))"
+        }
+    }
+
     private static func plistStatus(bundle: Bundle) -> String {
         let hasURLTypes = bundle.object(forInfoDictionaryKey: "CFBundleURLTypes") != nil
         let hasServices = bundle.object(forInfoDictionaryKey: "NSServices") != nil
@@ -106,5 +127,15 @@ enum Diagnostics {
             result.append(String(UnicodeScalar(UInt8(value))))
         }
         return identifier.isEmpty ? "unknown" : identifier
+    }
+
+    private static func sanitizeLogMessage(_ message: String) -> String {
+        message
+            .replacingOccurrences(of: NSHomeDirectory(), with: "~")
+            .replacingOccurrences(
+                of: #"/Users/[^/\s]+"#,
+                with: "/Users/[redacted]",
+                options: .regularExpression
+            )
     }
 }

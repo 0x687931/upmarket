@@ -9,11 +9,13 @@ body:
       label: Failure Type
       options:
         - Crash
+        - Python helper crash or stall
         - Stalled conversion
-        - Wrong conversion output
+        - Conversion failure or wrong output
         - Model download failure
         - StoreKit or payment issue
         - App Store/release regression
+        - Feature flag regression
         - UI/accessibility bug
         - Other
     validations:
@@ -58,7 +60,12 @@ body:
     id: diagnostics
     attributes:
       label: Diagnostics
-      description: Paste redacted diagnostic bundle text only. Do not include document contents, passwords, or private file paths.
+      description: Paste user-approved Help > Report a Problem preview text only. Do not include document contents, passwords, or private file paths.
+  - type: input
+    id: correlation
+    attributes:
+      label: Correlation ID
+      description: Optional job correlation ID from the report preview.
   - type: dropdown
     id: severity
     attributes:
