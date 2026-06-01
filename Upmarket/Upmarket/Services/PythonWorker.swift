@@ -14,20 +14,37 @@ struct PythonWorker {
     }
 
     nonisolated func analyse(fileURL: URL, workspaceURL: URL? = nil) async throws -> ComplexityAdvice? {
-        let workspaceURL = try workspaceURL ?? AppWorkspace.create(prefix: "analyse-runtime")
-        return try await helperClient.analyse(fileURL: fileURL, workspaceURL: workspaceURL)
+        let workspace = try workspaceURL ?? AppWorkspace.create(prefix: "analyse-runtime")
+        defer {
+            if workspaceURL == nil {
+                AppWorkspace.remove(workspace)
+            }
+        }
+        return try await helperClient.analyse(fileURL: fileURL, workspaceURL: workspace)
     }
 
     nonisolated func convert(fileURL: URL, title: String, useAI: Bool, password: String?, workspaceURL: URL? = nil) async -> ConversionResult {
+        let workspace: URL
         do {
-            let workspaceURL = try workspaceURL ?? AppWorkspace.create(prefix: "conversion-runtime")
+            workspace = try workspaceURL ?? AppWorkspace.create(prefix: "conversion-runtime")
+        } catch {
+            AppLog.pythonBridge.error("Advanced conversion failed code=runtime.workspace")
+            return .failure(ConversionError.inaccessible.errorDescription ?? "Upmarket couldn't access this file.")
+        }
+        defer {
+            if workspaceURL == nil {
+                AppWorkspace.remove(workspace)
+            }
+        }
+
+        do {
             AppLog.pythonBridge.info("Advanced conversion started ext=\(fileURL.pathExtension, privacy: .public) useAI=\(useAI, privacy: .public)")
             return try await helperClient.convert(
                 fileURL: fileURL,
                 title: title,
                 useAI: useAI,
                 password: password,
-                workspaceURL: workspaceURL
+                workspaceURL: workspace
             )
         } catch let error as PythonBridgeError {
             AppLog.pythonBridge.error("Advanced conversion failed code=\(error.diagnosticCode, privacy: .public)")

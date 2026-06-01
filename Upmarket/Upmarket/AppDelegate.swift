@@ -8,10 +8,16 @@ private struct QuickActionHandoff: Decodable {
 
 /// AppDelegate handles app lifecycle, URL scheme handling (from Quick Action),
 /// and Services menu integration.
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return false  // Stay alive as menu bar + shelf app
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        ConversionQueue.shared.cancelAll()
+        AppWorkspace.removeStaleWorkspaces()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {

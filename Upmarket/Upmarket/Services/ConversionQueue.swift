@@ -90,6 +90,23 @@ final class ConversionQueue: ObservableObject {
         finish(id, result: .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled."), stage: .cancelled)
     }
 
+    func cancelAll() {
+        let ids = jobs.filter(\.isRunning).map(\.id)
+        guard !ids.isEmpty else {
+            reset()
+            return
+        }
+        cancelledJobIDs.formUnion(ids)
+        pendingJobIDs.removeAll()
+        activeTask?.cancel()
+        activeTask = nil
+        activeJobID = nil
+        for id in ids {
+            finish(id, result: .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled."), stage: .cancelled)
+        }
+        reset()
+    }
+
     @discardableResult
     func retry(_ id: UUID, useAI: Bool? = nil) -> UUID? {
         guard let job = jobs.first(where: { $0.id == id }) else { return nil }

@@ -11,8 +11,19 @@ struct ConversionRunner {
     }
 
     func analyse(fileURL: URL) async -> ComplexityAdvice? {
-        guard let workspace = try? AppWorkspace.create(prefix: "analyse"),
-              let tempURL = try? AppWorkspace.copy(fileURL, into: workspace) else { return nil }
+        let workspace: URL
+        let tempURL: URL
+        do {
+            workspace = try AppWorkspace.create(prefix: "analyse")
+            do {
+                tempURL = try AppWorkspace.copy(fileURL, into: workspace)
+            } catch {
+                AppWorkspace.remove(workspace)
+                return nil
+            }
+        } catch {
+            return nil
+        }
         defer { AppWorkspace.remove(workspace) }
         return try? await pythonWorker.analyse(fileURL: tempURL, workspaceURL: workspace)
     }
@@ -26,7 +37,12 @@ struct ConversionRunner {
         let tempURL: URL
         do {
             workspace = try AppWorkspace.create(prefix: "conversion")
-            tempURL = try AppWorkspace.copy(job.sourceURL, into: workspace)
+            do {
+                tempURL = try AppWorkspace.copy(job.sourceURL, into: workspace)
+            } catch {
+                AppWorkspace.remove(workspace)
+                throw error
+            }
         } catch ConversionError.fileTooLarge {
             AppLog.conversion.error("Conversion rejected oversized file correlationID=\(job.correlationID, privacy: .public)")
             return .failure(ConversionError.fileTooLarge.errorDescription ?? "This document is too large to convert safely.")

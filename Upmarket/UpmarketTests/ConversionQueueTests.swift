@@ -88,6 +88,35 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.stage, .complete)
     }
 
+    func testCancelAllCancelsActiveAndQueuedJobs() async {
+        var started: [String] = []
+        let queue = ConversionQueue { job, _ in
+            started.append(job.name)
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            if Task.isCancelled {
+                return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.")
+            }
+            return .success(ConversionOutput(
+                markdown: job.name,
+                pages: 1,
+                format: job.ext,
+                title: job.name,
+                pipeline: .fast
+            ))
+        }
+
+        let first = queue.add(URL(fileURLWithPath: "/tmp/first.pdf"))
+        let second = queue.add(URL(fileURLWithPath: "/tmp/second.pdf"))
+        await waitUntil { started == ["first"] }
+
+        queue.cancelAll()
+
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == first })?.stage, .cancelled)
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.stage, .cancelled)
+        XCTAssertNil(queue.latestResult)
+        XCTAssertFalse(queue.isConverting)
+    }
+
     func testRunningJobCanBeClassifiedAsStalledWithoutCancellingIt() {
         let job = ConversionJob(
             sourceURL: URL(fileURLWithPath: "/tmp/stalled.pdf"),
@@ -155,6 +184,19 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.stage, .complete)
     }
 
+    func testRunnerCleansWorkspaceWhenInputCopyFails() async {
+        AppWorkspace.removeStaleWorkspaces()
+        let before = workspaceNames()
+        let missing = FileManager.default.temporaryDirectory
+            .appendingPathComponent("missing-\(UUID().uuidString)")
+            .appendingPathExtension("pdf")
+
+        let result = await ConversionRunner().run(ConversionJob(sourceURL: missing))
+
+        XCTAssertEqual(result.errorMessage, ConversionError.sourceUnavailable.errorDescription)
+        XCTAssertEqual(workspaceNames(), before)
+    }
+
     private func waitForResult(_ id: UUID, in queue: ConversionQueue) async {
         for _ in 0..<100 {
             if let job = queue.jobs.first(where: { $0.id == id }),
@@ -173,5 +215,13 @@ final class ConversionQueueTests: XCTestCase {
             try? await Task.sleep(nanoseconds: 10_000_000)
         }
         XCTFail("Timed out waiting for condition")
+    }
+
+    private func workspaceNames() -> [String] {
+        let entries = (try? FileManager.default.contentsOfDirectory(
+            at: AppWorkspace.baseDirectory,
+            includingPropertiesForKeys: nil
+        )) ?? []
+        return entries.map(\.lastPathComponent).sorted()
     }
 }
