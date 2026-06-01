@@ -51,6 +51,10 @@ Models are downloaded on first use and cached in `~/Library/Application Support/
 
 See [IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for the full technical plan and [USER_FLOW.md](docs/USER_FLOW.md) for the app journey.
 
+## Current Benchmarks
+
+See [CORPUS_BENCHMARKS.md](docs/release/CORPUS_BENCHMARKS.md) for the current corpus table: file in the first column, converter pathways in the following columns, and measured scores in each cell.
+
 ### Project Structure
 
 ```
