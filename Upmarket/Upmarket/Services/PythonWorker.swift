@@ -23,7 +23,14 @@ struct PythonWorker {
         return try await helperClient.analyse(fileURL: fileURL, workspaceURL: workspace)
     }
 
-    nonisolated func convert(fileURL: URL, title: String, useAI: Bool, password: String?, workspaceURL: URL? = nil) async -> ConversionResult {
+    nonisolated func convert(
+        fileURL: URL,
+        title: String,
+        useAI: Bool,
+        password: String?,
+        workspaceURL: URL? = nil,
+        heartbeat: (@Sendable () -> Void)? = nil
+    ) async -> ConversionResult {
         let workspace: URL
         do {
             workspace = try workspaceURL ?? AppWorkspace.create(prefix: "conversion-runtime")
@@ -44,7 +51,8 @@ struct PythonWorker {
                 title: title,
                 useAI: useAI,
                 password: password,
-                workspaceURL: workspace
+                workspaceURL: workspace,
+                heartbeat: heartbeat
             )
         } catch let error as PythonBridgeError {
             AppLog.pythonBridge.error("Advanced conversion failed code=\(error.diagnosticCode, privacy: .public)")

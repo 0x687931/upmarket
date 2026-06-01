@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         NSApp.servicesProvider = self
+        MemoryPressureMonitor.shared.start()
 
         // Observe conversion state for Dock tile animation
         NotificationCenter.default.addObserver(

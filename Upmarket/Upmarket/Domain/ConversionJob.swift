@@ -21,6 +21,7 @@ struct ConversionJob: Identifiable, Equatable {
     var stage: ConversionStage
     var result: ConversionResult?
     var lastProgressAt: Date
+    var isStalled: Bool
 
     init(
         id: UUID = UUID(),
@@ -30,7 +31,8 @@ struct ConversionJob: Identifiable, Equatable {
         createdAt: Date = Date(),
         stage: ConversionStage = .queued,
         result: ConversionResult? = nil,
-        lastProgressAt: Date = Date()
+        lastProgressAt: Date = Date(),
+        isStalled: Bool = false
     ) {
         self.id = id
         self.sourceURL = sourceURL
@@ -40,6 +42,7 @@ struct ConversionJob: Identifiable, Equatable {
         self.stage = stage
         self.result = result
         self.lastProgressAt = lastProgressAt
+        self.isStalled = isStalled
     }
 
     var name: String { sourceURL.deletingPathExtension().lastPathComponent }
@@ -47,7 +50,7 @@ struct ConversionJob: Identifiable, Equatable {
     var correlationID: String { id.uuidString }
     var isRunning: Bool { stage == .queued || stage == .copying || stage == .extracting || stage == .python || stage == .postProcessing }
 
-    func isStalled(referenceDate: Date = Date(), threshold: TimeInterval) -> Bool {
+    func hasNoRecentProgress(referenceDate: Date = Date(), threshold: TimeInterval) -> Bool {
         isRunning && referenceDate.timeIntervalSince(lastProgressAt) >= threshold
     }
 }

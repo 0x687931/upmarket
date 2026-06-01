@@ -14,6 +14,10 @@ enum AppLog {
     nonisolated static let diagnostics = Logger(subsystem: subsystem, category: "diagnostics")
 }
 
+enum AppSignpost {
+    nonisolated static let conversion = OSSignposter(logger: AppLog.conversion)
+}
+
 struct DiagnosticSnapshot: Codable, Equatable {
     let appVersion: String
     let buildNumber: String

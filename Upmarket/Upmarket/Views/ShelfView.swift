@@ -335,7 +335,7 @@ struct ShelfItemView: View {
     @State private var now = Date()
 
     private var isStalled: Bool {
-        item.isStalled(referenceDate: now, threshold: 60)
+        item.isStalled || item.hasNoRecentProgress(referenceDate: now, threshold: 60)
     }
 
     var body: some View {
@@ -480,6 +480,7 @@ struct ShelfItemView: View {
                 .foregroundStyle(.yellow)
                 .lineLimit(1)
                 .frame(width: 56, height: 8)
+                .help("No progress detected. Conversion is still running; you can cancel and retry.")
         } else if let message = item.result?.errorMessage {
             Text(message)
                 .font(.system(size: 7))
@@ -487,6 +488,13 @@ struct ShelfItemView: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .frame(width: 56, height: 8)
+        } else if item.isRunning {
+            Text("Working")
+                .font(.system(size: 7))
+                .foregroundStyle(.primary.opacity(0.4))
+                .lineLimit(1)
+                .frame(width: 56, height: 8)
+                .help("Still working: \(stageLabel)")
         } else {
             Text(stageLabel)
                 .font(.system(size: 7))

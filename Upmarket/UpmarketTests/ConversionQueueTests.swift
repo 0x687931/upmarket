@@ -124,9 +124,59 @@ final class ConversionQueueTests: XCTestCase {
             lastProgressAt: Date(timeIntervalSince1970: 100)
         )
 
-        XCTAssertTrue(job.isStalled(referenceDate: Date(timeIntervalSince1970: 165), threshold: 60))
+        XCTAssertTrue(job.hasNoRecentProgress(referenceDate: Date(timeIntervalSince1970: 165), threshold: 60))
         XCTAssertTrue(job.isRunning)
         XCTAssertEqual(job.stage, .python)
+    }
+
+    func testProgressClearsRecoverableStalledState() async {
+        let queue = ConversionQueue { _, progress in
+            progress?(.python)
+            try? await Task.sleep(nanoseconds: 20_000_000)
+            progress?(.postProcessing)
+            return .success(ConversionOutput(
+                markdown: "ok",
+                pages: 1,
+                format: "PDF",
+                title: "stalled",
+                pipeline: .fast
+            ))
+        }
+
+        let id = queue.add(URL(fileURLWithPath: "/tmp/stalled.pdf"))
+        await waitUntil {
+            queue.jobs.first(where: { $0.id == id })?.stage == .python
+        }
+
+        XCTAssertFalse(queue.jobs.first(where: { $0.id == id })?.isStalled ?? true)
+        await waitForResult(id, in: queue)
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == id })?.stage, .complete)
+        XCTAssertFalse(queue.jobs.first(where: { $0.id == id })?.isStalled ?? true)
+    }
+
+    func testCriticalMemoryPressureFailsRunningJobsRecoverably() async {
+        let queue = ConversionQueue { _, _ in
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            return .success(ConversionOutput(
+                markdown: "late",
+                pages: 1,
+                format: "PDF",
+                title: "late",
+                pipeline: .fast
+            ))
+        }
+
+        let id = queue.add(URL(fileURLWithPath: "/tmp/memory.pdf"))
+        await waitUntil {
+            queue.jobs.first(where: { $0.id == id })?.isRunning == true
+        }
+
+        queue.handleMemoryPressureCritical()
+
+        let job = queue.jobs.first { $0.id == id }
+        XCTAssertEqual(job?.stage, .failed)
+        XCTAssertEqual(job?.result?.errorMessage, ConversionError.memoryPressure.errorDescription)
+        XCTAssertFalse(job?.isRunning ?? true)
     }
 
     func testFailureIsStoredPerJob() async {

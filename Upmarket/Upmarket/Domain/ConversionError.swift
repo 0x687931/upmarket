@@ -5,6 +5,7 @@ enum ConversionError: Error, Equatable, LocalizedError {
     case passwordRequired
     case cancelled
     case noProgress
+    case memoryPressure
     case fileTooLarge
     case sourceUnavailable
     case pythonRuntime(String)
@@ -20,6 +21,8 @@ enum ConversionError: Error, Equatable, LocalizedError {
             return "job.cancelled"
         case .noProgress:
             return "job.no-progress"
+        case .memoryPressure:
+            return "system.memory-pressure"
         case .fileTooLarge:
             return "file.too-large"
         case .sourceUnavailable:
@@ -41,6 +44,8 @@ enum ConversionError: Error, Equatable, LocalizedError {
             return "Conversion cancelled."
         case .noProgress:
             return "Conversion made no progress."
+        case .memoryPressure:
+            return "Conversion paused because this Mac is low on memory. Retry after closing other apps."
         case .fileTooLarge:
             return "This document is too large to convert safely."
         case .sourceUnavailable:

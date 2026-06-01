@@ -53,6 +53,9 @@ final class FileAccessService {
     }
 
     func saveMarkdown(_ markdown: String, title: String) -> URL? {
+        let signpost = AppSignpost.conversion.beginInterval("saveOutput")
+        defer { AppSignpost.conversion.endInterval("saveOutput", signpost) }
+
         let panel = NSSavePanel()
         panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
         panel.nameFieldStringValue = (title.isEmpty ? "converted" : title) + ".md"

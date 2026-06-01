@@ -11,6 +11,9 @@ struct ConversionRunner {
     }
 
     func analyse(fileURL: URL) async -> ComplexityAdvice? {
+        let signpost = AppSignpost.conversion.beginInterval("analyse")
+        defer { AppSignpost.conversion.endInterval("analyse", signpost) }
+
         let workspace: URL
         let tempURL: URL
         do {
@@ -35,6 +38,8 @@ struct ConversionRunner {
         progress?(.copying)
         let workspace: URL
         let tempURL: URL
+        let copySignpost = AppSignpost.conversion.beginInterval("copyToTemp")
+        defer { AppSignpost.conversion.endInterval("copyToTemp", copySignpost) }
         do {
             workspace = try AppWorkspace.create(prefix: "conversion")
             do {
@@ -56,7 +61,7 @@ struct ConversionRunner {
         defer { AppWorkspace.remove(workspace) }
 
         progress?(.extracting)
-        let raw = await extract(job: job, tempURL: tempURL, workspaceURL: workspace)
+        let raw = await extract(job: job, tempURL: tempURL, workspaceURL: workspace, progress: progress)
         guard !Task.isCancelled else { return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.") }
         guard case .success(let output) = raw else {
             AppLog.conversion.error("Conversion failed correlationID=\(job.correlationID, privacy: .public)")
@@ -64,13 +69,20 @@ struct ConversionRunner {
         }
 
         progress?(.postProcessing)
+        let postProcessSignpost = AppSignpost.conversion.beginInterval("postProcess")
         let refined = await postProcess(output)
+        AppSignpost.conversion.endInterval("postProcess", postProcessSignpost)
         progress?(.complete)
         AppLog.conversion.info("Conversion completed correlationID=\(job.correlationID, privacy: .public)")
         return .success(refined)
     }
 
-    private func extract(job: ConversionJob, tempURL: URL, workspaceURL: URL) async -> ConversionResult {
+    private func extract(
+        job: ConversionJob,
+        tempURL: URL,
+        workspaceURL: URL,
+        progress: ProgressHandler?
+    ) async -> ConversionResult {
         let ext = job.sourceURL.pathExtension.lowercased()
         let title = job.sourceURL.deletingPathExtension().lastPathComponent
 
@@ -83,7 +95,8 @@ struct ConversionRunner {
                     password: job.password,
                     workspaceURL: workspaceURL,
                     classifierEvidence: nil,
-                    secondary: .advanced(useAI: true)
+                    secondary: .advanced(useAI: true),
+                    progress: progress
                 )
             }
             if let classification = try? await NativeDocumentClassifier.classify(pdfURL: tempURL, password: job.password) {
@@ -98,7 +111,8 @@ struct ConversionRunner {
                         password: job.password,
                         workspaceURL: workspaceURL,
                         classifierEvidence: classification.evidence,
-                        secondary: .imageText
+                        secondary: .imageText,
+                        progress: progress
                     )
                 case .enhanced:
                     return await runQualitySelectedPDFConversion(
@@ -107,7 +121,8 @@ struct ConversionRunner {
                         password: job.password,
                         workspaceURL: workspaceURL,
                         classifierEvidence: classification.evidence,
-                        secondary: .advanced(useAI: false)
+                        secondary: .advanced(useAI: false),
+                        progress: progress
                     )
                 case .pdfKit:
                     return await runPDFKitConversion(fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL)
@@ -121,11 +136,21 @@ struct ConversionRunner {
         case _ where NativeMetadataExtractor.handlesMedia(ext):
             return await NativeMetadataExtractor.mediaMetadata(url: tempURL, title: title)
         default:
-            return await pythonWorker.convert(fileURL: tempURL, title: title, useAI: job.useAI, password: job.password, workspaceURL: workspaceURL)
+            return await runPythonConversion(
+                fileURL: tempURL,
+                title: title,
+                useAI: job.useAI,
+                password: job.password,
+                workspaceURL: workspaceURL,
+                progress: progress
+            )
         }
     }
 
     private func runVisionExtraction(fileURL: URL, title: String, password: String?, workspaceURL: URL) async -> ConversionResult {
+        let signpost = AppSignpost.conversion.beginInterval("nativeExtract")
+        defer { AppSignpost.conversion.endInterval("nativeExtract", signpost) }
+
         do {
             let result = try await VisionDocumentExtractor.extract(pdfURL: fileURL, password: password)
             return .success(ConversionOutput(
@@ -143,6 +168,9 @@ struct ConversionRunner {
     }
 
     private func runSpeechTranscription(fileURL: URL, title: String) async -> ConversionResult {
+        let signpost = AppSignpost.conversion.beginInterval("nativeExtract")
+        defer { AppSignpost.conversion.endInterval("nativeExtract", signpost) }
+
         guard await SpeechTranscriber.requestAuthorisation() else {
             return .failure("Microphone access is required to transcribe audio. Enable it in System Settings -> Privacy.")
         }
@@ -163,6 +191,9 @@ struct ConversionRunner {
     }
 
     private func runPDFKitConversion(fileURL: URL, title: String, password: String?, workspaceURL: URL) async -> ConversionResult {
+        let signpost = AppSignpost.conversion.beginInterval("nativeExtract")
+        defer { AppSignpost.conversion.endInterval("nativeExtract", signpost) }
+
         do {
             let result = try PDFConverter.convert(url: fileURL, password: password)
             return .success(ConversionOutput(
@@ -175,7 +206,14 @@ struct ConversionRunner {
         } catch PDFConverter.ConversionError.passwordRequired {
             return .failure(ConversionError.passwordRequired.errorDescription ?? "This PDF is password-protected.")
         } catch {
-            return await pythonWorker.convert(fileURL: fileURL, title: title, useAI: false, password: password, workspaceURL: workspaceURL)
+            return await runPythonConversion(
+                fileURL: fileURL,
+                title: title,
+                useAI: false,
+                password: password,
+                workspaceURL: workspaceURL,
+                progress: nil
+            )
         }
     }
 
@@ -190,7 +228,8 @@ struct ConversionRunner {
         password: String?,
         workspaceURL: URL,
         classifierEvidence: NativeDocumentClassifier.Evidence?,
-        secondary: PDFSecondaryCandidate
+        secondary: PDFSecondaryCandidate,
+        progress: ProgressHandler?
     ) async -> ConversionResult {
         var outputs: [(label: String, output: ConversionOutput)] = []
         var firstFailure: ConversionResult?
@@ -210,7 +249,14 @@ struct ConversionRunner {
             secondaryResult = await runVisionExtraction(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
         case .advanced(let useAI):
             secondaryLabel = useAI ? "ai" : "advanced"
-            secondaryResult = await pythonWorker.convert(fileURL: fileURL, title: title, useAI: useAI, password: password, workspaceURL: workspaceURL)
+            secondaryResult = await runPythonConversion(
+                fileURL: fileURL,
+                title: title,
+                useAI: useAI,
+                password: password,
+                workspaceURL: workspaceURL,
+                progress: progress
+            )
         }
 
         if case .success(let output) = secondaryResult {
@@ -253,6 +299,29 @@ struct ConversionRunner {
                 classifierEvidence: evidence,
                 imageText: imageTextReference
             )
+        )
+    }
+
+    private func runPythonConversion(
+        fileURL: URL,
+        title: String,
+        useAI: Bool,
+        password: String?,
+        workspaceURL: URL,
+        progress: ProgressHandler?
+    ) async -> ConversionResult {
+        progress?(.python)
+        let signpost = AppSignpost.conversion.beginInterval("pythonConvert")
+        defer { AppSignpost.conversion.endInterval("pythonConvert", signpost) }
+        return await pythonWorker.convert(
+            fileURL: fileURL,
+            title: title,
+            useAI: useAI,
+            password: password,
+            workspaceURL: workspaceURL,
+            heartbeat: {
+                progress?(.python)
+            }
         )
     }
 

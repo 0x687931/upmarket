@@ -35,6 +35,9 @@ jobs:
       - name: Validate generated repository docs
         run: scripts/docs/generate_repo_docs.py --check
 
+      - name: Validate release regression guards
+        run: scripts/ci/validate_release_regression_guards.py
+
       - name: Verify source entitlements
         run: scripts/ci/verify_entitlements.sh
 

@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import OSLog
 import UniformTypeIdentifiers
 
 /// Manages where converted .md files are saved.
@@ -62,6 +63,9 @@ final class SavePreference {
 
     @MainActor
     private func performSave(markdown: String, title: String, sourceURL: URL?) -> URL? {
+        let signpost = AppSignpost.conversion.beginInterval("saveOutput")
+        defer { AppSignpost.conversion.endInterval("saveOutput", signpost) }
+
         let fileName = (title.isEmpty ? "converted" : title.sanitisedForFilename) + ".md"
 
         switch destination {

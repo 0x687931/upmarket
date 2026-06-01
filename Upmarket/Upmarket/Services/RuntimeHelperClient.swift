@@ -28,14 +28,21 @@ struct RuntimeHelperClient: Sendable {
         )
     }
 
-    nonisolated func convert(fileURL: URL, title: String, useAI: Bool, password: String?, workspaceURL: URL) async throws -> ConversionResult {
+    nonisolated func convert(
+        fileURL: URL,
+        title: String,
+        useAI: Bool,
+        password: String?,
+        workspaceURL: URL,
+        heartbeat: (@Sendable () -> Void)? = nil
+    ) async throws -> ConversionResult {
         let response: RuntimeHelperResponse = try await perform(.convert(
             filePath: fileURL.path,
             title: title,
             useAI: useAI,
             password: password,
             workspacePath: workspaceURL.path
-        ))
+        ), heartbeat: heartbeat)
         guard response.success else {
             if response.needsPassword {
                 return .failure(ConversionError.passwordRequired.errorDescription ?? "This PDF is password-protected.")
@@ -88,7 +95,10 @@ struct RuntimeHelperClient: Sendable {
         }
     }
 
-    private nonisolated func perform<T: Decodable>(_ request: RuntimeHelperRequest) async throws -> T {
+    private nonisolated func perform<T: Decodable>(
+        _ request: RuntimeHelperRequest,
+        heartbeat: (@Sendable () -> Void)? = nil
+    ) async throws -> T {
         let executable = try helperExecutableURL()
         let process = Process()
         process.executableURL = executable
@@ -108,18 +118,22 @@ struct RuntimeHelperClient: Sendable {
 
         let state = RuntimeHelperProcessState()
         let decoder = JSONDecoder()
+        let recordOutputLine: @Sendable (String) -> Void = { line in
+            guard let lineData = line.data(using: .utf8) else { return }
+            if let event = try? decoder.decode(RuntimeHelperEvent.self, from: lineData), event.event == "heartbeat" {
+                state.markHeartbeat()
+                heartbeat?()
+            } else {
+                state.recordResponseLine(line)
+            }
+        }
 
         stdout.fileHandleForReading.readabilityHandler = { handle in
             let data = handle.availableData
             guard !data.isEmpty else { return }
             state.append(data)
             for line in state.drainLines() {
-                guard let lineData = line.data(using: .utf8) else { continue }
-                if let event = try? decoder.decode(RuntimeHelperEvent.self, from: lineData), event.event == "heartbeat" {
-                    state.markHeartbeat()
-                } else {
-                    state.recordResponseLine(line)
-                }
+                recordOutputLine(line)
             }
         }
 
@@ -152,6 +166,17 @@ struct RuntimeHelperClient: Sendable {
                 monitor.start()
 
                 process.terminationHandler = { terminated in
+                    stdout.fileHandleForReading.readabilityHandler = nil
+                    let remainingOutput = stdout.fileHandleForReading.readDataToEndOfFile()
+                    if !remainingOutput.isEmpty {
+                        state.append(remainingOutput)
+                    }
+                    for line in state.drainLines() {
+                        recordOutputLine(line)
+                    }
+                    if let line = state.drainRemainingLine() {
+                        recordOutputLine(line)
+                    }
                     stdout.fileHandleForReading.readabilityHandler = nil
                     stderr.fileHandleForReading.readabilityHandler = nil
                     monitor.cancel()
@@ -341,6 +366,14 @@ private final class RuntimeHelperProcessState: @unchecked Sendable {
             }
         }
         return drained
+    }
+
+    func drainRemainingLine() -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !buffer.isEmpty else { return nil }
+        defer { buffer.removeAll() }
+        return String(data: buffer, encoding: .utf8)
     }
 
     func recordResponseLine(_ line: String) {

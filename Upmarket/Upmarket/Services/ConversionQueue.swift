@@ -20,15 +20,17 @@ final class ConversionQueue: ObservableObject {
     private var pendingJobIDs: [UUID] = []
     private var activeJobID: UUID?
     private var activeTask: Task<Void, Never>?
+    private var livenessTask: Task<Void, Never>?
     private var continuations: [UUID: CheckedContinuation<ConversionResult, Never>] = [:]
     private var cancelledJobIDs: Set<UUID> = []
+    private let livenessThreshold: TimeInterval = 60
 
     var isConverting: Bool {
         jobs.contains { $0.isRunning }
     }
 
     func stalledJobs(referenceDate: Date = Date(), threshold: TimeInterval = 60) -> [ConversionJob] {
-        jobs.filter { $0.isStalled(referenceDate: referenceDate, threshold: threshold) }
+        jobs.filter { $0.isStalled || $0.hasNoRecentProgress(referenceDate: referenceDate, threshold: threshold) }
     }
 
     init(runner: ConversionRunner = ConversionRunner()) {
@@ -66,6 +68,7 @@ final class ConversionQueue: ObservableObject {
         jobs.insert(job, at: 0)
         latestResult = nil
         AppLog.conversion.info("Queued conversion correlationID=\(job.correlationID, privacy: .public) ext=\(job.ext, privacy: .public)")
+        startLivenessMonitorIfNeeded()
         enqueue(job.id)
         return job.id
     }
@@ -105,6 +108,24 @@ final class ConversionQueue: ObservableObject {
             finish(id, result: .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled."), stage: .cancelled)
         }
         reset()
+    }
+
+    func handleMemoryPressureCritical() {
+        let ids = jobs.filter(\.isRunning).map(\.id)
+        guard !ids.isEmpty else { return }
+        AppLog.diagnostics.error("Critical memory pressure; stopping active conversions count=\(ids.count, privacy: .public)")
+        cancelledJobIDs.formUnion(ids)
+        pendingJobIDs.removeAll()
+        activeTask?.cancel()
+        activeTask = nil
+        activeJobID = nil
+        for id in ids {
+            finish(
+                id,
+                result: .failure(ConversionError.memoryPressure.errorDescription ?? "Conversion paused because this Mac is low on memory."),
+                stage: .failed
+            )
+        }
     }
 
     @discardableResult
@@ -174,7 +195,18 @@ final class ConversionQueue: ObservableObject {
         guard jobs[index].isRunning else { return }
         jobs[index].stage = stage
         jobs[index].lastProgressAt = Date()
+        jobs[index].isStalled = false
         AppLog.conversion.info("Conversion stage correlationID=\(id.uuidString, privacy: .public) stage=\(stage.rawValue, privacy: .public)")
+    }
+
+    private func markHeartbeat(_ id: UUID) {
+        guard let index = jobs.firstIndex(where: { $0.id == id }) else { return }
+        guard jobs[index].isRunning else { return }
+        jobs[index].lastProgressAt = Date()
+        if jobs[index].isStalled {
+            AppLog.conversion.info("Conversion progress resumed correlationID=\(id.uuidString, privacy: .public)")
+        }
+        jobs[index].isStalled = false
     }
 
     private func finish(_ id: UUID, result: ConversionResult, stage: ConversionStage) {
@@ -183,8 +215,38 @@ final class ConversionQueue: ObservableObject {
         jobs[index].stage = stage
         jobs[index].result = result
         jobs[index].lastProgressAt = Date()
+        jobs[index].isStalled = false
         latestResult = result
         AppLog.conversion.info("Finished conversion correlationID=\(id.uuidString, privacy: .public) stage=\(stage.rawValue, privacy: .public)")
         continuations.removeValue(forKey: id)?.resume(returning: result)
+    }
+
+    private func startLivenessMonitorIfNeeded() {
+        guard livenessTask == nil else { return }
+        livenessTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                await MainActor.run {
+                    self?.classifyStalledJobs()
+                }
+            }
+        }
+    }
+
+    private func classifyStalledJobs(referenceDate: Date = Date()) {
+        var hasRunningJob = false
+        for index in jobs.indices {
+            guard jobs[index].isRunning else { continue }
+            hasRunningJob = true
+            let stalled = jobs[index].hasNoRecentProgress(referenceDate: referenceDate, threshold: livenessThreshold)
+            if stalled, !jobs[index].isStalled {
+                jobs[index].isStalled = true
+                AppLog.conversion.warning("Conversion stalled correlationID=\(self.jobs[index].correlationID, privacy: .public) stage=\(self.jobs[index].stage.rawValue, privacy: .public)")
+            }
+        }
+        if !hasRunningJob {
+            livenessTask?.cancel()
+            livenessTask = nil
+        }
     }
 }
