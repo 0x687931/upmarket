@@ -3,9 +3,27 @@ set -euo pipefail
 
 SITE="${1:-Upmarket/Python/Python.xcframework/macos-arm64_x86_64/Python.framework/Versions/3.12/lib/python3.12/site-packages}"
 LOCK="requirements.txt"
+SITE_PYTHON_VERSION="$(printf '%s\n' "$SITE" | sed -nE 's#.*lib/python([0-9]+[.][0-9]+)/site-packages$#\1#p')"
+PYTHON_CHECK_BIN="${PYTHON_CHECK_BIN:-python$SITE_PYTHON_VERSION}"
 
 if [[ ! -d "$SITE" ]]; then
   echo "error: bundled Python site-packages not found at $SITE"
+  exit 1
+fi
+
+if [[ -z "$SITE_PYTHON_VERSION" ]]; then
+  echo "error: unable to infer bundled Python version from $SITE"
+  exit 1
+fi
+
+if ! command -v "$PYTHON_CHECK_BIN" >/dev/null 2>&1; then
+  echo "error: $PYTHON_CHECK_BIN is required to verify bundled Python $SITE_PYTHON_VERSION extensions"
+  exit 1
+fi
+
+ACTUAL_CHECK_VERSION="$("$PYTHON_CHECK_BIN" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+if [[ "$ACTUAL_CHECK_VERSION" != "$SITE_PYTHON_VERSION" ]]; then
+  echo "error: verifier interpreter must be Python $SITE_PYTHON_VERSION, got $ACTUAL_CHECK_VERSION from $PYTHON_CHECK_BIN"
   exit 1
 fi
 
@@ -26,7 +44,7 @@ for path in "${required_paths[@]}"; do
   fi
 done
 
-python3 - "$SITE" <<'PY'
+"$PYTHON_CHECK_BIN" - "$SITE" <<'PY'
 from __future__ import annotations
 
 import filecmp
@@ -69,13 +87,13 @@ PY
 
 CHECK_VENV="$(mktemp -d "${TMPDIR:-/tmp}/upmarket-pip-check.XXXXXX")"
 trap 'rm -rf "$CHECK_VENV"' EXIT
-python3 -m venv "$CHECK_VENV"
+"$PYTHON_CHECK_BIN" -m venv "$CHECK_VENV"
 PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_CACHE_DIR="$CHECK_VENV/pip-cache" PYTHONPATH="$SITE" \
   "$CHECK_VENV/bin/python" -m pip check >/dev/null
 trap - EXIT
 rm -rf "$CHECK_VENV"
 
-PYTHONPATH="$SITE" HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python3 - "$SITE" "$LOCK" <<'PY'
+PYTHONPATH="$SITE" HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 "$PYTHON_CHECK_BIN" - "$SITE" "$LOCK" <<'PY'
 import importlib
 import importlib.util
 from importlib import metadata
@@ -87,6 +105,9 @@ import sys
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
+site_root = str(Path(sys.argv[1]).resolve())
+lock = Path(sys.argv[2])
+
 modules = [
     "docling_bridge.converter",
     "docling_bridge.security",
@@ -96,8 +117,18 @@ modules = [
 for module in modules:
     importlib.import_module(module)
 
-site_root = sys.argv[1]
-lock = Path(sys.argv[2])
+bundle_required_modules = [
+    "docling.datamodel.vlm_model_specs",
+    "docling.pipeline.vlm_pipeline",
+    "mlx.core",
+]
+
+for module in bundle_required_modules:
+    spec = importlib.util.find_spec(module)
+    origin = getattr(spec, "origin", "") if spec else ""
+    if not origin or not origin.startswith(site_root):
+        raise SystemExit(f"error: bundled runtime module missing or outside app bundle: {module} origin={origin or 'missing'}")
+
 distributions = list(metadata.distributions(path=[site_root]))
 versions = {
     canonicalize_name(distribution.metadata["Name"]): distribution.version

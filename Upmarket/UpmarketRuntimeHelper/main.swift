@@ -113,6 +113,13 @@ struct UpmarketRuntimeHelper {
         case "convert":
             guard let filePath = request.filePath,
                   let title = request.title else { throw HelperError.invalidRequest }
+            if request.useAI == true, !aiRuntimeProbeCanRun() {
+                return RuntimeHelperResponse(
+                    success: false,
+                    code: "runtime.helper.runtime-unavailable",
+                    message: "Upmarket AI cannot access this Mac's graphics processor from the current session. Quit and reopen Upmarket, then try again."
+                )
+            }
             let converter = Python.import("docling_bridge.converter")
             var options: [String: PythonObject] = [
                 "use_ai": PythonObject(request.useAI ?? false),
@@ -182,8 +189,78 @@ struct UpmarketRuntimeHelper {
                 code: success ? nil : "runtime.helper.call-failed",
                 message: success ? nil : (error == "None" ? "download failed" : error)
             )
+        case "aiRuntimeProbe":
+            let mlx = Python.import("mlx.core")
+            let info = mlx.device_info()
+            return RuntimeHelperResponse(success: Bool(info) ?? false)
         default:
             throw HelperError.invalidRequest
+        }
+    }
+
+    private static func aiRuntimeProbeCanRun() -> Bool {
+        let executableURL = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+        let request = RuntimeHelperRequest(
+            operation: "aiRuntimeProbe",
+            filePath: nil,
+            title: nil,
+            useAI: nil,
+            password: nil,
+            workspacePath: nil,
+            key: nil,
+            progressFile: nil
+        )
+
+        let process = Process()
+        process.executableURL = executableURL
+        process.arguments = ["--request-json-stdin"]
+        process.environment = [
+            "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
+            "HF_HUB_OFFLINE": "1",
+            "TRANSFORMERS_OFFLINE": "1",
+            "UPMARKET_RUNTIME_SANDBOX": "1",
+            "UPMARKET_ALLOW_NETWORK": "0"
+        ]
+
+        let stdin = Pipe()
+        let stdout = Pipe()
+        process.standardInput = stdin
+        process.standardOutput = stdout
+        process.standardError = FileHandle.nullDevice
+
+        do {
+            try process.run()
+            try stdin.fileHandleForWriting.write(JSONEncoder().encode(request))
+            stdin.fileHandleForWriting.closeFile()
+            let deadline = Date().addingTimeInterval(15)
+            while process.isRunning && Date() < deadline {
+                usleep(50_000)
+            }
+            if process.isRunning {
+                process.terminate()
+                process.waitUntilExit()
+                return false
+            }
+        } catch {
+            return false
+        }
+
+        guard process.terminationReason == .exit,
+              process.terminationStatus == 0 else {
+            return false
+        }
+
+        let output = stdout.fileHandleForReading.readDataToEndOfFile()
+        let lines = String(data: output, encoding: .utf8)?
+            .split(separator: "\n")
+            .map(String.init) ?? []
+        let decoder = JSONDecoder()
+        return lines.contains { line in
+            guard let data = line.data(using: .utf8),
+                  let response = try? decoder.decode(RuntimeHelperResponse.self, from: data) else {
+                return false
+            }
+            return response.success
         }
     }
 
