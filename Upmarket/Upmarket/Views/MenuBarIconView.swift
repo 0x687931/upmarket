@@ -13,7 +13,6 @@ struct MenuBarIconView: View {
             badgeDot
         }
         .frame(width: 22, height: 22)
-        // task cancels automatically if the view disappears mid-wait
         .task(id: completionToken) {
             guard completionToken > 0 else { return }
             showCompletionDot = true
@@ -43,16 +42,20 @@ struct MenuBarIconView: View {
         }
     }
 
+    // 6pt dot with a 1pt white stroke — readable on both light and dark menu bars
+    // and against the symbol itself. Offset pushes it to the corner of the 22pt frame.
     @ViewBuilder private var badgeDot: some View {
         if isConverting {
             Circle()
                 .fill(Color.accentColor)
-                .frame(width: 5, height: 5)
+                .frame(width: 6, height: 6)
+                .overlay(Circle().strokeBorder(.white, lineWidth: 1))
                 .offset(x: 3, y: 3)
         } else if showCompletionDot {
             Circle()
                 .fill(Color.green)
-                .frame(width: 5, height: 5)
+                .frame(width: 6, height: 6)
+                .overlay(Circle().strokeBorder(.white, lineWidth: 1))
                 .offset(x: 3, y: 3)
                 .transition(.opacity.combined(with: .scale(scale: 0.5)))
         }
