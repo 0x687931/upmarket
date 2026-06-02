@@ -1,4 +1,5 @@
 import Foundation
+import Metal
 
 /// Single source of truth for device capability checks.
 /// All UI and service decisions about what to offer should read from here.
@@ -16,8 +17,11 @@ final class DeviceCapability {
     /// Human-readable chip description for UI display.
     let chipDescription: String
 
+    private let hasMetalDevice: Bool
+
     private init() {
         isAppleSilicon = Self.currentIsAppleSilicon()
+        hasMetalDevice = Self.currentHasMetalDevice()
 
         if #available(macOS 26, *) {
             isTahoe = true
@@ -42,9 +46,17 @@ final class DeviceCapability {
         return machine.hasPrefix("arm64")
     }
 
+    nonisolated static var currentSupportsUpmarketAI: Bool {
+        currentIsAppleSilicon() && currentHasMetalDevice()
+    }
+
+    nonisolated static func currentHasMetalDevice() -> Bool {
+        MTLCreateSystemDefaultDevice() != nil
+    }
+
     /// Whether Upmarket AI (Pro tier) can run on this device.
     /// MLX is an Apple Silicon/Metal path, not a generic GPU path.
-    nonisolated var supportsUpmarketAI: Bool { isAppleSilicon }
+    nonisolated var supportsUpmarketAI: Bool { isAppleSilicon && hasMetalDevice }
 
     /// Whether bundled advanced conversion should run on this device.
     /// v1.0 keeps Intel Macs on native-only Basic conversion until physical

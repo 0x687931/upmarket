@@ -305,6 +305,9 @@ def _convert_ai(path: Path, opts: dict) -> dict:
     manager = _model_manager()
     if not manager.supports_upmarket_ai_hardware():
         return _error("Upmarket AI requires Apple Silicon with Metal support.")
+    runtime_error = _upmarket_ai_runtime_unavailable_reason()
+    if runtime_error:
+        return _error(runtime_error)
 
     suffix = path.suffix.lower()
     if suffix not in (".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp"):
@@ -361,6 +364,7 @@ class _GraniteNoiseFilter(logging.Filter):
 
 
 _GRANITE_WARNINGS_QUIETED = False
+_AI_RUNTIME_PRECHECK: str | None = None
 
 
 def _quiet_known_granite_warnings() -> None:
@@ -379,6 +383,27 @@ def _quiet_known_granite_warnings() -> None:
         pass
 
     _GRANITE_WARNINGS_QUIETED = True
+
+
+def _upmarket_ai_runtime_unavailable_reason() -> str | None:
+    """Return a user-safe reason when the current process cannot see Metal."""
+    global _AI_RUNTIME_PRECHECK
+    if _AI_RUNTIME_PRECHECK is not None:
+        return None if _AI_RUNTIME_PRECHECK == "" else _AI_RUNTIME_PRECHECK
+
+    try:
+        import mlx.core as mx
+
+        info = mx.device_info()
+        if not info:
+            _AI_RUNTIME_PRECHECK = "Upmarket AI cannot access this Mac's graphics processor from the current session. Quit and reopen Upmarket, then try again."
+        else:
+            _AI_RUNTIME_PRECHECK = ""
+    except Exception as exc:
+        print(f"[Upmarket] AI runtime preflight failed: {exc}", file=sys.stderr)
+        _AI_RUNTIME_PRECHECK = "Upmarket AI cannot access this Mac's graphics processor from the current session. Quit and reopen Upmarket, then try again."
+
+    return None if _AI_RUNTIME_PRECHECK == "" else _AI_RUNTIME_PRECHECK
 
 
 def _ai_model_path() -> Path:
