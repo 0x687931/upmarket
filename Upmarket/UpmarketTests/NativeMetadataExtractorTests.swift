@@ -3,6 +3,7 @@ import ImageIO
 import XCTest
 @testable import Upmarket
 
+@MainActor
 final class NativeMetadataExtractorTests: XCTestCase {
     func testImageMetadataUsesNativeImageIO() throws {
         let workspace = try AppWorkspace.create(prefix: "native-metadata-test")
@@ -24,8 +25,11 @@ final class NativeMetadataExtractorTests: XCTestCase {
     func testCorpusMediaMetadataUsesNativeAVFoundation() async throws {
         let fixtures = [
             "tests/data/audio/sample_10s_audio-flac.flac",
+            "tests/data/audio/sample_10s_audio-x-flac.flac",
+            "tests/data/audio/sample_10s_video-avi.avi",
             "tests/data/audio/sample_10s_video-mp4.mp4",
-            "tests/data/audio/sample_10s_video-quicktime.mov"
+            "tests/data/audio/sample_10s_video-quicktime.mov",
+            "tests/data/audio/sample_10s_video-x-msvideo.avi"
         ]
 
         for relativePath in fixtures {

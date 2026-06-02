@@ -37,7 +37,7 @@
     },
     "swift-imageio-metadata": {
       "owner": "Services/NativeMetadataExtractor.swift",
-      "runner": "xcode-test",
+      "runner": "scripts/benchmark_native_metadata.py --pathway swift-imageio-metadata --json-output reports/corpus-swift-imageio-metadata.json",
       "release_status": "shipping",
       "valid_categories": ["image"],
       "compute_modes": ["cpu", "hardware-codec"],
@@ -47,7 +47,7 @@
     },
     "swift-avfoundation-metadata": {
       "owner": "Services/NativeMetadataExtractor.swift",
-      "runner": "xcode-test",
+      "runner": "scripts/benchmark_native_metadata.py --pathway swift-avfoundation-metadata --json-output reports/corpus-swift-avfoundation-metadata.json",
       "release_status": "shipping",
       "valid_categories": ["audio", "video"],
       "compute_modes": ["cpu", "hardware-codec"],

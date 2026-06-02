@@ -2241,6 +2241,136 @@
         "status": "scored"
       }
     },
+    "swift-avfoundation-metadata": {
+      "docling_sample_10s_audio-flac": {
+        "category": "audio",
+        "elapsed_seconds": 0.0092,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_sample_10s_audio-x-flac": {
+        "category": "audio",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_sample_10s_video-avi": {
+        "category": "video",
+        "elapsed_seconds": 0.0014,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_sample_10s_video-mp4": {
+        "category": "video",
+        "elapsed_seconds": 0.0012,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_sample_10s_video-quicktime": {
+        "category": "video",
+        "elapsed_seconds": 0.0012,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_sample_10s_video-x-msvideo": {
+        "category": "video",
+        "elapsed_seconds": 0.0011,
+        "overall_percent": 95.0,
+        "status": "scored"
+      }
+    },
+    "swift-imageio-metadata": {
+      "docling_2206.01062_tiff": {
+        "category": "image",
+        "elapsed_seconds": 0.0008,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_2305.03393v1-pg9-img": {
+        "category": "image",
+        "elapsed_seconds": 0.0053,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_2305.03393v1-table_crop": {
+        "category": "image",
+        "elapsed_seconds": 0.0007,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_230927_bars": {
+        "category": "image",
+        "elapsed_seconds": 0.0004,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_230927_effective_sizes": {
+        "category": "image",
+        "elapsed_seconds": 0.0003,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-19": {
+        "category": "image",
+        "elapsed_seconds": 0.0003,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-20": {
+        "category": "image",
+        "elapsed_seconds": 0.0005,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-21": {
+        "category": "image",
+        "elapsed_seconds": 0.0002,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-22": {
+        "category": "image",
+        "elapsed_seconds": 0.0001,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-23": {
+        "category": "image",
+        "elapsed_seconds": 0.0002,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-32": {
+        "category": "image",
+        "elapsed_seconds": 0.0003,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_example_image_01": {
+        "category": "image",
+        "elapsed_seconds": 0.0007,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_html_freq_v4": {
+        "category": "image",
+        "elapsed_seconds": 0.0009,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_llama_vs_mistral_example": {
+        "category": "image",
+        "elapsed_seconds": 0.0008,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_webp-test": {
+        "category": "image",
+        "elapsed_seconds": 0.0002,
+        "overall_percent": 65.0,
+        "status": "scored"
+      }
+    },
     "swift-pdfkit": {
       "docling_138-bpt_scatter_examples_3x3": {
         "category": "pdf",
@@ -2631,6 +2761,12 @@
     ],
     "python-fast-pdfium": [
       "reports/corpus-python-fast-pdfium.json"
+    ],
+    "swift-avfoundation-metadata": [
+      "reports/corpus-swift-avfoundation-metadata.json"
+    ],
+    "swift-imageio-metadata": [
+      "reports/corpus-swift-imageio-metadata.json"
     ],
     "swift-pdfkit": [
       "reports/corpus-swift-pdfkit.json"
