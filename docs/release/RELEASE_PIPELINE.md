@@ -16,30 +16,32 @@ Release control documents:
 
 ### PR CI
 
-Runs on every pull request.
+Runs on every pull request with `scripts/ci/gate.sh quick`.
 
 Checks:
 
 - Xcode project path is valid.
-- App builds with `Upmarket/Upmarket.xcodeproj`.
-- Unit tests pass. PR CI intentionally skips UI automation because launch/UI tests change system appearance during automation.
 - Architecture simplification holds: no hidden launch windows, zero-size placeholder scenes, or create-then-hide AppKit window workarounds.
 - Philosophy remediation regression guards pass.
 - User-facing copy hides internal toolkit names outside licenses and explicit diagnostic previews.
-- Effective `Info.plist` contains required keys.
 - Entitlements match App Store policy.
-- Python bundle imports first-party modules.
-- Offline smoke conversion passes.
+- Generated repository documentation is current.
+- App builds unsigned with `Upmarket/Upmarket.xcodeproj`.
+- Effective `Info.plist` contains required keys.
+- Unit tests pass.
 - No undeclared PATH tools are required for supported formats.
+
+PR CI intentionally skips UI automation, runtime rebuilding, packaged-app smoke, and corpus/model baselines. Run `scripts/ci/gate.sh runtime` for Python, dependency, entitlement, model, corpus, or packaging changes, then broaden to the release-candidate gate before shipping.
 
 ### Release Candidate CI
 
-Runs manually or on `release/*` branches.
+Runs manually or on `release/*` branches with `scripts/ci/gate.sh release` before archive and benchmark steps.
 
 Checks:
 
+- Clean runtime rebuild from release pins.
 - Clean archive build.
-- Signed app entitlements inspection.
+- Source entitlement policy; signed app entitlements inspection when a signing identity is available.
 - Packaged app launch/import smoke.
 - StoreKit configuration tests.
 - UI automation tests, including launch and appearance coverage.
@@ -52,7 +54,7 @@ Checks:
 - Diagnostic bundle generation.
 - Privacy-sensitive logs are redacted.
 
-`scripts/ci/verify_release_app.sh <Upmarket.app>` is the shared app-package gate for PR and release-candidate CI. It verifies the effective plist, entitlement policy, embedded runtime imports, runtime helper boundary, offline smoke conversion, and model-missing behavior against the built app bundle. Unsigned local/CI builds validate source entitlement policy; signed release verification must run with `UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS=1` so missing embedded entitlements fail.
+`scripts/ci/verify_release_app.sh <Upmarket.app>` is the shared app-package gate for runtime and release-candidate CI. It verifies the effective plist, entitlement policy, embedded runtime imports, runtime helper boundary, offline smoke conversion, and model-missing behavior against the built app bundle. Unsigned local/CI builds validate source entitlement policy; signed release verification must run with `UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS=1` so missing embedded entitlements fail.
 
 ### Nightly Upstream Validation
 
@@ -181,6 +183,7 @@ Local patches to upstream code are allowed only when:
 Target scripts:
 
 ```text
+scripts/ci/gate.sh
 scripts/ci/verify_xcode_project.sh
 scripts/ci/verify_effective_plist.sh
 scripts/ci/verify_entitlements.sh
@@ -231,11 +234,13 @@ Human review is required for:
 Use unit tests during normal P0 implementation:
 
 ```sh
-xcodebuild test -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' -only-testing:UpmarketTests CODE_SIGNING_ALLOWED=NO
+scripts/ci/gate.sh quick
 ```
 
-Run UI automation only for release candidates or explicit UI changes, because those tests drive the app and may switch the system between light and dark appearance:
+Use the runtime gate for Python, dependency, entitlement, model, corpus, or packaging changes:
 
 ```sh
-xcodebuild test -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' -only-testing:UpmarketUITests CODE_SIGNING_ALLOWED=NO
+scripts/ci/gate.sh runtime
 ```
+
+Run UI automation only through `scripts/ci/gate.sh major` or `scripts/ci/gate.sh ui` for release candidates or explicit UI changes, because those tests drive the app and may switch the system between light and dark appearance.

@@ -19,9 +19,10 @@ Files/modules intentionally not changed:
 
 ## Validation
 
-- [ ] `xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' build`
-- [ ] `xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' test`
-- [ ] Relevant CI hook/script:
+- [ ] `scripts/ci/gate.sh quick`
+- [ ] Runtime/package gate if Python, packaging, dependencies, entitlements, corpus, models, or release automation changed: `scripts/ci/gate.sh runtime`
+- [ ] Release gate for minor candidates: `scripts/ci/gate.sh minor`
+- [ ] Release gate for major candidates: `scripts/ci/gate.sh major`
 - [ ] Manual check:
 
 ## Risk Review

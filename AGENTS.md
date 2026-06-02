@@ -35,9 +35,10 @@ Large fixtures and upstream corpus material live in `tests/corpus/`; avoid editi
 ## Build, Test, and Development Commands
 
 - `open Upmarket/Upmarket.xcodeproj` opens the app in Xcode.
-- `xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' build` builds the app.
-- `xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' test -only-testing:UpmarketTests` runs unit tests for normal implementation work.
-- `xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' test -only-testing:UpmarketUITests` runs UI automation; reserve this for release candidates or explicit UI changes because it may switch light/dark appearance.
+- `scripts/ci/gate.sh quick` runs the normal local/PR gate: policy checks, unsigned build, effective plist check, and unit tests.
+- `scripts/ci/gate.sh runtime` rebuilds/verifies the bundled runtime and app package; use it for Python, dependency, entitlement, model, corpus, or packaging changes.
+- `scripts/ci/gate.sh minor` runs the release gate without UI automation.
+- `scripts/ci/gate.sh major` runs the release gate plus UI automation; reserve it for major candidates or explicit UI changes because it may switch light/dark appearance.
 - `python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt` prepares Python dependencies for local bridge work.
 - `scripts/build_python_env.sh` rebuilds the bundled Python runtime.
 

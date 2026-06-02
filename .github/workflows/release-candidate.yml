@@ -18,17 +18,13 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app
 
-      - name: Preflight hooks
-        run: |
-          scripts/ci/verify_xcode_project.sh
-          scripts/ci/verify_entitlements.sh
-          scripts/ci/verify_python_bundle.sh
-          scripts/ci/validate_corpus.py
-          scripts/ci/validate_corpus_baseline.py
-          scripts/ci/validate_corpus_pathways.py
-          scripts/ci/validate_models.py
-          scripts/ci/test_model_faults.py
-          scripts/ci/validate_release_regression_guards.py
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Release gate
+        run: scripts/ci/gate.sh release
 
       - name: Archive
         run: |

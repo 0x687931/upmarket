@@ -13,6 +13,7 @@ REGISTRY = Path("docs/release/p0_task_registry.json")
 PLAN = Path("docs/IMPLEMENTATION_PLAN.md")
 ORCHESTRATION = Path("docs/release/AGENT_TASK_ORCHESTRATION.md")
 CI_WORKFLOW = Path(".github/workflows/ci.yml")
+GATE_SCRIPT = Path("scripts/ci/gate.sh")
 
 
 def fail(errors: list[str]) -> int:
@@ -46,6 +47,7 @@ def main() -> int:
     p0_text = p0_plan_section(plan_text)
     orchestration_text = ORCHESTRATION.read_text(encoding="utf-8")
     ci_text = CI_WORKFLOW.read_text(encoding="utf-8")
+    gate_text = GATE_SCRIPT.read_text(encoding="utf-8") if GATE_SCRIPT.exists() else ""
 
     headings = set(re.findall(r"^### (P0 - .+)$", p0_text, flags=re.MULTILINE))
     release_gates = {task.get("release_gate") for task in tasks}
@@ -80,12 +82,19 @@ def main() -> int:
         if phrase not in orchestration_text:
             errors.append(f"{ORCHESTRATION}: missing required integration guidance: {phrase}")
 
+    if "scripts/ci/gate.sh quick" in ci_text:
+        command_text = gate_text
+        command_source = GATE_SCRIPT
+    else:
+        command_text = ci_text
+        command_source = CI_WORKFLOW
+
     for command in (
         "scripts/ci/validate_task_registry.py",
         "scripts/ci/validate_p0_plan_sync.py",
     ):
-        if command not in ci_text:
-            errors.append(f"{CI_WORKFLOW}: missing PR CI command {command}")
+        if command not in command_text:
+            errors.append(f"{command_source}: missing PR CI command {command}")
 
     if errors:
         return fail(errors)
