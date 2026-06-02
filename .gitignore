@@ -1,6 +1,9 @@
 # Xcode
+*.profraw
 *.xcodeproj/xcuserdata/
+**/*.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
+**/*.xcworkspace/xcuserdata/
 *.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
 build/
 DerivedData/
