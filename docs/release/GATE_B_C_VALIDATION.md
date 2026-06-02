@@ -35,6 +35,8 @@ python3 scripts/ci/validate_corpus_pathways.py \
   --results reports/corpus-swift-avfoundation-metadata.json
 ```
 
+Per-document expected status is recorded in `docs/release/corpus_expected_status.json` and validates with `scripts/ci/validate_corpus_expected_status.py`. Current coverage is all 185 manifest documents: 161 success, 23 degraded output, 1 password required, and 0 unsupported.
+
 Gate B is not fully release-passing yet. Remaining release blockers are full GUI app quit/relaunch temp cleanup validation, native Vision OCR and Speech transcription permission/runtime evidence, and a targeted GUI/Metal Granite AI validation pass. Physical Intel validation is not a v1.0 blocker; Intel-facing copy must stay limited to build compatibility/native-only positioning until actual Intel hardware evidence exists. Every corpus document now has at least one current pathway-result row.
 
 `NativeMetadataExtractorTests.testCorpusMediaMetadataUsesNativeAVFoundation` now exercises AVFoundation metadata extraction against representative corpus audio/video fixtures: FLAC, MP4, and QuickTime/MOV. This is native media evidence, not a full audio/video pathway baseline; Speech transcription still needs app permission/runtime evidence.

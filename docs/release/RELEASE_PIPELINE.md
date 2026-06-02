@@ -189,6 +189,7 @@ scripts/ci/smoke_convert_offline.sh
 scripts/ci/validate_models.py
 scripts/ci/validate_corpus.py
 scripts/ci/validate_corpus_baseline.py
+scripts/ci/validate_corpus_expected_status.py
 scripts/ci/validate_corpus_pathways.py
 scripts/ci/summarize_corpus_pathway_reports.py
 scripts/ci/validate_task_registry.py

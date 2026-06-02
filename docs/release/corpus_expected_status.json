@@ -1,0 +1,1707 @@
+{
+  "allowed_statuses": [
+    "degraded_output",
+    "password_required",
+    "success",
+    "unsupported"
+  ],
+  "counts": {
+    "degraded_output": 23,
+    "password_required": 1,
+    "success": 161
+  },
+  "degraded_threshold_percent": 70.0,
+  "documents": [
+    {
+      "best_overall_percent": 90.0,
+      "category": "image",
+      "expected_status": "success",
+      "file": "tests/data/2305.03393v1-pg9-img.png",
+      "format": "png",
+      "id": "docling_2305.03393v1-pg9-img",
+      "status_source": "python-ai-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "image",
+      "expected_status": "success",
+      "file": "tests/data/2305.03393v1-table_crop.png",
+      "format": "png",
+      "id": "docling_2305.03393v1-table_crop",
+      "status_source": "python-ai-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "asciidoc",
+      "expected_status": "success",
+      "file": "tests/data/asciidoc/test_01.asciidoc",
+      "format": "asciidoc",
+      "id": "docling_test_01",
+      "status_source": "python-fast-markitdown"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "asciidoc",
+      "expected_status": "success",
+      "file": "tests/data/asciidoc/test_02.asciidoc",
+      "format": "asciidoc",
+      "id": "docling_test_02",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "asciidoc",
+      "expected_status": "success",
+      "file": "tests/data/asciidoc/test_03.asciidoc",
+      "format": "asciidoc",
+      "id": "docling_test_03",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "audio",
+      "expected_status": "success",
+      "file": "tests/data/audio/sample_10s.mp3",
+      "format": "mp3",
+      "id": "docling_sample_10s",
+      "status_source": "python-fast-markitdown"
+    },
+    {
+      "best_overall_percent": 65.0,
+      "category": "audio",
+      "expected_status": "degraded_output",
+      "file": "tests/data/audio/sample_10s_audio-flac.flac",
+      "format": "flac",
+      "id": "docling_sample_10s_audio-flac",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "swift-avfoundation-metadata"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "audio",
+      "expected_status": "success",
+      "file": "tests/data/audio/sample_10s_audio-m4a.m4a",
+      "format": "m4a",
+      "id": "docling_sample_10s_audio-m4a",
+      "status_source": "python-fast-markitdown"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "audio",
+      "expected_status": "success",
+      "file": "tests/data/audio/sample_10s_audio-mp3.mp3",
+      "format": "mp3",
+      "id": "docling_sample_10s_audio-mp3",
+      "status_source": "python-fast-markitdown"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "audio",
+      "expected_status": "success",
+      "file": "tests/data/audio/sample_10s_audio-mp4.m4a",
+      "format": "m4a",
+      "id": "docling_sample_10s_audio-mp4",
+      "status_source": "python-fast-markitdown"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "audio",
+      "expected_status": "success",
+      "file": "tests/data/audio/sample_10s_audio-mpeg.mp3",
+      "format": "mp3",
+      "id": "docling_sample_10s_audio-mpeg",
+      "status_source": "python-fast-markitdown"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "audio",
+      "expected_status": "success",
+      "file": "tests/data/audio/sample_10s_audio-wav.wav",
+      "format": "wav",
+      "id": "docling_sample_10s_audio-wav",
+      "status_source": "python-fast-markitdown"
+    },
+    {
+      "best_overall_percent": 65.0,
+      "category": "audio",
+      "expected_status": "degraded_output",
+      "file": "tests/data/audio/sample_10s_audio-x-flac.flac",
+      "format": "flac",
+      "id": "docling_sample_10s_audio-x-flac",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "swift-avfoundation-metadata"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "audio",
+      "expected_status": "success",
+      "file": "tests/data/audio/sample_10s_audio-x-wav.wav",
+      "format": "wav",
+      "id": "docling_sample_10s_audio-x-wav",
+      "status_source": "python-fast-markitdown"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "video",
+      "expected_status": "success",
+      "file": "tests/data/audio/sample_10s_video-avi.avi",
+      "format": "avi",
+      "id": "docling_sample_10s_video-avi",
+      "status_source": "swift-avfoundation-metadata"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "video",
+      "expected_status": "success",
+      "file": "tests/data/audio/sample_10s_video-mp4.mp4",
+      "format": "mp4",
+      "id": "docling_sample_10s_video-mp4",
+      "status_source": "swift-avfoundation-metadata"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "video",
+      "expected_status": "success",
+      "file": "tests/data/audio/sample_10s_video-quicktime.mov",
+      "format": "mov",
+      "id": "docling_sample_10s_video-quicktime",
+      "status_source": "swift-avfoundation-metadata"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "video",
+      "expected_status": "success",
+      "file": "tests/data/audio/sample_10s_video-x-msvideo.avi",
+      "format": "avi",
+      "id": "docling_sample_10s_video-x-msvideo",
+      "status_source": "swift-avfoundation-metadata"
+    },
+    {
+      "best_overall_percent": 65.0,
+      "category": "audio",
+      "expected_status": "degraded_output",
+      "file": "tests/data/audio/silent_1s.wav",
+      "format": "wav",
+      "id": "docling_silent_1s",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-fast-markitdown"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "csv",
+      "expected_status": "success",
+      "file": "tests/data/csv/csv-comma-in-cell.csv",
+      "format": "csv",
+      "id": "docling_csv-comma-in-cell",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "csv",
+      "expected_status": "success",
+      "file": "tests/data/csv/csv-comma.csv",
+      "format": "csv",
+      "id": "docling_csv-comma",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 60.0,
+      "category": "csv",
+      "expected_status": "degraded_output",
+      "file": "tests/data/csv/csv-inconsistent-header.csv",
+      "format": "csv",
+      "id": "docling_csv-inconsistent-header",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "csv",
+      "expected_status": "success",
+      "file": "tests/data/csv/csv-pipe.csv",
+      "format": "csv",
+      "id": "docling_csv-pipe",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "csv",
+      "expected_status": "success",
+      "file": "tests/data/csv/csv-semicolon.csv",
+      "format": "csv",
+      "id": "docling_csv-semicolon",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "csv",
+      "expected_status": "success",
+      "file": "tests/data/csv/csv-single-column.csv",
+      "format": "csv",
+      "id": "docling_csv-single-column",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "csv",
+      "expected_status": "success",
+      "file": "tests/data/csv/csv-tab.csv",
+      "format": "csv",
+      "id": "docling_csv-tab",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "csv",
+      "expected_status": "success",
+      "file": "tests/data/csv/csv-too-few-columns.csv",
+      "format": "csv",
+      "id": "docling_csv-too-few-columns",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "csv",
+      "expected_status": "success",
+      "file": "tests/data/csv/csv-too-many-columns.csv",
+      "format": "csv",
+      "id": "docling_csv-too-many-columns",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/docx_checkboxes.docx",
+      "format": "docx",
+      "id": "docling_docx_checkboxes",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/docx_external_image.docx",
+      "format": "docx",
+      "id": "docling_docx_external_image",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/docx_grouped_images.docx",
+      "format": "docx",
+      "id": "docling_docx_grouped_images",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/docx_rich_cells.docx",
+      "format": "docx",
+      "id": "docling_docx_rich_cells",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/docx_vml_images.docx",
+      "format": "docx",
+      "id": "docling_docx_vml_images",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 65.0,
+      "category": "docx",
+      "expected_status": "degraded_output",
+      "file": "tests/data/docx/drawingml.docx",
+      "format": "docx",
+      "id": "docling_drawingml",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/equations.docx",
+      "format": "docx",
+      "id": "docling_equations",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/list_after_num_headers.docx",
+      "format": "docx",
+      "id": "docling_list_after_num_headers",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/lorem_ipsum.docx",
+      "format": "docx",
+      "id": "docling_lorem_ipsum",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/omml_frac_superscript.docx",
+      "format": "docx",
+      "id": "docling_omml_frac_superscript",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/omml_func_log.docx",
+      "format": "docx",
+      "id": "docling_omml_func_log",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/omml_multi_equation_paragraph.docx",
+      "format": "docx",
+      "id": "docling_omml_multi_equation_paragraph",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/omml_text_escapes_in_math.docx",
+      "format": "docx",
+      "id": "docling_omml_text_escapes_in_math",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/table_with_equations.docx",
+      "format": "docx",
+      "id": "docling_table_with_equations",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/tablecell.docx",
+      "format": "docx",
+      "id": "docling_tablecell",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/test_emf_docx.docx",
+      "format": "docx",
+      "id": "docling_test_emf_docx",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/textbox.docx",
+      "format": "docx",
+      "id": "docling_textbox",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/unit_test_formatting.docx",
+      "format": "docx",
+      "id": "docling_unit_test_formatting",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/unit_test_headers.docx",
+      "format": "docx",
+      "id": "docling_unit_test_headers",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/unit_test_headers_numbered.docx",
+      "format": "docx",
+      "id": "docling_unit_test_headers_numbered",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/unit_test_lists.docx",
+      "format": "docx",
+      "id": "docling_unit_test_lists",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/word_comments.docx",
+      "format": "docx",
+      "id": "docling_word_comments",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/word_image_anchors.docx",
+      "format": "docx",
+      "id": "docling_word_image_anchors",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 94.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/word_sample.docx",
+      "format": "docx",
+      "id": "docling_word_sample",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "docx",
+      "expected_status": "success",
+      "file": "tests/data/docx/word_tables.docx",
+      "format": "docx",
+      "id": "docling_word_tables",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/example_01.html",
+      "format": "html",
+      "id": "docling_example_01",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/example_02.html",
+      "format": "html",
+      "id": "docling_example_02",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/example_03.html",
+      "format": "html",
+      "id": "docling_example_03",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/example_04.html",
+      "format": "html",
+      "id": "docling_example_04",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/example_05.html",
+      "format": "html",
+      "id": "docling_example_05",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/example_06.html",
+      "format": "html",
+      "id": "docling_example_06",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/example_07.html",
+      "format": "html",
+      "id": "docling_example_07",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/example_08.html",
+      "format": "html",
+      "id": "docling_example_08",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "image",
+      "expected_status": "success",
+      "file": "tests/data/html/example_image_01.png",
+      "format": "png",
+      "id": "docling_example_image_01",
+      "status_source": "python-ai-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/formatting.html",
+      "format": "html",
+      "id": "docling_formatting",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/html_code_snippets.html",
+      "format": "html",
+      "id": "docling_html_code_snippets",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/html_heading_in_p.html",
+      "format": "html",
+      "id": "docling_html_heading_in_p",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/html_inline_group_in_table_cell.html",
+      "format": "html",
+      "id": "docling_html_inline_group_in_table_cell",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/html_rich_table_cells.html",
+      "format": "html",
+      "id": "docling_html_rich_table_cells",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 65.0,
+      "category": "html",
+      "expected_status": "degraded_output",
+      "file": "tests/data/html/hyperlink_01.html",
+      "format": "html",
+      "id": "docling_hyperlink_01",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/hyperlink_02.html",
+      "format": "html",
+      "id": "docling_hyperlink_02",
+      "status_source": "python-fast-markitdown"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/hyperlink_03.html",
+      "format": "html",
+      "id": "docling_hyperlink_03",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 65.0,
+      "category": "html",
+      "expected_status": "degraded_output",
+      "file": "tests/data/html/hyperlink_04.html",
+      "format": "html",
+      "id": "docling_hyperlink_04",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/hyperlink_05.html",
+      "format": "html",
+      "id": "docling_hyperlink_05",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/hyperlink_06.html",
+      "format": "html",
+      "id": "docling_hyperlink_06",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/kvp_data_example.html",
+      "format": "html",
+      "id": "docling_kvp_data_example",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 60.0,
+      "category": "html",
+      "expected_status": "degraded_output",
+      "file": "tests/data/html/table_01.html",
+      "format": "html",
+      "id": "docling_table_01",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/table_02.html",
+      "format": "html",
+      "id": "docling_table_02",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/table_03.html",
+      "format": "html",
+      "id": "docling_table_03",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/table_04.html",
+      "format": "html",
+      "id": "docling_table_04",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/table_05.html",
+      "format": "html",
+      "id": "docling_table_05",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/table_06.html",
+      "format": "html",
+      "id": "docling_table_06",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 60.0,
+      "category": "html",
+      "expected_status": "degraded_output",
+      "file": "tests/data/html/table_with_heading_01.html",
+      "format": "html",
+      "id": "docling_table_with_heading_01",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/table_with_heading_02.html",
+      "format": "html",
+      "id": "docling_table_with_heading_02",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/unit_test_01.html",
+      "format": "html",
+      "id": "docling_unit_test_01",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "html",
+      "expected_status": "success",
+      "file": "tests/data/html/wiki_duck.html",
+      "format": "html",
+      "id": "docling_wiki_duck",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "xml",
+      "expected_status": "success",
+      "file": "tests/data/jats/elife-56337.xml",
+      "format": "xml",
+      "id": "docling_elife-56337",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 65.0,
+      "category": "image",
+      "expected_status": "degraded_output",
+      "file": "tests/data/latex/1706.03762/Figures/ModalNet-19.png",
+      "format": "png",
+      "id": "docling_ModalNet-19",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-ai-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "image",
+      "expected_status": "success",
+      "file": "tests/data/latex/1706.03762/Figures/ModalNet-20.png",
+      "format": "png",
+      "id": "docling_ModalNet-20",
+      "status_source": "python-ai-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "image",
+      "expected_status": "success",
+      "file": "tests/data/latex/1706.03762/Figures/ModalNet-21.png",
+      "format": "png",
+      "id": "docling_ModalNet-21",
+      "status_source": "python-ai-docling"
+    },
+    {
+      "best_overall_percent": 65.0,
+      "category": "image",
+      "expected_status": "degraded_output",
+      "file": "tests/data/latex/1706.03762/Figures/ModalNet-22.png",
+      "format": "png",
+      "id": "docling_ModalNet-22",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-ai-docling"
+    },
+    {
+      "best_overall_percent": 65.0,
+      "category": "image",
+      "expected_status": "degraded_output",
+      "file": "tests/data/latex/1706.03762/Figures/ModalNet-23.png",
+      "format": "png",
+      "id": "docling_ModalNet-23",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-ai-docling"
+    },
+    {
+      "best_overall_percent": 65.0,
+      "category": "image",
+      "expected_status": "degraded_output",
+      "file": "tests/data/latex/1706.03762/Figures/ModalNet-32.png",
+      "format": "png",
+      "id": "docling_ModalNet-32",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/1706.03762/vis/anaphora_resolution2_new.pdf",
+      "format": "pdf",
+      "id": "docling_anaphora_resolution2_new",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/1706.03762/vis/anaphora_resolution_new.pdf",
+      "format": "pdf",
+      "id": "docling_anaphora_resolution_new",
+      "status_source": "python-fast-pdfium"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/1706.03762/vis/attending_to_head2_new.pdf",
+      "format": "pdf",
+      "id": "docling_attending_to_head2_new",
+      "status_source": "python-fast-pdfium"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/1706.03762/vis/attending_to_head_new.pdf",
+      "format": "pdf",
+      "id": "docling_attending_to_head_new",
+      "status_source": "python-fast-pdfium"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/1706.03762/vis/making_more_difficult5_new.pdf",
+      "format": "pdf",
+      "id": "docling_making_more_difficult5_new",
+      "status_source": "python-fast-pdfium"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/1706.03762/vis/making_more_difficult_new.pdf",
+      "format": "pdf",
+      "id": "docling_making_more_difficult_new",
+      "status_source": "python-fast-pdfium"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2305.03393/figs/HTMLvOTSLv7.pdf",
+      "format": "pdf",
+      "id": "docling_HTMLvOTSLv7",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 65.0,
+      "category": "image",
+      "expected_status": "degraded_output",
+      "file": "tests/data/latex/2305.03393/figs/html_freq_v4.png",
+      "format": "png",
+      "id": "docling_html_freq_v4",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-ai-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2305.03393/figs/html_v_otsl_intro_v2.pdf",
+      "format": "pdf",
+      "id": "docling_html_v_otsl_intro_v2",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2305.03393/figs/otsl_proof_v3.pdf",
+      "format": "pdf",
+      "id": "docling_otsl_proof_v3",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2305.03393/figs/otsl_vs_html_ex3_v2.pdf",
+      "format": "pdf",
+      "id": "docling_otsl_vs_html_ex3_v2",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2305.03393/figs/tablemodel_overview_otsl.pdf",
+      "format": "pdf",
+      "id": "docling_tablemodel_overview_otsl",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2305.03393/llncsdoc.pdf",
+      "format": "pdf",
+      "id": "docling_llncsdoc",
+      "status_source": "python-fast-pdfium"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "image",
+      "expected_status": "success",
+      "file": "tests/data/latex/2310.06825/images/230927_bars.png",
+      "format": "png",
+      "id": "docling_230927_bars",
+      "status_source": "python-ai-docling"
+    },
+    {
+      "best_overall_percent": 65.0,
+      "category": "image",
+      "expected_status": "degraded_output",
+      "file": "tests/data/latex/2310.06825/images/230927_effective_sizes.png",
+      "format": "png",
+      "id": "docling_230927_effective_sizes",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2310.06825/images/chunking.pdf",
+      "format": "pdf",
+      "id": "docling_chunking",
+      "status_source": "swift-pdfkit"
+    },
+    {
+      "best_overall_percent": 65.0,
+      "category": "image",
+      "expected_status": "degraded_output",
+      "file": "tests/data/latex/2310.06825/images/llama_vs_mistral_example.png",
+      "format": "png",
+      "id": "docling_llama_vs_mistral_example",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2310.06825/images/rolling_buffer.pdf",
+      "format": "pdf",
+      "id": "docling_rolling_buffer",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2310.06825/images/swa.pdf",
+      "format": "pdf",
+      "id": "docling_swa",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2412.19437/figures/basic_arch.pdf",
+      "format": "pdf",
+      "id": "docling_basic_arch",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2412.19437/figures/dsv3_performance.pdf",
+      "format": "pdf",
+      "id": "docling_dsv3_performance",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2412.19437/figures/dualpipe.pdf",
+      "format": "pdf",
+      "id": "docling_dualpipe",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2412.19437/figures/fp8-128accumulatorv4.pdf",
+      "format": "pdf",
+      "id": "docling_fp8-128accumulatorv4",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2412.19437/figures/fp8-frameworkv3.pdf",
+      "format": "pdf",
+      "id": "docling_fp8-frameworkv3",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2412.19437/figures/fp8-v.s.-bf16.pdf",
+      "format": "pdf",
+      "id": "docling_fp8-v.s.-bf16",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2412.19437/figures/needle_in_a_haystack.pdf",
+      "format": "pdf",
+      "id": "docling_needle_in_a_haystack",
+      "status_source": "python-fast-pdfium"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2412.19437/figures/nextn.pdf",
+      "format": "pdf",
+      "id": "docling_nextn",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2412.19437/figures/overlap.pdf",
+      "format": "pdf",
+      "id": "docling_overlap",
+      "status_source": "python-fast-pdfium"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2412.19437/figures/relative_expert_load_multi.pdf",
+      "format": "pdf",
+      "id": "docling_relative_expert_load_multi",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2412.19437/figures/relative_expert_load_multi_1-6.pdf",
+      "format": "pdf",
+      "id": "docling_relative_expert_load_multi_1-6",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2412.19437/figures/relative_expert_load_multi_13-18.pdf",
+      "format": "pdf",
+      "id": "docling_relative_expert_load_multi_13-18",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2412.19437/figures/relative_expert_load_multi_19-24.pdf",
+      "format": "pdf",
+      "id": "docling_relative_expert_load_multi_19-24",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2412.19437/figures/relative_expert_load_multi_25-26.pdf",
+      "format": "pdf",
+      "id": "docling_relative_expert_load_multi_25-26",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2412.19437/figures/relative_expert_load_multi_7-12.pdf",
+      "format": "pdf",
+      "id": "docling_relative_expert_load_multi_7-12",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 69.0,
+      "category": "pdf",
+      "expected_status": "degraded_output",
+      "file": "tests/data/latex/2412.19437/logo/DeepSeek.pdf",
+      "format": "pdf",
+      "id": "docling_DeepSeek",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2501.00089/138-bpt_scatter_examples_3x3.pdf",
+      "format": "pdf",
+      "id": "docling_138-bpt_scatter_examples_3x3",
+      "status_source": "python-ai-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2501.00089/157-bpt_scatter_examples_3x3.pdf",
+      "format": "pdf",
+      "id": "docling_157-bpt_scatter_examples_3x3",
+      "status_source": "python-ai-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2501.00089/17-bpt_scatter_examples_3x3.pdf",
+      "format": "pdf",
+      "id": "docling_17-bpt_scatter_examples_3x3",
+      "status_source": "swift-pdfkit"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2501.00089/322-bpt_scatter_examples_3x3.pdf",
+      "format": "pdf",
+      "id": "docling_322-bpt_scatter_examples_3x3",
+      "status_source": "python-ai-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2501.00089/SFNet_ResNet18-TopK.pdf",
+      "format": "pdf",
+      "id": "docling_SFNet_ResNet18-TopK",
+      "status_source": "python-fast-pdfium"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2501.00089/equations.pdf",
+      "format": "pdf",
+      "id": "docling_latex_equations",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/2501.00089/pca-comparison.pdf",
+      "format": "pdf",
+      "id": "docling_pca-comparison",
+      "status_source": "python-fast-pdfium"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/arXiv-2501.01300v2/BQSC-1003.pdf",
+      "format": "pdf",
+      "id": "docling_BQSC-1003",
+      "status_source": "python-fast-pdfium"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/arXiv-2501.01300v2/D-BQSC-0004-1003.pdf",
+      "format": "pdf",
+      "id": "docling_D-BQSC-0004-1003",
+      "status_source": "python-fast-pdfium"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/arXiv-2501.01300v2/P_B.pdf",
+      "format": "pdf",
+      "id": "docling_P_B",
+      "status_source": "python-fast-pdfium"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/arXiv-2501.01300v2/P_M.pdf",
+      "format": "pdf",
+      "id": "docling_P_M",
+      "status_source": "python-fast-pdfium"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/arXiv-2501.01300v2/P_q.pdf",
+      "format": "pdf",
+      "id": "docling_P_q",
+      "status_source": "swift-pdfkit"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/latex/arXiv-2501.01300v2/m_q.pdf",
+      "format": "pdf",
+      "id": "docling_m_q",
+      "status_source": "swift-pdfkit"
+    },
+    {
+      "best_overall_percent": 74.3,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/pdf/2203.01017v2.pdf",
+      "format": "pdf",
+      "id": "docling_2203.01017v2",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/pdf/2206.01062.pdf",
+      "format": "pdf",
+      "id": "docling_2206.01062",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 94.8,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/pdf/2305.03393v1-pg9.pdf",
+      "format": "pdf",
+      "id": "docling_2305.03393v1-pg9",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/pdf/2305.03393v1.pdf",
+      "format": "pdf",
+      "id": "docling_2305.03393v1",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/pdf/amt_handbook_sample.pdf",
+      "format": "pdf",
+      "id": "docling_amt_handbook_sample",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/pdf/code_and_formula.pdf",
+      "format": "pdf",
+      "id": "docling_code_and_formula",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/pdf/multi_page.pdf",
+      "format": "pdf",
+      "id": "docling_multi_page",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/pdf/normal_4pages.pdf",
+      "format": "pdf",
+      "id": "docling_normal_4pages",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/pdf/picture_classification.pdf",
+      "format": "pdf",
+      "id": "docling_picture_classification",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 94.3,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/pdf/redp5110_sampled.pdf",
+      "format": "pdf",
+      "id": "docling_redp5110_sampled",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/pdf/right_to_left_01.pdf",
+      "format": "pdf",
+      "id": "docling_right_to_left_01",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/pdf/right_to_left_02.pdf",
+      "format": "pdf",
+      "id": "docling_right_to_left_02",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/pdf/right_to_left_03.pdf",
+      "format": "pdf",
+      "id": "docling_right_to_left_03",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/pdf/skipped_1page.pdf",
+      "format": "pdf",
+      "id": "docling_skipped_1page",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pdf",
+      "expected_status": "success",
+      "file": "tests/data/pdf/skipped_2pages.pdf",
+      "format": "pdf",
+      "id": "docling_skipped_2pages",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "category": "pdf",
+      "expected_status": "password_required",
+      "file": "tests/data/pdf_password/2206.01062_pg3.pdf",
+      "format": "pdf",
+      "id": "docling_2206.01062_pg3",
+      "note": "Document requires a password before conversion.",
+      "status_source": "password_required"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pptx",
+      "expected_status": "success",
+      "file": "tests/data/pptx/powerpoint_bad_text.pptx",
+      "format": "pptx",
+      "id": "docling_powerpoint_bad_text",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pptx",
+      "expected_status": "success",
+      "file": "tests/data/pptx/powerpoint_issue_2663.pptx",
+      "format": "pptx",
+      "id": "docling_powerpoint_issue_2663",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pptx",
+      "expected_status": "success",
+      "file": "tests/data/pptx/powerpoint_malformed_pictures.pptx",
+      "format": "pptx",
+      "id": "docling_powerpoint_malformed_pictures",
+      "status_source": "python-fast-markitdown"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "pptx",
+      "expected_status": "success",
+      "file": "tests/data/pptx/powerpoint_sample.pptx",
+      "format": "pptx",
+      "id": "docling_powerpoint_sample",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pptx",
+      "expected_status": "success",
+      "file": "tests/data/pptx/powerpoint_unrecognized_shape.pptx",
+      "format": "pptx",
+      "id": "docling_powerpoint_unrecognized_shape",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "pptx",
+      "expected_status": "success",
+      "file": "tests/data/pptx/powerpoint_with_image.pptx",
+      "format": "pptx",
+      "id": "docling_powerpoint_with_image",
+      "status_source": "python-fast-markitdown"
+    },
+    {
+      "best_overall_percent": 65.0,
+      "category": "image",
+      "expected_status": "degraded_output",
+      "file": "tests/data/tiff/2206.01062.tif",
+      "format": "tif",
+      "id": "docling_2206.01062_tiff",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "swift-imageio-metadata"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "xml",
+      "expected_status": "success",
+      "file": "tests/data/uspto/ipa20110039701.xml",
+      "format": "xml",
+      "id": "docling_ipa20110039701",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 15.4,
+      "category": "xml",
+      "expected_status": "degraded_output",
+      "file": "tests/data/uspto/ipa20180000016.xml",
+      "format": "xml",
+      "id": "docling_ipa20180000016",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 38.9,
+      "category": "xml",
+      "expected_status": "degraded_output",
+      "file": "tests/data/uspto/ipa20200022300.xml",
+      "format": "xml",
+      "id": "docling_ipa20200022300",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "xml",
+      "expected_status": "success",
+      "file": "tests/data/uspto/ipg07997973.xml",
+      "format": "xml",
+      "id": "docling_ipg07997973",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "xml",
+      "expected_status": "success",
+      "file": "tests/data/uspto/ipg08672134.xml",
+      "format": "xml",
+      "id": "docling_ipg08672134",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "xml",
+      "expected_status": "success",
+      "file": "tests/data/uspto/ipgD0701016.xml",
+      "format": "xml",
+      "id": "docling_ipgD0701016",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 15.7,
+      "category": "xml",
+      "expected_status": "degraded_output",
+      "file": "tests/data/uspto/pa20010031492.xml",
+      "format": "xml",
+      "id": "docling_pa20010031492",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 39.6,
+      "category": "xml",
+      "expected_status": "degraded_output",
+      "file": "tests/data/uspto/pg06442728.xml",
+      "format": "xml",
+      "id": "docling_pg06442728",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "xml",
+      "expected_status": "success",
+      "file": "tests/data/uspto/tables_ipa20180000016.xml",
+      "format": "xml",
+      "id": "docling_tables_ipa20180000016",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 65.0,
+      "category": "image",
+      "expected_status": "degraded_output",
+      "file": "tests/data/webp/webp-test.webp",
+      "format": "webp",
+      "id": "docling_webp-test",
+      "note": "Best current pathway is below 70% quality threshold.",
+      "status_source": "python-ai-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "webvtt",
+      "expected_status": "success",
+      "file": "tests/data/webvtt/webvtt_example_01.vtt",
+      "format": "vtt",
+      "id": "docling_webvtt_example_01",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "webvtt",
+      "expected_status": "success",
+      "file": "tests/data/webvtt/webvtt_example_02.vtt",
+      "format": "vtt",
+      "id": "docling_webvtt_example_02",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "webvtt",
+      "expected_status": "success",
+      "file": "tests/data/webvtt/webvtt_example_03.vtt",
+      "format": "vtt",
+      "id": "docling_webvtt_example_03",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "webvtt",
+      "expected_status": "success",
+      "file": "tests/data/webvtt/webvtt_example_04.vtt",
+      "format": "vtt",
+      "id": "docling_webvtt_example_04",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "xml",
+      "expected_status": "success",
+      "file": "tests/data/xbrl/grve_10q_htm.xml",
+      "format": "xml",
+      "id": "docling_grve_10q_htm",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 95.0,
+      "category": "xml",
+      "expected_status": "success",
+      "file": "tests/data/xbrl/mlac-20251231.xml",
+      "format": "xml",
+      "id": "docling_mlac-20251231",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "xlsx",
+      "expected_status": "success",
+      "file": "tests/data/xlsx/xlsx_01.xlsx",
+      "format": "xlsx",
+      "id": "docling_xlsx_01",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "xlsx",
+      "expected_status": "success",
+      "file": "tests/data/xlsx/xlsx_03_chartsheet.xlsx",
+      "format": "xlsx",
+      "id": "docling_xlsx_03_chartsheet",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "xlsx",
+      "expected_status": "success",
+      "file": "tests/data/xlsx/xlsx_04_inflated.xlsx",
+      "format": "xlsx",
+      "id": "docling_xlsx_04_inflated",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "xlsx",
+      "expected_status": "success",
+      "file": "tests/data/xlsx/xlsx_05_table_with_title.xlsx",
+      "format": "xlsx",
+      "id": "docling_xlsx_05_table_with_title",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "xlsx",
+      "expected_status": "success",
+      "file": "tests/data/xlsx/xlsx_06_edge_cases_.xlsx",
+      "format": "xlsx",
+      "id": "docling_xlsx_06_edge_cases_",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "xlsx",
+      "expected_status": "success",
+      "file": "tests/data/xlsx/xlsx_07_gap_tolerance_.xlsx",
+      "format": "xlsx",
+      "id": "docling_xlsx_07_gap_tolerance_",
+      "status_source": "python-enhanced-docling"
+    },
+    {
+      "best_overall_percent": 90.0,
+      "category": "xlsx",
+      "expected_status": "success",
+      "file": "tests/data/xlsx/xlsx_08_one_cell_anchor.xlsx",
+      "format": "xlsx",
+      "id": "docling_xlsx_08_one_cell_anchor",
+      "status_source": "python-enhanced-docling"
+    }
+  ],
+  "manifest": "tests/corpus/manifest.json",
+  "pathway_baseline": "docs/release/corpus_pathway_baseline.json",
+  "version": 1
+}

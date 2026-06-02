@@ -180,6 +180,17 @@ def main() -> int:
         errors,
     )
     require_text(
+        "docs/release/corpus_expected_status.json",
+        [
+            '"degraded_output": 23',
+            '"password_required": 1',
+            '"success": 161',
+            '"documents": [',
+        ],
+        "corpus expected-status ledger",
+        errors,
+    )
+    require_text(
         "docs/release/TEST_MATRIX.md",
         [
             "Philosophy remediation",
