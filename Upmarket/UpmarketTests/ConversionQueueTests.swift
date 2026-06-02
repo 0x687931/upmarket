@@ -567,6 +567,34 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertTrue(result.output?.markdown.contains("Native PDF conversion") ?? false)
     }
 
+    func testAIPDFRouteIsSelectedBySwiftAndPassedToRuntimeHelper() async throws {
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketAIPDFRouteTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: workspace)
+        }
+        let pdf = workspace.appendingPathComponent("ai-route.pdf")
+        try writePDF(to: pdf, text: "AI route PDF")
+        let requestLog = workspace.appendingPathComponent("helper-request.json")
+        let helper = try makeRuntimeHelperScript(
+            requestLog: requestLog,
+            response: #"{"success":true,"needsPassword":false,"output":{"markdown":"AI PDF route output","pages":1,"format":"PDF","title":"AI PDF","pipeline":"ai"}}"#
+        )
+        let runner = ConversionRunner(
+            pythonWorker: PythonWorker(helperClient: RuntimeHelperClient(executableURL: helper, livenessInterval: 5)),
+            supportsAdvancedRuntime: true
+        )
+
+        let result = await runner.run(ConversionJob(sourceURL: pdf, useAI: true))
+
+        XCTAssertNil(result.errorMessage)
+        let request = try String(contentsOf: requestLog, encoding: .utf8)
+        XCTAssertTrue(request.contains(#""operation":"convert""#))
+        XCTAssertTrue(request.contains(#""useAI":true"#))
+        XCTAssertTrue(request.contains(#""filePath":"#))
+    }
+
     private func writePDF(to url: URL, text: String) throws {
         var mediaBox = CGRect(x: 0, y: 0, width: 400, height: 300)
         guard let context = CGContext(url as CFURL, mediaBox: &mediaBox, nil) else {
@@ -581,6 +609,24 @@ final class ConversionQueueTests: XCTestCase {
         CTLineDraw(CTLineCreateWithAttributedString(attributed), context)
         context.endPDFPage()
         context.closePDF()
+    }
+
+    private func makeRuntimeHelperScript(requestLog: URL, response: String) throws -> URL {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketRouteHelperTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let helper = directory.appendingPathComponent("helper.sh")
+        let source = """
+        #!/bin/sh
+        cat > '\(requestLog.path)'
+        printf '%s\\n' '\(response)'
+        """
+        try source.write(to: helper, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: helper.path)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: directory)
+        }
+        return helper
     }
 
     private func waitForResult(_ id: UUID, in queue: ConversionQueue) async {
