@@ -9,6 +9,7 @@ struct MenuBarDropdown: View {
     @State private var primaryActionHovered = false
     @State private var completedConversion = false
     @State private var showHistory = false
+    @State private var completionToken = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,9 +20,13 @@ struct MenuBarDropdown: View {
             footer
         }
         .frame(width: 280)
-        // task replaces DispatchQueue.asyncAfter — cancels if view disappears
-        .task(id: conversion.isConverting) {
-            guard !conversion.isConverting else { return }
+        // onChange fires only on genuine transitions; never on initial appearance.
+        // completionToken increment is the trigger; task resets it after 0.8s.
+        .onChange(of: conversion.isConverting) { converting in
+            if !converting { completionToken += 1 }
+        }
+        .task(id: completionToken) {
+            guard completionToken > 0 else { return }
             completedConversion = true
             try? await Task.sleep(for: .seconds(0.8))
             completedConversion = false
