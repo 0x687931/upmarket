@@ -8,18 +8,20 @@ The release corpus is not a new 20-document smoke set; the current benchmark man
 
 Current pathway artifacts:
 
-| Report | Pipeline | Documents | Overall | Failed | Release status |
-| --- | --- | ---: | ---: | ---: | --- |
-| `reports/corpus-python-fast-pdfium.json` | fast PDF | 60 | 80.1% | 1 | Evidence only |
-| `reports/corpus-python-fast-markitdown.json` | fast non-PDF | 111 | 83.8% | 0 | Evidence only |
-| `reports/corpus-python-fast-markitdown-audio.json` | fast audio via packaged MarkItDown | 8 | 91.2% | 0 | Evidence only |
-| `reports/corpus-swift-pdfkit.json` | native PDF | 60 | 83.2% | 1 | Evidence only |
-| `reports/corpus-swift-imageio-metadata.json` | native image metadata | 15 | 65.0% | 0 | Evidence only |
-| `reports/corpus-swift-avfoundation-metadata.json` | native media metadata | 6 | 85.0% | 0 | Evidence only |
-| `reports/corpus-python-enhanced-docling.json` | enhanced | 171 | 83.3% | 1 | Evidence only |
-| `reports/corpus-granite-docling-scanned-or-unknown.json` | Granite AI image/PDF bucket | 24 | 65.0% | 4 environment-blocked | Baselined, not release-passing |
+| Report | Pipeline | Documents | Overall | Unexpected failed | Expected blocked | Env blocked | Release status |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| `reports/corpus-python-fast-pdfium.json` | fast PDF | 60 | 80.1% | 0 | 1 | 0 | Evidence only |
+| `reports/corpus-python-fast-markitdown.json` | fast non-PDF | 111 | 83.8% | 0 | 0 | 0 | Evidence only |
+| `reports/corpus-python-fast-markitdown-audio.json` | fast audio via packaged MarkItDown | 8 | 91.2% | 0 | 0 | 0 | Evidence only |
+| `reports/corpus-swift-pdfkit.json` | native PDF | 60 | 83.2% | 0 | 1 | 0 | Evidence only |
+| `reports/corpus-swift-imageio-metadata.json` | native image metadata | 15 | 65.0% | 0 | 0 | 0 | Evidence only |
+| `reports/corpus-swift-avfoundation-metadata.json` | native media metadata | 6 | 85.0% | 0 | 0 | 0 | Evidence only |
+| `reports/corpus-python-enhanced-docling.json` | enhanced | 171 | 83.3% | 0 | 1 | 0 | Evidence only |
+| `reports/corpus-granite-docling-scanned-or-unknown.json` | Granite AI image/PDF bucket | 24 | 65.0% | 0 | 0 | 4 | Baselined, not release-passing |
 
 `reports/gate-b-corpus-pathway-comparison.md` compares these pathways. `scripts/ci/validate_corpus_pathways.py` accepts repeated `--results` files so split pathway reports can be validated together for coverage and release exclusions. `docs/release/corpus_pathway_baseline.json` is now populated from the current report-backed pathways. Password-protected PDFs are recorded as `expected_blocked`, and Granite AI Metal/runtime availability failures are recorded as `environment_blocked`, instead of converter quality failures. The packaged MarkItDown audio report covers MP3/M4A/WAV capability separately from FLAC/video capability; the native AVFoundation metadata report covers the remaining FLAC/video fixtures. The native ImageIO report is intentionally low-scoring because metadata Markdown is not OCR/content extraction.
+
+`scripts/ci/summarize_corpus_pathway_reports.py` normalizes older and newer report JSON before rendering the comparison artifact, so expected password blocks and environment-blocked Metal rows do not inflate the unexpected-failure count.
 
 The current report-backed pathway baseline validates with:
 

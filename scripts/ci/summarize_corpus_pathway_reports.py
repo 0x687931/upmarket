@@ -5,7 +5,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from benchmark_scorer import is_expected_blocked_error  # noqa: E402
 
 
 def load_report(path: Path) -> dict:
@@ -28,12 +32,35 @@ def table(headers: list[str], rows: list[list[str]]) -> list[str]:
 def score_cell(document: dict | None) -> str:
     if document is None:
         return "-"
-    if document.get("status") == "expected_blocked":
+    status = normalised_status(document)
+    if status == "expected_blocked":
         return "BLOCKED"
-    if document.get("error"):
+    if status == "environment_blocked":
+        return "ENV"
+    if status == "failed":
         return "ERR"
     elapsed = float(document.get("elapsed_seconds", 0))
     return f"{float(document.get('overall_percent', 0)):.1f}% / {elapsed:.3f}s"
+
+
+def normalised_status(document: dict) -> str:
+    status = document.get("status")
+    if status in {"expected_blocked", "environment_blocked"}:
+        return status
+    message = str(document.get("error") or document.get("blocked_reason") or "")
+    expected_blocked, _reason = is_expected_blocked_error(message)
+    if expected_blocked:
+        return "expected_blocked"
+    lowered = message.lower()
+    if any(term in lowered for term in ("metal", "graphics processor", "device compatibility", "couldn't run on this mac")):
+        return "environment_blocked"
+    if document.get("error"):
+        return "failed"
+    return "scored"
+
+
+def status_count(report: dict, status: str) -> int:
+    return sum(1 for document in report.get("documents", []) if normalised_status(document) == status)
 
 
 def report_label(report: dict) -> str:
@@ -85,8 +112,8 @@ def main() -> int:
     lines.extend([
         "## Pathway Summary",
         "",
-        "| Pathway | Status | Compute Capability | Control | Pipeline | Compute | Repeats | Documents | Overall | Avg Sec/Doc | Failed |",
-        "| --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |",
+        "| Pathway | Status | Compute Capability | Control | Pipeline | Compute | Repeats | Documents | Overall | Avg Sec/Doc | Unexpected Failed | Expected Blocked | Env Blocked |",
+        "| --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ])
 
     pathway_ids = sorted(
@@ -106,14 +133,17 @@ def main() -> int:
         compute_capability = ", ".join(config.get("compute_modes", [])) or "-"
         accelerator_control = config.get("accelerator_control", "-")
         if report is None:
-            lines.append(f"| {pathway_id} | {status} | {compute_capability} | {accelerator_control} | not run | - | - | 0 | - | - | - |")
+            lines.append(f"| {pathway_id} | {status} | {compute_capability} | {accelerator_control} | not run | - | - | 0 | - | - | - | - | - |")
             continue
-        failed = sum(int(category.get("failed_count", 0)) for category in report.get("categories", {}).values())
+        failed = status_count(report, "failed")
+        expected_blocked = status_count(report, "expected_blocked")
+        environment_blocked = status_count(report, "environment_blocked")
         lines.append(
             f"| {pathway_id} | {status} | {compute_capability} | {accelerator_control} | "
             f"{report.get('pipeline', '-')} | {report.get('compute_mode', 'auto')} | "
             f"{report.get('repeat_count', 1)} | {report.get('document_count', 0)} | "
-            f"{float(report.get('overall_percent', 0)):.1f}% | {float(report.get('avg_elapsed_seconds', 0)):.3f}s | {failed} |"
+            f"{float(report.get('overall_percent', 0)):.1f}% | {float(report.get('avg_elapsed_seconds', 0)):.3f}s | "
+            f"{failed} | {expected_blocked} | {environment_blocked} |"
         )
 
     lines.extend(["", "## Category Summary", ""])
@@ -121,20 +151,28 @@ def main() -> int:
         lines.extend([
             f"### {pathway}",
             "",
-            "| Category | Documents | Overall | Avg Sec/Doc | Failed |",
-            "| --- | ---: | ---: | ---: | ---: |",
+            "| Category | Documents | Overall | Avg Sec/Doc | Unexpected Failed | Expected Blocked | Env Blocked |",
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
         ])
         for category, values in sorted(report.get("categories", {}).items()):
+            documents = [
+                document
+                for document in report.get("documents", [])
+                if document.get("category") == category
+            ]
             lines.append(
                 f"| {category} | {values.get('document_count', 0)} | "
-                f"{float(values.get('overall_percent', 0)):.1f}% | {float(values.get('avg_elapsed_seconds', 0)):.3f}s | {values.get('failed_count', 0)} |"
+                f"{float(values.get('overall_percent', 0)):.1f}% | {float(values.get('avg_elapsed_seconds', 0)):.3f}s | "
+                f"{sum(1 for document in documents if normalised_status(document) == 'failed')} | "
+                f"{sum(1 for document in documents if normalised_status(document) == 'expected_blocked')} | "
+                f"{sum(1 for document in documents if normalised_status(document) == 'environment_blocked')} |"
             )
         lines.append("")
 
     lines.extend([
         "## Document Score Matrix",
         "",
-        "Cells are `accuracy / average wall time`. `BLOCKED` means the document needed missing user input, such as a password. `ERR` means the pathway ran and failed unexpectedly. `-` means that converter was not run for that file.",
+        "Cells are `accuracy / average wall time`. `BLOCKED` means the document needed missing user input, such as a password. `ENV` means the pathway could not run in the current hardware/runtime environment. `ERR` means the pathway ran and failed unexpectedly. `-` means that converter was not run for that file.",
         "",
     ])
 

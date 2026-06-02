@@ -191,6 +191,18 @@ def main() -> int:
         errors,
     )
     require_text(
+        "scripts/ci/summarize_corpus_pathway_reports.py",
+        [
+            "Unexpected Failed",
+            "Expected Blocked",
+            "Env Blocked",
+            "normalised_status",
+            "is_expected_blocked_error",
+        ],
+        "corpus pathway comparison failure accounting",
+        errors,
+    )
+    require_text(
         "docs/release/TEST_MATRIX.md",
         [
             "Philosophy remediation",
