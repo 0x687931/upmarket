@@ -10,6 +10,7 @@ PROJECT="${UPMARKET_XCODE_PROJECT:-Upmarket/Upmarket.xcodeproj}"
 SCHEME="${UPMARKET_XCODE_SCHEME:-Upmarket}"
 DESTINATION="${UPMARKET_XCODE_DESTINATION:-platform=macOS}"
 CODE_SIGNING="${UPMARKET_CODE_SIGNING_ALLOWED:-NO}"
+PYTHON_XCFRAMEWORK="${UPMARKET_PYTHON_XCFRAMEWORK:-Upmarket/Python/Python.xcframework}"
 
 usage() {
   cat <<'USAGE'
@@ -84,6 +85,16 @@ xcode_ui_tests() {
     CODE_SIGNING_ALLOWED="$CODE_SIGNING"
 }
 
+require_build_runtime() {
+  if [[ -d "$PYTHON_XCFRAMEWORK" ]]; then
+    return 0
+  fi
+
+  echo "error: build runtime missing: $PYTHON_XCFRAMEWORK"
+  echo "       Run scripts/ci/ensure_python_runtime.sh to prepare the local build runtime."
+  exit 1
+}
+
 policy_gate() {
   run_step "Verify Xcode project" scripts/ci/verify_xcode_project.sh
   run_step "Validate P0 task registry" scripts/ci/validate_task_registry.py
@@ -96,6 +107,7 @@ policy_gate() {
 }
 
 build_gate() {
+  run_step "Check build runtime" require_build_runtime
   run_step "Build unsigned app" xcode_build
   run_step "Verify effective plist" scripts/ci/verify_effective_plist.sh
 }

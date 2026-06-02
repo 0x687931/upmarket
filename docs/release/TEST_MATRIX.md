@@ -5,6 +5,7 @@ This matrix defines the minimum validation surface. Add focused tests when a cha
 | Area | Scope | Command Or Evidence | Frequency | Blocks Release |
 | --- | --- | --- | --- | --- |
 | Fast PR gate | Policy checks, unsigned build, effective plist, and unit tests | `scripts/ci/gate.sh quick` | Every PR | Yes |
+| Build runtime preparation | Ignored `Python.xcframework` exists so the Xcode target can compile; CI rebuilds only when cache is missing or stale | `scripts/ci/ensure_python_runtime.sh` | Every PR in CI; local only when missing | Yes |
 | Xcode project | Project opens, targets resolve, helper target is wired | `scripts/ci/verify_xcode_project.sh` | Every PR through quick gate | Yes |
 | Architecture boundaries | Minimal monolith, Python behind helper, no restored legacy service, no hidden launch window workarounds | `scripts/ci/validate_architecture_boundaries.py` | Every PR through quick gate | Yes |
 | Philosophy remediation | Primary conversion surface, rejected input visibility, supported type parity, queue-owned UI state, model setup states, support redaction/context, and programmatic authorization stay covered | `scripts/ci/validate_release_regression_guards.py`; `UpmarketUITests/UpmarketUITests.swift`; `UpmarketTests/ConversionQueueTests.swift`; `UpmarketTests/StorageAccessTests.swift`; `UpmarketTests/ModelManagerTests.swift`; `UpmarketTests/SupportReporterTests.swift`; `UpmarketTests/ProgrammaticConversionAuthorizationTests.swift` | Every PR through quick gate | Yes |

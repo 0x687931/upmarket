@@ -20,6 +20,7 @@ Runs on every pull request with `scripts/ci/gate.sh quick`.
 
 Checks:
 
+- Cached generated Python runtime is present as a build input; CI runs `scripts/ci/ensure_python_runtime.sh` to rebuild it only when missing or stale.
 - Xcode project path is valid.
 - Architecture simplification holds: no hidden launch windows, zero-size placeholder scenes, or create-then-hide AppKit window workarounds.
 - Philosophy remediation regression guards pass.
@@ -31,7 +32,7 @@ Checks:
 - Unit tests pass.
 - No undeclared PATH tools are required for supported formats.
 
-PR CI intentionally skips UI automation, runtime rebuilding, packaged-app smoke, and corpus/model baselines. Run `scripts/ci/gate.sh runtime` for Python, dependency, entitlement, model, corpus, or packaging changes, then broaden to the release-candidate gate before shipping.
+PR CI intentionally skips UI automation, release-level runtime rebuilding, packaged-app smoke, and corpus/model baselines. The ignored runtime framework is still prepared because the Xcode target needs it to compile. Run `scripts/ci/gate.sh runtime` for Python, dependency, entitlement, model, corpus, or packaging changes, then broaden to the release-candidate gate before shipping.
 
 ### Release Candidate CI
 
@@ -184,6 +185,7 @@ Target scripts:
 
 ```text
 scripts/ci/gate.sh
+scripts/ci/ensure_python_runtime.sh
 scripts/ci/verify_xcode_project.sh
 scripts/ci/verify_effective_plist.sh
 scripts/ci/verify_entitlements.sh
@@ -241,6 +243,12 @@ Use the runtime gate for Python, dependency, entitlement, model, corpus, or pack
 
 ```sh
 scripts/ci/gate.sh runtime
+```
+
+If a local quick build reports that `Upmarket/Python/Python.xcframework` is missing, prepare the ignored build artifact first:
+
+```sh
+scripts/ci/ensure_python_runtime.sh
 ```
 
 Run UI automation only through `scripts/ci/gate.sh major` or `scripts/ci/gate.sh ui` for release candidates or explicit UI changes, because those tests drive the app and may switch the system between light and dark appearance.

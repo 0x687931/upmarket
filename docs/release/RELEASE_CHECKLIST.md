@@ -14,6 +14,10 @@ Use this checklist for every internal beta, external beta, and App Store candida
   ```sh
   scripts/ci/gate.sh quick
   ```
+- If the local runtime artifact is missing, prepare it first:
+  ```sh
+  scripts/ci/ensure_python_runtime.sh
+  ```
 
 ## 2. Build And Package
 

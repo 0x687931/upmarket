@@ -36,6 +36,7 @@ Large fixtures and upstream corpus material live in `tests/corpus/`; avoid editi
 
 - `open Upmarket/Upmarket.xcodeproj` opens the app in Xcode.
 - `scripts/ci/gate.sh quick` runs the normal local/PR gate: policy checks, unsigned build, effective plist check, and unit tests.
+- `scripts/ci/ensure_python_runtime.sh` prepares the ignored local runtime artifact if `gate.sh quick` reports that `Upmarket/Python/Python.xcframework` is missing.
 - `scripts/ci/gate.sh runtime` rebuilds/verifies the bundled runtime and app package; use it for Python, dependency, entitlement, model, corpus, or packaging changes.
 - `scripts/ci/gate.sh minor` runs the release gate without UI automation.
 - `scripts/ci/gate.sh major` runs the release gate plus UI automation; reserve it for major candidates or explicit UI changes because it may switch light/dark appearance.
