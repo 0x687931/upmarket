@@ -29,7 +29,7 @@ python3 scripts/ci/validate_corpus_pathways.py \
   --results reports/corpus-granite-docling-scanned-or-unknown.json
 ```
 
-Gate B is not fully release-passing yet. Remaining release blockers are cancellation/app-quit temp cleanup validation, native Vision/Speech/ImageIO/AVFoundation pathway baselines once their runners exist, and a targeted GUI/Metal Granite AI validation pass. Physical Intel validation is not a v1.0 blocker; Intel-facing copy must stay limited to build compatibility/native-only positioning until actual Intel hardware evidence exists. The 14 corpus documents without any current pathway-result row are all audio/video fixtures; they map to the native Speech and AVFoundation registry entries whose app/Xcode runners still need release evidence.
+Gate B is not fully release-passing yet. Remaining release blockers are full GUI app quit/relaunch temp cleanup validation, native Vision/Speech/ImageIO/AVFoundation pathway baselines once their runners exist, and a targeted GUI/Metal Granite AI validation pass. Physical Intel validation is not a v1.0 blocker; Intel-facing copy must stay limited to build compatibility/native-only positioning until actual Intel hardware evidence exists. The 14 corpus documents without any current pathway-result row are all audio/video fixtures; they map to the native Speech and AVFoundation registry entries whose app/Xcode runners still need release evidence.
 
 `NativeMetadataExtractorTests.testCorpusMediaMetadataUsesNativeAVFoundation` now exercises AVFoundation metadata extraction against representative corpus audio/video fixtures: FLAC, MP4, and QuickTime/MOV. This is native media evidence, not a full audio/video pathway baseline; Speech transcription still needs app permission/runtime evidence.
 
@@ -53,7 +53,7 @@ The 2026-06-02 rerun passed 20 selected `ConversionQueueTests` with 0 failures.
 xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/ConversionQueueTests
 ```
 
-The 2026-06-02 rerun passed 20 selected `ConversionQueueTests` with 0 failures. App startup stale-workspace cleanup remains covered by `DiagnosticsTests.testStaleWorkspaceCleanupRemovesStartupLeftovers`. Remaining release evidence needed: cancellation while a real app conversion is in flight, and cleanup after full app quit/relaunch.
+The 2026-06-02 rerun passed 20 selected `ConversionQueueTests` with 0 failures. App startup stale-workspace cleanup remains covered by `DiagnosticsTests.testStaleWorkspaceCleanupRemovesStartupLeftovers`. `PythonBridgeTests.testRunnerCleansWorkspaceWhenAdvancedConversionIsCancelled` now cancels a real `ConversionRunner` task while it is inside the advanced-runtime boundary and verifies the app-owned workspace list returns to its pre-run state. `DiagnosticsTests.testAppDelegateTerminationCleansStaleWorkspaces` covers the app-termination cleanup hook. Remaining release evidence needed: cleanup after full GUI app quit/relaunch.
 
 ### Granite AI Metal Root Cause
 

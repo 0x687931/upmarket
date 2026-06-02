@@ -216,6 +216,42 @@ final class PythonBridgeTests: XCTestCase {
         XCTAssertNotNil(result.output)
     }
 
+    func testRunnerCleansWorkspaceWhenAdvancedConversionIsCancelled() async throws {
+        AppWorkspace.removeStaleWorkspaces()
+        let before = workspaceNames()
+        let helper = try makeHelperScript("""
+        #!/bin/sh
+        cat >/dev/null
+        sleep 5
+        printf '{"success":true,"needsPassword":false,"output":{"markdown":"# Late","pages":1,"format":"DOCX","title":"Late","pipeline":"enhanced"}}\\n'
+        """)
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketCancelledRunnerTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: directory)
+        }
+        let input = directory.appendingPathComponent("cancel-me.docx")
+        try Data("slow advanced conversion".utf8).write(to: input)
+        let runner = ConversionRunner(
+            pythonWorker: PythonWorker(helperClient: RuntimeHelperClient(executableURL: helper, livenessInterval: 15)),
+            supportsAdvancedRuntime: true
+        )
+
+        let task = Task {
+            await runner.run(ConversionJob(sourceURL: input))
+        }
+        await waitUntil {
+            self.workspaceNames() != before
+        }
+
+        task.cancel()
+        let result = await task.value
+
+        XCTAssertEqual(result.errorMessage, ConversionError.cancelled.errorDescription)
+        XCTAssertEqual(workspaceNames(), before)
+    }
+
     func testGraniteAIPreviouslyBlockedCorpusFixturesRouteThroughHelperWhenModelInstalled() async throws {
         guard DeviceCapability.shared.supportsUpmarketAI else {
             throw XCTSkip("Upmarket AI requires Apple Silicon with a visible Metal device")
@@ -301,5 +337,21 @@ final class PythonBridgeTests: XCTestCase {
             .deletingLastPathComponent()
             .appendingPathComponent("tests/corpus")
             .appendingPathComponent(relativePath)
+    }
+
+    private func waitUntil(_ predicate: @escaping () -> Bool) async {
+        for _ in 0..<100 {
+            if predicate() { return }
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTFail("Timed out waiting for condition")
+    }
+
+    private func workspaceNames() -> [String] {
+        let entries = (try? FileManager.default.contentsOfDirectory(
+            at: AppWorkspace.baseDirectory,
+            includingPropertiesForKeys: nil
+        )) ?? []
+        return entries.map(\.lastPathComponent).sorted()
     }
 }
