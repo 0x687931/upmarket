@@ -194,7 +194,7 @@ private func authorizeShortcutConversion(useAI: Bool) async throws {
         },
         aiUnavailableReason: { useAI in
             guard useAI else { return nil }
-            return ModelManager.shared.aiUseUnavailableReason(hasPro: store.hasProOrAbove)
+            return await ModelManager.shared.aiUseUnavailableReasonAfterChecking(hasPro: store.hasProOrAbove)
         },
         consumeConversion: {
             store.consumeConversion()
@@ -206,7 +206,7 @@ private func authorizeShortcutConversion(useAI: Bool) async throws {
 @MainActor
 struct ProgrammaticConversionAuthorizer {
     typealias RefreshEntitlements = () async -> Void
-    typealias AIUnavailableReason = (_ useAI: Bool) -> String?
+    typealias AIUnavailableReason = (_ useAI: Bool) async -> String?
     typealias ConsumeConversion = () -> Bool
 
     let refreshEntitlements: RefreshEntitlements
@@ -216,7 +216,7 @@ struct ProgrammaticConversionAuthorizer {
     func authorize(useAI: Bool) async throws {
         await refreshEntitlements()
 
-        if aiUnavailableReason(useAI) != nil {
+        if await aiUnavailableReason(useAI) != nil {
             throw UpmarketIntentError.aiUnavailable
         }
 

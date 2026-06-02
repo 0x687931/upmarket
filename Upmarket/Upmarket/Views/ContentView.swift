@@ -590,14 +590,16 @@ struct ContentView: View {
     }
 
     private func beginConversion(url: URL, useAI: Bool) {
-        var shouldUseAI = useAI
-        if useAI, let reason = modelManager.aiUseUnavailableReason(hasPro: store.hasProOrAbove) {
-            shouldUseAI = false
-            withAnimation {
-                languageWarning = reason
+        Task { @MainActor in
+            var shouldUseAI = useAI
+            if useAI, let reason = await modelManager.aiUseUnavailableReasonAfterChecking(hasPro: store.hasProOrAbove) {
+                shouldUseAI = false
+                withAnimation {
+                    languageWarning = reason
+                }
             }
+            primaryJobID = conversion.add(url, useAI: shouldUseAI)
         }
-        primaryJobID = conversion.add(url, useAI: shouldUseAI)
     }
 
     private func retry(_ job: ConversionJob) {

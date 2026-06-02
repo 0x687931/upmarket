@@ -177,23 +177,18 @@ final class ModelManager: ObservableObject {
     // MARK: - Public
 
     func checkModels() {
+        Task { await checkModelsNow() }
+    }
+
+    func checkModelsNow() async {
         installState = .checking
         downloadError = nil
-        Task.detached(priority: .userInitiated) {
-            let result: [ModelStatus]
-            do {
-                result = try await self.checkModelsHandler()
-            } catch {
-                await MainActor.run {
-                    self.models = []
-                    self.installState = .failed("Upmarket couldn't check local model files. Try again from Settings.")
-                }
-                return
-            }
-            await MainActor.run {
-                self.models = result
-                self.installState = .ready
-            }
+        do {
+            models = try await checkModelsHandler()
+            installState = .ready
+        } catch {
+            models = []
+            installState = .failed("Upmarket couldn't check local model files. Try again from Settings.")
         }
     }
 
@@ -243,6 +238,28 @@ final class ModelManager: ObservableObject {
             return "Download Upmarket AI before using it for conversion."
         }
         return nil
+    }
+
+    func aiUseUnavailableReasonAfterChecking(
+        hasPro: Bool,
+        featureEnabled: Bool? = nil,
+        featureReason: String? = nil,
+        deviceSupportsAI: Bool? = nil,
+        deviceReason: String? = nil
+    ) async -> String? {
+        switch installState {
+        case .unchecked, .checking:
+            await checkModelsNow()
+        case .ready, .failed:
+            break
+        }
+        return aiUseUnavailableReason(
+            hasPro: hasPro,
+            featureEnabled: featureEnabled ?? FeatureFlags.shared.aiAvailable,
+            featureReason: featureReason ?? FeatureFlags.shared.aiUnavailableReason,
+            deviceSupportsAI: deviceSupportsAI ?? DeviceCapability.shared.supportsUpmarketAI,
+            deviceReason: deviceReason ?? DeviceCapability.shared.upmarketAIUnavailableReason
+        )
     }
 
     func downloadProModels(hasPro: Bool) {

@@ -71,6 +71,24 @@ final class ModelManagerTests: XCTestCase {
         )
     }
 
+    func testAIUseChecksModelsBeforeTreatingEmptyListAsUnavailable() async {
+        let manager = ModelManager(
+            checkModelsHandler: {
+                return [Self.proModel(isDownloaded: true)]
+            }
+        )
+
+        let reason = await manager.aiUseUnavailableReasonAfterChecking(
+            hasPro: true,
+            featureEnabled: true,
+            deviceSupportsAI: true
+        )
+
+        XCTAssertNil(reason)
+        XCTAssertTrue(manager.proDownloaded)
+        XCTAssertTrue(manager.hasCheckedModels)
+    }
+
     func testDownloadProgressUpdatesBeforeCompletion() async throws {
         let manager = ModelManager(
             models: [Self.proModel(isDownloaded: false)],

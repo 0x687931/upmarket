@@ -33,10 +33,6 @@ struct ShelfView: View {
         conversion.isConverting
     }
 
-    private func allowedAISelection(_ requested: Bool) -> Bool {
-        requested && modelManager.aiUseUnavailableReason(hasPro: store.hasProOrAbove) == nil
-    }
-
     // Width: closed = stripWidth, open = strip + items
     private var closedWidth: CGFloat { colWidth * 2 + 1 }  // two cols + divider
 
@@ -85,7 +81,10 @@ struct ShelfView: View {
             guard let req = note.object as? ReprocessRequest else { return }
             guard conversion.jobs.contains(where: { $0.id == req.itemID }) else { return }
             guard consumeConversionOrShowPaywall() else { return }
-            _ = conversion.retry(req.itemID, useAI: allowedAISelection(req.useAI))
+            Task { @MainActor in
+                let useAI = await allowedAISelection(req.useAI)
+                _ = conversion.retry(req.itemID, useAI: useAI)
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .upmarketSetShelfExpanded)) { note in
             guard let expanded = note.object as? Bool else { return }
@@ -343,6 +342,11 @@ struct ShelfView: View {
             return false
         }
         return true
+    }
+
+    private func allowedAISelection(_ requested: Bool) async -> Bool {
+        guard requested else { return false }
+        return await modelManager.aiUseUnavailableReasonAfterChecking(hasPro: store.hasProOrAbove) == nil
     }
 }
 
