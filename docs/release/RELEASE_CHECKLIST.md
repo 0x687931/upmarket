@@ -15,6 +15,7 @@ Use this checklist for every internal beta, external beta, and App Store candida
   scripts/ci/validate_architecture_boundaries.py
   scripts/ci/validate_user_facing_copy.py
   ```
+- Confirm no hidden launch windows, zero-size placeholder scenes, or create-then-hide AppKit window workarounds were introduced.
 - Confirm generated docs are current:
   ```sh
   scripts/docs/generate_repo_docs.py --check

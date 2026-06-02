@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path("Upmarket/Upmarket")
 VIEW_DIR = ROOT / "Views"
+APP_SOURCE = ROOT / "UpmarketApp.swift"
 APPROVED_PYTHONKIT_IMPORTS: set[Path] = set()
 APPROVED_PYTHON_CALLS = APPROVED_PYTHONKIT_IMPORTS
 HELPER_SOURCE = Path("Upmarket/UpmarketRuntimeHelper/main.swift")
@@ -26,6 +27,13 @@ FORBIDDEN_IN_VIEWS = {
     "NSOpenPanel(": "views must use FileAccessService for open panels",
     "NSSavePanel(": "views must use FileAccessService or SavePreference for save panels",
     "NSPasteboard.general": "views must use FileAccessService for pasteboard writes",
+}
+FORBIDDEN_APP_SCENE_WORKAROUNDS = {
+    "orderOut(nil)": "app scene must not create then hide launch windows",
+    ".defaultSize(width: 0": "app scene must not use zero-size hidden windows",
+    ".defaultSize(width: 0, height: 0)": "app scene must not use zero-size hidden windows",
+    ".frame(width: 0": "app scene must not use zero-size hidden views as window placeholders",
+    ".frame(width: 0, height: 0)": "app scene must not use zero-size hidden views as window placeholders",
 }
 
 
@@ -47,6 +55,19 @@ def main() -> int:
         for pattern, message in FORBIDDEN_IN_VIEWS.items():
             if pattern in text:
                 errors.append(f"{path}: {message} ({pattern})")
+
+    if APP_SOURCE.exists():
+        app_text = APP_SOURCE.read_text(encoding="utf-8")
+        for pattern, message in FORBIDDEN_APP_SCENE_WORKAROUNDS.items():
+            if pattern in app_text:
+                errors.append(f"{APP_SOURCE}: {message} ({pattern})")
+        if "WindowGroup" in app_text and "MenuBarExtra" in app_text:
+            errors.append(
+                f"{APP_SOURCE}: menu-bar app must not restore a placeholder WindowGroup; "
+                "use explicit Window scenes or document a real primary window"
+            )
+    else:
+        errors.append(f"{APP_SOURCE}: app source is missing")
 
     for path in sorted(ROOT.rglob("*.swift")):
         text = path.read_text(encoding="utf-8")

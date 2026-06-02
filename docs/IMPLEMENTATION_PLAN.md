@@ -35,6 +35,7 @@ These items block mission-critical use, TestFlight confidence, and App Store sub
 - [x] Define the target source layout with small hard boundaries: Views, Domain, Services, Infrastructure, Resources, and release docs.
 - [x] Keep file access behind a concrete service; views must not own file picker, save panel, or pasteboard mechanics.
 - [x] Remove speculative architecture, duplicate conversion entry points, and unused product surfaces that do not support conversion, monetization, diagnostics, or release safety.
+- [x] Add a simplification gate that rejects hidden launch windows, zero-size placeholder scenes, and create-then-hide AppKit window workarounds.
 - [x] Add a lightweight architecture decision record whenever a P0 decision adds a new dependency, new process boundary, new entitlement, or new release hook.
 - [x] Complete the P0 minimalist core rewrite: `ConversionQueue`, `ConversionRunner`, `PythonWorker`, and small `Domain/` models with no TCA, no enterprise layers, no protocol forests, and no speculative abstractions.
 - [x] Move remaining StoreKit accounting and diagnostics behind the P0-007 and P0-008 service boundaries.

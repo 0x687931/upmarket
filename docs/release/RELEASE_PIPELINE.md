@@ -23,6 +23,7 @@ Checks:
 - Xcode project path is valid.
 - App builds with `Upmarket/Upmarket.xcodeproj`.
 - Unit tests pass. PR CI intentionally skips UI automation because launch/UI tests change system appearance during automation.
+- Architecture simplification holds: no hidden launch windows, zero-size placeholder scenes, or create-then-hide AppKit window workarounds.
 - User-facing copy hides internal toolkit names outside licenses and explicit diagnostic previews.
 - Effective `Info.plist` contains required keys.
 - Entitlements match App Store policy.
