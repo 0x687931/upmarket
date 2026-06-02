@@ -213,14 +213,11 @@ struct PreferencesView: View {
     }
 
     // MARK: - About
-    // No icon — name/version + license + links + attributions (collapsed)
-    // Everything fits without scrolling.
 
-    @State private var attributionsExpanded = false
+    @State private var showAttributions = false
 
     private var aboutTab: some View {
         Form {
-            // Identity — text only, no icon
             Section {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -233,7 +230,6 @@ struct PreferencesView: View {
                 }
             }
 
-            // License
             Section("License") {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -262,7 +258,6 @@ struct PreferencesView: View {
                 }
             }
 
-            // Links — three equal buttons on one row
             Section {
                 HStack(spacing: 0) {
                     linkButton(icon: "lock.shield", label: "Privacy Policy",
@@ -276,41 +271,15 @@ struct PreferencesView: View {
                 }
             }
 
-            // Attributions — single disclosure group, collapsed by default
-            // Keeps the page at a fixed height; 17 rows only appear on demand.
             if !openSourcePackages.isEmpty {
                 Section {
-                    DisclosureGroup(
-                        isExpanded: $attributionsExpanded
-                    ) {
-                        ForEach(licenseGroups) { group in
-                            Text(group.family)
-                                .font(.footnote)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.secondary)
-                                .padding(.top, 4)
-                            ForEach(group.packages) { pkg in
-                                Button {
-                                    if let url = URL(string: pkg.url) {
-                                        NSWorkspace.shared.open(url)
-                                    }
-                                } label: {
-                                    HStack {
-                                        Text(pkg.name)
-                                            .font(.subheadline)
-                                            .foregroundStyle(.primary)
-                                        Spacer()
-                                        Text(pkg.version)
-                                            .font(.subheadline)
-                                            .foregroundStyle(.tertiary)
-                                    }
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
+                    Button {
+                        showAttributions = true
                     } label: {
-                        Text("Attributions")
-                            .font(.subheadline)
+                        Label("Attributions", systemImage: "doc.text")
+                    }
+                    .sheet(isPresented: $showAttributions) {
+                        AttributionsSheet(groups: licenseGroups)
                     }
                 }
             }
@@ -389,6 +358,57 @@ struct PreferencesView: View {
               let entries = try? JSONDecoder().decode([LicenseEntry].self, from: data)
         else { return [] }
         return entries
+    }
+}
+
+// MARK: - Attributions sheet
+
+struct AttributionsSheet: View {
+    let groups: [LicenseGroup]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Title bar
+            HStack {
+                Text("Attributions")
+                    .font(.headline)
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 12)
+
+            Divider()
+
+            // Package list grouped by license family
+            List {
+                ForEach(groups) { group in
+                    Section(group.family) {
+                        ForEach(group.packages) { pkg in
+                            Button {
+                                if let url = URL(string: pkg.url) {
+                                    NSWorkspace.shared.open(url)
+                                }
+                            } label: {
+                                HStack {
+                                    Text(pkg.name)
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    Text(pkg.version)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .listStyle(.inset)
+        }
+        .frame(width: 380, height: 420)
     }
 }
 
