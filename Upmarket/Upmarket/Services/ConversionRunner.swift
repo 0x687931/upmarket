@@ -28,6 +28,13 @@ struct ConversionRunner {
             return nil
         }
         defer { AppWorkspace.remove(workspace) }
+        if tempURL.pathExtension.lowercased() == "pdf",
+           let classification = try? await NativeDocumentClassifier.classify(pdfURL: tempURL) {
+            AppLog.conversion.info(
+                "Document analysis bucket=\(classification.bucket.diagnosticLabel, privacy: .public) recommendation=\(classification.recommendedPathway.diagnosticLabel, privacy: .public) confidence=\(classification.confidence, privacy: .public)"
+            )
+            return classification.complexityAdvice
+        }
         return try? await pythonWorker.analyse(fileURL: tempURL, workspaceURL: workspace)
     }
 
@@ -89,19 +96,25 @@ struct ConversionRunner {
         switch ext {
         case "pdf":
             if job.useAI {
+                let classification = try? await NativeDocumentClassifier.classify(pdfURL: tempURL, password: job.password)
+                if let classification {
+                    AppLog.conversion.info(
+                        "Document classifier bucket=\(classification.bucket.diagnosticLabel, privacy: .public) recommendation=\(classification.recommendedPathway.diagnosticLabel, privacy: .public) confidence=\(classification.confidence, privacy: .public)"
+                    )
+                }
                 return await runQualitySelectedPDFConversion(
                     fileURL: tempURL,
                     title: title,
                     password: job.password,
                     workspaceURL: workspaceURL,
-                    classifierEvidence: nil,
-                    secondary: .advanced(useAI: true),
+                    classifierEvidence: classification?.evidence,
+                    secondary: .all(useAI: true),
                     progress: progress
                 )
             }
             if let classification = try? await NativeDocumentClassifier.classify(pdfURL: tempURL, password: job.password) {
                 AppLog.conversion.info(
-                    "Document classifier recommendation=\(classification.recommendedPathway.diagnosticLabel, privacy: .public) confidence=\(classification.confidence, privacy: .public)"
+                    "Document classifier bucket=\(classification.bucket.diagnosticLabel, privacy: .public) recommendation=\(classification.recommendedPathway.diagnosticLabel, privacy: .public) confidence=\(classification.confidence, privacy: .public)"
                 )
                 switch classification.recommendedPathway {
                 case .visionOCR:
@@ -220,6 +233,7 @@ struct ConversionRunner {
     private enum PDFSecondaryCandidate {
         case imageText
         case advanced(useAI: Bool)
+        case all(useAI: Bool)
     }
 
     private func runQualitySelectedPDFConversion(
@@ -241,28 +255,51 @@ struct ConversionRunner {
             firstFailure = basic
         }
 
-        let secondaryResult: ConversionResult
-        let secondaryLabel: String
+        let secondaryCandidates: [(label: String, result: ConversionResult)]
         switch secondary {
         case .imageText:
-            secondaryLabel = "image-text"
-            secondaryResult = await runVisionExtraction(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
+            secondaryCandidates = [(
+                label: "image-text",
+                result: await runVisionExtraction(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
+            )]
         case .advanced(let useAI):
-            secondaryLabel = useAI ? "ai" : "advanced"
-            secondaryResult = await runPythonConversion(
-                fileURL: fileURL,
-                title: title,
-                useAI: useAI,
-                password: password,
-                workspaceURL: workspaceURL,
-                progress: progress
-            )
+            secondaryCandidates = [(
+                label: useAI ? "ai" : "advanced",
+                result: await runPythonConversion(
+                    fileURL: fileURL,
+                    title: title,
+                    useAI: useAI,
+                    password: password,
+                    workspaceURL: workspaceURL,
+                    progress: progress
+                )
+            )]
+        case .all(let useAI):
+            secondaryCandidates = [
+                (
+                    label: "image-text",
+                    result: await runVisionExtraction(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
+                ),
+                (
+                    label: useAI ? "ai" : "advanced",
+                    result: await runPythonConversion(
+                        fileURL: fileURL,
+                        title: title,
+                        useAI: useAI,
+                        password: password,
+                        workspaceURL: workspaceURL,
+                        progress: progress
+                    )
+                )
+            ]
         }
 
-        if case .success(let output) = secondaryResult {
-            outputs.append((label: secondaryLabel, output: output))
-        } else if firstFailure == nil {
-            firstFailure = secondaryResult
+        for candidate in secondaryCandidates {
+            if case .success(let output) = candidate.result {
+                outputs.append((label: candidate.label, output: output))
+            } else if firstFailure == nil {
+                firstFailure = candidate.result
+            }
         }
 
         let imageTextReference = outputs.first { $0.label == "image-text" }?.output.markdown

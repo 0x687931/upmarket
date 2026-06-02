@@ -10,6 +10,7 @@ No internal library names are exposed to callers.
 
 import os
 import sys
+import logging
 from pathlib import Path
 from docling_bridge.security import validate_file_path, validate_password, log_security_event
 
@@ -66,10 +67,11 @@ def convert(file_path: str, options: dict | None = None) -> dict:
     ENHANCED_FORMATS = {'.pdf', '.docx', '.pptx', '.xlsx', '.html', '.htm',
                         '.md', '.asciidoc', '.epub', '.xml'}
     can_use_enhanced = suffix in ENHANCED_FORMATS
+    can_use_ai = suffix in ENHANCED_FORMATS or suffix in {'.png', '.jpg', '.jpeg', '.tif', '.tiff', '.webp'}
 
     # Route to appropriate pipeline
     try:
-        if use_ai and can_use_enhanced:
+        if use_ai and can_use_ai:
             if not _ai_available():
                 return _error("Upmarket AI model is not downloaded or failed validation. Download it again from Settings > Models.")
             try:
@@ -77,8 +79,8 @@ def convert(file_path: str, options: dict | None = None) -> dict:
             except TimeoutError:
                 raise
             except Exception as e:
-                print(f"[Upmarket] AI pipeline fallback for {suffix}: {e}", file=sys.stderr)
-                return _convert_fast_pdf(path, password) if suffix == ".pdf" else _convert_fast_other(path)
+                print(f"[Upmarket] AI pipeline failed for {suffix}: {e}", file=sys.stderr)
+                return _error("Upmarket AI couldn't run on this Mac. Check model download and device compatibility.")
 
         if suffix == ".pdf" and use_enhanced and _enhanced_available():
             try:
@@ -189,7 +191,8 @@ def _convert_fast_other(path: Path) -> dict:
 def _convert_docx_text_only(path: Path) -> dict:
     """Extract text from DOCX, skipping external images that cause mammoth to fail."""
     try:
-        import zipfile, xml.etree.ElementTree as ET
+        import zipfile
+        import defusedxml.ElementTree as ET
 
         NS = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
         lines = []
@@ -298,28 +301,118 @@ def _convert_enhanced(path: Path, opts: dict) -> dict:
 
 
 def _convert_ai(path: Path, opts: dict) -> dict:
-    """Upmarket AI — Pro tier, best results for complex and scanned documents."""
-    result = _convert_enhanced(path, {**opts, "use_vlm": True})
-    result["pipeline"] = "ai"
-    return result
+    """Upmarket AI — Pro tier, Granite Docling MLX path for image/scanned documents."""
+    manager = _model_manager()
+    if not manager.supports_upmarket_ai_hardware():
+        return _error("Upmarket AI requires Apple Silicon with Metal support.")
+
+    suffix = path.suffix.lower()
+    if suffix not in (".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp"):
+        return _convert_enhanced(path, opts)
+
+    model_path = _ai_model_path()
+    artifacts_path = model_path.parent
+    _quiet_known_granite_warnings()
+
+    # Import the VLM pipeline only after model validation. In headless/test
+    # environments MLX may not see a Metal device, and that must not break
+    # non-AI conversion.
+    from docling.datamodel import vlm_model_specs
+    from docling.datamodel.base_models import InputFormat
+    from docling.datamodel.pipeline_options import VlmPipelineOptions
+    from docling.document_converter import DocumentConverter, ImageFormatOption, PdfFormatOption
+    from docling.pipeline.vlm_pipeline import VlmPipeline
+
+    pipeline_options = VlmPipelineOptions(
+        artifacts_path=artifacts_path,
+        vlm_options=vlm_model_specs.GRANITEDOCLING_MLX,
+    )
+    if suffix == ".pdf":
+        format_options = {
+            InputFormat.PDF: PdfFormatOption(
+                pipeline_cls=VlmPipeline,
+                pipeline_options=pipeline_options,
+            )
+        }
+    else:
+        format_options = {
+            InputFormat.IMAGE: ImageFormatOption(
+                pipeline_cls=VlmPipeline,
+                pipeline_options=pipeline_options,
+            )
+        }
+
+    converter = DocumentConverter(format_options=format_options)
+    result = converter.convert(path)
+    markdown = result.document.export_to_markdown()
+    if not markdown.strip():
+        raise RuntimeError("AI model returned empty Markdown")
+    page_count = result.document.num_pages() if callable(result.document.num_pages) else 0
+    return _success(markdown, page_count, path, pipeline="ai")
+
+
+class _GraniteNoiseFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        return not (
+            "Model config: pad_token_id must be `None` or an integer within the vocabulary" in message
+            and "got 128002" in message
+        )
+
+
+_GRANITE_WARNINGS_QUIETED = False
+
+
+def _quiet_known_granite_warnings() -> None:
+    global _GRANITE_WARNINGS_QUIETED
+    if _GRANITE_WARNINGS_QUIETED:
+        return
+
+    logging.getLogger("transformers.configuration_utils").addFilter(_GraniteNoiseFilter())
+
+    try:
+        import mlx.core as mx
+
+        if hasattr(mx, "device_info") and hasattr(mx, "metal"):
+            mx.metal.device_info = mx.device_info
+    except Exception:
+        pass
+
+    _GRANITE_WARNINGS_QUIETED = True
+
+
+def _ai_model_path() -> Path:
+    manager = _model_manager()
+
+    model_path = manager.model_directory("upmarket_ai")
+    ok, error = manager.validate_model_dir("upmarket_ai", model_path)
+    if not ok:
+        raise RuntimeError(error or "Upmarket AI model is not available")
+    return model_path.resolve()
 
 
 # MARK: - Availability checks
 
 def _enhanced_available() -> bool:
     try:
-        from upmarket_models.model_manager import model_available
-        return model_available("layout")
+        return _model_manager().model_available("layout")
     except Exception:
         return False
 
 
 def _ai_available() -> bool:
     try:
-        from upmarket_models.model_manager import model_available
-        return model_available("upmarket_ai")
+        return _model_manager().model_available("upmarket_ai")
     except Exception:
         return False
+
+
+def _model_manager():
+    try:
+        from models import model_manager
+    except ImportError:
+        from upmarket_models import model_manager
+    return model_manager
 
 
 # MARK: - Helpers

@@ -89,11 +89,11 @@
       "owner": "UpmarketPython/docling_bridge",
       "runner": "scripts/benchmark.sh --pathway python-ai-docling",
       "release_status": "shipping",
-      "valid_categories": ["asciidoc", "csv", "docx", "html", "image", "pdf", "pptx", "webvtt", "xlsx", "xml"],
-      "compute_modes": ["cpu", "gpu-metal-mps"],
-      "accelerator_control": "partial; Python model stack may use PyTorch MPS/MLX when available",
+      "valid_categories": ["image", "pdf"],
+      "compute_modes": ["apple-silicon-metal"],
+      "accelerator_control": "MLX requires Apple Silicon/Metal; not a generic Intel, AMD, or NVIDIA GPU path",
       "baseline_required": true,
-      "notes": "AI-assisted Docling path for advanced conversion experiments and release gates."
+      "notes": "Granite Docling MLX path for scanned, image-only, and unknown visual documents. Runtime use is gated by validated Upmarket AI model download. SmolDocling preview is deprecated and must not be used for release evidence."
     },
     "internal-reference-pymupdf": {
       "owner": "developer benchmark environment only",

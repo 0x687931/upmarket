@@ -59,6 +59,7 @@ Rules:
 - User-facing copy describes product behavior, not implementation toolkits. Internal engines and third-party components belong in logs, diagnostics, and licenses, not normal UI.
 
 The detailed boundary map is `docs/release/ARCHITECTURE_BOUNDARIES.md`.
+The product tier and conversion routing policy is `docs/release/TIER_AND_ROUTING_POLICY.md`.
 
 ## Product Scope Discipline
 

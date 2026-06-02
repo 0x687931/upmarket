@@ -2,6 +2,8 @@
 
 This report compares convert-to-Markdown quality by pathway. Shipping decisions use the stored baseline ledger; internal reference pathways are evidence only and do not imply approval to ship those dependencies.
 
+Note: the `python-ai-docling` rows in this historical report predate the Granite Docling MLX wiring and were produced by the enhanced Docling path relabeled as AI. Do not use those rows as Pro AI quality evidence. SmolDocling preview is deprecated. Regenerate this report with `scripts/benchmark.sh --pathway python-ai-docling --bucket scanned-or-unknown` on an Apple Silicon/Metal host after the Upmarket AI model is validated.
+
 ## Benchmark Environment
 
 | Pathway | macOS | Machine | CPU | Requested Compute | Repeats |

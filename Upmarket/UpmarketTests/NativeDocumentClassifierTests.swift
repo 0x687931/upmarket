@@ -22,6 +22,8 @@ final class NativeDocumentClassifierTests: XCTestCase {
         let classification = NativeDocumentClassifier.recommend(from: evidence)
 
         XCTAssertEqual(classification.recommendedPathway, .visionOCR)
+        XCTAssertEqual(classification.bucket, .scannedOrUnknown)
+        XCTAssertEqual(classification.complexityAdvice.recommendation, .aiRequired)
         XCTAssertTrue(classification.shouldUseNativeFirst)
     }
 
@@ -67,7 +69,34 @@ final class NativeDocumentClassifierTests: XCTestCase {
         let classification = NativeDocumentClassifier.recommend(from: evidence)
 
         XCTAssertEqual(classification.recommendedPathway, .enhanced)
+        XCTAssertEqual(classification.bucket, .digitalComplex)
+        XCTAssertEqual(classification.complexityAdvice.recommendation, .aiRecommended)
         XCTAssertFalse(classification.shouldUseNativeFirst)
+    }
+
+    func testDigitalTextRoutesToNativeBucket() {
+        let evidence = NativeDocumentClassifier.Evidence(
+            pageCount: 3,
+            sampledPages: 3,
+            averageDigitalTextCharactersPerPage: 1800,
+            averageLinesPerSampledPage: 28,
+            shortLineRatio: 0.2,
+            numericLineRatio: 0.02,
+            hasAxisLikeText: false,
+            hasRTLText: false,
+            hasTableLikeText: false,
+            visionTextRecognitionAvailable: true,
+            coreMLAvailable: true,
+            visionObservedTextLines: 25,
+            visionAverageConfidence: 0.8
+        )
+
+        let classification = NativeDocumentClassifier.recommend(from: evidence)
+
+        XCTAssertEqual(classification.recommendedPathway, .pdfKit)
+        XCTAssertEqual(classification.bucket, .native)
+        XCTAssertEqual(classification.complexityAdvice.recommendation, .basic)
+        XCTAssertTrue(classification.shouldUseNativeFirst)
     }
 
     func testCorpusPDFClassifiesWithFrameworksUnavailable() async throws {

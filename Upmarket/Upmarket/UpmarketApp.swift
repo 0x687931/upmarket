@@ -1,4 +1,22 @@
+import Darwin
 import SwiftUI
+
+private enum RuntimePrivilegeGuard {
+    static func abortIfPrivilegedProcess() {
+        let realUserID = getuid()
+        let effectiveUserID = geteuid()
+        let realGroupID = getgid()
+        let effectiveGroupID = getegid()
+
+        guard realUserID != 0,
+              effectiveUserID != 0,
+              realUserID == effectiveUserID,
+              realGroupID == effectiveGroupID else {
+            fputs("Upmarket refuses to run with elevated privileges.\n", stderr)
+            _exit(77)
+        }
+    }
+}
 
 @main
 struct UpmarketApp: App {
@@ -109,6 +127,7 @@ struct UpmarketApp: App {
     }
 
     init() {
+        RuntimePrivilegeGuard.abortIfPrivilegedProcess()
         AppWorkspace.removeStaleWorkspaces()
         Task { @MainActor in
             PythonBridge.shared.setup()

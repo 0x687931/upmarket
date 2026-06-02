@@ -10,6 +10,14 @@ import CoreML
 #endif
 
 struct NativeDocumentClassifier {
+    enum DocumentBucket: String, Equatable {
+        case native = "native"
+        case digitalComplex = "digital-complex"
+        case scannedOrUnknown = "scanned-or-unknown"
+
+        var diagnosticLabel: String { rawValue }
+    }
+
     enum RecommendedPathway: String, Equatable {
         case pdfKit = "pdfkit"
         case visionOCR = "vision_ocr"
@@ -100,8 +108,45 @@ struct NativeDocumentClassifier {
         let evidence: Evidence
         let reasons: [String]
 
+        var bucket: DocumentBucket {
+            switch recommendedPathway {
+            case .pdfKit:
+                return .native
+            case .enhanced:
+                return .digitalComplex
+            case .visionOCR:
+                return .scannedOrUnknown
+            }
+        }
+
         var shouldUseNativeFirst: Bool {
             recommendedPathway == .pdfKit || recommendedPathway == .visionOCR
+        }
+
+        var complexityAdvice: ComplexityAdvice {
+            switch bucket {
+            case .native:
+                return ComplexityAdvice(
+                    recommendation: .basic,
+                    score: Int(confidence * 100),
+                    reasons: reasons,
+                    detectedLanguage: nil
+                )
+            case .digitalComplex:
+                return ComplexityAdvice(
+                    recommendation: .aiRecommended,
+                    score: Int(confidence * 100),
+                    reasons: reasons,
+                    detectedLanguage: nil
+                )
+            case .scannedOrUnknown:
+                return ComplexityAdvice(
+                    recommendation: .aiRequired,
+                    score: Int(confidence * 100),
+                    reasons: reasons,
+                    detectedLanguage: nil
+                )
+            }
         }
     }
 

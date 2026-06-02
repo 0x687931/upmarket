@@ -31,7 +31,7 @@ PATHWAYS = {
     },
     "python-ai-docling": {
         "pipeline": "ai",
-        "valid_categories": {"asciidoc", "csv", "docx", "html", "image", "pdf", "pptx", "webvtt", "xlsx", "xml"},
+        "valid_categories": {"image", "pdf"},
         "release_status": "shipping",
     },
     "internal-reference-pymupdf": {
@@ -68,6 +68,7 @@ class DocScore:
     doc_id: str
     category: str
     file: str = ""
+    bucket: str | None = None
     heading_recall: float = 0.0
     table_accuracy: float = 0.0
     content_completeness: float = 0.0
@@ -445,11 +446,9 @@ def _convert_via_venv(doc_path: Path, pipeline: str) -> tuple[str, float]:
     """Run Enhanced/AI conversion in-process so model-backed benchmarks stay warm."""
     root = Path(__file__).parent.parent
     source_bridge = root / "UpmarketPython"
-    packaged_site = root / "Upmarket/Python/Python.xcframework/macos-arm64_x86_64/Python.framework/Versions/3.12/lib/python3.12/site-packages"
-    for path in (packaged_site, source_bridge):
-        value = str(path)
-        if value not in sys.path:
-            sys.path.insert(0, value)
+    value = str(source_bridge)
+    if value not in sys.path:
+        sys.path.insert(0, value)
 
     from docling_bridge.converter import convert
 
@@ -526,6 +525,7 @@ def run_benchmark(
     pipeline: str,
     pathway: str,
     category_filter: str,
+    bucket_filter: str,
     fail_below: int,
     repeat_count: int,
     compute_mode: str,
@@ -557,6 +557,10 @@ def run_benchmark(
 
     manifest = json.loads(manifest_path.read_text())
     docs = manifest.get("documents", [])
+    bucket_labels = load_bucket_labels()
+    for doc in docs:
+        if doc.get("id") in bucket_labels:
+            doc["bucket"] = bucket_labels[doc["id"]]
 
     selected_pathway = None
     if pathway:
@@ -571,15 +575,23 @@ def run_benchmark(
 
     if category_filter:
         docs = [d for d in docs if d.get("category", "").startswith(category_filter)]
+    if bucket_filter:
+        docs = [d for d in docs if d.get("bucket") == bucket_filter]
 
     if not docs:
-        print(f"No documents found{' for category: ' + category_filter if category_filter else ''}")
+        filters = []
+        if category_filter:
+            filters.append(f"category: {category_filter}")
+        if bucket_filter:
+            filters.append(f"bucket: {bucket_filter}")
+        print(f"No documents found{' for ' + ', '.join(filters) if filters else ''}")
         return 0
 
     repeat_count = max(1, repeat_count)
     label = f"pathway: {pathway}" if pathway else f"pipeline: {pipeline or 'auto'}"
     repeat_label = f" | repeats: {repeat_count}" if repeat_count > 1 else ""
-    print(f"Running {len(docs)} documents | {label}{repeat_label} | compute: {compute_mode}\n")
+    bucket_label = f" | bucket: {bucket_filter}" if bucket_filter else ""
+    print(f"Running {len(docs)} documents | {label}{repeat_label}{bucket_label} | compute: {compute_mode}\n")
 
     for doc_meta in docs:
         doc_id = doc_meta["id"]
@@ -634,6 +646,7 @@ def run_benchmark(
 
             score = score_document(markdown, doc_meta, ground_truth_md)
             score.file = doc_meta.get("file", "")
+            score.bucket = doc_meta.get("bucket")
             score.elapsed_runs_seconds = elapsed_runs
             score.elapsed_seconds = sum(elapsed_runs) / len(elapsed_runs)
             scores.append(score)
@@ -642,6 +655,7 @@ def run_benchmark(
             print(f"[{gt_indicator}] {status}  {score.overall*100:.0f}%  ({score.elapsed_seconds:.3f}s avg)")
         except TimeoutError as exc:
             score = DocScore(doc_id=doc_id, category=category, file=doc_meta.get("file", ""), error=str(exc) or "Timed out")
+            score.bucket = doc_meta.get("bucket")
             scores.append(score)
             print(f"[  ] ✗  TIMEOUT ({score.error})")
         except Exception as e:
@@ -655,6 +669,7 @@ def run_benchmark(
                 expected_blocked=expected_blocked,
                 blocked_reason=reason,
             )
+            score.bucket = doc_meta.get("bucket")
             scores.append(score)
             if expected_blocked:
                 print(f"[  ] ⏸  BLOCKED: {reason}")
@@ -673,7 +688,7 @@ def run_benchmark(
     print(f"\nOverall: {overall_avg*100:.1f}%  ({len(scored)}/{len(scores)} scored documents{blocked_label}, {elapsed_avg:.3f}s avg/document)")
 
     if json_output:
-        write_json_report(json_output, pipeline or "fast", pathway or None, scores, corpus_dir, category_filter, repeat_count, compute_mode)
+        write_json_report(json_output, pipeline or "fast", pathway or None, scores, corpus_dir, category_filter, bucket_filter, repeat_count, compute_mode)
         print(f"JSON report: {json_output}")
 
     if fail_below > 0 and overall_avg * 100 < fail_below:
@@ -681,6 +696,17 @@ def run_benchmark(
         return 1
 
     return 0
+
+
+def load_bucket_labels(path: Path = Path("docs/release/corpus_bucket_classification.json")) -> dict[str, str]:
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return {
+        doc["id"]: doc["bucket"]
+        for doc in data.get("documents", [])
+        if doc.get("id") and doc.get("bucket")
+    }
 
 
 def print_summary(scores: list[DocScore]):
@@ -709,7 +735,7 @@ def print_summary(scores: list[DocScore]):
         )
 
 
-def write_json_report(path: Path, pipeline: str, pathway: str | None, scores: list[DocScore], corpus_dir: Path, category_filter: str, repeat_count: int, compute_mode: str) -> None:
+def write_json_report(path: Path, pipeline: str, pathway: str | None, scores: list[DocScore], corpus_dir: Path, category_filter: str, bucket_filter: str, repeat_count: int, compute_mode: str) -> None:
     by_category: dict[str, list[DocScore]] = {}
     for score in scores:
         category = score.category.split("/")[0]
@@ -738,6 +764,7 @@ def write_json_report(path: Path, pipeline: str, pathway: str | None, scores: li
         "benchmark_host": benchmark_host(compute_mode),
         "corpus": str(corpus_dir),
         "category_filter": category_filter or None,
+        "bucket_filter": bucket_filter or None,
         "document_count": len(scores),
         "scored_document_count": len(scored),
         "overall_percent": round(sum(score.overall for score in scored) / len(scored) * 100, 1) if scored else 0.0,
@@ -751,6 +778,7 @@ def write_json_report(path: Path, pipeline: str, pathway: str | None, scores: li
                 "id": score.doc_id,
                 "file": score.file,
                 "category": score.category.split("/")[0],
+                "bucket": score.bucket,
                 "status": "expected_blocked" if score.expected_blocked else ("failed" if score.error else "scored"),
                 "overall_percent": round(score.overall * 100, 1),
                 "heading_recall_percent": round(score.heading_recall * 100, 1),
@@ -779,6 +807,7 @@ if __name__ == "__main__":
     parser.add_argument("--pipeline", default="")
     parser.add_argument("--pathway", default="")
     parser.add_argument("--category", default="")
+    parser.add_argument("--bucket", choices=("native", "digital-complex", "scanned-or-unknown", "blocked"), default="")
     parser.add_argument("--fail-below", type=int, default=0)
     parser.add_argument("--repeat", type=int, default=1, help="number of conversion runs per document for average wall-time")
     parser.add_argument("--compute-mode", choices=("auto", "cpu", "gpu", "ane"), default="auto", help="requested compute mode for pathways that support CPU/GPU/Apple Neural Engine selection")
@@ -802,6 +831,7 @@ if __name__ == "__main__":
         pipeline=args.pipeline,
         pathway=args.pathway,
         category_filter=args.category,
+        bucket_filter=args.bucket,
         fail_below=args.fail_below,
         repeat_count=args.repeat,
         compute_mode=args.compute_mode,

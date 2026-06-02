@@ -35,10 +35,11 @@ final class DeviceCapability {
     }
 
     /// Whether Upmarket AI (Pro tier) can run on this device.
+    /// MLX is an Apple Silicon/Metal path, not a generic GPU path.
     var supportsUpmarketAI: Bool { isAppleSilicon }
 
     /// Why Upmarket AI is unavailable, for display in UI.
     var upmarketAIUnavailableReason: String {
-        "Upmarket AI requires Apple Silicon"
+        "Upmarket AI requires Apple Silicon with Metal support"
     }
 }

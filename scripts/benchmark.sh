@@ -10,6 +10,7 @@
 #   ./scripts/benchmark.sh --repeat 3       # average wall-time across runs
 #   ./scripts/benchmark.sh --compute-mode cpu|gpu|ane|auto
 #   ./scripts/benchmark.sh --category pdf_digital # specific category
+#   ./scripts/benchmark.sh --bucket digital-complex # native|digital-complex|scanned-or-unknown
 #   ./scripts/benchmark.sh --fail-below 85        # fail if score < 85%
 #   ./scripts/benchmark.sh --json-output reports/corpus-fast.json
 #   ./scripts/benchmark.sh --compare fast enhanced # diff two pipelines
@@ -22,6 +23,7 @@ FAIL_BELOW=0
 PIPELINE=""
 PATHWAY=""
 CATEGORY=""
+BUCKET=""
 COMPARE_MODE=false
 JSON_OUTPUT=""
 REPEAT=1
@@ -33,6 +35,7 @@ while [[ $# -gt 0 ]]; do
         --pipeline) PIPELINE="$2"; shift 2 ;;
         --pathway) PATHWAY="$2"; shift 2 ;;
         --category) CATEGORY="$2"; shift 2 ;;
+        --bucket) BUCKET="$2"; shift 2 ;;
         --fail-below) FAIL_BELOW="$2"; shift 2 ;;
         --json-output) JSON_OUTPUT="$2"; shift 2 ;;
         --repeat) REPEAT="$2"; shift 2 ;;
@@ -54,6 +57,7 @@ echo "  Corpus: $CORPUS_DIR"
 [ -n "$PIPELINE" ] && echo "  Pipeline: $PIPELINE"
 [ -n "$PATHWAY" ] && echo "  Pathway: $PATHWAY"
 [ -n "$CATEGORY" ] && echo "  Category: $CATEGORY"
+[ -n "$BUCKET" ] && echo "  Bucket: $BUCKET"
 echo "  Repeat: $REPEAT"
 echo "  Compute Mode: $COMPUTE_MODE"
 echo "═══════════════════════════════════════════════"
@@ -70,6 +74,7 @@ fi
     ${PIPELINE:+--pipeline "$PIPELINE"} \
     ${PATHWAY:+--pathway "$PATHWAY"} \
     ${CATEGORY:+--category "$CATEGORY"} \
+    ${BUCKET:+--bucket "$BUCKET"} \
     ${JSON_OUTPUT:+--json-output "$JSON_OUTPUT"} \
     --repeat "$REPEAT" \
     --compute-mode "$COMPUTE_MODE" \

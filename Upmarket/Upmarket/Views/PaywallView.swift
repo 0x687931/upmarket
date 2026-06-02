@@ -20,10 +20,12 @@ struct PaywallView: View {
             Divider()
             ScrollView {
                 VStack(spacing: 12) {
-                    proCard
-                    if flags.aiAvailable {
-                        basicCard
+                    if canPurchasePro {
+                        proCard
+                    } else {
+                        proUnavailableCard
                     }
+                    basicCard
                     packCard
                     productStatus
                     purchaseStatus
@@ -131,7 +133,7 @@ struct PaywallView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(isPurchasing != nil || store.proProduct == nil)
+            .disabled(isPurchasing != nil || store.proProduct == nil || !canPurchasePro)
         }
         .padding(18)
         .background(
@@ -141,6 +143,34 @@ struct PaywallView: View {
                     RoundedRectangle(cornerRadius: 14)
                         .strokeBorder(Color.accentColor, lineWidth: 2)
                 )
+        )
+    }
+
+    private var proUnavailableCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(.secondary)
+                Text("Upmarket + AI")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                Spacer()
+                Text("Unavailable")
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+            }
+            Text(flags.aiUnavailableReason ?? device.upmarketAIUnavailableReason)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text("Use Upmarket for unlimited private conversion on this Mac.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(Color.secondary.opacity(0.25), lineWidth: 1)
         )
     }
 
@@ -311,7 +341,15 @@ struct PaywallView: View {
         }
     }
 
+    private var canPurchasePro: Bool {
+        flags.aiAvailable
+    }
+
     private func buy(_ product: Product) async {
+        if product.id == StoreManager.proID && !canPurchasePro {
+            errorMessage = flags.aiUnavailableReason ?? device.upmarketAIUnavailableReason
+            return
+        }
         isPurchasing = product.id
         errorMessage = nil
         do {

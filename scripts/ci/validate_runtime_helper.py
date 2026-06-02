@@ -70,27 +70,35 @@ def main() -> int:
 
     app_path = built_app_from_args()
     if app_path:
-        helper = app_path / "Contents" / "MacOS" / "UpmarketRuntimeHelper"
-        if not helper.exists():
-            errors.append(f"{helper}: embedded helper missing")
-        elif os.environ.get("ENABLE_USER_SCRIPT_SANDBOXING") == "YES" and os.environ.get("UPMARKET_RUN_HELPER_SMOKE_IN_BUILD") != "1":
-            print("warning: skipping helper readiness smoke inside Xcode's user script sandbox")
-        elif os.access(helper, os.X_OK):
-            request = json.dumps({"operation": "readiness"}).encode()
-            result = subprocess.run(
-                [str(helper), "--request-json-stdin"],
-                input=request,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=30,
-                check=False,
+        if app_path.name == "UpmarketRuntimeHelper":
+            errors.append(
+                f"{app_path}: do not validate the standalone helper as a release proxy; "
+                "pass Upmarket.app so the embedded Contents/MacOS helper and Contents/Frameworks layout are tested"
             )
-            if result.returncode != 0:
-                errors.append(f"{helper}: readiness smoke exited {result.returncode}")
-            elif b'"success":true' not in result.stdout:
-                errors.append(f"{helper}: readiness smoke did not return success")
+        elif app_path.suffix != ".app":
+            errors.append(f"{app_path}: expected an Upmarket.app bundle for packaged helper validation")
         else:
-            errors.append(f"{helper}: embedded helper is not executable")
+            helper = app_path / "Contents" / "MacOS" / "UpmarketRuntimeHelper"
+            if not helper.exists():
+                errors.append(f"{helper}: embedded helper missing")
+            elif os.environ.get("ENABLE_USER_SCRIPT_SANDBOXING") == "YES" and os.environ.get("UPMARKET_RUN_HELPER_SMOKE_IN_BUILD") != "1":
+                print("warning: skipping helper readiness smoke inside Xcode's user script sandbox")
+            elif os.access(helper, os.X_OK):
+                request = json.dumps({"operation": "readiness"}).encode()
+                result = subprocess.run(
+                    [str(helper), "--request-json-stdin"],
+                    input=request,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=30,
+                    check=False,
+                )
+                if result.returncode != 0:
+                    errors.append(f"{helper}: readiness smoke exited {result.returncode}")
+                elif b'"success":true' not in result.stdout:
+                    errors.append(f"{helper}: readiness smoke did not return success")
+            else:
+                errors.append(f"{helper}: embedded helper is not executable")
 
     if errors:
         for error in errors:

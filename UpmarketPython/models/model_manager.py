@@ -7,6 +7,7 @@ After download, HF_HUB_OFFLINE=1 prevents any further hub calls.
 import hashlib
 import json
 import os
+import platform
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
@@ -34,8 +35,9 @@ MODELS = {
     "upmarket_ai": {
         "name": "Upmarket AI",
         "description": "Best results for scanned, handwritten, and research documents",
-        "repo_id": "docling-project/SmolDocling-256M-preview-mlx-bf16-docling-snap",
-        "revision": "54a18c06969c29e2f9b01532337327c54c2b8933",
+        "repo_id": "ibm-granite/granite-docling-258M-mlx",
+        "revision": "e9939db25d2f296c8678d0491c4609a8c596c50a",
+        "storage_dir": "ibm-granite--granite-docling-258M-mlx",
         "expected_files": [
             "config.json",
             "model.safetensors",
@@ -44,7 +46,7 @@ MODELS = {
             "tokenizer.json",
         ],
         "expected_dirs": [],
-        "size_mb": 500,
+        "size_mb": 631,
         "required": False,
         "tier": "pro",
     },
@@ -53,6 +55,12 @@ MODELS = {
 
 def _manifest_path(model_path: Path) -> Path:
     return model_path / MANIFEST_NAME
+
+
+def model_directory(model_key: str) -> Path:
+    if model_key not in MODELS:
+        raise KeyError(f"unknown model: {model_key}")
+    return MODELS_DIR / MODELS[model_key].get("storage_dir", model_key)
 
 
 def _sha256(path: Path) -> str:
@@ -93,7 +101,7 @@ def validate_model_dir(model_key: str, model_path: Path | None = None) -> tuple[
         return False, f"unknown model: {model_key}"
 
     info = MODELS[model_key]
-    model_path = model_path or MODELS_DIR / model_key
+    model_path = model_path or model_directory(model_key)
     if not model_path.exists():
         return False, "not downloaded"
     if not model_path.is_dir():
@@ -163,18 +171,27 @@ def check_models() -> dict:
     """
     status = {}
     for key, info in MODELS.items():
-        model_path = MODELS_DIR / key
+        model_path = model_directory(key)
         downloaded, error = validate_model_dir(key, model_path)
+        unavailable = None
+        if key == "upmarket_ai" and not supports_upmarket_ai_hardware():
+            unavailable = "Upmarket AI requires Apple Silicon with Metal support."
         status[key] = {
             "name": info["name"],
             "description": info["description"],
             "downloaded": downloaded,
-            "error": None if downloaded else error,
+            "error": None if downloaded else unavailable or error,
             "size_mb": info["size_mb"],
             "required": info["required"],
             "tier": info["tier"],
+            "available": unavailable is None,
         }
     return status
+
+
+def supports_upmarket_ai_hardware() -> bool:
+    """Granite Docling MLX is an Apple Silicon/Metal path, not a generic GPU path."""
+    return platform.system() == "Darwin" and platform.machine() == "arm64"
 
 
 def download_model(model_key: str, progress_file: str | None = None) -> dict:
@@ -185,9 +202,11 @@ def download_model(model_key: str, progress_file: str | None = None) -> dict:
     """
     if model_key not in MODELS:
         return {"success": False, "error": f"Unknown model: {model_key}"}
+    if model_key == "upmarket_ai" and not supports_upmarket_ai_hardware():
+        return {"success": False, "error": "Upmarket AI requires Apple Silicon with Metal support."}
 
     info = MODELS[model_key]
-    dest = MODELS_DIR / model_key
+    dest = model_directory(model_key)
     staging = MODELS_DIR / f".{model_key}.download"
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
 

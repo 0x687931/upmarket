@@ -20,11 +20,9 @@ final class PythonBridgeTests: XCTestCase {
     }
 
     func testHelperReadinessImportSmokeSucceedsWhenPackagedRuntimeIsPresent() async throws {
-        guard Bundle.main.url(forAuxiliaryExecutable: "UpmarketRuntimeHelper") != nil else {
-            throw XCTSkip("Runtime helper is not embedded in this test bundle")
-        }
+        let helper = try packagedRuntimeHelperURL()
 
-        let status = try await RuntimeHelperClient(livenessInterval: 15).readiness()
+        let status = try await RuntimeHelperClient(executableURL: helper, livenessInterval: 15).readiness()
 
         XCTAssertTrue(status.isReady)
         XCTAssertNotNil(status.version)
@@ -202,9 +200,7 @@ final class PythonBridgeTests: XCTestCase {
     }
 
     func testAdvancedCorpusSmokeFixtureRoutesThroughHelperWhenAvailable() async throws {
-        guard Bundle.main.url(forAuxiliaryExecutable: "UpmarketRuntimeHelper") != nil else {
-            throw XCTSkip("Runtime helper is not embedded in this test bundle")
-        }
+        let helper = try packagedRuntimeHelperURL()
         let fixture = corpusFixture("docling/docling/tests/data/pdf/right_to_left_01.pdf")
         guard FileManager.default.fileExists(atPath: fixture.path) else {
             throw XCTSkip("Corpus fixture is not present")
@@ -213,8 +209,9 @@ final class PythonBridgeTests: XCTestCase {
         let workspace = try AppWorkspace.create(prefix: "helper-corpus-smoke")
         defer { AppWorkspace.remove(workspace) }
         let copied = try AppWorkspace.copy(fixture, into: workspace)
+        let worker = PythonWorker(helperClient: RuntimeHelperClient(executableURL: helper, livenessInterval: 15))
 
-        let result = await PythonWorker().convert(fileURL: copied, title: "right_to_left_01", useAI: false, password: nil, workspaceURL: workspace)
+        let result = await worker.convert(fileURL: copied, title: "right_to_left_01", useAI: false, password: nil, workspaceURL: workspace)
 
         XCTAssertNotNil(result.output)
     }
@@ -230,6 +227,17 @@ final class PythonBridgeTests: XCTestCase {
             try? FileManager.default.removeItem(at: directory)
         }
         return url
+    }
+
+    private func packagedRuntimeHelperURL() throws -> URL {
+        let helper = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/MacOS/UpmarketRuntimeHelper")
+        guard FileManager.default.isExecutableFile(atPath: helper.path) else {
+            throw XCTSkip("App-packaged runtime helper is not embedded in the test host")
+        }
+        XCTAssertTrue(helper.path.contains(".app/Contents/MacOS/UpmarketRuntimeHelper"))
+        XCTAssertFalse(helper.path.hasSuffix("/Build/Products/Debug/UpmarketRuntimeHelper"))
+        return helper
     }
 
     private func corpusFixture(_ relativePath: String) -> URL {

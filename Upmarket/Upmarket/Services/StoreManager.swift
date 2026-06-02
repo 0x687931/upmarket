@@ -143,6 +143,9 @@ final class StoreManager: ObservableObject {
     // MARK: - Purchasing
 
     func purchase(_ product: Product) async throws {
+        if product.id == Self.proID && !FeatureFlags.shared.aiAvailable {
+            throw StoreError.unsupportedDevice
+        }
         let result = try await product.purchase()
         switch result {
         case .success(let verification):
@@ -275,4 +278,5 @@ enum UpgradeNudge {
 
 enum StoreError: Error {
     case failedVerification
+    case unsupportedDevice
 }

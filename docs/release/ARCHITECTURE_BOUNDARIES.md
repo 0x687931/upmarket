@@ -28,6 +28,7 @@ Do not create folders until there is code to move. Prefer one clear service over
 - Advanced/model runtime calls go through `PythonWorker` and the isolated runtime helper; `PythonBridge` may remain as an observable readiness facade only.
 - StoreKit remains behind `StoreManager`; paywall views may display StoreKit product state but should not duplicate purchase policy.
 - Diagnostics must go through a dedicated service once P0-008 starts; do not add new `print`-based diagnostics.
+- Product tiering and conversion routing must follow `docs/release/TIER_AND_ROUTING_POLICY.md`: two product tiers, with capability-gated conversion paths inside Enhanced.
 
 ## Current Exceptions
 

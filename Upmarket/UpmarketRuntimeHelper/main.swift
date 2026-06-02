@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import PythonKit
 
 struct RuntimeHelperRequest: Codable {
@@ -61,6 +62,7 @@ struct RuntimeModelStatusDTO: Codable {
 
 struct UpmarketRuntimeHelper {
     static func run() {
+        abortIfPrivilegedProcess()
         let heartbeat = Heartbeat()
         heartbeat.start()
 
@@ -68,6 +70,7 @@ struct UpmarketRuntimeHelper {
             let data = FileHandle.standardInput.readDataToEndOfFile()
             let request = try JSONDecoder().decode(RuntimeHelperRequest.self, from: data)
             configureRuntime(workspacePath: request.workspacePath)
+            installPythonSandbox()
             let response = try handle(request)
             heartbeat.stop()
             emit(response)
@@ -187,6 +190,7 @@ struct UpmarketRuntimeHelper {
         setenv("PYTHONPATH", "\(stdlibPath.path):\(sitePackagesPath.path)", 1)
         setenv("HF_HUB_OFFLINE", getenv("HF_HUB_OFFLINE").map { String(cString: $0) } ?? "1", 1)
         setenv("TRANSFORMERS_OFFLINE", getenv("TRANSFORMERS_OFFLINE").map { String(cString: $0) } ?? "1", 1)
+        setenv("UPMARKET_RUNTIME_SANDBOX", "1", 1)
 
         let appSupport = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -199,6 +203,25 @@ struct UpmarketRuntimeHelper {
             setenv("TMPDIR", workspacePath, 1)
             setenv("UPMARKET_ALLOWED_INPUT_ROOTS", workspacePath, 1)
         }
+    }
+
+    private static func abortIfPrivilegedProcess() {
+        let realUserID = getuid()
+        let effectiveUserID = geteuid()
+        let realGroupID = getgid()
+        let effectiveGroupID = getegid()
+        guard realUserID != 0,
+              effectiveUserID != 0,
+              realUserID == effectiveUserID,
+              realGroupID == effectiveGroupID else {
+            FileHandle.standardError.write(Data("UpmarketRuntimeHelper refuses to run with elevated privileges.\n".utf8))
+            _exit(77)
+        }
+    }
+
+    private static func installPythonSandbox() {
+        let security = Python.import("docling_bridge.security")
+        security.install_runtime_sandbox()
     }
 
     private static func emit(_ response: RuntimeHelperResponse) {

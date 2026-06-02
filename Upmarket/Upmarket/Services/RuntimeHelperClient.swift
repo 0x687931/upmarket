@@ -104,9 +104,26 @@ struct RuntimeHelperClient: Sendable {
         process.executableURL = executable
         process.arguments = ["--request-json-stdin"]
 
-        var environment = ProcessInfo.processInfo.environment
-        environment["HF_HUB_OFFLINE"] = request.operation == "downloadModel" ? "0" : "1"
-        environment["TRANSFORMERS_OFFLINE"] = request.operation == "downloadModel" ? "0" : "1"
+        let parentEnvironment = ProcessInfo.processInfo.environment
+        var environment: [String: String] = [
+            "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
+            "HF_HUB_OFFLINE": request.operation == "downloadModel" ? "0" : "1",
+            "TRANSFORMERS_OFFLINE": request.operation == "downloadModel" ? "0" : "1",
+            "UPMARKET_RUNTIME_SANDBOX": "1",
+            "UPMARKET_ALLOW_NETWORK": request.operation == "downloadModel" ? "1" : "0"
+        ]
+        if let home = parentEnvironment["HOME"] {
+            environment["HOME"] = home
+        }
+        if let logName = parentEnvironment["LOGNAME"] {
+            environment["LOGNAME"] = logName
+        }
+        if let user = parentEnvironment["USER"] {
+            environment["USER"] = user
+        }
+        if let tmpdir = parentEnvironment["TMPDIR"] {
+            environment["TMPDIR"] = tmpdir
+        }
         process.environment = environment
 
         let stdin = Pipe()

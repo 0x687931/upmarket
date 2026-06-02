@@ -4,8 +4,7 @@
    version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
-      buildImplicitDependencies = "YES"
-      runPostActionsOnFailure = "NO">
+      buildImplicitDependencies = "YES">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -39,20 +38,19 @@
                BuildableName = "UpmarketTests.xctest"
                BlueprintName = "UpmarketTests"
                ReferencedContainer = "container:Upmarket.xcodeproj">
-         </BuildableReference>
-      </TestableReference>
-      <TestableReference
-         skipped = "NO"
-         parallelizable = "NO">
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "81A3B7412FCB0F91004A488D"
-            BuildableName = "UpmarketUITests.xctest"
-            BlueprintName = "UpmarketUITests"
-            ReferencedContainer = "container:Upmarket.xcodeproj">
-         </BuildableReference>
-      </TestableReference>
-   </Testables>
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "81A3B7412FCB0F91004A488D"
+               BuildableName = "UpmarketUITests.xctest"
+               BlueprintName = "UpmarketUITests"
+               ReferencedContainer = "container:Upmarket.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+      </Testables>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
