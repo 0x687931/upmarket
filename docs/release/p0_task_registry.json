@@ -3,6 +3,36 @@
   "source_of_truth": "docs/IMPLEMENTATION_PLAN.md",
   "tasks": [
     {
+      "id": "P0-015",
+      "title": "Philosophy review remediation",
+      "objective": "Close the philosophy-review issue set by proving the app has one clear conversion loop, deterministic routing, visible failures, queue-owned state, and value-first monetization.",
+      "owner": "Codex main",
+      "scope": [
+        "docs/IMPLEMENTATION_PLAN.md",
+        "docs/release/p0_task_registry.json",
+        "Upmarket/Upmarket/Views/**",
+        "Upmarket/Upmarket/Services/**",
+        "Upmarket/Upmarket/Domain/**",
+        "Upmarket/Upmarket/Intents/**",
+        "Upmarket/UpmarketTests/**"
+      ],
+      "non_goals": [
+        "Do not add new product surfaces beyond the document-to-Markdown loop.",
+        "Do not expose internal toolkit names to normal users.",
+        "Do not introduce protocol-heavy architecture, Redux/TCA-style frameworks, or speculative service layers."
+      ],
+      "acceptance": [
+        "The running app exposes a visible choose/drop -> progress -> Markdown -> copy/save loop.",
+        "Rejected inputs surface actionable conversion failures instead of disappearing into logs.",
+        "Conversion UI renders queue-owned job state.",
+        "Supported input policy is shared across picker, drop, App Intents, Services, and Quick Action.",
+        "Model install state, feature gating, programmatic authorization, support reporting, cancellation, and paywall timing have regression coverage tied to issues #15 through #24."
+      ],
+      "release_gate": "P0 - Philosophy Review Remediation",
+      "risk": ["maintainability", "UX", "operability", "App Store"],
+      "labels": ["p0-blocker", "area-swift", "area-ux", "gate-b-conversion", "agent-ready"]
+    },
+    {
       "id": "P0-001",
       "title": "Minimalist monolith source boundaries",
       "objective": "Make the app structure small, explicit, and understandable without introducing a framework-heavy architecture.",
