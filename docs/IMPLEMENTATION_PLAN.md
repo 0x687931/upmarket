@@ -289,6 +289,12 @@ This is a launch requirement, not post-launch polish.
 
 ## Product Workstream
 
+### Resolved Scope Decisions
+- [x] Intel Mac positioning: v1.0 should say Upmarket works on supported Macs for standard private conversion, with Apple Silicon recommended for Enhanced/AI capabilities. Do not market Intel as equivalent for model-heavy work; gate unavailable Enhanced capabilities before purchase, download, and conversion.
+- [x] Batch conversion: keep batch conversion UX out of v1.0 and treat it as a v1.1 candidate. v1.0 may continue to serialize multiple accepted inputs through per-job queue state, but the shipped product promise remains one clear choose/drop -> progress -> Markdown -> copy/save loop.
+- [x] Model downloads in Preferences: allow optional Enhanced/AI model setup from Preferences before the first complex document, but never force first-launch downloads or surprise network activity. The setup surface must show capability, disk, and availability status before download.
+- [x] Apple-native-only extraction: keep this internal for v1.0 as a routing/fallback behavior, not a visible user mode. Normal users see Basic conversion and Enhanced/AI capability gates, not engine selection.
+
 ### v1.0 Must-Haves
 - [ ] Friendly categorized errors using the error taxonomy above
 - [ ] Preferences/About links to licenses, privacy policy, support, and version
@@ -352,7 +358,3 @@ Manual validation remains required for Xcode Archive, App Store Connect setup, S
 
 - [ ] Domain: `upmarket.app` vs `upmarketapp.com`
 - [ ] Landing page before App Store submission or after TestFlight
-- [ ] How prominently to position Intel Mac as CPU-only / Apple Silicon recommended
-- [ ] Whether batch conversion belongs in v1.0 or v1.1
-- [ ] Whether enhanced/AI model downloads should be available from Preferences before first complex document
-- [ ] Whether Apple-native-only extraction should be a visible tool mode, a troubleshooting fallback, or remain internal.
