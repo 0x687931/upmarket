@@ -38,6 +38,67 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.stage, .complete)
     }
 
+    func testBatchShelfQueueFiveMixedInputsWithFailureCancellationAndRetry() async {
+        var events: [String] = []
+        var attempts: [String: Int] = [:]
+        let queue = ConversionQueue { job, progress in
+            attempts[job.name, default: 0] += 1
+            events.append("start:\(job.name)#\(attempts[job.name]!)")
+            progress?(.extracting)
+            try? await Task.sleep(nanoseconds: 20_000_000)
+            if Task.isCancelled {
+                return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.")
+            }
+            if job.name == "bad" {
+                return .failure("Unsupported file")
+            }
+            if job.name == "retry" && attempts[job.name] == 1 {
+                return .failure("Transient extraction failure")
+            }
+            return .success(ConversionOutput(
+                markdown: "# \(job.name)",
+                pages: 1,
+                format: job.ext,
+                title: job.name,
+                pipeline: .fast
+            ))
+        }
+
+        let first = queue.add(URL(fileURLWithPath: "/tmp/first.pdf"))
+        let bad = queue.add(URL(fileURLWithPath: "/tmp/bad.docx"))
+        let retry = queue.add(URL(fileURLWithPath: "/tmp/retry.html"))
+        let cancelled = queue.add(URL(fileURLWithPath: "/tmp/cancelled.pptx"))
+        let last = queue.add(URL(fileURLWithPath: "/tmp/last.xlsx"))
+        queue.cancel(cancelled)
+
+        await waitForResult(first, in: queue)
+        await waitForResult(bad, in: queue)
+        await waitForResult(retry, in: queue)
+        let retryAgain = queue.retry(retry)
+        XCTAssertNotNil(retryAgain)
+        await waitForResult(retryAgain!, in: queue)
+        await waitForResult(last, in: queue)
+
+        XCTAssertEqual(queue.job(id: first)?.stage, .complete)
+        XCTAssertEqual(queue.job(id: bad)?.stage, .failed)
+        XCTAssertEqual(queue.job(id: retry)?.stage, .failed)
+        XCTAssertEqual(queue.job(id: retryAgain!)?.stage, .complete)
+        XCTAssertEqual(queue.job(id: cancelled)?.stage, .cancelled)
+        XCTAssertEqual(queue.job(id: last)?.stage, .complete)
+        XCTAssertEqual(queue.job(id: bad)?.result?.errorMessage, "Unsupported file")
+        XCTAssertEqual(queue.job(id: retry)?.result?.errorMessage, "Transient extraction failure")
+        XCTAssertEqual(queue.job(id: cancelled)?.result?.errorMessage, ConversionError.cancelled.errorDescription)
+        XCTAssertEqual(queue.job(id: retryAgain!)?.result?.output?.title, "retry")
+        XCTAssertFalse(queue.isConverting)
+        XCTAssertEqual(events, [
+            "start:first#1",
+            "start:bad#1",
+            "start:retry#1",
+            "start:last#1",
+            "start:retry#2"
+        ])
+    }
+
     func testCancelPreventsQueuedJobFromRunning() async {
         var started: [String] = []
         let queue = ConversionQueue { job, _ in

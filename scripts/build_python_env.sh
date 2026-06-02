@@ -12,10 +12,29 @@ BEEWARE_VERSION="3.12-b8"   # update to latest BeeWare release
 DEST="Upmarket/Python"
 FRAMEWORK_ROOT="$DEST/Python.xcframework/macos-arm64_x86_64/Python.framework/Versions/$PYTHON_VERSION"
 SITE="$FRAMEWORK_ROOT/lib/python$PYTHON_VERSION/site-packages"
+BUILD_PYTHON="${PYTHON_BUILD_BIN:-}"
+
+if [[ -z "$BUILD_PYTHON" ]]; then
+  if command -v "python$PYTHON_VERSION" >/dev/null 2>&1; then
+    BUILD_PYTHON="python$PYTHON_VERSION"
+  elif [[ -x ".venv/bin/python" ]]; then
+    BUILD_PYTHON=".venv/bin/python"
+  else
+    BUILD_PYTHON="python3"
+  fi
+fi
+
+BUILD_PYTHON_VERSION="$("$BUILD_PYTHON" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+if [[ "$BUILD_PYTHON_VERSION" != "$PYTHON_VERSION" ]]; then
+  echo "error: build interpreter must be Python $PYTHON_VERSION, got $BUILD_PYTHON_VERSION from $BUILD_PYTHON"
+  echo "       Set PYTHON_BUILD_BIN to a Python $PYTHON_VERSION interpreter."
+  exit 1
+fi
 
 echo "==> Upmarket Python environment builder"
 echo "    Python: $PYTHON_VERSION"
 echo "    BeeWare: $BEEWARE_VERSION"
+echo "    Build interpreter: $BUILD_PYTHON"
 echo ""
 
 FRAMEWORK_URL="https://github.com/beeware/Python-Apple-support/releases/download/${BEEWARE_VERSION}/Python-${PYTHON_VERSION}-macOS-support.b8.tar.gz"
@@ -40,7 +59,7 @@ mkdir -p "$(dirname "$SITE")"
 STAGING_SITE="$(mktemp -d "${TMPDIR:-/tmp}/upmarket-site-packages.XXXXXX")"
 BUILD_VENV="$(mktemp -d "${TMPDIR:-/tmp}/upmarket-python-build.XXXXXX")"
 trap 'rm -rf "$STAGING_SITE" "$BUILD_VENV"' EXIT
-python3 -m venv "$BUILD_VENV"
+"$BUILD_PYTHON" -m venv "$BUILD_VENV"
 "$BUILD_VENV/bin/python" -m pip install \
   --disable-pip-version-check \
   --upgrade pip

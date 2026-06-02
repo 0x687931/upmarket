@@ -1,21 +1,2581 @@
 {
-  "version": 1,
-  "manifest": "tests/corpus/manifest.json",
-  "pathways": "docs/release/conversion_pathways.json",
-  "policy": {
-    "document_regression_block_percent": 5.0,
-    "large_regression_block_percent": 25.0,
-    "document_speed_regression_multiplier": 1.5,
-    "category_speed_regression_multiplier": 1.3,
-    "category_regression_block_percent": 3.0,
-    "uplift_review_percent": 3.0
+  "baseline_state": "document-baseline",
+  "document_baselines": {
+    "python-ai-docling": {
+      "docling_138-bpt_scatter_examples_3x3": {
+        "category": "pdf",
+        "elapsed_seconds": 54.417,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_157-bpt_scatter_examples_3x3": {
+        "category": "pdf",
+        "elapsed_seconds": 60.641,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_17-bpt_scatter_examples_3x3": {
+        "category": "pdf",
+        "elapsed_seconds": 1.678,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_2206.01062_tiff": {
+        "blocked_reason": "metal_unavailable",
+        "status": "environment_blocked"
+      },
+      "docling_2305.03393v1-pg9-img": {
+        "category": "image",
+        "elapsed_seconds": 7.309,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_2305.03393v1-table_crop": {
+        "category": "image",
+        "elapsed_seconds": 1.86,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_230927_bars": {
+        "category": "image",
+        "elapsed_seconds": 58.715,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_230927_effective_sizes": {
+        "blocked_reason": "metal_unavailable",
+        "status": "environment_blocked"
+      },
+      "docling_322-bpt_scatter_examples_3x3": {
+        "category": "pdf",
+        "elapsed_seconds": 59.744,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_DeepSeek": {
+        "category": "pdf",
+        "elapsed_seconds": 1.132,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-19": {
+        "category": "image",
+        "elapsed_seconds": 64.107,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-20": {
+        "category": "image",
+        "elapsed_seconds": 19.227,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-21": {
+        "category": "image",
+        "elapsed_seconds": 61.491,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-22": {
+        "category": "image",
+        "elapsed_seconds": 1.429,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-23": {
+        "category": "image",
+        "elapsed_seconds": 1.759,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-32": {
+        "blocked_reason": "metal_unavailable",
+        "status": "environment_blocked"
+      },
+      "docling_P_q": {
+        "category": "pdf",
+        "elapsed_seconds": 1.627,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_example_image_01": {
+        "category": "image",
+        "elapsed_seconds": 64.772,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_fp8-v.s.-bf16": {
+        "category": "pdf",
+        "elapsed_seconds": 54.666,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_html_freq_v4": {
+        "category": "image",
+        "elapsed_seconds": 50.899,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_llama_vs_mistral_example": {
+        "blocked_reason": "metal_unavailable",
+        "status": "environment_blocked"
+      },
+      "docling_rolling_buffer": {
+        "category": "pdf",
+        "elapsed_seconds": 55.94,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_swa": {
+        "category": "pdf",
+        "elapsed_seconds": 1.394,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_webp-test": {
+        "category": "image",
+        "elapsed_seconds": 1.849,
+        "overall_percent": 65.0,
+        "status": "scored"
+      }
+    },
+    "python-enhanced-docling": {
+      "docling_138-bpt_scatter_examples_3x3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.42,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_157-bpt_scatter_examples_3x3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.402,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_17-bpt_scatter_examples_3x3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.414,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_2203.01017v2": {
+        "category": "pdf",
+        "elapsed_seconds": 21.938,
+        "overall_percent": 74.3,
+        "status": "scored"
+      },
+      "docling_2206.01062": {
+        "category": "pdf",
+        "elapsed_seconds": 5.665,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_2206.01062_pg3": {
+        "blocked_reason": "password_required",
+        "status": "expected_blocked"
+      },
+      "docling_2206.01062_tiff": {
+        "category": "image",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 10.1,
+        "status": "scored"
+      },
+      "docling_2305.03393v1": {
+        "category": "pdf",
+        "elapsed_seconds": 7.095,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_2305.03393v1-pg9": {
+        "category": "pdf",
+        "elapsed_seconds": 0.608,
+        "overall_percent": 94.8,
+        "status": "scored"
+      },
+      "docling_2305.03393v1-pg9-img": {
+        "category": "image",
+        "elapsed_seconds": 0.538,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_2305.03393v1-table_crop": {
+        "category": "image",
+        "elapsed_seconds": 0.114,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_230927_bars": {
+        "category": "image",
+        "elapsed_seconds": 0.14,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_230927_effective_sizes": {
+        "category": "image",
+        "elapsed_seconds": 0.123,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_322-bpt_scatter_examples_3x3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.418,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_BQSC-1003": {
+        "category": "pdf",
+        "elapsed_seconds": 0.114,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_D-BQSC-0004-1003": {
+        "category": "pdf",
+        "elapsed_seconds": 0.112,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_DeepSeek": {
+        "category": "pdf",
+        "elapsed_seconds": 0.075,
+        "overall_percent": 69.0,
+        "status": "scored"
+      },
+      "docling_HTMLvOTSLv7": {
+        "category": "pdf",
+        "elapsed_seconds": 1.473,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-19": {
+        "category": "image",
+        "elapsed_seconds": 0.11,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-20": {
+        "category": "image",
+        "elapsed_seconds": 0.112,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-21": {
+        "category": "image",
+        "elapsed_seconds": 0.112,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-22": {
+        "category": "image",
+        "elapsed_seconds": 0.112,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-23": {
+        "category": "image",
+        "elapsed_seconds": 0.11,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-32": {
+        "category": "image",
+        "elapsed_seconds": 0.11,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_P_B": {
+        "category": "pdf",
+        "elapsed_seconds": 0.115,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_P_M": {
+        "category": "pdf",
+        "elapsed_seconds": 0.112,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_P_q": {
+        "category": "pdf",
+        "elapsed_seconds": 0.109,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_SFNet_ResNet18-TopK": {
+        "category": "pdf",
+        "elapsed_seconds": 0.111,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_amt_handbook_sample": {
+        "category": "pdf",
+        "elapsed_seconds": 0.801,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_anaphora_resolution2_new": {
+        "category": "pdf",
+        "elapsed_seconds": 1.804,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_anaphora_resolution_new": {
+        "category": "pdf",
+        "elapsed_seconds": 0.142,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_attending_to_head2_new": {
+        "category": "pdf",
+        "elapsed_seconds": 0.132,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_attending_to_head_new": {
+        "category": "pdf",
+        "elapsed_seconds": 0.138,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_basic_arch": {
+        "category": "pdf",
+        "elapsed_seconds": 0.289,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_chunking": {
+        "category": "pdf",
+        "elapsed_seconds": 0.146,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_code_and_formula": {
+        "category": "pdf",
+        "elapsed_seconds": 0.305,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_csv-comma": {
+        "category": "csv",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_csv-comma-in-cell": {
+        "category": "csv",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_csv-inconsistent-header": {
+        "category": "csv",
+        "elapsed_seconds": 0.006,
+        "overall_percent": 60.0,
+        "status": "scored"
+      },
+      "docling_csv-pipe": {
+        "category": "csv",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_csv-semicolon": {
+        "category": "csv",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_csv-single-column": {
+        "category": "csv",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_csv-tab": {
+        "category": "csv",
+        "elapsed_seconds": 0.009,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_csv-too-few-columns": {
+        "category": "csv",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_csv-too-many-columns": {
+        "category": "csv",
+        "elapsed_seconds": 0.009,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_docx_checkboxes": {
+        "category": "docx",
+        "elapsed_seconds": 0.015,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_docx_external_image": {
+        "category": "docx",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_docx_grouped_images": {
+        "category": "docx",
+        "elapsed_seconds": 0.023,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_docx_rich_cells": {
+        "category": "docx",
+        "elapsed_seconds": 0.046,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_docx_vml_images": {
+        "category": "docx",
+        "elapsed_seconds": 0.01,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_drawingml": {
+        "category": "docx",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_dsv3_performance": {
+        "category": "pdf",
+        "elapsed_seconds": 0.297,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_dualpipe": {
+        "category": "pdf",
+        "elapsed_seconds": 0.179,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_elife-56337": {
+        "category": "xml",
+        "elapsed_seconds": 0.021,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_equations": {
+        "category": "docx",
+        "elapsed_seconds": 0.029,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_example_01": {
+        "category": "html",
+        "elapsed_seconds": 0.011,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_example_02": {
+        "category": "html",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_example_03": {
+        "category": "html",
+        "elapsed_seconds": 0.004,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_example_04": {
+        "category": "html",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_example_05": {
+        "category": "html",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_example_06": {
+        "category": "html",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_example_07": {
+        "category": "html",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_example_08": {
+        "category": "html",
+        "elapsed_seconds": 0.005,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_example_image_01": {
+        "category": "image",
+        "elapsed_seconds": 0.113,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_formatting": {
+        "category": "html",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_fp8-128accumulatorv4": {
+        "category": "pdf",
+        "elapsed_seconds": 0.899,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_fp8-frameworkv3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.444,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_fp8-v.s.-bf16": {
+        "category": "pdf",
+        "elapsed_seconds": 0.579,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_grve_10q_htm": {
+        "category": "xml",
+        "elapsed_seconds": 0.018,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_html_code_snippets": {
+        "category": "html",
+        "elapsed_seconds": 0.005,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_html_freq_v4": {
+        "category": "image",
+        "elapsed_seconds": 0.17,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_html_heading_in_p": {
+        "category": "html",
+        "elapsed_seconds": 0.006,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_html_inline_group_in_table_cell": {
+        "category": "html",
+        "elapsed_seconds": 0.004,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_html_rich_table_cells": {
+        "category": "html",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_html_v_otsl_intro_v2": {
+        "category": "pdf",
+        "elapsed_seconds": 0.413,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_hyperlink_01": {
+        "category": "html",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_hyperlink_02": {
+        "category": "html",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_hyperlink_03": {
+        "category": "html",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_hyperlink_04": {
+        "category": "html",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_hyperlink_05": {
+        "category": "html",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_hyperlink_06": {
+        "category": "html",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_ipa20110039701": {
+        "category": "xml",
+        "elapsed_seconds": 0.069,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_ipa20180000016": {
+        "category": "xml",
+        "elapsed_seconds": 0.012,
+        "overall_percent": 15.4,
+        "status": "scored"
+      },
+      "docling_ipa20200022300": {
+        "category": "xml",
+        "elapsed_seconds": 0.011,
+        "overall_percent": 38.9,
+        "status": "scored"
+      },
+      "docling_ipg07997973": {
+        "category": "xml",
+        "elapsed_seconds": 0.118,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_ipg08672134": {
+        "category": "xml",
+        "elapsed_seconds": 0.012,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_ipgD0701016": {
+        "category": "xml",
+        "elapsed_seconds": 0.01,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_kvp_data_example": {
+        "category": "html",
+        "elapsed_seconds": 0.006,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_latex_equations": {
+        "category": "pdf",
+        "elapsed_seconds": 0.692,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_list_after_num_headers": {
+        "category": "docx",
+        "elapsed_seconds": 0.011,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_llama_vs_mistral_example": {
+        "category": "image",
+        "elapsed_seconds": 0.166,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_llncsdoc": {
+        "category": "pdf",
+        "elapsed_seconds": 1.401,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_lorem_ipsum": {
+        "category": "docx",
+        "elapsed_seconds": 0.004,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_m_q": {
+        "category": "pdf",
+        "elapsed_seconds": 0.11,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_making_more_difficult5_new": {
+        "category": "pdf",
+        "elapsed_seconds": 0.147,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_making_more_difficult_new": {
+        "category": "pdf",
+        "elapsed_seconds": 0.15,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_mlac-20251231": {
+        "category": "xml",
+        "elapsed_seconds": 0.019,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_multi_page": {
+        "category": "pdf",
+        "elapsed_seconds": 0.769,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_needle_in_a_haystack": {
+        "category": "pdf",
+        "elapsed_seconds": 0.248,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_nextn": {
+        "category": "pdf",
+        "elapsed_seconds": 0.219,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_normal_4pages": {
+        "category": "pdf",
+        "elapsed_seconds": 2.205,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_omml_frac_superscript": {
+        "category": "docx",
+        "elapsed_seconds": 0.006,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_omml_func_log": {
+        "category": "docx",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_omml_multi_equation_paragraph": {
+        "category": "docx",
+        "elapsed_seconds": 0.006,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_omml_text_escapes_in_math": {
+        "category": "docx",
+        "elapsed_seconds": 0.006,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_otsl_proof_v3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.365,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_otsl_vs_html_ex3_v2": {
+        "category": "pdf",
+        "elapsed_seconds": 6.883,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_overlap": {
+        "category": "pdf",
+        "elapsed_seconds": 0.109,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_pa20010031492": {
+        "category": "xml",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 15.7,
+        "status": "scored"
+      },
+      "docling_pca-comparison": {
+        "category": "pdf",
+        "elapsed_seconds": 0.1,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_pg06442728": {
+        "category": "xml",
+        "elapsed_seconds": 0.012,
+        "overall_percent": 39.6,
+        "status": "scored"
+      },
+      "docling_picture_classification": {
+        "category": "pdf",
+        "elapsed_seconds": 0.729,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_powerpoint_bad_text": {
+        "category": "pptx",
+        "elapsed_seconds": 0.004,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_powerpoint_issue_2663": {
+        "category": "pptx",
+        "elapsed_seconds": 0.006,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_powerpoint_malformed_pictures": {
+        "category": "pptx",
+        "elapsed_seconds": 0.004,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_powerpoint_sample": {
+        "category": "pptx",
+        "elapsed_seconds": 0.01,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_powerpoint_unrecognized_shape": {
+        "category": "pptx",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_powerpoint_with_image": {
+        "category": "pptx",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_redp5110_sampled": {
+        "category": "pdf",
+        "elapsed_seconds": 6.328,
+        "overall_percent": 94.3,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi": {
+        "category": "pdf",
+        "elapsed_seconds": 0.224,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi_1-6": {
+        "category": "pdf",
+        "elapsed_seconds": 0.447,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi_13-18": {
+        "category": "pdf",
+        "elapsed_seconds": 0.471,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi_19-24": {
+        "category": "pdf",
+        "elapsed_seconds": 0.464,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi_25-26": {
+        "category": "pdf",
+        "elapsed_seconds": 0.213,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi_7-12": {
+        "category": "pdf",
+        "elapsed_seconds": 0.44,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_right_to_left_01": {
+        "category": "pdf",
+        "elapsed_seconds": 0.211,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_right_to_left_02": {
+        "category": "pdf",
+        "elapsed_seconds": 0.372,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_right_to_left_03": {
+        "category": "pdf",
+        "elapsed_seconds": 0.262,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_rolling_buffer": {
+        "category": "pdf",
+        "elapsed_seconds": 0.791,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_skipped_1page": {
+        "category": "pdf",
+        "elapsed_seconds": 0.249,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_skipped_2pages": {
+        "category": "pdf",
+        "elapsed_seconds": 0.264,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_swa": {
+        "category": "pdf",
+        "elapsed_seconds": 0.905,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_table_01": {
+        "category": "html",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 60.0,
+        "status": "scored"
+      },
+      "docling_table_02": {
+        "category": "html",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_table_03": {
+        "category": "html",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_table_04": {
+        "category": "html",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_table_05": {
+        "category": "html",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_table_06": {
+        "category": "html",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_table_with_equations": {
+        "category": "docx",
+        "elapsed_seconds": 0.004,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_table_with_heading_01": {
+        "category": "html",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 60.0,
+        "status": "scored"
+      },
+      "docling_table_with_heading_02": {
+        "category": "html",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_tablecell": {
+        "category": "docx",
+        "elapsed_seconds": 0.005,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_tablemodel_overview_otsl": {
+        "category": "pdf",
+        "elapsed_seconds": 0.526,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_tables_ipa20180000016": {
+        "category": "xml",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_test_01": {
+        "category": "asciidoc",
+        "elapsed_seconds": 2.293,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_test_02": {
+        "category": "asciidoc",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_test_03": {
+        "category": "asciidoc",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_test_emf_docx": {
+        "category": "docx",
+        "elapsed_seconds": 0.034,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_textbox": {
+        "category": "docx",
+        "elapsed_seconds": 0.021,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_unit_test_01": {
+        "category": "html",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_unit_test_formatting": {
+        "category": "docx",
+        "elapsed_seconds": 0.016,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_unit_test_headers": {
+        "category": "docx",
+        "elapsed_seconds": 0.017,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_unit_test_headers_numbered": {
+        "category": "docx",
+        "elapsed_seconds": 0.028,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_unit_test_lists": {
+        "category": "docx",
+        "elapsed_seconds": 0.017,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_webp-test": {
+        "category": "image",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_webvtt_example_01": {
+        "category": "webvtt",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_webvtt_example_02": {
+        "category": "webvtt",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_webvtt_example_03": {
+        "category": "webvtt",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_webvtt_example_04": {
+        "category": "webvtt",
+        "elapsed_seconds": 0.01,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_wiki_duck": {
+        "category": "html",
+        "elapsed_seconds": 0.164,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_word_comments": {
+        "category": "docx",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_word_image_anchors": {
+        "category": "docx",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_word_sample": {
+        "category": "docx",
+        "elapsed_seconds": 0.023,
+        "overall_percent": 94.0,
+        "status": "scored"
+      },
+      "docling_word_tables": {
+        "category": "docx",
+        "elapsed_seconds": 0.022,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_xlsx_01": {
+        "category": "xlsx",
+        "elapsed_seconds": 0.02,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_xlsx_03_chartsheet": {
+        "category": "xlsx",
+        "elapsed_seconds": 0.005,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_xlsx_04_inflated": {
+        "category": "xlsx",
+        "elapsed_seconds": 0.018,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_xlsx_05_table_with_title": {
+        "category": "xlsx",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_xlsx_06_edge_cases_": {
+        "category": "xlsx",
+        "elapsed_seconds": 0.005,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_xlsx_07_gap_tolerance_": {
+        "category": "xlsx",
+        "elapsed_seconds": 0.014,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_xlsx_08_one_cell_anchor": {
+        "category": "xlsx",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 90.0,
+        "status": "scored"
+      }
+    },
+    "python-fast-markitdown": {
+      "docling_2206.01062_tiff": {
+        "category": "image",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 10.1,
+        "status": "scored"
+      },
+      "docling_2305.03393v1-pg9-img": {
+        "category": "image",
+        "elapsed_seconds": 0.342,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_2305.03393v1-table_crop": {
+        "category": "image",
+        "elapsed_seconds": 0.113,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_230927_bars": {
+        "category": "image",
+        "elapsed_seconds": 0.112,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_230927_effective_sizes": {
+        "category": "image",
+        "elapsed_seconds": 0.099,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-19": {
+        "category": "image",
+        "elapsed_seconds": 0.098,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-20": {
+        "category": "image",
+        "elapsed_seconds": 0.098,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-21": {
+        "category": "image",
+        "elapsed_seconds": 0.097,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-22": {
+        "category": "image",
+        "elapsed_seconds": 0.098,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-23": {
+        "category": "image",
+        "elapsed_seconds": 0.098,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_ModalNet-32": {
+        "category": "image",
+        "elapsed_seconds": 0.099,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_csv-comma": {
+        "category": "csv",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_csv-comma-in-cell": {
+        "category": "csv",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_csv-inconsistent-header": {
+        "category": "csv",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 60.0,
+        "status": "scored"
+      },
+      "docling_csv-pipe": {
+        "category": "csv",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_csv-semicolon": {
+        "category": "csv",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_csv-single-column": {
+        "category": "csv",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_csv-tab": {
+        "category": "csv",
+        "elapsed_seconds": 0.006,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_csv-too-few-columns": {
+        "category": "csv",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_csv-too-many-columns": {
+        "category": "csv",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_docx_checkboxes": {
+        "category": "docx",
+        "elapsed_seconds": 0.03,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_docx_external_image": {
+        "category": "docx",
+        "elapsed_seconds": 0.081,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_docx_grouped_images": {
+        "category": "docx",
+        "elapsed_seconds": 0.027,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_docx_rich_cells": {
+        "category": "docx",
+        "elapsed_seconds": 0.041,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_docx_vml_images": {
+        "category": "docx",
+        "elapsed_seconds": 0.078,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_drawingml": {
+        "category": "docx",
+        "elapsed_seconds": 0.02,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_elife-56337": {
+        "category": "xml",
+        "elapsed_seconds": 0.051,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_equations": {
+        "category": "docx",
+        "elapsed_seconds": 0.048,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_example_01": {
+        "category": "html",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_example_02": {
+        "category": "html",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_example_03": {
+        "category": "html",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_example_04": {
+        "category": "html",
+        "elapsed_seconds": 0.015,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_example_05": {
+        "category": "html",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_example_06": {
+        "category": "html",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_example_07": {
+        "category": "html",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_example_08": {
+        "category": "html",
+        "elapsed_seconds": 0.009,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_example_image_01": {
+        "category": "image",
+        "elapsed_seconds": 0.1,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_formatting": {
+        "category": "html",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_grve_10q_htm": {
+        "category": "xml",
+        "elapsed_seconds": 0.022,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_html_code_snippets": {
+        "category": "html",
+        "elapsed_seconds": 0.009,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_html_freq_v4": {
+        "category": "image",
+        "elapsed_seconds": 0.141,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_html_heading_in_p": {
+        "category": "html",
+        "elapsed_seconds": 0.009,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_html_inline_group_in_table_cell": {
+        "category": "html",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_html_rich_table_cells": {
+        "category": "html",
+        "elapsed_seconds": 0.01,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_hyperlink_01": {
+        "category": "html",
+        "elapsed_seconds": 0.006,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_hyperlink_02": {
+        "category": "html",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_hyperlink_03": {
+        "category": "html",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_hyperlink_04": {
+        "category": "html",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_hyperlink_05": {
+        "category": "html",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_hyperlink_06": {
+        "category": "html",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_ipa20110039701": {
+        "category": "xml",
+        "elapsed_seconds": 0.1,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_ipa20180000016": {
+        "category": "xml",
+        "elapsed_seconds": 0.019,
+        "overall_percent": 15.4,
+        "status": "scored"
+      },
+      "docling_ipa20200022300": {
+        "category": "xml",
+        "elapsed_seconds": 0.009,
+        "overall_percent": 38.9,
+        "status": "scored"
+      },
+      "docling_ipg07997973": {
+        "category": "xml",
+        "elapsed_seconds": 0.029,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_ipg08672134": {
+        "category": "xml",
+        "elapsed_seconds": 0.011,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_ipgD0701016": {
+        "category": "xml",
+        "elapsed_seconds": 0.009,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_kvp_data_example": {
+        "category": "html",
+        "elapsed_seconds": 0.009,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_list_after_num_headers": {
+        "category": "docx",
+        "elapsed_seconds": 0.028,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_llama_vs_mistral_example": {
+        "category": "image",
+        "elapsed_seconds": 0.138,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_lorem_ipsum": {
+        "category": "docx",
+        "elapsed_seconds": 0.013,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_mlac-20251231": {
+        "category": "xml",
+        "elapsed_seconds": 0.017,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_omml_frac_superscript": {
+        "category": "docx",
+        "elapsed_seconds": 0.08,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_omml_func_log": {
+        "category": "docx",
+        "elapsed_seconds": 0.082,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_omml_multi_equation_paragraph": {
+        "category": "docx",
+        "elapsed_seconds": 0.084,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_omml_text_escapes_in_math": {
+        "category": "docx",
+        "elapsed_seconds": 0.085,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_pa20010031492": {
+        "category": "xml",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 15.7,
+        "status": "scored"
+      },
+      "docling_pg06442728": {
+        "category": "xml",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 39.6,
+        "status": "scored"
+      },
+      "docling_powerpoint_bad_text": {
+        "category": "pptx",
+        "elapsed_seconds": 0.009,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_powerpoint_issue_2663": {
+        "category": "pptx",
+        "elapsed_seconds": 0.01,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_powerpoint_malformed_pictures": {
+        "category": "pptx",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_powerpoint_sample": {
+        "category": "pptx",
+        "elapsed_seconds": 0.013,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_powerpoint_unrecognized_shape": {
+        "category": "pptx",
+        "elapsed_seconds": 0.011,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_powerpoint_with_image": {
+        "category": "pptx",
+        "elapsed_seconds": 0.009,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_table_01": {
+        "category": "html",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 60.0,
+        "status": "scored"
+      },
+      "docling_table_02": {
+        "category": "html",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_table_03": {
+        "category": "html",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_table_04": {
+        "category": "html",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_table_05": {
+        "category": "html",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_table_06": {
+        "category": "html",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_table_with_equations": {
+        "category": "docx",
+        "elapsed_seconds": 0.015,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_table_with_heading_01": {
+        "category": "html",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 60.0,
+        "status": "scored"
+      },
+      "docling_table_with_heading_02": {
+        "category": "html",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_tablecell": {
+        "category": "docx",
+        "elapsed_seconds": 0.024,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_tables_ipa20180000016": {
+        "category": "xml",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_test_01": {
+        "category": "asciidoc",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_test_02": {
+        "category": "asciidoc",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 80.0,
+        "status": "scored"
+      },
+      "docling_test_03": {
+        "category": "asciidoc",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_test_emf_docx": {
+        "category": "docx",
+        "elapsed_seconds": 0.045,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_textbox": {
+        "category": "docx",
+        "elapsed_seconds": 0.056,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_unit_test_01": {
+        "category": "html",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_unit_test_formatting": {
+        "category": "docx",
+        "elapsed_seconds": 0.027,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_unit_test_headers": {
+        "category": "docx",
+        "elapsed_seconds": 0.016,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_unit_test_headers_numbered": {
+        "category": "docx",
+        "elapsed_seconds": 0.031,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_unit_test_lists": {
+        "category": "docx",
+        "elapsed_seconds": 0.026,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_webp-test": {
+        "category": "image",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_webvtt_example_01": {
+        "category": "webvtt",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_webvtt_example_02": {
+        "category": "webvtt",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_webvtt_example_03": {
+        "category": "webvtt",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_webvtt_example_04": {
+        "category": "webvtt",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_wiki_duck": {
+        "category": "html",
+        "elapsed_seconds": 0.065,
+        "overall_percent": 80.0,
+        "status": "scored"
+      },
+      "docling_word_comments": {
+        "category": "docx",
+        "elapsed_seconds": 0.081,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_word_image_anchors": {
+        "category": "docx",
+        "elapsed_seconds": 0.015,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_word_sample": {
+        "category": "docx",
+        "elapsed_seconds": 0.035,
+        "overall_percent": 67.3,
+        "status": "scored"
+      },
+      "docling_word_tables": {
+        "category": "docx",
+        "elapsed_seconds": 0.038,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_xlsx_01": {
+        "category": "xlsx",
+        "elapsed_seconds": 0.019,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_xlsx_03_chartsheet": {
+        "category": "xlsx",
+        "elapsed_seconds": 0.01,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_xlsx_04_inflated": {
+        "category": "xlsx",
+        "elapsed_seconds": 0.265,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_xlsx_05_table_with_title": {
+        "category": "xlsx",
+        "elapsed_seconds": 0.01,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_xlsx_06_edge_cases_": {
+        "category": "xlsx",
+        "elapsed_seconds": 0.014,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_xlsx_07_gap_tolerance_": {
+        "category": "xlsx",
+        "elapsed_seconds": 0.017,
+        "overall_percent": 90.0,
+        "status": "scored"
+      },
+      "docling_xlsx_08_one_cell_anchor": {
+        "category": "xlsx",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 60.0,
+        "status": "scored"
+      }
+    },
+    "python-fast-pdfium": {
+      "docling_138-bpt_scatter_examples_3x3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_157-bpt_scatter_examples_3x3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_17-bpt_scatter_examples_3x3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_2203.01017v2": {
+        "category": "pdf",
+        "elapsed_seconds": 0.158,
+        "overall_percent": 39.4,
+        "status": "scored"
+      },
+      "docling_2206.01062": {
+        "category": "pdf",
+        "elapsed_seconds": 0.153,
+        "overall_percent": 36.0,
+        "status": "scored"
+      },
+      "docling_2206.01062_pg3": {
+        "blocked_reason": "password_required",
+        "status": "expected_blocked"
+      },
+      "docling_2305.03393v1": {
+        "category": "pdf",
+        "elapsed_seconds": 0.048,
+        "overall_percent": 41.2,
+        "status": "scored"
+      },
+      "docling_2305.03393v1-pg9": {
+        "category": "pdf",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 51.8,
+        "status": "scored"
+      },
+      "docling_322-bpt_scatter_examples_3x3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_BQSC-1003": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_D-BQSC-0004-1003": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_DeepSeek": {
+        "category": "pdf",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 69.0,
+        "status": "scored"
+      },
+      "docling_HTMLvOTSLv7": {
+        "category": "pdf",
+        "elapsed_seconds": 0.004,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_P_B": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_P_M": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_P_q": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_SFNet_ResNet18-TopK": {
+        "category": "pdf",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_amt_handbook_sample": {
+        "category": "pdf",
+        "elapsed_seconds": 0.01,
+        "overall_percent": 64.4,
+        "status": "scored"
+      },
+      "docling_anaphora_resolution2_new": {
+        "category": "pdf",
+        "elapsed_seconds": 0.019,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_anaphora_resolution_new": {
+        "category": "pdf",
+        "elapsed_seconds": 0.009,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_attending_to_head2_new": {
+        "category": "pdf",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_attending_to_head_new": {
+        "category": "pdf",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_basic_arch": {
+        "category": "pdf",
+        "elapsed_seconds": 0.005,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_chunking": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_code_and_formula": {
+        "category": "pdf",
+        "elapsed_seconds": 0.006,
+        "overall_percent": 93.0,
+        "status": "scored"
+      },
+      "docling_dsv3_performance": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_dualpipe": {
+        "category": "pdf",
+        "elapsed_seconds": 0.005,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_fp8-128accumulatorv4": {
+        "category": "pdf",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_fp8-frameworkv3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_fp8-v.s.-bf16": {
+        "category": "pdf",
+        "elapsed_seconds": 0.0,
+        "overall_percent": 69.0,
+        "status": "scored"
+      },
+      "docling_html_v_otsl_intro_v2": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_latex_equations": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_llncsdoc": {
+        "category": "pdf",
+        "elapsed_seconds": 0.022,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_m_q": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
+      "docling_making_more_difficult5_new": {
+        "category": "pdf",
+        "elapsed_seconds": 0.01,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_making_more_difficult_new": {
+        "category": "pdf",
+        "elapsed_seconds": 0.011,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_multi_page": {
+        "category": "pdf",
+        "elapsed_seconds": 0.013,
+        "overall_percent": 64.5,
+        "status": "scored"
+      },
+      "docling_needle_in_a_haystack": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_nextn": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_normal_4pages": {
+        "category": "pdf",
+        "elapsed_seconds": 0.02,
+        "overall_percent": 36.5,
+        "status": "scored"
+      },
+      "docling_otsl_proof_v3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_otsl_vs_html_ex3_v2": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_overlap": {
+        "category": "pdf",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_pca-comparison": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_picture_classification": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 93.7,
+        "status": "scored"
+      },
+      "docling_redp5110_sampled": {
+        "category": "pdf",
+        "elapsed_seconds": 0.039,
+        "overall_percent": 22.7,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi": {
+        "category": "pdf",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi_1-6": {
+        "category": "pdf",
+        "elapsed_seconds": 0.03,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi_13-18": {
+        "category": "pdf",
+        "elapsed_seconds": 0.03,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi_19-24": {
+        "category": "pdf",
+        "elapsed_seconds": 0.03,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi_25-26": {
+        "category": "pdf",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi_7-12": {
+        "category": "pdf",
+        "elapsed_seconds": 0.03,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_right_to_left_01": {
+        "category": "pdf",
+        "elapsed_seconds": 0.006,
+        "overall_percent": 56.0,
+        "status": "scored"
+      },
+      "docling_right_to_left_02": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 89.5,
+        "status": "scored"
+      },
+      "docling_right_to_left_03": {
+        "category": "pdf",
+        "elapsed_seconds": 0.005,
+        "overall_percent": 60.9,
+        "status": "scored"
+      },
+      "docling_rolling_buffer": {
+        "category": "pdf",
+        "elapsed_seconds": 0.0,
+        "overall_percent": 69.0,
+        "status": "scored"
+      },
+      "docling_skipped_1page": {
+        "category": "pdf",
+        "elapsed_seconds": 0.004,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_skipped_2pages": {
+        "category": "pdf",
+        "elapsed_seconds": 0.011,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_swa": {
+        "category": "pdf",
+        "elapsed_seconds": 0.0,
+        "overall_percent": 69.0,
+        "status": "scored"
+      },
+      "docling_tablemodel_overview_otsl": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      }
+    },
+    "swift-pdfkit": {
+      "docling_138-bpt_scatter_examples_3x3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_157-bpt_scatter_examples_3x3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_17-bpt_scatter_examples_3x3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_2203.01017v2": {
+        "category": "pdf",
+        "elapsed_seconds": 0.082,
+        "overall_percent": 29.3,
+        "status": "scored"
+      },
+      "docling_2206.01062": {
+        "category": "pdf",
+        "elapsed_seconds": 0.089,
+        "overall_percent": 21.6,
+        "status": "scored"
+      },
+      "docling_2206.01062_pg3": {
+        "blocked_reason": "password_required",
+        "status": "expected_blocked"
+      },
+      "docling_2305.03393v1": {
+        "category": "pdf",
+        "elapsed_seconds": 0.039,
+        "overall_percent": 39.3,
+        "status": "scored"
+      },
+      "docling_2305.03393v1-pg9": {
+        "category": "pdf",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 37.0,
+        "status": "scored"
+      },
+      "docling_322-bpt_scatter_examples_3x3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_BQSC-1003": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_D-BQSC-0004-1003": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_DeepSeek": {
+        "category": "pdf",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 69.0,
+        "status": "scored"
+      },
+      "docling_HTMLvOTSLv7": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_P_B": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_P_M": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_P_q": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_SFNet_ResNet18-TopK": {
+        "category": "pdf",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_amt_handbook_sample": {
+        "category": "pdf",
+        "elapsed_seconds": 0.009,
+        "overall_percent": 64.5,
+        "status": "scored"
+      },
+      "docling_anaphora_resolution2_new": {
+        "category": "pdf",
+        "elapsed_seconds": 0.034,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_anaphora_resolution_new": {
+        "category": "pdf",
+        "elapsed_seconds": 0.009,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_attending_to_head2_new": {
+        "category": "pdf",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_attending_to_head_new": {
+        "category": "pdf",
+        "elapsed_seconds": 0.009,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_basic_arch": {
+        "category": "pdf",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_chunking": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_code_and_formula": {
+        "category": "pdf",
+        "elapsed_seconds": 0.005,
+        "overall_percent": 92.7,
+        "status": "scored"
+      },
+      "docling_dsv3_performance": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_dualpipe": {
+        "category": "pdf",
+        "elapsed_seconds": 0.005,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_fp8-128accumulatorv4": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_fp8-frameworkv3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_fp8-v.s.-bf16": {
+        "category": "pdf",
+        "elapsed_seconds": 0.0,
+        "overall_percent": 69.0,
+        "status": "scored"
+      },
+      "docling_html_v_otsl_intro_v2": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_latex_equations": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_llncsdoc": {
+        "category": "pdf",
+        "elapsed_seconds": 0.018,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_m_q": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_making_more_difficult5_new": {
+        "category": "pdf",
+        "elapsed_seconds": 0.009,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_making_more_difficult_new": {
+        "category": "pdf",
+        "elapsed_seconds": 0.01,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_multi_page": {
+        "category": "pdf",
+        "elapsed_seconds": 0.008,
+        "overall_percent": 69.9,
+        "status": "scored"
+      },
+      "docling_needle_in_a_haystack": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_nextn": {
+        "category": "pdf",
+        "elapsed_seconds": 0.006,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_normal_4pages": {
+        "category": "pdf",
+        "elapsed_seconds": 0.02,
+        "overall_percent": 37.7,
+        "status": "scored"
+      },
+      "docling_otsl_proof_v3": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_otsl_vs_html_ex3_v2": {
+        "category": "pdf",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_overlap": {
+        "category": "pdf",
+        "elapsed_seconds": 0.002,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_pca-comparison": {
+        "category": "pdf",
+        "elapsed_seconds": 0.001,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_picture_classification": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 93.1,
+        "status": "scored"
+      },
+      "docling_redp5110_sampled": {
+        "category": "pdf",
+        "elapsed_seconds": 0.032,
+        "overall_percent": 34.8,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi_1-6": {
+        "category": "pdf",
+        "elapsed_seconds": 0.01,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi_13-18": {
+        "category": "pdf",
+        "elapsed_seconds": 0.01,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi_19-24": {
+        "category": "pdf",
+        "elapsed_seconds": 0.009,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi_25-26": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_relative_expert_load_multi_7-12": {
+        "category": "pdf",
+        "elapsed_seconds": 0.01,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_right_to_left_01": {
+        "category": "pdf",
+        "elapsed_seconds": 0.005,
+        "overall_percent": 63.1,
+        "status": "scored"
+      },
+      "docling_right_to_left_02": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 83.8,
+        "status": "scored"
+      },
+      "docling_right_to_left_03": {
+        "category": "pdf",
+        "elapsed_seconds": 0.007,
+        "overall_percent": 60.3,
+        "status": "scored"
+      },
+      "docling_rolling_buffer": {
+        "category": "pdf",
+        "elapsed_seconds": 0.0,
+        "overall_percent": 69.0,
+        "status": "scored"
+      },
+      "docling_skipped_1page": {
+        "category": "pdf",
+        "elapsed_seconds": 0.009,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_skipped_2pages": {
+        "category": "pdf",
+        "elapsed_seconds": 0.016,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_swa": {
+        "category": "pdf",
+        "elapsed_seconds": 0.0,
+        "overall_percent": 69.0,
+        "status": "scored"
+      },
+      "docling_tablemodel_overview_otsl": {
+        "category": "pdf",
+        "elapsed_seconds": 0.003,
+        "overall_percent": 95.0,
+        "status": "scored"
+      }
+    }
   },
-  "baseline_state": "bootstrap",
+  "manifest": "tests/corpus/manifest.json",
   "notes": [
     "This file is the release ledger for corpus document x conversion pathway quality.",
     "A pathway result below its stored document baseline by document_regression_block_percent blocks release unless the baseline is corrected with review notes.",
     "A pathway result above baseline by uplift_review_percent should be called out in release notes after the baseline is intentionally updated.",
     "PyMuPDF, Poppler, RapidOCR, and PaddleOCR are allowed only as developer/reference pathways and must not ship in release locks or the packaged runtime without explicit promotion approval."
   ],
-  "document_baselines": {}
+  "pathways": "docs/release/conversion_pathways.json",
+  "policy": {
+    "category_regression_block_percent": 3.0,
+    "category_speed_regression_multiplier": 1.3,
+    "document_regression_block_percent": 5.0,
+    "document_speed_regression_multiplier": 1.5,
+    "large_regression_block_percent": 25.0,
+    "uplift_review_percent": 3.0
+  },
+  "source_reports": {
+    "python-ai-docling": "reports/corpus-granite-docling-scanned-or-unknown.json",
+    "python-enhanced-docling": "reports/corpus-python-enhanced-docling.json",
+    "python-fast-markitdown": "reports/corpus-python-fast-markitdown.json",
+    "python-fast-pdfium": "reports/corpus-python-fast-pdfium.json",
+    "swift-pdfkit": "reports/corpus-swift-pdfkit.json"
+  },
+  "version": 1
 }

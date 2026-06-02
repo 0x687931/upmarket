@@ -30,16 +30,31 @@ python3 - "$SITE" <<'PY'
 from __future__ import annotations
 
 import filecmp
+import re
 import sys
 from pathlib import Path
 
 site = Path(sys.argv[1])
+python_version_match = re.search(r"/python(\d+)\.(\d+)/site-packages$", str(site))
+expected_tag = None
+if python_version_match:
+    expected_tag = f"cpython-{python_version_match.group(1)}{python_version_match.group(2)}"
+
 pairs = [
     (Path("UpmarketPython/docling_bridge"), site / "docling_bridge"),
     (Path("UpmarketPython/models"), site / "upmarket_models"),
 ]
 
 errors = []
+if not expected_tag:
+    errors.append(f"could not infer Python ABI tag from bundled site path: {site}")
+
+extension_tag_re = re.compile(r"\.(cpython-\d+)-")
+for extension in sorted(site.rglob("*.so")):
+    match = extension_tag_re.search(extension.name)
+    if match and match.group(1) != expected_tag:
+        errors.append(f"native extension ABI mismatch: {extension} uses {match.group(1)}, expected {expected_tag}")
+
 for source_dir, bundled_dir in pairs:
     for source in sorted(source_dir.glob("*.py")):
         bundled = bundled_dir / source.name

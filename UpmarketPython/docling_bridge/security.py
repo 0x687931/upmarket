@@ -301,6 +301,7 @@ def validate_image_file(path: Path) -> None:
             width, height = image.size
             image.verify()
     except Exception as exc:
+        log_security_event("IMAGE_VALIDATION_FAILED", f"{type(exc).__name__}: {exc}")
         raise ValueError("Invalid or unsafe image file") from exc
 
     if width <= 0 or height <= 0:

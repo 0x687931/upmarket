@@ -216,6 +216,60 @@ final class PythonBridgeTests: XCTestCase {
         XCTAssertNotNil(result.output)
     }
 
+    func testGraniteAIPreviouslyBlockedCorpusFixturesRouteThroughHelperWhenModelInstalled() async throws {
+        guard DeviceCapability.shared.supportsUpmarketAI else {
+            throw XCTSkip("Upmarket AI requires Apple Silicon with a visible Metal device")
+        }
+
+        let helper = try packagedRuntimeHelperURL()
+        let client = RuntimeHelperClient(executableURL: helper, livenessInterval: 240)
+        let models = try await client.checkModels()
+        guard models.contains(where: { $0.key == "upmarket_ai" && $0.isDownloaded }) else {
+            throw XCTSkip("Upmarket AI model is not installed in Application Support")
+        }
+
+        let fixtures = [
+            "docling/docling/tests/data/latex/1706.03762/Figures/ModalNet-32.png",
+            "docling/docling/tests/data/latex/2310.06825/images/230927_effective_sizes.png",
+            "docling/docling/tests/data/latex/2310.06825/images/llama_vs_mistral_example.png",
+            "docling/docling/tests/data/tiff/2206.01062.tif",
+        ]
+
+        for relativePath in fixtures {
+            let fixture = corpusFixture(relativePath)
+            guard FileManager.default.fileExists(atPath: fixture.path) else {
+                throw XCTSkip("Corpus fixture is not present: \(relativePath)")
+            }
+
+            let workspace = try AppWorkspace.create(prefix: "helper-granite-ai-smoke")
+            defer { AppWorkspace.remove(workspace) }
+            let copied = try AppWorkspace.copy(fixture, into: workspace)
+            let result: ConversionResult
+            do {
+                result = try await client.convert(
+                    fileURL: copied,
+                    title: copied.deletingPathExtension().lastPathComponent,
+                    useAI: true,
+                    password: nil,
+                    workspaceURL: workspace
+                )
+            } catch let error as PythonBridgeError {
+                if error.diagnosticCode == "runtime.helper.runtime-unavailable" {
+                    throw XCTSkip("Granite AI model is installed, but this Xcode session cannot access Metal: \(error)")
+                }
+                return XCTFail("Expected Granite AI output for \(relativePath), got \(error.diagnosticCode): \(error)")
+            } catch {
+                return XCTFail("Expected Granite AI output for \(relativePath), got: \(error)")
+            }
+
+            guard let output = result.output else {
+                return XCTFail("Expected Granite AI output for \(relativePath), got conversion failure: \(result.errorMessage ?? "nil")")
+            }
+            XCTAssertEqual(output.pipeline, .ai)
+            XCTAssertFalse(output.markdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+    }
+
     private func makeHelperScript(_ source: String) throws -> URL {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("UpmarketRuntimeHelperTests-\(UUID().uuidString)", isDirectory: true)

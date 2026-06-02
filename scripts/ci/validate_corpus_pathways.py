@@ -130,7 +130,12 @@ def validate_results(results: dict, baseline: dict) -> list[str]:
         if expected is None:
             missing.append(doc_id)
             continue
-        if result.get("status") == "expected_blocked":
+        actual_status = normalise_result_status(result)
+        expected_status = expected.get("status", "scored")
+        if actual_status != expected_status:
+            errors.append(f"{pathway}/{doc_id}: status changed from {expected_status} to {actual_status}")
+            continue
+        if actual_status in {"expected_blocked", "environment_blocked"}:
             continue
         actual = float(result.get("overall_percent", 0))
         expected_score = float(expected.get("overall_percent", 0))
@@ -158,6 +163,33 @@ def validate_results(results: dict, baseline: dict) -> list[str]:
         print(f"uplift candidates for {pathway}: " + ", ".join(uplifts[:20]))
 
     return errors
+
+
+def normalise_result_status(result: dict) -> str:
+    status = result.get("status")
+    if status and status not in {"failed", "error"}:
+        return status
+    message = " ".join(
+        str(value)
+        for value in (result.get("error"), result.get("blocked_reason"))
+        if value
+    ).lower()
+    if "password" in message and any(term in message for term in ("protected", "required", "encrypted")):
+        return "expected_blocked"
+    if any(
+        term in message
+        for term in (
+            "metal device",
+            "no metal",
+            "device compatibility",
+            "couldn't run on this mac",
+            "graphics processor",
+        )
+    ):
+        return "environment_blocked"
+    if result.get("error"):
+        return "failed"
+    return "scored"
 
 
 def main() -> int:

@@ -152,6 +152,7 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 - [x] Require ADRs for local patches to upstream behavior, including removal condition and packaged-app validation.
 - [x] Require fork/cherry-pick candidates to be temporary, upstream-linked, pinned to immutable commits or packaged artifacts, covered by corpus validation, and removable once upstream releases.
 - [x] Add dependency audit workflow for exact pins, `pip check`, license generation, vulnerability review where practical, and undeclared runtime tool detection.
+- [x] Extend the packaged runtime dependency gate to reject native extension ABI mismatches, after the 2026-06-02 Xcode helper smoke found CPython 3.13-tagged extensions inside the embedded Python 3.12 framework.
 - [x] Add release docs: release policy, release checklist, and test matrix.
 - [x] Add CI helper scripts for Xcode project validation, effective plist checks, entitlement checks, Python bundle validation, offline conversion, model validation, and corpus validation.
 
@@ -218,10 +219,11 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 ### Gate B - Conversion Reliability
 - [x] Maintain a corpus benchmark covering the release formats. Current corpus manifest validates 185 documents across PDF, DOCX, PPTX, XLSX, HTML, image, audio, CSV, XML, WebVTT, video, and AsciiDoc.
 - [ ] For each corpus document, record expected status: success, unsupported, password required, or degraded output
-- [ ] Bootstrap `docs/release/corpus_pathway_baseline.json` with per-document scores for every valid conversion pathway before the first release candidate
-- [ ] Run fast path with no downloaded models. Evidence exists in `reports/corpus-python-fast-pdfium.json`, `reports/corpus-python-fast-markitdown.json`, and `reports/corpus-swift-pdfkit.json`; current reports are not release-passing because PDF paths still show 1 failed document and the per-document baseline ledger is bootstrap-only.
-- [ ] Run enhanced/AI paths after model download where supported. Evidence exists in `reports/corpus-python-enhanced-docling.json` and `reports/corpus-python-ai-docling.json`; current reports are not release-passing because both cover 171/185 documents, score 83.3% overall, and show 1 failed document.
-- [ ] Run batch conversion from the shelf queue across at least 5 mixed accepted inputs, including one failure, one cancellation, and one retry.
+- [x] Bootstrap `docs/release/corpus_pathway_baseline.json` with per-document scores for current report-backed pathways. `scripts/ci/validate_corpus_pathways.py` now passes across the five current report JSON files. Native Vision/Speech/ImageIO/AVFoundation pathway baselines remain required when their benchmark runners exist; the 14 currently uncovered corpus documents are audio/video fixtures.
+- [x] Run fast path with no downloaded models. Evidence exists in `reports/corpus-python-fast-pdfium.json`, `reports/corpus-python-fast-markitdown.json`, and `reports/corpus-swift-pdfkit.json`; the password-protected PDF is now recorded as expected-blocked in the per-document pathway baseline.
+- [x] Run enhanced path after model/runtime setup where supported. Evidence exists in `reports/corpus-python-enhanced-docling.json`; the password-protected PDF is now recorded as expected-blocked in the per-document pathway baseline.
+- [ ] Run AI path after model download where supported. Current valid Granite AI evidence is `reports/corpus-granite-docling-scanned-or-unknown.json`; it is baselined but not release-passing because 4 rows are environment-blocked by Metal/runtime availability in the benchmark context and need a targeted GUI/Metal validation pass before release.
+- [x] Run batch conversion from the shelf queue across at least 5 mixed accepted inputs, including one failure, one cancellation, and one retry. Covered by `ConversionQueueTests.testBatchShelfQueueFiveMixedInputsWithFailureCancellationAndRetry`; the 2026-06-02 Xcode run passed all 18 selected `ConversionQueueTests`.
 - [ ] Run Intel validation corpus on a physical Intel Mac: native PDFKit/Vision/ImageIO/AVFoundation/Speech paths where available, Python-backed formats visibly unsupported, and explicit Enhanced/AI unavailable/download-blocked state.
 - [ ] Verify temp files are cleaned after success, failure, cancellation, and app quit
 - [ ] Verify conversion result state always resolves to result, actionable error, password prompt, or explicit in-progress state
@@ -233,7 +235,7 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 - [x] Add conversion liveness monitor based on progress/heartbeat updates, not fixed elapsed duration
 - [x] Surface stalled conversion state with "still working" vs "no progress detected" messaging
 - [x] Add memory pressure handling using Apple-native process/system signals where practical
-- [ ] Run Instruments: Allocations, Leaks, Time Profiler, Main Thread Checker. Trace bundles exist under `reports/gate-c-stability/`; owner review still needs a written pass/fail interpretation.
+- [ ] Run Instruments: Allocations, Leaks, Time Profiler, Main Thread Checker. Owner interpretation is recorded in `docs/release/GATE_B_C_VALIDATION.md`; current Upmarket-targeted Allocations captures are usable, while Leaks, targeted Time Profiler, and Main Thread Checker still need release-quality evidence.
 - [x] Run Thread Sanitizer on conversion, model download, and StoreKit flows. Focused TSan run passed on 2026-06-02 for `ConversionQueueTests`, `ModelManagerTests`, `StoreAccountingServiceTests`, and `PackCreditLedgerTests`.
 - [x] Define Xcode Organizer crash triage process for TestFlight/App Store diagnostics
 - [ ] Verify TestFlight/App Store crash diagnostics appear in Xcode Organizer

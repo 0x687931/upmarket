@@ -14,7 +14,7 @@ This matrix defines the minimum validation surface. Add focused tests when a cha
 | Build | App, Quick Action, runtime helper compile | `xcodebuild build ... CODE_SIGNING_ALLOWED=NO` | Every PR | Yes |
 | Unit tests | Domain, services, StoreKit accounting, diagnostics, helper, native extraction | `xcodebuild test ... -only-testing:UpmarketTests` | Every PR | Yes |
 | UI tests | Launch, shelf, paywall, preferences, appearance-sensitive flows | `xcodebuild test ... -only-testing:UpmarketUITests` | Release candidate only | Yes |
-| Runtime package | Embedded runtime imports first-party bridge, pinned deps, `pip check` | `scripts/ci/verify_python_bundle.sh` | Every PR | Yes |
+| Runtime package | Embedded runtime imports first-party bridge, pinned deps, native extension ABI tags, `pip check` | `scripts/ci/verify_python_bundle.sh` | Every PR | Yes |
 | App package | Effective plist, entitlements, runtime imports, helper, offline smoke | `scripts/ci/verify_release_app.sh /path/to/Upmarket.app` | Every PR and RC | Yes |
 | Model states | Missing, partial, corrupt, stale, and unexpected model dirs fail safely | `scripts/ci/validate_models.py`; `scripts/ci/test_model_faults.py` | Every PR | Yes |
 | Corpus manifest | Corpus files and ground truth are present and well formed | `scripts/ci/validate_corpus.py` | Every PR | Yes |

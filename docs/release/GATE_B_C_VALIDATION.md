@@ -14,15 +14,81 @@ Current pathway artifacts:
 | `reports/corpus-python-fast-markitdown.json` | fast non-PDF | 111 | 83.8% | 0 | Evidence only |
 | `reports/corpus-swift-pdfkit.json` | native PDF | 60 | 83.2% | 1 | Evidence only |
 | `reports/corpus-python-enhanced-docling.json` | enhanced | 171 | 83.3% | 1 | Evidence only |
-| `reports/corpus-python-ai-docling.json` | AI | 171 | 83.3% | 1 | Evidence only |
+| `reports/corpus-granite-docling-scanned-or-unknown.json` | Granite AI image/PDF bucket | 24 | 65.0% | 4 environment-blocked | Baselined, not release-passing |
 
-`reports/gate-b-corpus-pathway-comparison.md` compares these pathways. `scripts/ci/validate_corpus_pathways.py` accepts repeated `--results` files so split pathway reports can be validated together for coverage and release exclusions.
+`reports/gate-b-corpus-pathway-comparison.md` compares these pathways. `scripts/ci/validate_corpus_pathways.py` accepts repeated `--results` files so split pathway reports can be validated together for coverage and release exclusions. `docs/release/corpus_pathway_baseline.json` is now populated from the current report-backed pathways. Password-protected PDFs are recorded as `expected_blocked`, and Granite AI Metal/runtime availability failures are recorded as `environment_blocked`, instead of converter quality failures.
 
-Gate B is not release-passing yet. Remaining release blockers are expected-status annotation, per-document pathway baselines in `docs/release/corpus_pathway_baseline.json`, batch shelf validation, physical Intel validation, temp cleanup validation, and resolving the failed/low-scoring pathway reports.
+The current report-backed pathway baseline validates with:
+
+```sh
+python3 scripts/ci/validate_corpus_pathways.py \
+  --results reports/corpus-python-fast-pdfium.json \
+  --results reports/corpus-python-fast-markitdown.json \
+  --results reports/corpus-python-enhanced-docling.json \
+  --results reports/corpus-swift-pdfkit.json \
+  --results reports/corpus-granite-docling-scanned-or-unknown.json
+```
+
+Gate B is not fully release-passing yet. Remaining release blockers are physical Intel validation, temp cleanup validation, native Vision/Speech/ImageIO/AVFoundation pathway baselines once their runners exist, and a targeted GUI/Metal Granite AI validation pass. The 14 corpus documents without any current pathway-result row are all audio/video fixtures; they map to the native Speech and AVFoundation registry entries whose app/Xcode runners still need release evidence.
+
+### Batch Shelf Queue
+
+Batch shelf queue behavior is now covered through Xcode by `ConversionQueueTests.testBatchShelfQueueFiveMixedInputsWithFailureCancellationAndRetry`. The test queues five accepted inputs across PDF, DOCX, HTML, PPTX, and XLSX, then verifies one success before a failure, one explicit failure, one cancellation, one later success, and one retry that creates a new successful job without overlapping the serial queue.
+
+Current evidence:
+
+```sh
+xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/ConversionQueueTests
+```
+
+The 2026-06-02 run passed 18 selected `ConversionQueueTests` with 0 failures.
+
+### Granite AI Metal Root Cause
+
+The 4 non-scored Granite AI rows in `reports/corpus-granite-docling-scanned-or-unknown.json` are not proven document-quality failures. They are:
+
+| Document | File | Recorded error |
+| --- | --- | --- |
+| `docling_ModalNet-32` | `tests/data/latex/1706.03762/Figures/ModalNet-32.png` | Upmarket AI couldn't run on this Mac. Check model download and device compatibility. |
+| `docling_230927_effective_sizes` | `tests/data/latex/2310.06825/images/230927_effective_sizes.png` | Upmarket AI couldn't run on this Mac. Check model download and device compatibility. |
+| `docling_llama_vs_mistral_example` | `tests/data/latex/2310.06825/images/llama_vs_mistral_example.png` | Upmarket AI couldn't run on this Mac. Check model download and device compatibility. |
+| `docling_2206.01062_tiff` | `tests/data/tiff/2206.01062.tif` | Upmarket AI couldn't run on this Mac. Check model download and device compatibility. |
+
+The current app-side availability gate was validated through Xcode on 2026-06-02:
+
+```sh
+xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/DeviceCapabilityTests
+```
+
+Xcode selected the arm64 macOS destination and `DeviceCapabilityTests.testUpmarketAIAvailabilityRequiresAppleSiliconAndMetalDevice` passed. `ModelManagerTests` also passed, so the Swift gate can see Apple Silicon plus a native Metal device in the app test runtime. The remaining Granite AI release gap is therefore a full conversion pass in a GUI/Metal-capable app or benchmark context, not proof that these four documents are bad.
+
+The 2026-06-02 packaged-helper smoke also exposed a real package-gate defect before the Metal check: the bundled Pillow native extensions were tagged for CPython 3.13 inside the embedded Python 3.12 framework. `scripts/build_python_env.sh` now refuses to build the bundled runtime with a non-3.12 interpreter, and `scripts/ci/verify_python_bundle.sh` now fails on native extension ABI mismatches under `site-packages`. The package dependency gate now passes:
+
+```sh
+scripts/ci/verify_python_bundle.sh
+```
+
+After that package fix, the targeted Xcode Granite smoke reaches the app-packaged helper and exits through the explicit `runtime.helper.runtime-unavailable` path because the current test session cannot access this Mac's graphics processor:
+
+```sh
+xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/PythonBridgeTests/testGraniteAIPreviouslyBlockedCorpusFixturesRouteThroughHelperWhenModelInstalled
+```
+
+The 2026-06-02 rerun records this as 1 skipped test with 0 failures so the normal unit suite remains usable on machines or Xcode sessions without helper-visible Metal. That keeps Granite AI release validation open, but it is no longer the same packaging failure.
 
 ## Gate C - Stability Diagnostics
 
-Existing Instruments trace bundles are under `reports/gate-c-stability/` for Allocations, Leaks, Time Profiler, and related captures. These are evidence only until an owner records pass/fail interpretation, notable leaks/hotspots, and any follow-up issues.
+Existing Instruments trace bundles are under `reports/gate-c-stability/` for Allocations, Leaks, Time Profiler, and related captures. Current owner interpretation:
+
+| Trace | Target | Duration | Interpretation |
+| --- | --- | ---: | --- |
+| `allocations.trace` | Upmarket | 105.140s | Usable Allocations capture; ended by time-limit SIGKILL. |
+| `allocations-binary.trace` | Upmarket | 10.811s | Usable Allocations capture; ended by time-limit SIGKILL. |
+| `time-profiler-all-processes.trace` | all processes | 5.696s | Usable Time Profiler inventory, but not Upmarket-targeted enough for release pass/fail. |
+| `leaks-all-processes.trace` | all processes | 0.000s | Not usable release evidence. |
+| `allocations-all-processes.trace` | all processes | 0.000s | Not usable release evidence. |
+
+Gate C Instruments remains open for a targeted Leaks capture, a targeted Time Profiler capture during conversion, and Main Thread Checker evidence.
 
 Thread Sanitizer validation covers the focused conversion, model, StoreKit accounting, and pack ledger unit flows with:
 

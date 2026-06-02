@@ -128,7 +128,9 @@ struct UpmarketRuntimeHelper {
             }
             let success = Bool(pyResult["success"]) ?? false
             guard success else {
-                return RuntimeHelperResponse(success: false, code: "runtime.helper.call-failed", message: "conversion failed")
+                let message = String(pyResult["error"]) ?? "conversion failed"
+                let code = Self.runtimeCode(forConversionError: message)
+                return RuntimeHelperResponse(success: false, code: code, message: message)
             }
             let meta = pyResult["metadata"]
             return RuntimeHelperResponse(success: true, output: RuntimeConversionOutputDTO(
@@ -211,6 +213,17 @@ struct UpmarketRuntimeHelper {
             setenv("TMPDIR", workspacePath, 1)
             setenv("UPMARKET_ALLOWED_INPUT_ROOTS", workspacePath, 1)
         }
+    }
+
+    private static func runtimeCode(forConversionError message: String) -> String {
+        let lowered = message.lowercased()
+        if lowered.contains("graphics processor")
+            || lowered.contains("metal")
+            || lowered.contains("device compatibility")
+            || lowered.contains("couldn't run on this mac") {
+            return "runtime.helper.runtime-unavailable"
+        }
+        return "runtime.helper.call-failed"
     }
 
     private static func abortIfPrivilegedProcess() {

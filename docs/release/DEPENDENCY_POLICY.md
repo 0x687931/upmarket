@@ -22,7 +22,7 @@ Before a candidate can become current:
 2. Add or identify a local reproduction or corpus fixture.
 3. Run `scripts/ci/validate_dependency_lock.py`.
 4. Run `scripts/update_dependencies.sh --install-candidate`.
-5. Run `scripts/ci/verify_python_bundle.sh` from the packaged app state.
+5. Run `scripts/ci/verify_python_bundle.sh` from the packaged app state, including native extension ABI-tag validation against the embedded Python minor version.
 6. Run `scripts/ci/smoke_convert_offline.sh`.
 7. Run `scripts/ci/validate_corpus.py`, `scripts/ci/validate_corpus_baseline.py`, and the relevant benchmark/corpus comparison.
 8. Run `scripts/generate_licenses.sh` and review license changes.
