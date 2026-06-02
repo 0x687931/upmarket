@@ -278,9 +278,9 @@ struct MenuBarDropdown: View {
         Button(action: action) {
             HStack(spacing: 10) {
                 Image(systemName: icon)
-                    .font(.system(size: 13))
+                    .font(.system(size: 14))
                     .foregroundStyle(Color.accentColor)
-                    .frame(width: 18)
+                    .frame(width: 20, alignment: .center)
                 Text(label)
                     .font(.subheadline)
                 Spacer()
@@ -296,9 +296,9 @@ struct MenuBarDropdown: View {
     private func menuItemDisabled(icon: String, label: String) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 13))
+                .font(.system(size: 14))
                 .foregroundStyle(.tertiary)
-                .frame(width: 18)
+                .frame(width: 20, alignment: .center)
             Text(label)
                 .font(.subheadline)
                 .foregroundStyle(.tertiary)
