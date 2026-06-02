@@ -13,22 +13,20 @@ struct MenuBarIconView: View {
             badgeDot
         }
         .frame(width: 22, height: 22)
+        // task cancels automatically if the view disappears mid-wait
+        .task(id: completionToken) {
+            guard completionToken > 0 else { return }
+            showCompletionDot = true
+            try? await Task.sleep(for: .seconds(1.8))
+            withAnimation(.easeOut(duration: 0.4)) {
+                showCompletionDot = false
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .upmarketConversionEnded)) { _ in
             completionToken += 1
-            showCompletionDot = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
-                withAnimation(.easeOut(duration: 0.4)) {
-                    showCompletionDot = false
-                }
-            }
         }
     }
 
-    // MARK: - Symbol
-
-    // Always number.square — state is communicated by the badge, not the symbol shape.
-    // .primary foreground keeps the icon template-compliant so the OS renders it
-    // correctly against both light and dark menu bar backgrounds.
     @ViewBuilder private var iconSymbol: some View {
         if #available(macOS 14.0, *) {
             Image(systemName: "number.square")
@@ -45,11 +43,6 @@ struct MenuBarIconView: View {
         }
     }
 
-    // MARK: - Badge dot
-
-    // 5pt circle, bottom-right of the 22pt frame.
-    // offset(x:3, y:3) pushes it just past the symbol edge — stays within
-    // the 22pt frame so it doesn't clip against the menu bar.
     @ViewBuilder private var badgeDot: some View {
         if isConverting {
             Circle()

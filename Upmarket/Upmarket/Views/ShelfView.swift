@@ -18,7 +18,6 @@ struct ShelfView: View {
     @State private var hoverClose  = false
     @State private var hoverAdd    = false
     @State private var hoverToggle = false
-    @State private var floatOffset: CGFloat = -2
 
     // UI-5: asymmetric closed state
     // Left: narrow control strip  |  Right: peek panel showing live job state
@@ -189,35 +188,46 @@ struct ShelfView: View {
         }
     }
 
+    // Float driven by TimelineView — starts immediately, never double-starts
+    // on re-appear, self-contained with no @State offset variable.
     private var peekIdleView: some View {
-        VStack(spacing: 6) {
-            Group {
-                if #available(macOS 14.0, *) {
-                    Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
-                        .font(.system(size: 20))
-                        .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.45))
-                        .symbolEffect(.bounce, value: isTargeted)
-                } else {
-                    Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
-                        .font(.system(size: 20))
-                        .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.45))
+        TimelineView(.animation) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            let float = sin(t * .pi / 1.5) * 2   // ±2pt, 3s period
+            VStack(spacing: 6) {
+                Group {
+                    if #available(macOS 14.0, *) {
+                        Image(systemName: isTargeted
+                              ? "arrow.down.circle.fill"
+                              : "arrow.down.circle")
+                            .font(.system(size: 20))
+                            .foregroundStyle(
+                                isTargeted ? Color.accentColor : .primary.opacity(0.45)
+                            )
+                            .symbolEffect(.bounce, value: isTargeted)
+                    } else {
+                        Image(systemName: isTargeted
+                              ? "arrow.down.circle.fill"
+                              : "arrow.down.circle")
+                            .font(.system(size: 20))
+                            .foregroundStyle(
+                                isTargeted ? Color.accentColor : .primary.opacity(0.45)
+                            )
+                    }
                 }
-            }
-            .offset(y: floatOffset)
-            .animation(
-                .easeInOut(duration: 1.5).repeatForever(autoreverses: true),
-                value: floatOffset
-            )
-            .onAppear { floatOffset = 2 }
+                .offset(y: float)
 
-            Text(isTargeted ? "Release to convert" : "Drop files here")
-                .font(.system(size: 11))
-                .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.4))
-                .multilineTextAlignment(.center)
+                Text(isTargeted ? "Release to convert" : "Drop files here")
+                    .font(.system(size: 11))
+                    .foregroundStyle(
+                        isTargeted ? Color.accentColor : .primary.opacity(0.4)
+                    )
+                    .multilineTextAlignment(.center)
+            }
+            .animation(.easeInOut(duration: 0.15), value: isTargeted)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, 12)
         }
-        .animation(.easeInOut(duration: 0.15), value: isTargeted)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, 12)
     }
 
     private func peekJobView(_ job: ConversionJob) -> some View {
@@ -499,16 +509,13 @@ struct ShelfItemView: View {
                 .frame(width: 56)
                 .animation(.easeInOut(duration: 0.15), value: showCopied)
             statusText
-            // Persistent action row for terminal states; hover cancel for running
             if item.isRunning {
-                // Reserve the same height so card doesn't shift when a job finishes
                 Color.clear.frame(height: persistentActionsHeight)
             } else {
                 persistentActions
             }
         }
         .padding(.vertical, 6)
-        // Cancel button on hover for running jobs only
         .overlay(alignment: .bottom) {
             if item.isRunning && showActions {
                 runningHoverActions
@@ -517,15 +524,22 @@ struct ShelfItemView: View {
             }
         }
         .contentShape(Rectangle())
-        .onHover { showActions = $0 }
+        .onHover { h in withAnimation(.easeInOut(duration: 0.1)) { showActions = h } }
         .onTapGesture(count: 2) { handleDoubleClick() }
         .onTapGesture(count: 1) { handleSingleClick() }
         .contextMenu { contextMenuItems }
+        // Liveness ticker — updates `now` while job is running
         .task(id: item.id) {
             while item.isRunning {
-                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                try? await Task.sleep(for: .seconds(5))
                 now = Date()
             }
+        }
+        // showCopied auto-reset — cancels if view disappears
+        .task(id: showCopied) {
+            guard showCopied else { return }
+            try? await Task.sleep(for: .seconds(1.5))
+            showCopied = false
         }
     }
 
@@ -612,8 +626,7 @@ struct ShelfItemView: View {
             if let output = item.result?.output {
                 Button {
                     FileAccessService.shared.copyMarkdown(output.markdown)
-                    showCopied = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { showCopied = false }
+                    showCopied = true   // task(id: showCopied) resets after 1.5s
                 } label: {
                     Image(systemName: "doc.on.doc").font(.system(size: 10))
                 }
@@ -690,10 +703,7 @@ struct ShelfItemView: View {
     private func handleSingleClick() {
         if let output = item.result?.output {
             FileAccessService.shared.copyMarkdown(output.markdown)
-            showCopied = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                showCopied = false
-            }
+            showCopied = true   // task(id: showCopied) resets after 1.5s
         }
     }
 

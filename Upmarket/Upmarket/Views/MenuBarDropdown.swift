@@ -7,8 +7,6 @@ struct MenuBarDropdown: View {
     @Environment(\.openWindow) private var openWindow
 
     @State private var primaryActionHovered = false
-    @State private var shimmerOffset: Double = -1.0
-    @State private var pulsing = false
     @State private var completedConversion = false
 
     var body: some View {
@@ -115,63 +113,65 @@ struct MenuBarDropdown: View {
             .background(background, in: Capsule())
     }
 
-    // Shimmer sweeps a brighter highlight left-to-right over the badge every 2.5s
+    // Shimmer driven by TimelineView — no @State, no repeatForever leak.
+    // TimelineView ticks at 60fps only while the view is on screen.
     private var proBadge: some View {
-        Text("Upmarket + AI")
-            .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(
-                Capsule().fill(
-                    LinearGradient(
-                        colors: [
-                            Color(hue: 0.67, saturation: 0.5, brightness: 1.0),
-                            Color(hue: 0.75, saturation: 0.6, brightness: 0.9),
-                            Color(hue: 0.67, saturation: 0.5, brightness: 1.0)
-                        ],
-                        startPoint: UnitPoint(x: shimmerOffset, y: 0),
-                        endPoint: UnitPoint(x: shimmerOffset + 1, y: 0)
+        TimelineView(.animation) { context in
+            let phase = context.date.timeIntervalSinceReferenceDate
+                .truncatingRemainder(dividingBy: 2.5) / 2.5   // 0…1 over 2.5s
+            let offset = phase * 2 - 1                         // -1…1
+            Text("Upmarket + AI")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(
+                    Capsule().fill(
+                        LinearGradient(
+                            colors: [
+                                Color(hue: 0.67, saturation: 0.5, brightness: 1.0),
+                                Color(hue: 0.75, saturation: 0.6, brightness: 0.9),
+                                Color(hue: 0.67, saturation: 0.5, brightness: 1.0)
+                            ],
+                            startPoint: UnitPoint(x: offset, y: 0),
+                            endPoint: UnitPoint(x: offset + 1, y: 0)
+                        )
                     )
                 )
-            )
-            .onAppear {
-                withAnimation(.linear(duration: 2.5).repeatForever(autoreverses: false)) {
-                    shimmerOffset = 1.0
-                }
-            }
+        }
     }
 
     // MARK: - Pulse dot + progress bar
 
+    // Pulse dot driven by TimelineView — no @State, correct lifecycle.
     @ViewBuilder private var pulseIndicator: some View {
         if conversion.isConverting {
-            Circle()
-                .fill(Color.white)
-                .frame(width: 6, height: 6)
-                .opacity(pulsing ? 0.35 : 1.0)
-                .animation(
-                    .easeInOut(duration: 0.7).repeatForever(autoreverses: true),
-                    value: pulsing
-                )
-                .onAppear { pulsing = true }
-                .onDisappear { pulsing = false }
+            TimelineView(.animation) { context in
+                let t = context.date.timeIntervalSinceReferenceDate
+                    .truncatingRemainder(dividingBy: 1.4) / 1.4
+                let opacity = 0.35 + 0.65 * abs(sin(t * .pi))
+                Circle()
+                    .fill(Color.white.opacity(opacity))
+                    .frame(width: 6, height: 6)
+            }
         }
     }
 
+    // Progress bar using scaleEffect(x:) on an anchor — no GeometryReader needed.
+    // The fill capsule starts at full width and is scaled from the leading edge.
     private var progressBar: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(Color.white.opacity(0.2))
-                    .frame(height: 3)
+        Capsule()
+            .fill(Color.white.opacity(0.2))
+            .frame(height: 3)
+            .overlay(alignment: .leading) {
                 Capsule()
                     .fill(completedConversion ? Color.green : Color.white.opacity(0.85))
-                    .frame(width: geo.size.width * conversion.overallProgress, height: 3)
+                    .scaleEffect(
+                        x: max(0.01, conversion.overallProgress),
+                        anchor: .leading
+                    )
                     .animation(.linear(duration: 0.3), value: conversion.overallProgress)
             }
-        }
-        .frame(height: 3)
     }
 
     // MARK: - Section chrome
