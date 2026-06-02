@@ -104,14 +104,9 @@ struct PreferencesView: View {
     }
 
     private func chooseSaveFolder() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.canCreateDirectories = true
-        panel.prompt = "Choose"
-        panel.message = "Upmarket will save converted files here."
-        panel.orderFrontRegardless()
-        if panel.runModal() == .OK, let url = panel.url {
+        if let url = FileAccessService.shared.chooseSaveDirectory(
+            message: "Upmarket will save converted files here."
+        ) {
             SavePreference.shared.chosenFolderURL = url
             SavePreference.shared.destination = .chosenFolder
         }

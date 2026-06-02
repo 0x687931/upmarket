@@ -66,6 +66,27 @@ final class FileAccessService {
         return panel.urls
     }
 
+    func chooseSaveDirectory(message: String, positioningNear window: NSWindow? = nil) -> URL? {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.prompt = "Choose"
+        panel.message = message
+
+        if let window {
+            panel.setFrameOrigin(NSPoint(x: window.frame.maxX + 8, y: window.frame.minY))
+            panel.orderFrontRegardless()
+        } else {
+            panel.orderFrontRegardless()
+        }
+
+        guard panel.runModal() == .OK, let url = panel.url else { return nil }
+        AppLog.fileAccess.info("Selected save directory kind=\(Self.storageKind(for: url).rawValue, privacy: .public)")
+        return url
+    }
+
     func loadFileURLs(from providers: [NSItemProvider], receiveURL: @escaping @MainActor (URL) -> Void) {
         AppLog.fileAccess.info("Loading dropped input batch count=\(providers.count, privacy: .public)")
         loadFileURL(from: providers, at: 0, receiveURL: receiveURL)
