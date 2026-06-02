@@ -23,12 +23,34 @@ if /usr/libexec/PlistBuddy -c "Print :com.apple.security.app-sandbox" "$APP_ENTI
   exit 1
 fi
 
+if /usr/libexec/PlistBuddy -c "Print :com.apple.security.app-sandbox" "$HELPER_ENTITLEMENTS" 2>/dev/null | grep -qv "true"; then
+  echo "error: runtime helper sandbox must be enabled in $HELPER_ENTITLEMENTS"
+  exit 1
+fi
+
+if /usr/libexec/PlistBuddy -c "Print :com.apple.security.inherit" "$HELPER_ENTITLEMENTS" 2>/dev/null | grep -qv "true"; then
+  echo "error: runtime helper must inherit the app sandbox in $HELPER_ENTITLEMENTS"
+  exit 1
+fi
+
 if /usr/libexec/PlistBuddy -c "Print :com.apple.security.temporary-exception.files.absolute-path.read-write" "$APP_ENTITLEMENTS" >/dev/null 2>&1; then
   echo "error: app contains temporary absolute-path sandbox exception"
   exit 1
 fi
 
 for file in "$APP_ENTITLEMENTS" "$EXT_ENTITLEMENTS" "$HELPER_ENTITLEMENTS"; do
+  if /usr/libexec/PlistBuddy -c "Print :com.apple.security.temporary-exception.mach-lookup.global-name" "$file" >/dev/null 2>&1; then
+    echo "error: $file contains temporary mach lookup sandbox exception"
+    exit 1
+  fi
+  if /usr/libexec/PlistBuddy -c "Print :com.apple.security.temporary-exception.files.absolute-path.read-only" "$file" >/dev/null 2>&1; then
+    echo "error: $file contains temporary absolute-path read sandbox exception"
+    exit 1
+  fi
+  if /usr/libexec/PlistBuddy -c "Print :com.apple.security.temporary-exception.files.absolute-path.read-write" "$file" >/dev/null 2>&1; then
+    echo "error: $file contains temporary absolute-path read-write sandbox exception"
+    exit 1
+  fi
   if /usr/libexec/PlistBuddy -c "Print :com.apple.security.application-groups" "$file" >/dev/null 2>&1; then
     groups=$(/usr/libexec/PlistBuddy -c "Print :com.apple.security.application-groups" "$file")
     if ! printf "%s\n" "$groups" | grep -q "group\\."; then
@@ -40,16 +62,24 @@ done
 
 if [[ $# -gt 0 ]]; then
   APP_PATH="$1"
+  SCRATCH_DIR="${TARGET_TEMP_DIR:-${TMPDIR:-/tmp}}"
+  APP_ENTITLEMENTS_DUMP="$SCRATCH_DIR/upmarket-entitlements.plist"
+  HELPER_ENTITLEMENTS_DUMP="$SCRATCH_DIR/upmarket-helper-entitlements.plist"
   if [[ ! -d "$APP_PATH" ]]; then
     echo "error: app bundle not found: $APP_PATH"
     exit 1
   fi
-  codesign -d --entitlements :- "$APP_PATH" >/tmp/upmarket-entitlements.plist 2>/dev/null || {
+  if [[ "${CODE_SIGNING_ALLOWED:-YES}" == "NO" ]]; then
+    echo "warning: skipping embedded entitlement read because code signing is disabled"
+    echo "ok: entitlements pass policy checks"
+    exit 0
+  fi
+  codesign -d --entitlements :- "$APP_PATH" >"$APP_ENTITLEMENTS_DUMP" 2>/dev/null || {
     echo "error: unable to read signed app entitlements from $APP_PATH"
     exit 1
   }
-  if [[ -s /tmp/upmarket-entitlements.plist ]]; then
-    plutil -lint /tmp/upmarket-entitlements.plist >/dev/null
+  if [[ -s "$APP_ENTITLEMENTS_DUMP" ]]; then
+    plutil -lint "$APP_ENTITLEMENTS_DUMP" >/dev/null
   elif [[ "${UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS:-0}" == "1" ]]; then
     echo "error: signed app entitlements are empty for $APP_PATH"
     exit 1
@@ -61,12 +91,12 @@ if [[ $# -gt 0 ]]; then
     echo "error: runtime helper missing from signed app: $HELPER_PATH"
     exit 1
   fi
-  codesign -d --entitlements :- "$HELPER_PATH" >/tmp/upmarket-helper-entitlements.plist 2>/dev/null || {
+  codesign -d --entitlements :- "$HELPER_PATH" >"$HELPER_ENTITLEMENTS_DUMP" 2>/dev/null || {
     echo "error: unable to read signed helper entitlements from $HELPER_PATH"
     exit 1
   }
-  if [[ -s /tmp/upmarket-helper-entitlements.plist ]]; then
-    plutil -lint /tmp/upmarket-helper-entitlements.plist >/dev/null
+  if [[ -s "$HELPER_ENTITLEMENTS_DUMP" ]]; then
+    plutil -lint "$HELPER_ENTITLEMENTS_DUMP" >/dev/null
   elif [[ "${UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS:-0}" == "1" ]]; then
     echo "error: signed helper entitlements are empty for $HELPER_PATH"
     exit 1

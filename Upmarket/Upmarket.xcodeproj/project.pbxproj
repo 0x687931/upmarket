@@ -216,8 +216,10 @@
 				81A3B7282FCB0F91004A488D /* Frameworks */,
 				81A3B7292FCB0F91004A488D /* Resources */,
 				81E090C32FCB12E400FC901A /* Embed Frameworks */,
+				CC000001000000000000001C /* Sync Python Bridge */,
 				AA00000E00000000000000EA /* Embed App Extensions */,
 				BB000007000000000000007B /* Embed Runtime Helper */,
+				CC000002000000000000002C /* Validate App Package */,
 			);
 			buildRules = (
 			);
@@ -413,6 +415,64 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		CC000001000000000000001C /* Sync Python Bridge */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/../scripts/ci/sync_and_verify_python_bridge.sh",
+				"$(SRCROOT)/../scripts/ci/sync_python_bridge.sh",
+				"$(SRCROOT)/../UpmarketPython/docling_bridge",
+				"$(SRCROOT)/../UpmarketPython/models",
+			);
+			name = "Sync Python Bridge";
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge",
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge/__init__.py",
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge/analyser.py",
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge/converter.py",
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge/postprocessor.py",
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge/security.py",
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/upmarket_models",
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/upmarket_models/__init__.py",
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/upmarket_models/model_manager.py",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "cd \"$SRCROOT/..\"\nSITE=\"$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH/Python.framework/Versions/3.12/lib/python3.12/site-packages\"\nscripts/ci/sync_and_verify_python_bridge.sh \"$SITE\"\n";
+		};
+		CC000002000000000000002C /* Validate App Package */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/../scripts/ci/verify_entitlements.sh",
+				"$(SRCROOT)/../scripts/ci/validate_runtime_helper.py",
+				"$(SRCROOT)/Upmarket.xcodeproj/project.pbxproj",
+				"$(SRCROOT)/Upmarket/Upmarket.entitlements",
+				"$(SRCROOT)/UpmarketQuickActionSupport/UpmarketQuickAction.entitlements",
+				"$(SRCROOT)/UpmarketRuntimeHelper/UpmarketRuntimeHelper.entitlements",
+				"$(SRCROOT)/UpmarketRuntimeHelper/main.swift",
+				"$(SRCROOT)/Vendor/PythonKit/UPMARKET_VENDOR.md",
+				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)",
+				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/Contents/MacOS/UpmarketRuntimeHelper",
+			);
+			name = "Validate App Package";
+			outputPaths = (
+				"$(TARGET_TEMP_DIR)/upmarket-entitlements.plist",
+				"$(TARGET_TEMP_DIR)/upmarket-helper-entitlements.plist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "cd \"$SRCROOT/..\"\nAPP=\"$TARGET_BUILD_DIR/$WRAPPER_NAME\"\nscripts/ci/verify_entitlements.sh \"$APP\"\nscripts/ci/validate_runtime_helper.py \"$APP\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		81A3B7272FCB0F91004A488D /* Sources */ = {

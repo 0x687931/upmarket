@@ -46,8 +46,13 @@ def main() -> int:
 
     if not HELPER_SOURCE.exists():
         errors.append(f"{HELPER_SOURCE}: helper source missing")
-    elif "import PythonKit" not in HELPER_SOURCE.read_text(encoding="utf-8"):
-        errors.append(f"{HELPER_SOURCE}: helper must own the runtime bridge import")
+    else:
+        helper_text = HELPER_SOURCE.read_text(encoding="utf-8")
+        if "import PythonKit" not in helper_text:
+            errors.append(f"{HELPER_SOURCE}: helper must own the runtime bridge import")
+        for marker in ["getuid()", "geteuid()", "installPythonSandbox()", "UPMARKET_RUNTIME_SANDBOX"]:
+            if marker not in helper_text:
+                errors.append(f"{HELPER_SOURCE}: missing runtime guard marker {marker}")
 
     if not HELPER_ENTITLEMENTS.exists():
         errors.append(f"{HELPER_ENTITLEMENTS}: helper entitlements missing")
@@ -68,6 +73,8 @@ def main() -> int:
         helper = app_path / "Contents" / "MacOS" / "UpmarketRuntimeHelper"
         if not helper.exists():
             errors.append(f"{helper}: embedded helper missing")
+        elif os.environ.get("ENABLE_USER_SCRIPT_SANDBOXING") == "YES" and os.environ.get("UPMARKET_RUN_HELPER_SMOKE_IN_BUILD") != "1":
+            print("warning: skipping helper readiness smoke inside Xcode's user script sandbox")
         elif os.access(helper, os.X_OK):
             request = json.dumps({"operation": "readiness"}).encode()
             result = subprocess.run(

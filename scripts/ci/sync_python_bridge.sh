@@ -10,17 +10,16 @@ fi
 
 mkdir -p "$SITE/docling_bridge" "$SITE/upmarket_models"
 
-find "$SITE/docling_bridge" "$SITE/upmarket_models" \
-  \( -name "__pycache__" -o -name "*.pyc" -o -name "*.pyo" \) -prune -exec rm -rf {} +
-
 find UpmarketPython/docling_bridge -maxdepth 1 -type f -name "*.py" -print0 \
   | while IFS= read -r -d '' file; do
-      install -m 0644 "$file" "$SITE/docling_bridge/$(basename "$file")"
+      cp -f "$file" "$SITE/docling_bridge/$(basename "$file")"
+      chmod 0644 "$SITE/docling_bridge/$(basename "$file")" 2>/dev/null || true
     done
 
 find UpmarketPython/models -maxdepth 1 -type f -name "*.py" -print0 \
   | while IFS= read -r -d '' file; do
-      install -m 0644 "$file" "$SITE/upmarket_models/$(basename "$file")"
+      cp -f "$file" "$SITE/upmarket_models/$(basename "$file")"
+      chmod 0644 "$SITE/upmarket_models/$(basename "$file")" 2>/dev/null || true
     done
 
 echo "ok: first-party Python bridge copied into bundled runtime"
