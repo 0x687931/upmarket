@@ -23,7 +23,11 @@ struct MenuBarDropdown: View {
         // onChange fires only on genuine transitions; never on initial appearance.
         // completionToken increment is the trigger; task resets it after 0.8s.
         .onChange(of: conversion.isConverting) { converting in
-            if !converting { completionToken += 1 }
+            if converting {
+                completedConversion = false   // clear green tint if a new job starts
+            } else {
+                completionToken += 1
+            }
         }
         .task(id: completionToken) {
             guard completionToken > 0 else { return }
