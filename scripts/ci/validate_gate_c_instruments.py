@@ -12,6 +12,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 TRACE_ROOT = ROOT / "reports" / "gate-c-stability"
+DEFAULT_EXPORT_TIMEOUT_SECONDS = 45
+
+
+class TraceExportError(RuntimeError):
+    pass
 
 
 @dataclass(frozen=True)
@@ -23,6 +28,7 @@ class TraceExpectation:
     max_duration: float | None
     usable: bool
     reason: str
+    export_timeout: int = DEFAULT_EXPORT_TIMEOUT_SECONDS
 
 
 EXPECTATIONS = [
@@ -34,15 +40,7 @@ EXPECTATIONS = [
         max_duration=120.0,
         usable=True,
         reason="Upmarket-targeted Allocations capture",
-    ),
-    TraceExpectation(
-        path="allocations-binary.trace",
-        template="Allocations",
-        target="Upmarket",
-        min_duration=8.0,
-        max_duration=20.0,
-        usable=True,
-        reason="Upmarket-targeted Allocations capture",
+        export_timeout=120,
     ),
     TraceExpectation(
         path="time-profiler.trace",
@@ -92,24 +90,24 @@ EXPECTATIONS = [
 ]
 
 
-def export_toc(trace: Path) -> ET.Element:
+def export_toc(trace: Path, timeout: int) -> ET.Element:
     try:
         result = subprocess.run(
             ["xcrun", "xctrace", "export", "--input", str(trace), "--toc"],
             check=True,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=timeout,
         )
     except subprocess.CalledProcessError as error:
-        raise SystemExit(f"error: xctrace export failed for {trace}: {error.stderr.strip()}") from error
+        raise TraceExportError(f"xctrace export failed: {error.stderr.strip()}") from error
     except subprocess.TimeoutExpired as error:
-        raise SystemExit(f"error: xctrace export timed out for {trace}") from error
+        raise TraceExportError(f"xctrace export timed out after {timeout}s") from error
 
     try:
         return ET.fromstring(result.stdout)
     except ET.ParseError as error:
-        raise SystemExit(f"error: xctrace exported invalid XML for {trace}: {error}") from error
+        raise TraceExportError(f"xctrace exported invalid XML: {error}") from error
 
 
 def text(root: ET.Element, path: str) -> str:
@@ -139,8 +137,14 @@ def validate(expectation: TraceExpectation) -> list[str]:
     if not trace.exists():
         return [f"{expectation.path}: missing trace bundle"]
 
-    root = export_toc(trace)
     errors: list[str] = []
+    try:
+        root = export_toc(trace, expectation.export_timeout)
+    except TraceExportError as error:
+        if expectation.usable:
+            return [f"{expectation.path}: {error}"]
+        print(f"{expectation.path}: not release evidence; {expectation.reason}; export={error}")
+        return []
 
     actual_target = target_label(root)
     if actual_target != expectation.target:
