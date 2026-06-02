@@ -41,6 +41,14 @@ jobs:
       - name: Verify source entitlements
         run: scripts/ci/verify_entitlements.sh
 
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build Python runtime
+        run: scripts/build_python_env.sh
+
       - name: Verify Python bundle imports
         run: scripts/ci/verify_python_bundle.sh
 
