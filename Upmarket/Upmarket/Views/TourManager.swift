@@ -3,7 +3,6 @@ import SwiftUI
 
 /// Manages the first-launch tour.
 /// Shows NSPanel callout bubbles pointing at the actual shelf buttons.
-/// Final step shows the paywall.
 @MainActor
 final class TourManager {
 
@@ -104,10 +103,6 @@ final class TourManager {
         dismissCallout()
         isActive = false
         UserDefaults.standard.set(true, forKey: "upmarket.tourComplete")
-        // Show paywall after tour
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            NotificationCenter.default.post(name: .showPaywall, object: nil)
-        }
     }
 
     // MARK: - Callout display

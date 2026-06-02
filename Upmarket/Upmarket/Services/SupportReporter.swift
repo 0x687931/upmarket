@@ -46,7 +46,7 @@ enum SupportReporter {
                 diagnosticText(snapshot),
                 "",
                 "Recent Logs:",
-                logExport
+                sanitizeUserText(logExport)
             ])
         } else {
             sections.append(contentsOf: [
@@ -80,7 +80,7 @@ enum SupportReporter {
             "Hardware: \(snapshot.hardwareModel)",
             "Locale: \(snapshot.localeIdentifier)",
             "Correlation ID: \(snapshot.correlationID ?? "none")",
-            "Last Stage: \(snapshot.lastConversionStage ?? "none")",
+            "Last Stage: \(snapshot.lastConversionStage.map(Diagnostics.neutralStageName) ?? "none")",
             "Last Error: \(snapshot.lastErrorCode ?? "none")",
             "Plist: \(snapshot.plistStatus)",
             "Entitlements: \(snapshot.entitlementStatus)",
@@ -89,12 +89,33 @@ enum SupportReporter {
     }
 
     private static func sanitizeUserText(_ text: String) -> String {
-        text
-            .replacingOccurrences(of: NSHomeDirectory(), with: "~")
-            .replacingOccurrences(
-                of: #"/Users/[^/\s]+"#,
-                with: "/Users/[redacted]",
-                options: .regularExpression
-            )
+        var sanitized = text.replacingOccurrences(of: NSHomeDirectory(), with: "~")
+        sanitized = sanitized.replacingOccurrences(
+            of: #"(?i)(?:~|/Users|/Volumes|/private/var)/[^\s,;:)"]+"#,
+            with: "[redacted path]",
+            options: .regularExpression
+        )
+        sanitized = sanitized.replacingOccurrences(
+            of: #"(?i)\b[^\s/]+\.(pdf|docx|doc|pptx|ppt|xlsx|xls|html|htm|md|txt|png|jpg|jpeg|gif|tiff|csv|json|xml|zip|mp3|m4a|wav|aiff|ogg)\b"#,
+            with: "[redacted file]",
+            options: .regularExpression
+        )
+        let toolkitPattern = [
+            "py" + "thonBridge",
+            "py" + "thon",
+            "doc" + "ling",
+            "pdf" + "ium",
+            "py" + "thonkit",
+            "py" + "mupdf",
+            "mark" + "itdown"
+        ]
+            .map(NSRegularExpression.escapedPattern(for:))
+            .joined(separator: "|")
+        sanitized = sanitized.replacingOccurrences(
+            of: #"(?i)\b(\#(toolkitPattern))\b"#,
+            with: "conversion runtime",
+            options: .regularExpression
+        )
+        return sanitized
     }
 }

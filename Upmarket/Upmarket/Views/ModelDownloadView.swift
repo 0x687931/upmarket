@@ -5,16 +5,18 @@ struct ModelDownloadView: View {
     @EnvironmentObject private var modelManager: ModelManager
     @EnvironmentObject private var store: StoreManager
 
-    private let device = DeviceCapability.shared
-
     var body: some View {
         VStack(spacing: 24) {
             header
 
             if modelManager.isDownloading {
                 downloadingView
+            } else if let checkError = modelManager.checkError {
+                checkErrorView(checkError)
             } else if let error = modelManager.downloadError {
                 errorView(error)
+            } else if case .checking = modelManager.installState {
+                checkingView
             } else {
                 modelList
                 downloadButton
@@ -37,7 +39,7 @@ struct ModelDownloadView: View {
                 .font(.title2)
                 .fontWeight(.bold)
 
-            Text("Upmarket runs entirely on your Mac — no cloud, no subscriptions. Download the AI models once (~\(modelManager.requiredSizeMB) MB) and convert documents offline forever.")
+            Text("Upmarket runs entirely on your Mac. Fast conversion works without downloads; optional local models can improve complex documents after a one-time install.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -48,26 +50,49 @@ struct ModelDownloadView: View {
 
     private var modelList: some View {
         VStack(spacing: 10) {
-            modelRow(
-                icon: "doc.text.magnifyingglass",
-                title: "Upmarket",
-                description: "Document understanding, tables, and layout detection",
-                sizeMB: modelManager.requiredSizeMB,
-                isDownloaded: modelManager.models.filter(\.isRequired).allSatisfy(\.isDownloaded),
-                isAI: false,
-                available: true
-            )
+            if modelManager.models.isEmpty {
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(Color.green)
+                        .font(.title3)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Fast conversion ready")
+                            .fontWeight(.medium)
+                        Text("No optional local models were reported for this build.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(12)
+                .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
+            }
+
+            ForEach(modelManager.models.filter { $0.tier != "pro" }, id: \.key) { model in
+                modelRow(
+                    icon: "doc.text.magnifyingglass",
+                    title: model.name,
+                    description: model.error ?? model.description,
+                    sizeMB: model.sizeMB,
+                    isDownloaded: model.isDownloaded,
+                    isAI: false,
+                    available: model.isAvailable
+                )
+            }
 
             if store.hasProOrAbove {
-                modelRow(
-                    icon: "sparkles",
-                    title: "Upmarket AI",
-                    description: "Advanced understanding for complex and scanned documents",
-                    sizeMB: modelManager.proSizeMB,
-                    isDownloaded: modelManager.models.filter { $0.tier == "pro" }.allSatisfy(\.isDownloaded),
-                    isAI: true,
-                    available: device.supportsUpmarketAI
-                )
+                ForEach(modelManager.models.filter { $0.tier == "pro" }, id: \.key) { model in
+                    let gateReason = modelManager.proDownloadUnavailableReason(hasPro: store.hasProOrAbove)
+                    modelRow(
+                        icon: "sparkles",
+                        title: model.name,
+                        description: gateReason ?? model.error ?? model.description,
+                        sizeMB: model.sizeMB,
+                        isDownloaded: model.isDownloaded,
+                        isAI: true,
+                        available: model.isAvailable && gateReason == nil
+                    )
+                }
             }
         }
     }
@@ -92,7 +117,7 @@ struct ModelDownloadView: View {
                             .background(Color.accentColor, in: Capsule())
                     }
                 }
-                Text(available ? description : device.upmarketAIUnavailableReason)
+                Text(description)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -114,7 +139,7 @@ struct ModelDownloadView: View {
         VStack(spacing: 10) {
             let requiredReady = modelManager.models.filter(\.isRequired).allSatisfy(\.isDownloaded)
 
-            if !requiredReady {
+            if !requiredReady && modelManager.requiredSizeMB > 0 {
                 Button {
                     modelManager.downloadRequiredModels()
                 } label: {
@@ -126,11 +151,11 @@ struct ModelDownloadView: View {
                 .controlSize(.large)
             }
 
-            if store.hasProOrAbove && device.supportsUpmarketAI {
+            if modelManager.proDownloadUnavailableReason(hasPro: store.hasProOrAbove) == nil {
                 let proReady = modelManager.models.filter { $0.tier == "pro" }.allSatisfy(\.isDownloaded)
                 if !proReady {
                     Button {
-                        modelManager.downloadProModels()
+                        modelManager.downloadProModels(hasPro: store.hasProOrAbove)
                     } label: {
                         Label("Download Upmarket AI — \(modelManager.proSizeMB) MB", systemImage: "sparkles")
                             .frame(maxWidth: .infinity)
@@ -148,6 +173,16 @@ struct ModelDownloadView: View {
     }
 
     // MARK: - Downloading
+
+    private var checkingView: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+                .controlSize(.small)
+            Text("Checking local model files...")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
 
     private var downloadingView: some View {
         VStack(spacing: 16) {
@@ -189,6 +224,24 @@ struct ModelDownloadView: View {
 
     // MARK: - Error
 
+    private func checkErrorView(_ error: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 32))
+                .foregroundStyle(.red)
+            Text("Model check failed")
+                .fontWeight(.medium)
+            Text(error)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Button("Check Again") {
+                modelManager.checkModels()
+            }
+            .buttonStyle(.borderedProminent)
+        }
+    }
+
     private func errorView(_ error: String) -> some View {
         VStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
@@ -196,12 +249,16 @@ struct ModelDownloadView: View {
                 .foregroundStyle(.red)
             Text(L("models.status.failed"))
                 .fontWeight(.medium)
-            Text("Please check your internet connection and try again.")
+            Text(error)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             Button("Try Again") {
-                modelManager.downloadRequiredModels()
+                if modelManager.proDownloadUnavailableReason(hasPro: store.hasProOrAbove) == nil {
+                    modelManager.downloadProModels(hasPro: store.hasProOrAbove)
+                } else {
+                    modelManager.checkModels()
+                }
             }
             .buttonStyle(.borderedProminent)
         }

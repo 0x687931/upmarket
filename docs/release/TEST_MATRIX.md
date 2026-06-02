@@ -6,6 +6,7 @@ This matrix defines the minimum validation surface. Add focused tests when a cha
 | --- | --- | --- | --- | --- |
 | Xcode project | Project opens, targets resolve, helper target is wired | `scripts/ci/verify_xcode_project.sh` | Every PR | Yes |
 | Architecture boundaries | Minimal monolith, Python behind helper, no restored legacy service, no hidden launch window workarounds | `scripts/ci/validate_architecture_boundaries.py` | Every PR | Yes |
+| Philosophy remediation | Primary conversion surface, rejected input visibility, supported type parity, queue-owned UI state, model setup states, support redaction/context, and programmatic authorization stay covered | `scripts/ci/validate_release_regression_guards.py`; `UpmarketUITests/UpmarketUITests.swift`; `UpmarketTests/ConversionQueueTests.swift`; `UpmarketTests/StorageAccessTests.swift`; `UpmarketTests/ModelManagerTests.swift`; `UpmarketTests/SupportReporterTests.swift`; `UpmarketTests/ProgrammaticConversionAuthorizationTests.swift` | Every PR | Yes |
 | User-facing copy | No internal toolkit/package names in normal UI copy | `scripts/ci/validate_user_facing_copy.py` | Every PR | Yes |
 | Generated docs | Source map and automation docs are current | `scripts/docs/generate_repo_docs.py --check` | Every PR | Yes |
 | Source entitlements | App/helper entitlement policy matches App Store intent | `scripts/ci/verify_entitlements.sh` | Every PR | Yes |

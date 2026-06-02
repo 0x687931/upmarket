@@ -10,7 +10,8 @@ struct ContentView: View {
     @EnvironmentObject private var store: StoreManager
     @EnvironmentObject private var modelManager: ModelManager
 
-    @State private var phase: AppPhase = .idle
+    @State private var primaryJobID: UUID?
+    @State private var isAnalysingPrimary = false
     @State private var isTargeted = false
     @State private var showPaywall = false
     @State private var showModelDownload = false
@@ -29,29 +30,23 @@ struct ContentView: View {
     @State private var rippleScale: CGFloat = 0
     @State private var rippleOpacity: Double = 0
 
-    enum AppPhase {
-        case idle, targeting, analysing, converting, result(ConversionResult), error(String)
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             statusBanner
             Divider()
             ZStack {
-                switch phase {
-                case .idle, .targeting:
+                if isAnalysingPrimary {
+                    convertingView(nil)
+                } else if let job = primaryJob {
+                    jobView(job)
+                } else {
                     dropZoneView
-                case .analysing, .converting:
-                    convertingView
-                case .result(let result):
-                    outputView(result)
-                case .error(let message):
-                    errorView(message)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .accessibilityIdentifier("PrimaryConversionView")
         .frame(
             minWidth: isOutputPhase ? 560 : 400,
             idealWidth: isOutputPhase ? 640 : 400,
@@ -90,21 +85,35 @@ struct ContentView: View {
         }
         .overlay(alignment: .bottom) { languageWarningBanner }
         .onAppear { startIdleAnimation() }
-        .onChange(of: conversion.isAnalysing) { analysing in
-            if analysing { transitionToAnalysing() }
+        .onChange(of: isAnalysingPrimary) { analysing in
+            if analysing { startProgressAnimation() }
         }
-        .onChange(of: conversion.isConverting) { converting in
-            if converting { transitionToConverting() }
-            else if let result = conversion.latestResult { transitionToResult(result) }
+        .onChange(of: primaryJob?.stage) { stage in
+            if stage?.isRunning == true { startProgressAnimation() }
         }
-        .onChange(of: conversion.needsPassword) { needs in
-            if needs { showPasswordPrompt = true }
+        .onChange(of: primaryJob?.result) { result in
+            guard let result else { return }
+            if result.errorMessage == ConversionError.passwordRequired.errorDescription {
+                showPasswordPrompt = true
+            }
+            if case .success = result, store.shouldShowTrialPaywallAfterConversion() {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                    NotificationCenter.default.post(name: .showPaywall, object: nil)
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openFilePicker)) { _ in
+            openFilePicker()
         }
     }
 
+    private var primaryJob: ConversionJob? {
+        guard let primaryJobID else { return nil }
+        return conversion.job(id: primaryJobID)
+    }
+
     private var isOutputPhase: Bool {
-        if case .result = phase { return true }
-        return false
+        primaryJob?.result?.output != nil
     }
 
     // MARK: - Drop Zone
@@ -181,6 +190,7 @@ struct ContentView: View {
                     .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("ChooseDocumentButton")
                 .opacity(isTargeted ? 0 : 1)
                 .animation(.easeInOut(duration: 0.15), value: isTargeted)
             }
@@ -211,7 +221,17 @@ struct ContentView: View {
 
     // MARK: - Converting View
 
-    private var convertingView: some View {
+    private func jobView(_ job: ConversionJob) -> some View {
+        if job.isRunning {
+            return AnyView(convertingView(job))
+        }
+        if let result = job.result {
+            return AnyView(outputView(result, job: job))
+        }
+        return AnyView(convertingView(job))
+    }
+
+    private func convertingView(_ job: ConversionJob?) -> some View {
         VStack(spacing: 24) {
             ZStack {
                 // Progress ring
@@ -234,18 +254,37 @@ struct ContentView: View {
                     .foregroundStyle(Color.accentColor)
                     .scaleEffect(0.9 + (ringProgress * 0.1))
             }
+
+            VStack(spacing: 6) {
+                Text(job?.name ?? "Checking document")
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: 280)
+
+                Text(job.map(stageText) ?? "Checking file access and document complexity")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let job, job.isRunning {
+                Button("Cancel") {
+                    conversion.cancel(job.id)
+                }
+                .buttonStyle(.bordered)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Output View
 
-    private func outputView(_ result: ConversionResult) -> some View {
+    private func outputView(_ result: ConversionResult, job: ConversionJob) -> some View {
         switch result {
         case .success(let output):
             return AnyView(successView(output))
         case .failure(let message):
-            return AnyView(errorView(message))
+            return AnyView(errorView(message, job: job))
         }
     }
 
@@ -330,7 +369,7 @@ struct ContentView: View {
 
     // MARK: - Error View
 
-    private func errorView(_ message: String) -> some View {
+    private func errorView(_ message: String, job: ConversionJob?) -> some View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 36, weight: .light))
@@ -343,10 +382,13 @@ struct ContentView: View {
                 .frame(maxWidth: 300)
 
             HStack(spacing: 10) {
-                Button("Try Again") { resetToIdle() }
+                Button("Convert Another") { resetToIdle() }
                     .buttonStyle(.borderedProminent)
-                if conversion.needsPassword {
+                if job != nil, message == ConversionError.passwordRequired.errorDescription {
                     Button("Enter Password") { showPasswordPrompt = true }
+                        .buttonStyle(.bordered)
+                } else if let job, job.stage != .cancelled {
+                    Button("Retry") { retry(job) }
                         .buttonStyle(.bordered)
                 }
             }
@@ -432,9 +474,10 @@ struct ContentView: View {
                 }
                 .buttonStyle(.bordered)
                 Button("Convert") {
-                    guard let url = pendingFileURL else { return }
+                    guard let job = primaryJob else { return }
                     showPasswordPrompt = false
-                    conversion.add(url, password: passwordInput)
+                    let id = conversion.add(job.sourceURL, useAI: job.useAI, password: passwordInput)
+                    primaryJobID = id
                     passwordInput = ""
                 }
                 .buttonStyle(.borderedProminent)
@@ -465,31 +508,10 @@ struct ContentView: View {
         }
     }
 
-    private func transitionToAnalysing() {
-        withAnimation(.easeInOut(duration: 0.3)) {
-            phase = .analysing
-            ringProgress = 0.15
-        }
-        // Animate ring to show activity
+    private func startProgressAnimation() {
+        ringProgress = 0.15
         withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: false)) {
             ringProgress = 0.85
-        }
-    }
-
-    private func transitionToConverting() {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            phase = .converting
-        }
-    }
-
-    private func transitionToResult(_ result: ConversionResult) {
-        withAnimation(.spring(duration: 0.5, bounce: 0.2)) {
-            phase = .result(result)
-        }
-        if store.shouldShowTrialPaywallAfterConversion() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                NotificationCenter.default.post(name: .showPaywall, object: nil)
-            }
         }
     }
 
@@ -497,8 +519,10 @@ struct ContentView: View {
         conversion.reset()
         languageWarning = nil
         pendingFileURL = nil
+        pendingAdvice = nil
+        primaryJobID = nil
+        isAnalysingPrimary = false
         withAnimation(.easeInOut(duration: 0.3)) {
-            phase = .idle
             ringProgress = 0
         }
         startIdleAnimation()
@@ -536,14 +560,22 @@ struct ContentView: View {
         do {
             try FileAccessService.shared.validateReadableInput(url)
         } catch {
-            AppLog.fileAccess.error("Rejected input before conversion: \(error.localizedDescription, privacy: .private)")
+            let message = FileAccessService.userVisibleMessage(for: error)
+            AppLog.fileAccess.error("Rejected input before conversion: \(message, privacy: .private)")
+            primaryJobID = conversion.addRejected(url, message: message)
+            isAnalysingPrimary = false
+            pendingFileURL = nil
+            languageWarning = nil
             return
         }
         store.consumeConversion()
         pendingFileURL = url
         languageWarning = nil
+        primaryJobID = nil
+        isAnalysingPrimary = true
 
         conversion.analyse(fileURL: url) { advice in
+            self.isAnalysingPrimary = false
             if let warning = advice?.languageQualityWarning {
                 withAnimation { self.languageWarning = warning }
             }
@@ -558,7 +590,34 @@ struct ContentView: View {
     }
 
     private func beginConversion(url: URL, useAI: Bool) {
-        conversion.add(url, useAI: useAI)
+        var shouldUseAI = useAI
+        if useAI, let reason = modelManager.aiUseUnavailableReason(hasPro: store.hasProOrAbove) {
+            shouldUseAI = false
+            withAnimation {
+                languageWarning = reason
+            }
+        }
+        primaryJobID = conversion.add(url, useAI: shouldUseAI)
+    }
+
+    private func retry(_ job: ConversionJob) {
+        primaryJobID = conversion.retry(job.id)
+    }
+
+    private func stageText(_ job: ConversionJob) -> String {
+        if job.isStalled {
+            return "No progress detected. You can cancel and retry."
+        }
+        switch job.stage {
+        case .queued: return "Queued"
+        case .copying: return "Preparing document"
+        case .extracting: return "Reading document"
+        case .python: return "Processing document"
+        case .postProcessing: return "Cleaning Markdown"
+        case .complete: return "Done"
+        case .failed: return "Failed"
+        case .cancelled: return "Cancelled"
+        }
     }
 
     private func saveMarkdown(_ output: ConversionOutput) {

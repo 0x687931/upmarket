@@ -47,7 +47,7 @@ enum Diagnostics {
             hardwareModel: hardwareModel(),
             localeIdentifier: Locale.current.identifier,
             correlationID: correlationID,
-            lastConversionStage: lastConversionStage?.rawValue,
+            lastConversionStage: lastConversionStage.map { neutralStageName($0.rawValue) },
             lastErrorCode: lastErrorCode,
             plistStatus: plistStatus(bundle: bundle),
             entitlementStatus: entitlementStatus(),
@@ -62,6 +62,29 @@ enum Diagnostics {
 
     static func redactPath(_ path: String) -> String {
         URL(fileURLWithPath: path).lastPathComponent
+    }
+
+    static func neutralStageName(_ stage: String) -> String {
+        switch stage {
+        case ConversionStage.queued.rawValue:
+            return "Queued"
+        case ConversionStage.copying.rawValue:
+            return "Preparing document"
+        case ConversionStage.extracting.rawValue:
+            return "Reading document"
+        case ConversionStage.python.rawValue:
+            return "Processing document"
+        case ConversionStage.postProcessing.rawValue:
+            return "Cleaning Markdown"
+        case ConversionStage.complete.rawValue:
+            return "Done"
+        case ConversionStage.failed.rawValue:
+            return "Failed"
+        case ConversionStage.cancelled.rawValue:
+            return "Cancelled"
+        default:
+            return stage
+        }
     }
 
     static func recentLogExport(limit: Int = 200, since seconds: TimeInterval = 900) -> String {

@@ -207,10 +207,45 @@ struct PreferencesView: View {
 
             PrefsBox(title: "Downloaded Models") {
                 VStack(spacing: 8) {
+                    if case .checking = modelManager.installState {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Checking local model files...")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    } else if let error = modelManager.checkError {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.red)
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Button("Check Again") { modelManager.checkModels() }
+                                .buttonStyle(.bordered)
+                                .controlSize(.mini)
+                        }
+                    } else if modelManager.models.isEmpty {
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Color.green)
+                            Text("Fast conversion works without downloaded models.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Button("Check Again") { modelManager.checkModels() }
+                                .buttonStyle(.bordered)
+                                .controlSize(.mini)
+                        }
+                    }
+
                     ForEach(modelManager.models, id: \.key) { model in
                         HStack(spacing: 12) {
                             Image(systemName: model.isDownloaded ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(model.isDownloaded ? Color.green : .secondary)
+                                .foregroundStyle(model.isDownloaded ? Color.green : model.isAvailable ? .secondary : .red)
 
                             VStack(alignment: .leading, spacing: 1) {
                                 HStack(spacing: 6) {
@@ -223,7 +258,7 @@ struct PreferencesView: View {
                                             .background(Color.accentColor, in: Capsule())
                                     }
                                 }
-                                Text(model.description)
+                                Text(model.error ?? model.description)
                                     .font(.caption).foregroundStyle(.secondary)
                             }
 
@@ -239,10 +274,12 @@ struct PreferencesView: View {
                             } else {
                                 Button("Download") {
                                     model.tier == "pro"
-                                        ? modelManager.downloadProModels()
+                                        ? modelManager.downloadProModels(hasPro: store.hasProOrAbove)
                                         : modelManager.downloadRequiredModels()
                                 }
                                 .buttonStyle(.bordered).controlSize(.mini)
+                                .disabled(downloadUnavailable(for: model) != nil)
+                                .help(downloadUnavailable(for: model) ?? "")
                             }
                         }
                         .padding(.vertical, 4)
@@ -259,6 +296,13 @@ struct PreferencesView: View {
                         }
                         .padding(.top, 4)
                     }
+
+                    if let error = modelManager.downloadError {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
             }
 
@@ -273,6 +317,22 @@ struct PreferencesView: View {
                 }
             }
         }
+        .onAppear {
+            if case .unchecked = modelManager.installState {
+                modelManager.checkModels()
+            }
+        }
+    }
+
+    private func downloadUnavailable(for model: ModelStatus) -> String? {
+        if model.isDownloaded { return nil }
+        if model.tier == "pro" {
+            return modelManager.proDownloadUnavailableReason(hasPro: store.hasProOrAbove)
+        }
+        if !model.isAvailable {
+            return model.error ?? "This optional model is not available on this Mac."
+        }
+        return nil
     }
 
     // MARK: - License Tab

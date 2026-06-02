@@ -88,6 +88,52 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.stage, .complete)
     }
 
+    func testCancelRunningJobDoesNotOverlapSlowRunnerWithNextJob() async {
+        var events: [String] = []
+        var releaseFirst: CheckedContinuation<Void, Never>?
+        let queue = ConversionQueue { job, _ in
+            events.append("start:\(job.name)")
+            if job.name == "first" {
+                await withCheckedContinuation { continuation in
+                    releaseFirst = continuation
+                }
+                events.append("unwound:first")
+                return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.")
+            }
+            events.append("finish:\(job.name)")
+            return .success(ConversionOutput(
+                markdown: job.name,
+                pages: 1,
+                format: job.ext,
+                title: job.name,
+                pipeline: .fast
+            ))
+        }
+
+        let first = queue.add(URL(fileURLWithPath: "/tmp/first.pdf"))
+        let second = queue.add(URL(fileURLWithPath: "/tmp/second.pdf"))
+        await waitUntil { events == ["start:first"] }
+
+        queue.cancel(first)
+        await sleep(milliseconds: 80)
+
+        XCTAssertEqual(queue.job(id: first)?.stage, .cancelled)
+        XCTAssertEqual(queue.job(id: first)?.result?.errorMessage, ConversionError.cancelled.errorDescription)
+        XCTAssertEqual(events, ["start:first"])
+
+        releaseFirst?.resume()
+        await waitForResult(second, in: queue)
+
+        XCTAssertEqual(events, [
+            "start:first",
+            "unwound:first",
+            "start:second",
+            "finish:second"
+        ])
+        XCTAssertEqual(queue.job(id: first)?.stage, .cancelled)
+        XCTAssertEqual(queue.job(id: second)?.stage, .complete)
+    }
+
     func testCancelAllCancelsActiveAndQueuedJobs() async {
         var started: [String] = []
         let queue = ConversionQueue { job, _ in
@@ -194,6 +240,75 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertEqual(job?.result?.errorMessage, "Unsupported file")
     }
 
+    func testRejectedInputCreatesVisibleFailedJobWithoutRunningQueue() {
+        var didRun = false
+        let queue = ConversionQueue { _, _ in
+            didRun = true
+            return .failure("Should not run")
+        }
+        let message = FileAccessError.unsupportedType.errorDescription!
+
+        let id = queue.addRejected(URL(fileURLWithPath: "/tmp/rejected"), message: message)
+
+        let job = queue.jobs.first { $0.id == id }
+        XCTAssertEqual(job?.stage, .failed)
+        XCTAssertEqual(job?.result?.errorMessage, message)
+        XCTAssertEqual(queue.latestResult?.errorMessage, message)
+        XCTAssertFalse(queue.isConverting)
+        XCTAssertFalse(didRun)
+    }
+
+    func testJobLookupKeepsTrackedPasswordJobSeparateFromLatestResult() async {
+        let passwordMessage = ConversionError.passwordRequired.errorDescription!
+        let queue = ConversionQueue { job, _ in
+            if job.name == "locked" {
+                return .failure(passwordMessage)
+            }
+            return .success(ConversionOutput(
+                markdown: "# Plain",
+                pages: 1,
+                format: "PDF",
+                title: "plain",
+                pipeline: .fast
+            ))
+        }
+
+        let locked = queue.add(URL(fileURLWithPath: "/tmp/locked.pdf"))
+        let plain = queue.add(URL(fileURLWithPath: "/tmp/plain.pdf"))
+        await waitForResult(locked, in: queue)
+        await waitForResult(plain, in: queue)
+
+        XCTAssertEqual(queue.job(id: locked)?.result?.errorMessage, passwordMessage)
+        XCTAssertEqual(queue.job(id: plain)?.result?.output?.title, "plain")
+        XCTAssertEqual(queue.latestResult?.output?.title, "plain")
+    }
+
+    func testTrackedRunningJobSurvivesAdjacentRejectedInputLatestResult() async {
+        let queue = ConversionQueue { _, _ in
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            return .success(ConversionOutput(
+                markdown: "# Primary",
+                pages: 1,
+                format: "PDF",
+                title: "primary",
+                pipeline: .fast
+            ))
+        }
+
+        let primary = queue.add(URL(fileURLWithPath: "/tmp/primary.pdf"))
+        await waitUntil {
+            queue.job(id: primary)?.isRunning == true
+        }
+
+        let rejectedMessage = FileAccessError.unsupportedType.errorDescription!
+        let rejected = queue.addRejected(URL(fileURLWithPath: "/tmp/rejected"), message: rejectedMessage)
+
+        XCTAssertTrue(queue.job(id: primary)?.isRunning ?? false)
+        XCTAssertEqual(queue.job(id: rejected)?.result?.errorMessage, rejectedMessage)
+        XCTAssertEqual(queue.latestResult?.errorMessage, rejectedMessage)
+        await waitForResult(primary, in: queue)
+    }
+
     func testPythonBridgeFailureIsStoredPerJob() async {
         let queue = ConversionQueue { _, progress in
             progress?(.python)
@@ -262,9 +377,13 @@ final class ConversionQueueTests: XCTestCase {
     private func waitUntil(_ predicate: @escaping () -> Bool) async {
         for _ in 0..<100 {
             if predicate() { return }
-            try? await Task.sleep(nanoseconds: 10_000_000)
+            await sleep(milliseconds: 10)
         }
         XCTFail("Timed out waiting for condition")
+    }
+
+    private func sleep(milliseconds: UInt64) async {
+        try? await Task.sleep(nanoseconds: milliseconds * 1_000_000)
     }
 
     private func workspaceNames() -> [String] {

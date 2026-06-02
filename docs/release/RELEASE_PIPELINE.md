@@ -24,6 +24,7 @@ Checks:
 - App builds with `Upmarket/Upmarket.xcodeproj`.
 - Unit tests pass. PR CI intentionally skips UI automation because launch/UI tests change system appearance during automation.
 - Architecture simplification holds: no hidden launch windows, zero-size placeholder scenes, or create-then-hide AppKit window workarounds.
+- Philosophy remediation regression guards pass.
 - User-facing copy hides internal toolkit names outside licenses and explicit diagnostic previews.
 - Effective `Info.plist` contains required keys.
 - Entitlements match App Store policy.
@@ -192,6 +193,7 @@ scripts/ci/validate_corpus_pathways.py
 scripts/ci/summarize_corpus_pathway_reports.py
 scripts/ci/validate_task_registry.py
 scripts/ci/validate_p0_plan_sync.py
+scripts/ci/validate_release_regression_guards.py
 scripts/ci/validate_architecture_boundaries.py
 scripts/ci/validate_user_facing_copy.py
 scripts/ci/validate_runtime_helper.py

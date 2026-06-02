@@ -185,6 +185,7 @@ def check_models() -> dict:
             "required": info["required"],
             "tier": info["tier"],
             "available": unavailable is None,
+            "storage_dir": info.get("storage_dir", key),
         }
     return status
 

@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-struct ModelStatus: Sendable {
+struct ModelStatus: Equatable, Sendable {
     let key: String
     let name: String
     let description: String
@@ -9,11 +9,49 @@ struct ModelStatus: Sendable {
     let sizeMB: Int
     let isRequired: Bool
     let tier: String
+    let isAvailable: Bool
+    let error: String?
+    let storageDirectory: String
+
+    init(
+        key: String,
+        name: String,
+        description: String,
+        isDownloaded: Bool,
+        sizeMB: Int,
+        isRequired: Bool,
+        tier: String,
+        isAvailable: Bool = true,
+        error: String? = nil,
+        storageDirectory: String? = nil
+    ) {
+        self.key = key
+        self.name = name
+        self.description = description
+        self.isDownloaded = isDownloaded
+        self.sizeMB = sizeMB
+        self.isRequired = isRequired
+        self.tier = tier
+        self.isAvailable = isAvailable
+        self.error = error
+        self.storageDirectory = storageDirectory ?? key
+    }
+}
+
+enum ModelInstallState: Equatable, Sendable {
+    case unchecked
+    case checking
+    case ready
+    case failed(String)
 }
 
 final class ModelManager: ObservableObject {
 
     static let shared = ModelManager()
+
+    typealias CheckModelsHandler = @Sendable () async throws -> [ModelStatus]
+    typealias DownloadModelHandler = @Sendable (_ key: String, _ progressFile: String) async -> ModelDownloadResult
+    typealias OfflineModeHandler = @Sendable () async -> Void
 
     let objectWillChange = PassthroughSubject<Void, Never>()
 
@@ -37,9 +75,31 @@ final class ModelManager: ObservableObject {
         willSet { objectWillChange.send() }
     }
 
-    private let pythonWorker = PythonWorker()
+    private(set) var installState: ModelInstallState = .unchecked {
+        willSet { objectWillChange.send() }
+    }
 
-    private init() {}
+    private let checkModelsHandler: CheckModelsHandler
+    private let downloadModelHandler: DownloadModelHandler
+    private let offlineModeHandler: OfflineModeHandler
+
+    init(
+        models: [ModelStatus] = [],
+        checkModelsHandler: @escaping CheckModelsHandler = {
+            try await PythonWorker().checkModels()
+        },
+        downloadModelHandler: @escaping DownloadModelHandler = { key, progressFile in
+            await PythonWorker().downloadModel(key: key, progressFile: progressFile)
+        },
+        offlineModeHandler: @escaping OfflineModeHandler = {
+            await PythonWorker().setOfflineMode()
+        }
+    ) {
+        self.models = models
+        self.checkModelsHandler = checkModelsHandler
+        self.downloadModelHandler = downloadModelHandler
+        self.offlineModeHandler = offlineModeHandler
+    }
 
     // Fast local conversion works without downloaded models.
     var allRequiredDownloaded: Bool { true }
@@ -61,6 +121,16 @@ final class ModelManager: ObservableObject {
         models.filter { $0.tier == "pro" }.reduce(0) { $0 + $1.sizeMB }
     }
 
+    var checkError: String? {
+        guard case .failed(let message) = installState else { return nil }
+        return message
+    }
+
+    var hasCheckedModels: Bool {
+        if case .ready = installState { return true }
+        return false
+    }
+
     // MARK: - Storage
 
     /// Total disk space used by downloaded models in bytes
@@ -77,9 +147,10 @@ final class ModelManager: ObservableObject {
 
     /// Remove a specific model — user can re-download later
     func deleteModel(key: String) {
+        let directory = models.first { $0.key == key }?.storageDirectory ?? key
         let cacheURL = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Upmarket/models/\(key)")
+            .appendingPathComponent("Upmarket/models/\(directory)")
         try? FileManager.default.removeItem(at: cacheURL)
         checkModels()
     }
@@ -106,10 +177,22 @@ final class ModelManager: ObservableObject {
     // MARK: - Public
 
     func checkModels() {
+        installState = .checking
+        downloadError = nil
         Task.detached(priority: .userInitiated) {
-            let result = (try? await self.pythonWorker.checkModels()) ?? []
+            let result: [ModelStatus]
+            do {
+                result = try await self.checkModelsHandler()
+            } catch {
+                await MainActor.run {
+                    self.models = []
+                    self.installState = .failed("Upmarket couldn't check local model files. Try again from Settings.")
+                }
+                return
+            }
             await MainActor.run {
                 self.models = result
+                self.installState = .ready
             }
         }
     }
@@ -118,9 +201,53 @@ final class ModelManager: ObservableObject {
         downloadModels(keys: models.filter(\.isRequired).map(\.key))
     }
 
-    func downloadProModels() {
-        guard DeviceCapability.shared.supportsUpmarketAI else {
-            downloadError = DeviceCapability.shared.upmarketAIUnavailableReason
+    func proDownloadUnavailableReason(
+        hasPro: Bool,
+        featureEnabled: Bool = FeatureFlags.shared.aiAvailable,
+        featureReason: String? = FeatureFlags.shared.aiUnavailableReason,
+        deviceSupportsAI: Bool = DeviceCapability.shared.supportsUpmarketAI,
+        deviceReason: String = DeviceCapability.shared.upmarketAIUnavailableReason
+    ) -> String? {
+        if !hasPro {
+            return "Upmarket AI requires a Pro license."
+        }
+        if !deviceSupportsAI {
+            return deviceReason
+        }
+        if !featureEnabled {
+            return featureReason ?? "Upmarket AI is not available for this Mac or language yet."
+        }
+        if models.filter({ $0.tier == "pro" }).isEmpty {
+            return "Check local model status before downloading Upmarket AI."
+        }
+        return nil
+    }
+
+    func aiUseUnavailableReason(
+        hasPro: Bool,
+        featureEnabled: Bool = FeatureFlags.shared.aiAvailable,
+        featureReason: String? = FeatureFlags.shared.aiUnavailableReason,
+        deviceSupportsAI: Bool = DeviceCapability.shared.supportsUpmarketAI,
+        deviceReason: String = DeviceCapability.shared.upmarketAIUnavailableReason
+    ) -> String? {
+        if let reason = proDownloadUnavailableReason(
+            hasPro: hasPro,
+            featureEnabled: featureEnabled,
+            featureReason: featureReason,
+            deviceSupportsAI: deviceSupportsAI,
+            deviceReason: deviceReason
+        ) {
+            return reason
+        }
+        if !proDownloaded {
+            return "Download Upmarket AI before using it for conversion."
+        }
+        return nil
+    }
+
+    func downloadProModels(hasPro: Bool) {
+        if let reason = proDownloadUnavailableReason(hasPro: hasPro) {
+            downloadError = reason
             return
         }
         downloadModels(keys: models.filter { $0.tier == "pro" && !$0.isDownloaded }.map(\.key))
@@ -130,17 +257,23 @@ final class ModelManager: ObservableObject {
 
     private func downloadModels(keys: [String]) {
         guard !isDownloading else { return }
+        guard !keys.isEmpty else {
+            downloadError = "No local models are available to download. Try checking again."
+            return
+        }
         isDownloading = true
         downloadError = nil
         downloadProgress = 0
+        downloadMessage = "Starting download..."
 
         Task.detached(priority: .userInitiated) {
             for key in keys {
                 await self.downloadSingleModel(key: key)
-                if await self.downloadError != nil { break }
+                let hasError = await MainActor.run { self.downloadError != nil }
+                if hasError { break }
             }
 
-            await self.pythonWorker.setOfflineMode()
+            await self.offlineModeHandler()
 
             await MainActor.run {
                 self.isDownloading = false
@@ -167,13 +300,16 @@ final class ModelManager: ObservableObject {
         // Clear any existing progress file
         try? FileManager.default.removeItem(atPath: progressFile)
 
-        // Start download in a separate task so we can poll progress
+        let resultBox = ModelDownloadResultBox()
+
+        // Start download in a separate task so we can poll progress.
         let downloadTask = Task.detached {
-            await self.pythonWorker.downloadModel(key: key, progressFile: progressFile)
+            let result = await self.downloadModelHandler(key, progressFile)
+            await resultBox.set(result)
         }
 
-        // Poll progress file every 500ms
-        while !downloadTask.isCancelled {
+        // Poll progress file every 500ms until the helper reports completion.
+        while true {
             try? await Task.sleep(nanoseconds: 500_000_000)
 
             if let line = Self.lastProgressLine(atPath: progressFile),
@@ -187,12 +323,25 @@ final class ModelManager: ObservableObject {
                 }
             }
 
-            // Check if download completed
-            let result = await downloadTask.value
-            if !result.success {
-                await MainActor.run { self.downloadError = result.error ?? "Download failed" }
+            if let result = await resultBox.result {
+                await downloadTask.value
+                await MainActor.run {
+                    if result.success {
+                        self.downloadProgress = max(self.downloadProgress, 100)
+                        if self.downloadMessage.isEmpty {
+                            self.downloadMessage = "Download complete"
+                        }
+                    } else {
+                        self.downloadError = result.error ?? "Download failed"
+                    }
+                }
+                break
             }
-            break
+
+            if Task.isCancelled {
+                downloadTask.cancel()
+                break
+            }
         }
 
         try? FileManager.default.removeItem(atPath: progressFile)
@@ -211,5 +360,13 @@ final class ModelManager: ObservableObject {
             .split(separator: "\n", omittingEmptySubsequences: true)
             .last
             .map(String.init)
+    }
+}
+
+private actor ModelDownloadResultBox {
+    private(set) var result: ModelDownloadResult?
+
+    func set(_ result: ModelDownloadResult) {
+        self.result = result
     }
 }

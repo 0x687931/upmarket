@@ -8,6 +8,23 @@ private let maxBatchBytes: Int64 = 2 * 1024 * 1024 * 1024
 private let maxBatchFiles = 100
 private let quickActionStaleAge: TimeInterval = 24 * 60 * 60
 
+private enum SupportedInputPolicy {
+    static let fileExtensions = [
+        "pdf", "html", "txt", "png", "jpg", "jpeg", "gif", "tiff",
+        "docx", "pptx", "xlsx", "epub", "csv", "json", "xml", "zip",
+        "mp3", "m4a", "wav", "aiff", "opus",
+    ]
+
+    static var contentTypes: [UTType] {
+        fileExtensions.compactMap { UTType(filenameExtension: $0) }
+    }
+
+    static func supports(_ url: URL) -> Bool {
+        guard let ownType = UTType(filenameExtension: url.pathExtension) else { return false }
+        return contentTypes.contains { ownType.conforms(to: $0) }
+    }
+}
+
 private struct QuickActionHandoff: Encodable {
     let files: [String]
 }
@@ -125,7 +142,7 @@ class ActionViewController: NSViewController {
     }
 
     private func readableRegularFileSize(_ url: URL) -> Int64? {
-        guard supportedInputTypes.contains(where: { url.conforms(to: $0) }) else { return nil }
+        guard SupportedInputPolicy.supports(url) else { return nil }
         guard (try? url.checkResourceIsReachable()) == true else { return nil }
         guard let values = try? url.resourceValues(forKeys: [
             .isRegularFileKey,
@@ -162,33 +179,7 @@ class ActionViewController: NSViewController {
         }
     }
 
-    private var supportedInputTypes: [UTType] {
-        [
-            .pdf, .html, .plainText, .png, .jpeg, .gif, .tiff,
-            UTType(filenameExtension: "docx") ?? .data,
-            UTType(filenameExtension: "pptx") ?? .data,
-            UTType(filenameExtension: "xlsx") ?? .data,
-            UTType(filenameExtension: "epub") ?? .data,
-            UTType(filenameExtension: "csv") ?? .data,
-            UTType(filenameExtension: "json") ?? .data,
-            UTType(filenameExtension: "xml") ?? .data,
-            UTType(filenameExtension: "zip") ?? .data,
-            UTType(filenameExtension: "mp3") ?? .data,
-            UTType(filenameExtension: "m4a") ?? .data,
-            UTType(filenameExtension: "wav") ?? .data,
-            UTType(filenameExtension: "aiff") ?? .data,
-            UTType(filenameExtension: "opus") ?? .data,
-        ]
-    }
-
     private func done() {
         extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
-    }
-}
-
-private extension URL {
-    func conforms(to type: UTType) -> Bool {
-        guard let ownType = UTType(filenameExtension: pathExtension) else { return false }
-        return ownType.conforms(to: type)
     }
 }

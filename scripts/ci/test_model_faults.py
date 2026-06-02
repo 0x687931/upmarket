@@ -2,6 +2,7 @@
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -72,6 +73,60 @@ def main() -> int:
         if result.returncode == 0 or "incomplete staging model directory" not in result.stdout:
             raise AssertionError(
                 "validate_models.py did not reject incomplete staging directory\n"
+                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
+
+        staging.rmdir()
+        shutil.rmtree(layout)
+
+        pro_key = "upmarket_ai"
+        pro_info = manager.MODELS[pro_key]
+        pro_dir = root / pro_info["storage_dir"]
+        pro_dir.mkdir()
+        file_hashes = {}
+        for relative in pro_info["expected_files"]:
+            path = pro_dir / relative
+            path.write_text(relative, encoding="utf-8")
+            file_hashes[relative] = manager._sha256(path)
+        manifest = {
+            "manifest_version": manager.MANIFEST_VERSION,
+            "model_key": pro_key,
+            "repo_id": pro_info["repo_id"],
+            "revision": pro_info["revision"],
+            "expected_files": pro_info["expected_files"],
+            "expected_dirs": pro_info["expected_dirs"],
+            "files": file_hashes,
+            "validated_at": "2026-06-01T00:00:00+00:00",
+        }
+        (pro_dir / manager.MANIFEST_NAME).write_text(json.dumps(manifest), encoding="utf-8")
+
+        result = subprocess.run(
+            [sys.executable, str(VALIDATE_MODELS)],
+            cwd=REPO_ROOT,
+            env={**os.environ, "UPMARKET_MODELS_DIR": str(root)},
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            raise AssertionError(
+                "validate_models.py rejected configured Pro storage directory\n"
+                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
+
+        unexpected = root / "unexpected-model"
+        unexpected.mkdir()
+        result = subprocess.run(
+            [sys.executable, str(VALIDATE_MODELS)],
+            cwd=REPO_ROOT,
+            env={**os.environ, "UPMARKET_MODELS_DIR": str(root)},
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode == 0 or "unexpected model directory" not in result.stdout:
+            raise AssertionError(
+                "validate_models.py did not reject unexpected model directory\n"
                 f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
             )
 

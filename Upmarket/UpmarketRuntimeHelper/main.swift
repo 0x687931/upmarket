@@ -58,6 +58,9 @@ struct RuntimeModelStatusDTO: Codable {
     let sizeMB: Int
     let isRequired: Bool
     let tier: String
+    let isAvailable: Bool?
+    let error: String?
+    let storageDirectory: String?
 }
 
 struct UpmarketRuntimeHelper {
@@ -142,6 +145,7 @@ struct UpmarketRuntimeHelper {
             for item in pyStatus.items() {
                 guard let key = String(item[0]) else { continue }
                 let info = item[1]
+                let rawError = String(info["error"])
                 models.append(RuntimeModelStatusDTO(
                     key: key,
                     name: String(info["name"]) ?? key,
@@ -149,7 +153,10 @@ struct UpmarketRuntimeHelper {
                     isDownloaded: Bool(info["downloaded"]) ?? false,
                     sizeMB: Int(info["size_mb"]) ?? 0,
                     isRequired: Bool(info["required"]) ?? false,
-                    tier: String(info["tier"]) ?? "basic"
+                    tier: String(info["tier"]) ?? "basic",
+                    isAvailable: Bool(info["available"]),
+                    error: rawError == "None" ? nil : rawError,
+                    storageDirectory: String(info["storage_dir"]) ?? key
                 ))
             }
             return RuntimeHelperResponse(success: true, models: models.sorted { $0.isRequired && !$1.isRequired })
@@ -167,10 +174,11 @@ struct UpmarketRuntimeHelper {
             let manager = Python.import("upmarket_models.model_manager")
             let result = manager.download_model(key, progressFile)
             let success = Bool(result["success"]) ?? false
+            let error = String(result["error"])
             return RuntimeHelperResponse(
                 success: success,
                 code: success ? nil : "runtime.helper.call-failed",
-                message: success ? nil : "download failed"
+                message: success ? nil : (error == "None" ? "download failed" : error)
             )
         default:
             throw HelperError.invalidRequest

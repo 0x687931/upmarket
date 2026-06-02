@@ -72,7 +72,10 @@ struct RuntimeHelperClient: Sendable {
                 isDownloaded: $0.isDownloaded,
                 sizeMB: $0.sizeMB,
                 isRequired: $0.isRequired,
-                tier: $0.tier
+                tier: $0.tier,
+                isAvailable: $0.isAvailable ?? true,
+                error: $0.error,
+                storageDirectory: $0.storageDirectory
             )
         }
     }
@@ -327,6 +330,9 @@ struct RuntimeModelStatusDTO: Codable, Sendable {
     let sizeMB: Int
     let isRequired: Bool
     let tier: String
+    let isAvailable: Bool?
+    let error: String?
+    let storageDirectory: String?
 }
 
 private struct RuntimeHelperEvent: Codable {

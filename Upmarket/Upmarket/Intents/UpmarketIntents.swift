@@ -38,12 +38,32 @@ struct ConvertDocumentIntent: AppIntent {
     )
     static var openAppWhenRun = false  // runs silently in background
 
-    @Parameter(title: "Document", description: "The file to convert", supportedTypeIdentifiers: [
-        "public.pdf", "org.openxmlformats.wordprocessingml.document",
-        "org.openxmlformats.presentationml.presentation",
-        "org.openxmlformats.spreadsheetml.sheet",
-        "public.html", "public.plain-text"
-    ])
+    @Parameter(
+        title: "Document",
+        description: "The file to convert",
+        supportedTypeIdentifiers: [
+            "com.adobe.pdf",
+            "public.html",
+            "public.plain-text",
+            "public.png",
+            "public.jpeg",
+            "com.compuserve.gif",
+            "public.tiff",
+            "org.openxmlformats.wordprocessingml.document",
+            "org.openxmlformats.presentationml.presentation",
+            "org.openxmlformats.spreadsheetml.sheet",
+            "org.idpf.epub-container",
+            "public.comma-separated-values-text",
+            "public.json",
+            "public.xml",
+            "public.zip-archive",
+            "public.mp3",
+            "com.apple.m4a-audio",
+            "com.microsoft.waveform-audio",
+            "public.aiff-audio",
+            "org.xiph.ogg-audio",
+        ]
+    )
     var document: IntentFile
 
     @Parameter(title: "Use AI", description: "Use Upmarket AI for complex or scanned documents", default: false)
@@ -55,6 +75,7 @@ struct ConvertDocumentIntent: AppIntent {
         }
     }
 
+    @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<String> {
         let input = try prepareShortcutInput(document)
         defer { input.cleanup() }
@@ -81,9 +102,26 @@ struct ConvertAndSaveIntent: AppIntent {
     static var openAppWhenRun = false
 
     @Parameter(title: "Document", supportedTypeIdentifiers: [
-        "public.pdf", "org.openxmlformats.wordprocessingml.document",
+        "com.adobe.pdf",
+        "public.html",
+        "public.plain-text",
+        "public.png",
+        "public.jpeg",
+        "com.compuserve.gif",
+        "public.tiff",
+        "org.openxmlformats.wordprocessingml.document",
         "org.openxmlformats.presentationml.presentation",
-        "public.html"
+        "org.openxmlformats.spreadsheetml.sheet",
+        "org.idpf.epub-container",
+        "public.comma-separated-values-text",
+        "public.json",
+        "public.xml",
+        "public.zip-archive",
+        "public.mp3",
+        "com.apple.m4a-audio",
+        "com.microsoft.waveform-audio",
+        "public.aiff-audio",
+        "org.xiph.ogg-audio",
     ])
     var document: IntentFile
 
@@ -96,6 +134,7 @@ struct ConvertAndSaveIntent: AppIntent {
         }
     }
 
+    @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<IntentFile> {
         let input = try prepareShortcutInput(document)
         defer { input.cleanup() }
@@ -147,25 +186,49 @@ private func prepareShortcutInput(_ document: IntentFile) throws -> ShortcutInpu
 }
 
 @MainActor
-private func authorizeShortcutConversion(useAI: Bool) throws {
+private func authorizeShortcutConversion(useAI: Bool) async throws {
     let store = StoreManager.shared
-    if useAI {
-        guard store.hasProOrAbove,
-              FeatureFlags.shared.aiAvailable,
-              DeviceCapability.shared.supportsUpmarketAI,
-              ModelManager.shared.proDownloaded else {
+    let authorizer = ProgrammaticConversionAuthorizer(
+        refreshEntitlements: {
+            await store.refreshEntitlementForProgrammaticConversion()
+        },
+        aiUnavailableReason: { useAI in
+            guard useAI else { return nil }
+            return ModelManager.shared.aiUseUnavailableReason(hasPro: store.hasProOrAbove)
+        },
+        consumeConversion: {
+            store.consumeConversion()
+        }
+    )
+    try await authorizer.authorize(useAI: useAI)
+}
+
+@MainActor
+struct ProgrammaticConversionAuthorizer {
+    typealias RefreshEntitlements = () async -> Void
+    typealias AIUnavailableReason = (_ useAI: Bool) -> String?
+    typealias ConsumeConversion = () -> Bool
+
+    let refreshEntitlements: RefreshEntitlements
+    let aiUnavailableReason: AIUnavailableReason
+    let consumeConversion: ConsumeConversion
+
+    func authorize(useAI: Bool) async throws {
+        await refreshEntitlements()
+
+        if aiUnavailableReason(useAI) != nil {
             throw UpmarketIntentError.aiUnavailable
         }
-    }
 
-    guard store.canConvert, store.consumeConversion() else {
-        throw UpmarketIntentError.purchaseRequired
+        guard consumeConversion() else {
+            throw UpmarketIntentError.purchaseRequired
+        }
     }
 }
 
 // MARK: - Errors
 
-enum UpmarketIntentError: Error, LocalizedError {
+enum UpmarketIntentError: Error, Equatable, LocalizedError {
     case noData
     case inputRejected
     case purchaseRequired

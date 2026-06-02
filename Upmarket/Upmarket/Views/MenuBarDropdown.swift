@@ -69,8 +69,14 @@ struct MenuBarDropdown: View {
 
     private var actions: some View {
         VStack(spacing: 0) {
+            menuItem(icon: "doc.badge.plus", label: "Convert Document…") {
+                openConversionWindow(pickFile: true)
+            }
             menuItem(icon: "sidebar.right", label: "Show Shelf") {
                 ShelfWindowController.shared.show()
+            }
+            menuItem(icon: "number.square", label: "Open Upmarket") {
+                openConversionWindow()
             }
             menuItem(icon: "gearshape", label: "Preferences…") {
                 openWindow(id: "preferences")
@@ -96,6 +102,16 @@ struct MenuBarDropdown: View {
         }
         .buttonStyle(.plain)
         .background(Color.primary.opacity(0.001))  // makes full row tappable
+    }
+
+    private func openConversionWindow(pickFile: Bool = false) {
+        openWindow(id: "main")
+        NSApp.activate(ignoringOtherApps: true)
+
+        guard pickFile else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            NotificationCenter.default.post(name: .openFilePicker, object: nil)
+        }
     }
 
     // MARK: - Footer

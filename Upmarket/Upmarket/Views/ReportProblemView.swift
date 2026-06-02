@@ -2,6 +2,8 @@ import AppKit
 import SwiftUI
 
 struct ReportProblemView: View {
+    @EnvironmentObject private var conversion: ConversionQueue
+
     @State private var category: SupportReportCategory = .conversionFailure
     @State private var summary = ""
     @State private var includeDiagnostics = true
@@ -81,14 +83,18 @@ struct ReportProblemView: View {
                 refreshDiagnostics()
             }
         }
+        .onAppear {
+            refreshDiagnostics()
+        }
     }
 
     private func refreshDiagnostics() {
-        diagnosticSnapshot = DiagnosticsService.shared.makeSnapshot()
+        diagnosticSnapshot = conversion.diagnosticSnapshotForLastFailedJob()
         logExport = DiagnosticsService.shared.recentLogExport()
     }
 }
 
 #Preview {
     ReportProblemView()
+        .environmentObject(ConversionQueue.shared)
 }

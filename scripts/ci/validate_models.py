@@ -30,6 +30,11 @@ def main() -> int:
         print("ok: no local models installed")
         return 0
 
+    storage_to_key = {
+        info.get("storage_dir", key): key
+        for key, info in manager.MODELS.items()
+    }
+
     failed = False
     for model_dir in sorted(p for p in models_dir.iterdir() if p.is_dir()):
         if model_dir.name.startswith("."):
@@ -37,7 +42,8 @@ def main() -> int:
             failed = True
             continue
 
-        if model_dir.name not in manager.MODELS:
+        model_key = storage_to_key.get(model_dir.name)
+        if model_key is None:
             print(f"error: unexpected model directory: {model_dir}")
             failed = True
             continue
@@ -64,7 +70,7 @@ def main() -> int:
                 print(f"error: model manifest missing '{key}': {manifest}")
                 failed = True
 
-        valid, reason = manager.validate_model_dir(model_dir.name, model_dir)
+        valid, reason = manager.validate_model_dir(model_key, model_dir)
         if not valid:
             print(f"error: model validation failed for {model_dir.name}: {reason}")
             failed = True

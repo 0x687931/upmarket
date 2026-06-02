@@ -29,6 +29,16 @@ final class DiagnosticsTests: XCTestCase {
         XCTAssertEqual(Diagnostics.redactPath("/Users/alice/Documents/secret.pdf"), "secret.pdf")
     }
 
+    func testDiagnosticSnapshotUsesNeutralStageName() {
+        let snapshot = Diagnostics.makeSnapshot(
+            lastConversionStage: .python,
+            lastErrorCode: "runtime.bridge"
+        )
+
+        XCTAssertEqual(snapshot.lastConversionStage, "Processing document")
+        XCTAssertEqual(snapshot.lastErrorCode, "runtime.bridge")
+    }
+
     func testWorkspaceCleanupRemovesDirectory() throws {
         let workspace = try AppWorkspace.create(prefix: "diagnostics-test")
         XCTAssertTrue(FileManager.default.fileExists(atPath: workspace.path))

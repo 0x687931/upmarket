@@ -9,6 +9,10 @@ enum ConversionStage: String, Equatable {
     case complete
     case failed
     case cancelled
+
+    var isRunning: Bool {
+        self == .queued || self == .copying || self == .extracting || self == .python || self == .postProcessing
+    }
 }
 
 struct ConversionJob: Identifiable, Equatable {
@@ -48,7 +52,7 @@ struct ConversionJob: Identifiable, Equatable {
     var name: String { sourceURL.deletingPathExtension().lastPathComponent }
     var ext: String { sourceURL.pathExtension.uppercased() }
     var correlationID: String { id.uuidString }
-    var isRunning: Bool { stage == .queued || stage == .copying || stage == .extracting || stage == .python || stage == .postProcessing }
+    var isRunning: Bool { stage.isRunning }
 
     func hasNoRecentProgress(referenceDate: Date = Date(), threshold: TimeInterval) -> Bool {
         isRunning && referenceDate.timeIntervalSince(lastProgressAt) >= threshold

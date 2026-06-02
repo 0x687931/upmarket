@@ -13,6 +13,22 @@ enum ConversionResult: Equatable {
         guard case .failure(let message) = self else { return nil }
         return message
     }
+
+    var diagnosticCode: String? {
+        guard case .failure(let message) = self else { return nil }
+        let knownErrors: [ConversionError] = [
+            .inaccessible,
+            .passwordRequired,
+            .cancelled,
+            .noProgress,
+            .memoryPressure,
+            .fileTooLarge,
+            .sourceUnavailable,
+            .pythonRuntime("")
+        ]
+        return knownErrors.first { $0.errorDescription == message }?.diagnosticCode
+            ?? ConversionError.failed(message).diagnosticCode
+    }
 }
 
 enum Pipeline: String {

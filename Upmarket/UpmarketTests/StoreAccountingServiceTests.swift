@@ -46,6 +46,11 @@ final class StoreAccountingServiceTests: XCTestCase {
     func testTrialPaywallPromptOnlyOncePerRemainingCount() {
         let service = makeService()
 
+        XCTAssertFalse(service.shouldShowTrialPaywallAfterConversion(
+            hasPaidEntitlement: false,
+            freeDocsRemaining: 3,
+            packCredits: 0
+        ))
         XCTAssertTrue(service.shouldShowTrialPaywallAfterConversion(
             hasPaidEntitlement: false,
             freeDocsRemaining: 1,

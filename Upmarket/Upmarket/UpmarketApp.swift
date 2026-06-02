@@ -32,6 +32,16 @@ struct UpmarketApp: App {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
+        // MARK: Primary conversion window
+        Window("Upmarket", id: "main") {
+            ContentView()
+                .environmentObject(conversionQueue)
+                .environmentObject(storeManager)
+                .environmentObject(modelManager)
+        }
+        .windowResizability(.contentSize)
+        .defaultSize(width: 420, height: 500)
+
         // MARK: Preferences window
         Window("Preferences", id: "preferences") {
             PreferencesView()
@@ -43,6 +53,7 @@ struct UpmarketApp: App {
 
         Window("Report a Problem", id: "reportProblem") {
             ReportProblemView()
+                .environmentObject(conversionQueue)
         }
         .windowResizability(.contentSize)
         .defaultSize(width: 620, height: 560)
@@ -68,7 +79,7 @@ struct UpmarketApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("Convert Document…") {
-                    NotificationCenter.default.post(name: .openFilePicker, object: nil)
+                    openPrimaryConversionWindow(pickFile: true)
                 }
                 .keyboardShortcut("o", modifiers: .command)
 
@@ -103,6 +114,16 @@ struct UpmarketApp: App {
                 }
                 .keyboardShortcut("q", modifiers: .command)
             }
+        }
+    }
+
+    private func openPrimaryConversionWindow(pickFile: Bool = false) {
+        openWindow(id: "main")
+        NSApp.activate(ignoringOtherApps: true)
+
+        guard pickFile else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            NotificationCenter.default.post(name: .openFilePicker, object: nil)
         }
     }
 

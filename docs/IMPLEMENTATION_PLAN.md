@@ -30,6 +30,18 @@ Runtime conversion must not require cloud inference. Network access is limited t
 
 These items block mission-critical use, TestFlight confidence, and App Store submission. They must be resolved before v1.0 release gates can pass.
 
+### P0 - Philosophy Review Remediation
+- [x] [#15](https://github.com/0x687931/upmarket/issues/15) Restore the primary conversion surface and wire the `Convert Document...` command so the running app has one visible choose/drop -> progress -> Markdown -> copy/save loop.
+- [x] [#16](https://github.com/0x687931/upmarket/issues/16) Surface rejected inputs as actionable conversion failures instead of silently logging and returning.
+- [x] [#18](https://github.com/0x687931/upmarket/issues/18) Bind conversion UI to queue-owned `ConversionJob` state instead of duplicate global phase/result/password state.
+- [x] [#17](https://github.com/0x687931/upmarket/issues/17) Centralize supported input policy across file picker, drops, App Intents, Services, and Quick Action.
+- [x] [#19](https://github.com/0x687931/upmarket/issues/19) Fix model install state, feature gating, download progress, and model validation so setup is explicit and release-gated.
+- [x] [#22](https://github.com/0x687931/upmarket/issues/22) Attach failed-job context to privacy-redacted support reports and keep diagnostic/support copy neutral.
+- [x] [#20](https://github.com/0x687931/upmarket/issues/20) Make programmatic conversion authorization deterministic across entitlement refresh, AI availability, and credit consumption.
+- [x] [#21](https://github.com/0x687931/upmarket/issues/21) Add regression coverage and release checks for the philosophy-review remediation set.
+- [x] [#24](https://github.com/0x687931/upmarket/issues/24) Align paywall timing with the value-first product loop so onboarding/tour completion does not prompt before conversion value.
+- [x] [#23](https://github.com/0x687931/upmarket/issues/23) Preserve serialized conversion semantics during active-job cancellation.
+
 ### P0 - Minimalist Monolith Architecture
 - [x] Adopt the project philosophy in `docs/PROJECT_VISION.md`: Linus-style minimalism plus DHH-style coherent monolith.
 - [x] Define the target source layout with small hard boundaries: Views, Domain, Services, Infrastructure, Resources, and release docs.

@@ -33,6 +33,10 @@ struct ShelfView: View {
         conversion.isConverting
     }
 
+    private func allowedAISelection(_ requested: Bool) -> Bool {
+        requested && modelManager.aiUseUnavailableReason(hasPro: store.hasProOrAbove) == nil
+    }
+
     // Width: closed = stripWidth, open = strip + items
     private var closedWidth: CGFloat { colWidth * 2 + 1 }  // two cols + divider
 
@@ -81,7 +85,7 @@ struct ShelfView: View {
             guard let req = note.object as? ReprocessRequest else { return }
             guard conversion.jobs.contains(where: { $0.id == req.itemID }) else { return }
             guard consumeConversionOrShowPaywall() else { return }
-            _ = conversion.retry(req.itemID, useAI: req.useAI)
+            _ = conversion.retry(req.itemID, useAI: allowedAISelection(req.useAI))
         }
         .onReceive(NotificationCenter.default.publisher(for: .upmarketSetShelfExpanded)) { note in
             guard let expanded = note.object as? Bool else { return }
@@ -291,7 +295,9 @@ struct ShelfView: View {
         do {
             try FileAccessService.shared.validateReadableInput(url)
         } catch {
-            AppLog.fileAccess.error("Rejected shelf input before queue: \(error.localizedDescription, privacy: .private)")
+            let message = FileAccessService.userVisibleMessage(for: error)
+            AppLog.fileAccess.error("Rejected shelf input before queue: \(message, privacy: .private)")
+            conversion.addRejected(url, message: message)
             if let cleanupDirectory {
                 cleanupQuickActionHandoffIfDone(cleanupDirectory)
             }
@@ -520,6 +526,7 @@ struct ShelfItemView: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .frame(width: 56, height: 10)
+                .help(message)
         } else if item.isRunning {
             Text("Working")
                 .font(.system(size: 9))

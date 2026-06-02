@@ -166,6 +166,10 @@ final class StoreManager: ObservableObject {
         await refreshEntitlement()
     }
 
+    func refreshEntitlementForProgrammaticConversion() async {
+        await refreshEntitlement()
+    }
+
     // MARK: - Private
 
     func loadProducts() async {

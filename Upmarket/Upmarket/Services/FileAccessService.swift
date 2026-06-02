@@ -34,6 +34,42 @@ enum FileAccessError: Error, Equatable, LocalizedError {
     }
 }
 
+enum SupportedInputPolicy {
+    nonisolated static let typeIdentifiers: [String] = [
+        UTType.pdf.identifier,
+        UTType.html.identifier,
+        UTType.plainText.identifier,
+        UTType.png.identifier,
+        UTType.jpeg.identifier,
+        UTType.gif.identifier,
+        UTType.tiff.identifier,
+        identifier(forFileExtension: "docx"),
+        identifier(forFileExtension: "pptx"),
+        identifier(forFileExtension: "xlsx"),
+        identifier(forFileExtension: "epub"),
+        identifier(forFileExtension: "csv"),
+        identifier(forFileExtension: "json"),
+        identifier(forFileExtension: "xml"),
+        identifier(forFileExtension: "zip"),
+        identifier(forFileExtension: "mp3"),
+        identifier(forFileExtension: "m4a"),
+        identifier(forFileExtension: "wav"),
+        identifier(forFileExtension: "aiff"),
+        identifier(forFileExtension: "opus"),
+    ].compactMap { $0 }
+
+    nonisolated static let contentTypes: [UTType] = typeIdentifiers.compactMap(UTType.init)
+
+    nonisolated static func supports(_ url: URL) -> Bool {
+        guard let ownType = UTType(filenameExtension: url.pathExtension) else { return false }
+        return contentTypes.contains { ownType.conforms(to: $0) }
+    }
+
+    private nonisolated static func identifier(forFileExtension fileExtension: String) -> String? {
+        UTType(filenameExtension: fileExtension)?.identifier
+    }
+}
+
 /// AppKit file and pasteboard operations kept out of SwiftUI views.
 final class FileAccessService {
     nonisolated static let shared = FileAccessService()
@@ -44,7 +80,7 @@ final class FileAccessService {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = allowsMultipleSelection
         panel.canChooseDirectories = false
-        panel.allowedContentTypes = Self.supportedInputTypes
+        panel.allowedContentTypes = SupportedInputPolicy.contentTypes
 
         if let window {
             panel.setFrameOrigin(NSPoint(x: window.frame.maxX + 8, y: window.frame.minY))
@@ -120,6 +156,22 @@ final class FileAccessService {
         NSPasteboard.general.setString(url.path, forType: .string)
     }
 
+    nonisolated static func userVisibleMessage(for error: Error) -> String {
+        if let fileError = error as? FileAccessError,
+           let message = fileError.errorDescription {
+            return message
+        }
+        if let conversionError = error as? ConversionError,
+           let message = conversionError.errorDescription {
+            return message
+        }
+        if let message = (error as? LocalizedError)?.errorDescription,
+           !message.isEmpty {
+            return message
+        }
+        return FileAccessError.unreadable.errorDescription ?? "Upmarket couldn't access this file. Please try again."
+    }
+
     func open(_ url: URL) {
         NSWorkspace.shared.open(url)
     }
@@ -151,7 +203,7 @@ final class FileAccessService {
 
         guard values.isRegularFile != false else { throw FileAccessError.notAFile }
         guard values.isReadable != false else { throw FileAccessError.unreadable }
-        guard Self.supportedInputTypes.contains(where: { url.conforms(to: $0) }) else {
+        guard SupportedInputPolicy.supports(url) else {
             throw FileAccessError.unsupportedType
         }
         if let fileSize = values.fileSize, Int64(fileSize) > maxBytes {
@@ -183,29 +235,5 @@ final class FileAccessService {
             return .networkVolume
         }
         return .local
-    }
-
-    static let supportedInputTypes: [UTType] = [
-        .pdf, .html, .plainText, .png, .jpeg, .gif, .tiff,
-        UTType(filenameExtension: "docx") ?? .data,
-        UTType(filenameExtension: "pptx") ?? .data,
-        UTType(filenameExtension: "xlsx") ?? .data,
-        UTType(filenameExtension: "epub") ?? .data,
-        UTType(filenameExtension: "csv") ?? .data,
-        UTType(filenameExtension: "json") ?? .data,
-        UTType(filenameExtension: "xml") ?? .data,
-        UTType(filenameExtension: "zip") ?? .data,
-        UTType(filenameExtension: "mp3") ?? .data,
-        UTType(filenameExtension: "m4a") ?? .data,
-        UTType(filenameExtension: "wav") ?? .data,
-        UTType(filenameExtension: "aiff") ?? .data,
-        UTType(filenameExtension: "opus") ?? .data,
-    ]
-}
-
-private extension URL {
-    func conforms(to type: UTType) -> Bool {
-        guard let ownType = UTType(filenameExtension: pathExtension) else { return false }
-        return ownType.conforms(to: type)
     }
 }
