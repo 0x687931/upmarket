@@ -108,7 +108,7 @@ Existing Instruments trace bundles are under `reports/gate-c-stability/` for All
 | `allocations-binary.trace` | Upmarket | 10.811s | Usable Allocations capture; ended by time-limit SIGKILL. |
 | `time-profiler.trace` | Upmarket | 10.740s | Usable Time Profiler capture; ended by time-limit SIGKILL. |
 | `time-profiler-all-processes.trace` | all processes | 5.696s | Usable Time Profiler inventory, but not Upmarket-targeted enough for release pass/fail. |
-| `leaks.trace` | Upmarket | 13.313s | Targeted Leaks attempt, but not release-passing because recording reported task-port authorization errors. |
+| `leaks.trace` | Upmarket | 10.824s | Usable Leaks capture; ended by time-limit SIGKILL. |
 | `leaks-all-processes.trace` | all processes | 0.000s | Not usable release evidence. |
 | `allocations-all-processes.trace` | all processes | 0.000s | Not usable release evidence. |
 
@@ -118,7 +118,7 @@ This interpretation is checked with:
 scripts/ci/validate_gate_c_instruments.py
 ```
 
-Gate C Instruments remains open for a targeted Leaks capture without task-port authorization errors.
+Gate C Instruments now has targeted Allocations, Leaks, and Time Profiler evidence. The Leaks capture required enabling Developer Mode, signing the actual LaunchServices-selected debug app with `get-task-allow`, and launching the exact signed executable path for `xctrace`.
 
 Main Thread Checker launch validation covers the built app with Xcode's checker runtime injected:
 

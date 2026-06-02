@@ -66,8 +66,8 @@ EXPECTATIONS = [
         target="Upmarket",
         min_duration=8.0,
         max_duration=20.0,
-        usable=False,
-        reason="targeted Leaks attempt hit task-port authorization errors during recording",
+        usable=True,
+        reason="Upmarket-targeted Leaks capture",
     ),
     TraceExpectation(
         path="leaks-all-processes.trace",
