@@ -213,22 +213,23 @@ struct PreferencesView: View {
     }
 
     // MARK: - About
-    // Identity · License · Links · Open source (accordion)
+    // No icon — name/version + license + links + attributions (collapsed)
+    // Everything fits without scrolling.
+
+    @State private var attributionsExpanded = false
 
     private var aboutTab: some View {
         Form {
-            // Identity
+            // Identity — text only, no icon
             Section {
-                HStack(spacing: 14) {
-                    Image(nsImage: NSApp.applicationIconImage)
-                        .resizable()
-                        .frame(width: 48, height: 48)
+                HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Upmarket").font(.headline)
                         Text("Version \(appVersion)")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
+                    Spacer()
                 }
             }
 
@@ -275,35 +276,41 @@ struct PreferencesView: View {
                 }
             }
 
-            // Attributions — flat list, grouped by license family header
+            // Attributions — single disclosure group, collapsed by default
+            // Keeps the page at a fixed height; 17 rows only appear on demand.
             if !openSourcePackages.isEmpty {
-                Section("Attributions") {
-                    ForEach(licenseGroups) { group in
-                        // Family header
-                        Text(group.family)
-                            .font(.footnote)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
-                            .padding(.top, 4)
-                        // Packages under this family
-                        ForEach(group.packages) { pkg in
-                            Button {
-                                if let url = URL(string: pkg.url) {
-                                    NSWorkspace.shared.open(url)
+                Section {
+                    DisclosureGroup(
+                        isExpanded: $attributionsExpanded
+                    ) {
+                        ForEach(licenseGroups) { group in
+                            Text(group.family)
+                                .font(.footnote)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.secondary)
+                                .padding(.top, 4)
+                            ForEach(group.packages) { pkg in
+                                Button {
+                                    if let url = URL(string: pkg.url) {
+                                        NSWorkspace.shared.open(url)
+                                    }
+                                } label: {
+                                    HStack {
+                                        Text(pkg.name)
+                                            .font(.subheadline)
+                                            .foregroundStyle(.primary)
+                                        Spacer()
+                                        Text(pkg.version)
+                                            .font(.subheadline)
+                                            .foregroundStyle(.tertiary)
+                                    }
                                 }
-                            } label: {
-                                HStack {
-                                    Text(pkg.name)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.primary)
-                                    Spacer()
-                                    Text(pkg.version)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.tertiary)
-                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
+                    } label: {
+                        Text("Attributions")
+                            .font(.subheadline)
                     }
                 }
             }
