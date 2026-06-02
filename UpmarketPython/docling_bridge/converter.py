@@ -155,10 +155,9 @@ def _convert_fast_other(path: Path) -> dict:
     if suffix in ('.webp', '.tif', '.tiff', '.bmp', '.gif'):
         return _convert_image_pillow(path)
 
-    # Audio/video metadata is a native Swift responsibility.
-    if suffix in ('.flac', '.avi', '.mov', '.ogg', '.aac', '.wma', '.wmv', '.mkv', '.m4v',
-                  '.wav', '.mp3', '.m4a', '.mp4', '.mpeg', '.webm'):
-        return _error("Upmarket couldn't read this media file.")
+    # Native Swift handles first-choice audio transcription and media metadata.
+    # Do not reject media here: MarkItDown may still provide useful Markdown for
+    # supported audio files when the native route is unavailable.
 
     # Everything else: markitdown — with graceful partial-content fallback
     try:

@@ -99,6 +99,8 @@ struct ConversionRunner {
         let ext = job.sourceURL.pathExtension.lowercased()
         let title = job.sourceURL.deletingPathExtension().lastPathComponent
 
+        let format = ConversionFormat(fileExtension: ext)
+
         switch ext {
         case "pdf":
             if job.useAI {
@@ -151,8 +153,15 @@ struct ConversionRunner {
                 }
             }
             return await runPDFKitConversion(fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL)
-        case "mp3", "m4a", "wav", "aiff", "opus":
-            return await runSpeechTranscription(fileURL: tempURL, title: title)
+        case _ where format.map({ ToolFormatCapabilityMatrix.supports(.speech, $0) }) == true:
+            return await runAudioConversion(
+                fileURL: tempURL,
+                title: title,
+                useAI: job.useAI,
+                password: job.password,
+                workspaceURL: workspaceURL,
+                progress: progress
+            )
         case _ where NativeMetadataExtractor.handlesImage(ext):
             return NativeMetadataExtractor.imageMetadata(url: tempURL, title: title)
         case _ where NativeMetadataExtractor.handlesMedia(ext):
@@ -170,6 +179,33 @@ struct ConversionRunner {
                 progress: progress
             )
         }
+    }
+
+    private func runAudioConversion(
+        fileURL: URL,
+        title: String,
+        useAI: Bool,
+        password: String?,
+        workspaceURL: URL,
+        progress: ProgressHandler?
+    ) async -> ConversionResult {
+        let speech = await runSpeechTranscription(fileURL: fileURL, title: title)
+        if speech.output != nil || !supportsAdvancedRuntime {
+            return speech
+        }
+        guard let format = ConversionFormat(fileExtension: fileURL.pathExtension),
+              ToolFormatCapabilityMatrix.supports(.markItDown, format) else {
+            return speech
+        }
+        AppLog.conversion.info("Audio native transcription unavailable; trying advanced fallback ext=\(fileURL.pathExtension, privacy: .public)")
+        return await runPythonConversion(
+            fileURL: fileURL,
+            title: title,
+            useAI: useAI,
+            password: password,
+            workspaceURL: workspaceURL,
+            progress: progress
+        )
     }
 
     private func runVisionExtraction(fileURL: URL, title: String, password: String?, workspaceURL: URL) async -> ConversionResult {
