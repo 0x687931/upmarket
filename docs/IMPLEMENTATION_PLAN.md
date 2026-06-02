@@ -216,11 +216,11 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 - [ ] Validate signed app on a physical Intel Mac before claiming Intel support beyond build compatibility and Rosetta-hosted tests.
 
 ### Gate B - Conversion Reliability
-- [ ] Create a 20-document smoke corpus covering PDF, scanned PDF, DOCX, PPTX, XLSX, HTML, image, and audio
+- [x] Maintain a corpus benchmark covering the release formats. Current corpus manifest validates 185 documents across PDF, DOCX, PPTX, XLSX, HTML, image, audio, CSV, XML, WebVTT, video, and AsciiDoc.
 - [ ] For each corpus document, record expected status: success, unsupported, password required, or degraded output
 - [ ] Bootstrap `docs/release/corpus_pathway_baseline.json` with per-document scores for every valid conversion pathway before the first release candidate
-- [ ] Run fast path with no downloaded models
-- [ ] Run enhanced/AI paths after model download where supported
+- [ ] Run fast path with no downloaded models. Evidence exists in `reports/corpus-python-fast-pdfium.json`, `reports/corpus-python-fast-markitdown.json`, and `reports/corpus-swift-pdfkit.json`; current reports are not release-passing because PDF paths still show 1 failed document and the per-document baseline ledger is bootstrap-only.
+- [ ] Run enhanced/AI paths after model download where supported. Evidence exists in `reports/corpus-python-enhanced-docling.json` and `reports/corpus-python-ai-docling.json`; current reports are not release-passing because both cover 171/185 documents, score 83.3% overall, and show 1 failed document.
 - [ ] Run batch conversion from the shelf queue across at least 5 mixed accepted inputs, including one failure, one cancellation, and one retry.
 - [ ] Run Intel validation corpus on a physical Intel Mac: native PDFKit/Vision/ImageIO/AVFoundation/Speech paths where available, Python-backed formats visibly unsupported, and explicit Enhanced/AI unavailable/download-blocked state.
 - [ ] Verify temp files are cleaned after success, failure, cancellation, and app quit
@@ -233,8 +233,8 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 - [x] Add conversion liveness monitor based on progress/heartbeat updates, not fixed elapsed duration
 - [x] Surface stalled conversion state with "still working" vs "no progress detected" messaging
 - [x] Add memory pressure handling using Apple-native process/system signals where practical
-- [ ] Run Instruments: Allocations, Leaks, Time Profiler, Main Thread Checker
-- [ ] Run Thread Sanitizer on conversion, model download, and StoreKit flows
+- [ ] Run Instruments: Allocations, Leaks, Time Profiler, Main Thread Checker. Trace bundles exist under `reports/gate-c-stability/`; owner review still needs a written pass/fail interpretation.
+- [x] Run Thread Sanitizer on conversion, model download, and StoreKit flows. Focused TSan run passed on 2026-06-02 for `ConversionQueueTests`, `ModelManagerTests`, `StoreAccountingServiceTests`, and `PackCreditLedgerTests`.
 - [x] Define Xcode Organizer crash triage process for TestFlight/App Store diagnostics
 - [ ] Verify TestFlight/App Store crash diagnostics appear in Xcode Organizer
 

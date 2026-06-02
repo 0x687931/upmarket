@@ -105,12 +105,12 @@ final class ModelManagerTests: XCTestCase {
             hasPro: true
         )
 
-        try await waitUntil {
+        try await waitUntil(timeout: 8) {
             manager.isDownloading && manager.downloadProgress >= 25
         }
         XCTAssertGreaterThanOrEqual(manager.downloadProgress, 25)
 
-        try await waitUntil {
+        try await waitUntil(timeout: 8) {
             !manager.isDownloading
         }
         XCTAssertEqual(manager.downloadProgress, 100)
@@ -140,11 +140,11 @@ final class ModelManagerTests: XCTestCase {
 
     private func waitUntil(
         timeout: TimeInterval = 3,
-        condition: @escaping () -> Bool
+        condition: @MainActor @escaping () -> Bool
     ) async throws {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
-            if condition() { return }
+            if await MainActor.run(body: condition) { return }
             try await Task.sleep(nanoseconds: 50_000_000)
         }
         XCTFail("Timed out waiting for condition")

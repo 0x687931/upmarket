@@ -165,7 +165,12 @@ def main() -> int:
     parser.add_argument("--manifest", default=str(MANIFEST))
     parser.add_argument("--pathways", default=str(PATHWAYS))
     parser.add_argument("--baseline", default=str(BASELINE))
-    parser.add_argument("--results", help="optional pathway benchmark JSON produced by scripts/benchmark.sh --pathway")
+    parser.add_argument(
+        "--results",
+        action="append",
+        default=[],
+        help="optional pathway benchmark JSON produced by scripts/benchmark.sh --pathway; may be repeated",
+    )
     args = parser.parse_args()
 
     manifest = load_json(Path(args.manifest))
@@ -174,8 +179,8 @@ def main() -> int:
 
     errors = validate_registry(manifest, pathways, baseline)
     errors.extend(validate_pymupdf_release_exclusion())
-    if args.results:
-        errors.extend(validate_results(load_json(Path(args.results)), baseline))
+    for result_path in args.results:
+        errors.extend(validate_results(load_json(Path(result_path)), baseline))
 
     if errors:
         for error in errors:
