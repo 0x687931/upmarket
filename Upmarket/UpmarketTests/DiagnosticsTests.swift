@@ -1,3 +1,4 @@
+import AppKit
 import XCTest
 @testable import Upmarket
 
@@ -53,6 +54,16 @@ final class DiagnosticsTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: workspace.path))
 
         AppWorkspace.removeStaleWorkspaces()
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: workspace.path))
+    }
+
+    @MainActor
+    func testAppDelegateTerminationCleansStaleWorkspaces() throws {
+        let workspace = try AppWorkspace.create(prefix: "diagnostics-quit-test")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: workspace.path))
+
+        AppDelegate().applicationWillTerminate(Notification(name: NSApplication.willTerminateNotification))
 
         XCTAssertFalse(FileManager.default.fileExists(atPath: workspace.path))
     }

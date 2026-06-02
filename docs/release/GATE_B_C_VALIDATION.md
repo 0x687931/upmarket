@@ -29,7 +29,7 @@ python3 scripts/ci/validate_corpus_pathways.py \
   --results reports/corpus-granite-docling-scanned-or-unknown.json
 ```
 
-Gate B is not fully release-passing yet. Remaining release blockers are physical Intel validation, cancellation/app-quit temp cleanup validation, native Vision/Speech/ImageIO/AVFoundation pathway baselines once their runners exist, and a targeted GUI/Metal Granite AI validation pass. The 14 corpus documents without any current pathway-result row are all audio/video fixtures; they map to the native Speech and AVFoundation registry entries whose app/Xcode runners still need release evidence.
+Gate B is not fully release-passing yet. Remaining release blockers are cancellation/app-quit temp cleanup validation, native Vision/Speech/ImageIO/AVFoundation pathway baselines once their runners exist, and a targeted GUI/Metal Granite AI validation pass. Physical Intel validation is not a v1.0 blocker; Intel-facing copy must stay limited to build compatibility/native-only positioning until actual Intel hardware evidence exists. The 14 corpus documents without any current pathway-result row are all audio/video fixtures; they map to the native Speech and AVFoundation registry entries whose app/Xcode runners still need release evidence.
 
 `NativeMetadataExtractorTests.testCorpusMediaMetadataUsesNativeAVFoundation` now exercises AVFoundation metadata extraction against representative corpus audio/video fixtures: FLAC, MP4, and QuickTime/MOV. This is native media evidence, not a full audio/video pathway baseline; Speech transcription still needs app permission/runtime evidence.
 

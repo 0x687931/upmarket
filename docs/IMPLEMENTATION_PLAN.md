@@ -214,7 +214,7 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 - [x] Verify sandbox entitlements in the archived app
 - [x] Confirm bundled Python runtime imports required modules from inside the app bundle
 - [ ] Confirm app works after deleting downloaded models
-- [ ] Validate signed app on a physical Intel Mac before claiming Intel support beyond build compatibility and Rosetta-hosted tests.
+- [x] Do not block v1.0 on physical Intel hardware validation. Do not claim Intel support beyond build compatibility/native-only positioning until actual Intel hardware evidence exists.
 
 ### Gate B - Conversion Reliability
 - [x] Maintain a corpus benchmark covering the release formats. Current corpus manifest validates 185 documents across PDF, DOCX, PPTX, XLSX, HTML, image, audio, CSV, XML, WebVTT, video, and AsciiDoc.
@@ -224,7 +224,7 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 - [x] Run enhanced path after model/runtime setup where supported. Evidence exists in `reports/corpus-python-enhanced-docling.json`; the password-protected PDF is now recorded as expected-blocked in the per-document pathway baseline.
 - [ ] Run AI path after model download where supported. Current valid Granite AI evidence is `reports/corpus-granite-docling-scanned-or-unknown.json`; it is baselined but not release-passing because 4 rows are environment-blocked by Metal/runtime availability in the benchmark context and need a targeted GUI/Metal validation pass before release.
 - [x] Run batch conversion from the shelf queue across at least 5 mixed accepted inputs, including one failure, one cancellation, and one retry. Covered by `ConversionQueueTests.testBatchShelfQueueFiveMixedInputsWithFailureCancellationAndRetry`; the 2026-06-02 Xcode rerun passed all 20 selected `ConversionQueueTests`.
-- [ ] Run Intel validation corpus on a physical Intel Mac: native PDFKit/Vision/ImageIO/AVFoundation/Speech paths where available, Python-backed formats visibly unsupported, and explicit Enhanced/AI unavailable/download-blocked state.
+- [x] Defer physical Intel corpus validation from v1.0 release blocking. Current release positioning must keep Intel claims limited to build compatibility/native-only behavior until physical Intel evidence exists.
 - [ ] Verify temp files are cleaned after success, failure, cancellation, and app quit. Xcode now covers app-owned workspace cleanup after native success, recoverable failure, input-copy failure, and stale startup cleanup; cancellation and full app-quit cleanup still need release evidence.
 - [ ] Verify conversion result state always resolves to result, actionable error, password prompt, or explicit in-progress state
 
@@ -360,4 +360,4 @@ Manual validation remains required for Xcode Archive, App Store Connect setup, S
 
 - [ ] Domain: `upmarket.app` vs `upmarketapp.com`
 - [ ] Landing page before App Store submission or after TestFlight
-- [ ] How to phrase Intel support after physical Intel validation: current evidence supports x86_64 build compatibility and native-only Basic paths, while Python-backed Enhanced/AI remains Apple Silicon gated.
+- [x] Intel support phrasing: do not block v1.0 on physical Intel validation; current evidence supports x86_64 build compatibility and native-only Basic positioning, while Python-backed Enhanced/AI remains Apple Silicon gated until physical Intel evidence exists.
