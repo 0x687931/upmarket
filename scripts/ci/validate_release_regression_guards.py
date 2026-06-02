@@ -106,6 +106,28 @@ def main() -> int:
         errors,
     )
     require_text(
+        "Upmarket/Upmarket/Domain/ToolFormatCapabilityMatrix.swift",
+        [
+            "case markItDown",
+            ".mp3, .m4a, .wav",
+            "requiresAdvancedRuntime",
+            "requiresAuthorisation",
+        ],
+        "tool-format capability matrix",
+        errors,
+    )
+    require_text(
+        "Upmarket/UpmarketTests/ToolFormatCapabilityMatrixTests.swift",
+        [
+            "testAudioFormatsExposeAllValidRoutes",
+            "tools.contains(.speech)",
+            "tools.contains(.markItDown)",
+            "tools.contains(.avFoundation)",
+        ],
+        "tool-format capability matrix tests",
+        errors,
+    )
+    require_text(
         "Upmarket/UpmarketTests/ModelManagerTests.swift",
         [
             "testCheckFailureIsVisibleInstallFailure",

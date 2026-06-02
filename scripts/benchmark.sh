@@ -63,6 +63,8 @@ echo "  Compute Mode: $COMPUTE_MODE"
 echo "═══════════════════════════════════════════════"
 echo ""
 
+scripts/ci/sync_python_bridge.sh >/dev/null
+
 # Run Python benchmark scorer
 PYTHON="$VENV/bin/python3"
 if [ ! -x "$PYTHON" ]; then

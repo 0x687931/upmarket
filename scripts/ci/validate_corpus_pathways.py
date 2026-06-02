@@ -51,6 +51,7 @@ def validate_registry(manifest: dict, pathways_doc: dict, baseline: dict) -> lis
         unknown = sorted(valid_categories - set(corpus_categories))
         if unknown:
             errors.append(f"{pathway_id}: references unknown corpus categories: {', '.join(unknown)}")
+        valid_formats = set(config.get("valid_formats", []))
 
         runner = config.get("runner")
         if not runner:
@@ -68,7 +69,7 @@ def validate_registry(manifest: dict, pathways_doc: dict, baseline: dict) -> lis
 
         if release_status == "shipping":
             for doc in docs:
-                if doc.get("category") in valid_categories:
+                if doc.get("category") in valid_categories and (not valid_formats or doc.get("format") in valid_formats):
                     shipping_coverage[doc.get("id")].append(pathway_id)
 
     for doc_id, covered_by in shipping_coverage.items():

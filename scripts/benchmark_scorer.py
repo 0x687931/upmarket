@@ -21,7 +21,8 @@ PATHWAYS = {
     },
     "python-fast-markitdown": {
         "pipeline": "fast",
-        "valid_categories": {"asciidoc", "csv", "docx", "html", "image", "pptx", "webvtt", "xlsx", "xml"},
+        "valid_categories": {"asciidoc", "audio", "csv", "docx", "html", "image", "pptx", "webvtt", "xlsx", "xml"},
+        "valid_formats": {"asciidoc", "csv", "docx", "epub", "html", "jpeg", "jpg", "json", "m4a", "md", "mp3", "png", "pptx", "wav", "webvtt", "xlsx", "xml", "zip"},
         "release_status": "shipping",
     },
     "python-enhanced-docling": {
@@ -571,7 +572,10 @@ def run_benchmark(
             return 1
         pipeline = selected_pathway["pipeline"]
         valid_categories = selected_pathway["valid_categories"]
+        valid_formats = selected_pathway.get("valid_formats")
         docs = [d for d in docs if d.get("category") in valid_categories]
+        if valid_formats:
+            docs = [d for d in docs if d.get("format") in valid_formats]
 
     if category_filter:
         docs = [d for d in docs if d.get("category", "").startswith(category_filter)]

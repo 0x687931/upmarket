@@ -12,11 +12,12 @@ Current pathway artifacts:
 | --- | --- | ---: | ---: | ---: | --- |
 | `reports/corpus-python-fast-pdfium.json` | fast PDF | 60 | 80.1% | 1 | Evidence only |
 | `reports/corpus-python-fast-markitdown.json` | fast non-PDF | 111 | 83.8% | 0 | Evidence only |
+| `reports/corpus-python-fast-markitdown-audio.json` | fast audio via packaged MarkItDown | 8 | 91.2% | 0 | Evidence only |
 | `reports/corpus-swift-pdfkit.json` | native PDF | 60 | 83.2% | 1 | Evidence only |
 | `reports/corpus-python-enhanced-docling.json` | enhanced | 171 | 83.3% | 1 | Evidence only |
 | `reports/corpus-granite-docling-scanned-or-unknown.json` | Granite AI image/PDF bucket | 24 | 65.0% | 4 environment-blocked | Baselined, not release-passing |
 
-`reports/gate-b-corpus-pathway-comparison.md` compares these pathways. `scripts/ci/validate_corpus_pathways.py` accepts repeated `--results` files so split pathway reports can be validated together for coverage and release exclusions. `docs/release/corpus_pathway_baseline.json` is now populated from the current report-backed pathways. Password-protected PDFs are recorded as `expected_blocked`, and Granite AI Metal/runtime availability failures are recorded as `environment_blocked`, instead of converter quality failures.
+`reports/gate-b-corpus-pathway-comparison.md` compares these pathways. `scripts/ci/validate_corpus_pathways.py` accepts repeated `--results` files so split pathway reports can be validated together for coverage and release exclusions. `docs/release/corpus_pathway_baseline.json` is now populated from the current report-backed pathways. Password-protected PDFs are recorded as `expected_blocked`, and Granite AI Metal/runtime availability failures are recorded as `environment_blocked`, instead of converter quality failures. The packaged MarkItDown audio report covers MP3/M4A/WAV capability separately from FLAC/video capability.
 
 The current report-backed pathway baseline validates with:
 
@@ -24,12 +25,13 @@ The current report-backed pathway baseline validates with:
 python3 scripts/ci/validate_corpus_pathways.py \
   --results reports/corpus-python-fast-pdfium.json \
   --results reports/corpus-python-fast-markitdown.json \
+  --results reports/corpus-python-fast-markitdown-audio.json \
   --results reports/corpus-python-enhanced-docling.json \
   --results reports/corpus-swift-pdfkit.json \
   --results reports/corpus-granite-docling-scanned-or-unknown.json
 ```
 
-Gate B is not fully release-passing yet. Remaining release blockers are full GUI app quit/relaunch temp cleanup validation, native Vision/Speech/ImageIO/AVFoundation pathway baselines once their runners exist, and a targeted GUI/Metal Granite AI validation pass. Physical Intel validation is not a v1.0 blocker; Intel-facing copy must stay limited to build compatibility/native-only positioning until actual Intel hardware evidence exists. The 14 corpus documents without any current pathway-result row are all audio/video fixtures; they map to the native Speech and AVFoundation registry entries whose app/Xcode runners still need release evidence.
+Gate B is not fully release-passing yet. Remaining release blockers are full GUI app quit/relaunch temp cleanup validation, native Vision/Speech/ImageIO/AVFoundation pathway baselines once their runners exist, and a targeted GUI/Metal Granite AI validation pass. Physical Intel validation is not a v1.0 blocker; Intel-facing copy must stay limited to build compatibility/native-only positioning until actual Intel hardware evidence exists. The 6 corpus documents without any current pathway-result row are 2 FLAC audio fixtures and 4 video fixtures; they map to native media registry entries whose app/Xcode runners still need release evidence.
 
 `NativeMetadataExtractorTests.testCorpusMediaMetadataUsesNativeAVFoundation` now exercises AVFoundation metadata extraction against representative corpus audio/video fixtures: FLAC, MP4, and QuickTime/MOV. This is native media evidence, not a full audio/video pathway baseline; Speech transcription still needs app permission/runtime evidence.
 

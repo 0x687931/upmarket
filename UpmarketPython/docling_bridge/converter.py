@@ -150,6 +150,7 @@ def _convert_fast_other(path: Path) -> dict:
       - Everything else: markitdown (MIT, Microsoft) — DOCX, PPTX, XLSX, HTML, CSV, EPUB
     """
     suffix = path.suffix.lower()
+    speech_audio_suffixes = {'.mp3', '.m4a', '.wav'}
 
     # Images markitdown can't handle — use Pillow
     if suffix in ('.webp', '.tif', '.tiff', '.bmp', '.gif'):
@@ -182,6 +183,14 @@ def _convert_fast_other(path: Path) -> dict:
         # PPTX with unrecognized shapes: extract what we can, skip bad slides.
         if suffix == '.pptx' and 'NotImplementedError' in err_msg:
             return _convert_pptx_safe(path)
+
+        if suffix in speech_audio_suffixes and "UnknownValueError" in err_msg:
+            return _success(
+                f"# Audio: {path.stem}\n\n_No recognizable speech was detected in this audio file._",
+                1,
+                path,
+                pipeline="fast",
+            )
 
         print(f"[Upmarket] markitdown error for {suffix_upper}: {e}", file=sys.stderr)
         return _error(f"Upmarket couldn't convert this {suffix_upper} file. Try downloading the Enhanced pipeline for better results.")

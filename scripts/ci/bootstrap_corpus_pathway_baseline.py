@@ -81,6 +81,8 @@ def main() -> int:
     baseline = load_json(baseline_path)
     document_baselines = baseline.setdefault("document_baselines", {})
     source_reports = baseline.setdefault("source_reports", {})
+    grouped_documents: dict[str, dict[str, dict]] = {}
+    grouped_reports: dict[str, list[str]] = {}
 
     for result in args.results:
         result_path = Path(result)
@@ -93,12 +95,17 @@ def main() -> int:
         if not documents:
             raise SystemExit(f"error: {result_path} has no documents")
 
-        document_baselines[pathway] = {
-            document["id"]: baseline_for_document(document)
-            for document in documents
-            if document.get("id")
-        }
-        source_reports[pathway] = str(result_path)
+        pathway_baselines = grouped_documents.setdefault(pathway, {})
+        for document in documents:
+            doc_id = document.get("id")
+            if doc_id:
+                pathway_baselines[doc_id] = baseline_for_document(document)
+        reports = grouped_reports.setdefault(pathway, [])
+        reports.append(str(result_path))
+
+    for pathway, pathway_baselines in grouped_documents.items():
+        document_baselines[pathway] = pathway_baselines
+        source_reports[pathway] = grouped_reports[pathway]
 
     baseline["baseline_state"] = "document-baseline"
     baseline_path.write_text(json.dumps(baseline, indent=2, sort_keys=True) + "\n", encoding="utf-8")

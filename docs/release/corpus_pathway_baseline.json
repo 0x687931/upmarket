@@ -1604,6 +1604,54 @@
         "overall_percent": 95.0,
         "status": "scored"
       },
+      "docling_sample_10s": {
+        "category": "audio",
+        "elapsed_seconds": 3.124,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_sample_10s_audio-m4a": {
+        "category": "audio",
+        "elapsed_seconds": 1.936,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_sample_10s_audio-mp3": {
+        "category": "audio",
+        "elapsed_seconds": 2.07,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_sample_10s_audio-mp4": {
+        "category": "audio",
+        "elapsed_seconds": 1.992,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_sample_10s_audio-mpeg": {
+        "category": "audio",
+        "elapsed_seconds": 1.854,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_sample_10s_audio-wav": {
+        "category": "audio",
+        "elapsed_seconds": 2.277,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_sample_10s_audio-x-wav": {
+        "category": "audio",
+        "elapsed_seconds": 2.273,
+        "overall_percent": 95.0,
+        "status": "scored"
+      },
+      "docling_silent_1s": {
+        "category": "audio",
+        "elapsed_seconds": 0.631,
+        "overall_percent": 65.0,
+        "status": "scored"
+      },
       "docling_table_01": {
         "category": "html",
         "elapsed_seconds": 0.007,
@@ -2571,11 +2619,22 @@
     "uplift_review_percent": 3.0
   },
   "source_reports": {
-    "python-ai-docling": "reports/corpus-granite-docling-scanned-or-unknown.json",
-    "python-enhanced-docling": "reports/corpus-python-enhanced-docling.json",
-    "python-fast-markitdown": "reports/corpus-python-fast-markitdown.json",
-    "python-fast-pdfium": "reports/corpus-python-fast-pdfium.json",
-    "swift-pdfkit": "reports/corpus-swift-pdfkit.json"
+    "python-ai-docling": [
+      "reports/corpus-granite-docling-scanned-or-unknown.json"
+    ],
+    "python-enhanced-docling": [
+      "reports/corpus-python-enhanced-docling.json"
+    ],
+    "python-fast-markitdown": [
+      "reports/corpus-python-fast-markitdown.json",
+      "reports/corpus-python-fast-markitdown-audio.json"
+    ],
+    "python-fast-pdfium": [
+      "reports/corpus-python-fast-pdfium.json"
+    ],
+    "swift-pdfkit": [
+      "reports/corpus-swift-pdfkit.json"
+    ]
   },
   "version": 1
 }
