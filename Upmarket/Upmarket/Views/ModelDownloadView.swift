@@ -5,11 +5,15 @@ struct ModelDownloadView: View {
     @EnvironmentObject private var modelManager: ModelManager
     @EnvironmentObject private var store: StoreManager
 
+    private let device = DeviceCapability.shared
+
     var body: some View {
         VStack(spacing: 24) {
             header
 
-            if modelManager.isDownloading {
+            if !device.supportsAdvancedRuntime {
+                machineUnavailableView
+            } else if modelManager.isDownloading {
                 downloadingView
             } else if let checkError = modelManager.checkError {
                 checkErrorView(checkError)
@@ -44,6 +48,23 @@ struct ModelDownloadView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
+    }
+
+    private var machineUnavailableView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 32))
+                .foregroundStyle(Color.green)
+            Text("Fast conversion is ready")
+                .fontWeight(.medium)
+            Text("This Mac uses the native Basic conversion path. Upmarket AI and advanced local models require Apple Silicon.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
     }
 
     // MARK: - Model List

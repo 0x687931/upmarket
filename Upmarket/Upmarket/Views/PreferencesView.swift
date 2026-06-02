@@ -10,6 +10,7 @@ struct PreferencesView: View {
     @EnvironmentObject private var store: StoreManager
 
     @State private var selectedTab: Tab = .general
+    private let device = DeviceCapability.shared
 
     enum Tab: String, CaseIterable {
         case general    = "General"
@@ -153,10 +154,17 @@ struct PreferencesView: View {
                             set: { UserDefaults.standard.set($0, forKey: "upmarket.defaultPipeline") }
                         )) {
                             Text("Fast (instant)").tag(0)
-                            Text("Enhanced (better quality)").tag(1)
+                            if device.supportsAdvancedRuntime {
+                                Text("Enhanced (better quality)").tag(1)
+                            }
                         }
                         .pickerStyle(.radioGroup)
                         .horizontalRadioGroupLayout()
+                        .onAppear {
+                            if !device.supportsAdvancedRuntime {
+                                UserDefaults.standard.set(0, forKey: "upmarket.defaultPipeline")
+                            }
+                        }
                     }
 
                     HStack(alignment: .top) {
@@ -167,10 +175,16 @@ struct PreferencesView: View {
                                 get: { UserDefaults.standard.bool(forKey: "upmarket.enableOCR") },
                                 set: { UserDefaults.standard.set($0, forKey: "upmarket.enableOCR") }
                             ))
-                            Toggle("Suggest Upmarket AI for complex documents", isOn: Binding(
-                                get: { UserDefaults.standard.bool(forKey: "upmarket.suggestAI") },
-                                set: { UserDefaults.standard.set($0, forKey: "upmarket.suggestAI") }
-                            ))
+                            if device.supportsUpmarketAI {
+                                Toggle("Suggest Upmarket AI for complex documents", isOn: Binding(
+                                    get: { UserDefaults.standard.bool(forKey: "upmarket.suggestAI") },
+                                    set: { UserDefaults.standard.set($0, forKey: "upmarket.suggestAI") }
+                                ))
+                            } else {
+                                Label(device.upmarketAIUnavailableReason, systemImage: "xmark.circle")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                             Toggle("Auto-convert on drop (no confirmation)", isOn: Binding(
                                 get: { UserDefaults.standard.bool(forKey: "upmarket.autoConvert") },
                                 set: { UserDefaults.standard.set($0, forKey: "upmarket.autoConvert") }
@@ -207,7 +221,16 @@ struct PreferencesView: View {
 
             PrefsBox(title: "Downloaded Models") {
                 VStack(spacing: 8) {
-                    if case .checking = modelManager.installState {
+                    if !device.supportsAdvancedRuntime {
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Color.green)
+                            Text("Fast conversion is ready. Advanced local models require Apple Silicon.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                        }
+                    } else if case .checking = modelManager.installState {
                         HStack(spacing: 8) {
                             ProgressView()
                                 .controlSize(.small)
@@ -242,53 +265,55 @@ struct PreferencesView: View {
                         }
                     }
 
-                    ForEach(modelManager.models, id: \.key) { model in
-                        HStack(spacing: 12) {
-                            Image(systemName: model.isDownloaded ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(model.isDownloaded ? Color.green : model.isAvailable ? .secondary : .red)
+                    if device.supportsAdvancedRuntime {
+                        ForEach(modelManager.models, id: \.key) { model in
+                            HStack(spacing: 12) {
+                                Image(systemName: model.isDownloaded ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(model.isDownloaded ? Color.green : model.isAvailable ? .secondary : .red)
 
-                            VStack(alignment: .leading, spacing: 1) {
-                                HStack(spacing: 6) {
-                                    Text(model.name).fontWeight(.medium)
-                                    if model.tier == "pro" {
-                                        Text("PRO")
-                                            .font(.caption2).fontWeight(.semibold)
-                                            .foregroundStyle(.white)
-                                            .padding(.horizontal, 5).padding(.vertical, 1)
-                                            .background(Color.accentColor, in: Capsule())
+                                VStack(alignment: .leading, spacing: 1) {
+                                    HStack(spacing: 6) {
+                                        Text(model.name).fontWeight(.medium)
+                                        if model.tier == "pro" {
+                                            Text("PRO")
+                                                .font(.caption2).fontWeight(.semibold)
+                                                .foregroundStyle(.white)
+                                                .padding(.horizontal, 5).padding(.vertical, 1)
+                                                .background(Color.accentColor, in: Capsule())
+                                        }
                                     }
+                                    Text(model.error ?? model.description)
+                                        .font(.caption).foregroundStyle(.secondary)
                                 }
-                                Text(model.error ?? model.description)
+
+                                Spacer()
+
+                                Text(model.isDownloaded ? modelManager.totalStorageUsedFormatted : "\(model.sizeMB) MB")
                                     .font(.caption).foregroundStyle(.secondary)
-                            }
 
-                            Spacer()
-
-                            Text(model.isDownloaded ? modelManager.totalStorageUsedFormatted : "\(model.sizeMB) MB")
-                                .font(.caption).foregroundStyle(.secondary)
-
-                            if model.isDownloaded {
-                                Button("Delete") { modelManager.deleteModel(key: model.key) }
+                                if model.isDownloaded {
+                                    Button("Delete") { modelManager.deleteModel(key: model.key) }
+                                        .buttonStyle(.bordered).controlSize(.mini)
+                                        .foregroundStyle(.red)
+                                } else {
+                                    Button("Download") {
+                                        model.tier == "pro"
+                                            ? modelManager.downloadProModels(hasPro: store.hasProOrAbove)
+                                            : modelManager.downloadRequiredModels()
+                                    }
                                     .buttonStyle(.bordered).controlSize(.mini)
-                                    .foregroundStyle(.red)
-                            } else {
-                                Button("Download") {
-                                    model.tier == "pro"
-                                        ? modelManager.downloadProModels(hasPro: store.hasProOrAbove)
-                                        : modelManager.downloadRequiredModels()
+                                    .disabled(downloadUnavailable(for: model) != nil)
+                                    .help(downloadUnavailable(for: model) ?? "")
                                 }
-                                .buttonStyle(.bordered).controlSize(.mini)
-                                .disabled(downloadUnavailable(for: model) != nil)
-                                .help(downloadUnavailable(for: model) ?? "")
                             }
-                        }
-                        .padding(.vertical, 4)
-                        if model.key != modelManager.models.last?.key {
-                            Divider()
+                            .padding(.vertical, 4)
+                            if model.key != modelManager.models.last?.key {
+                                Divider()
+                            }
                         }
                     }
 
-                    if modelManager.isDownloading {
+                    if device.supportsAdvancedRuntime, modelManager.isDownloading {
                         VStack(spacing: 6) {
                             ProgressView(value: modelManager.downloadProgress, total: 100)
                             Text(modelManager.downloadMessage)
@@ -297,7 +322,7 @@ struct PreferencesView: View {
                         .padding(.top, 4)
                     }
 
-                    if let error = modelManager.downloadError {
+                    if device.supportsAdvancedRuntime, let error = modelManager.downloadError {
                         Text(error)
                             .font(.caption)
                             .foregroundStyle(.red)

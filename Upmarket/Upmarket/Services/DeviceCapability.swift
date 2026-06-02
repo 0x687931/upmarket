@@ -17,13 +17,7 @@ final class DeviceCapability {
     let chipDescription: String
 
     private init() {
-        var sysinfo = utsname()
-        uname(&sysinfo)
-        let machine = withUnsafeBytes(of: &sysinfo.machine) {
-            $0.bindMemory(to: CChar.self).baseAddress
-                .map { String(cString: $0) } ?? ""
-        }
-        isAppleSilicon = machine.hasPrefix("arm64")
+        isAppleSilicon = Self.currentIsAppleSilicon()
 
         if #available(macOS 26, *) {
             isTahoe = true
@@ -34,12 +28,31 @@ final class DeviceCapability {
         chipDescription = isAppleSilicon ? "Apple Silicon" : "Intel"
     }
 
+    nonisolated static var currentSupportsAdvancedRuntime: Bool {
+        currentIsAppleSilicon()
+    }
+
+    private nonisolated static func currentIsAppleSilicon() -> Bool {
+        var sysinfo = utsname()
+        uname(&sysinfo)
+        let machine = withUnsafeBytes(of: &sysinfo.machine) {
+            $0.bindMemory(to: CChar.self).baseAddress
+                .map { String(cString: $0) } ?? ""
+        }
+        return machine.hasPrefix("arm64")
+    }
+
     /// Whether Upmarket AI (Pro tier) can run on this device.
     /// MLX is an Apple Silicon/Metal path, not a generic GPU path.
-    var supportsUpmarketAI: Bool { isAppleSilicon }
+    nonisolated var supportsUpmarketAI: Bool { isAppleSilicon }
+
+    /// Whether bundled advanced conversion should run on this device.
+    /// v1.0 keeps Intel Macs on native-only Basic conversion until physical
+    /// Intel validation proves the packaged runtime is reliable there.
+    nonisolated var supportsAdvancedRuntime: Bool { isAppleSilicon }
 
     /// Why Upmarket AI is unavailable, for display in UI.
-    var upmarketAIUnavailableReason: String {
+    nonisolated var upmarketAIUnavailableReason: String {
         "Upmarket AI requires Apple Silicon with Metal support"
     }
 }

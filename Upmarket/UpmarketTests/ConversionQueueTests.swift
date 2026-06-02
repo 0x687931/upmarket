@@ -1,4 +1,7 @@
 import XCTest
+import AppKit
+import CoreText
+import PDFKit
 @testable import Upmarket
 
 @MainActor
@@ -360,6 +363,52 @@ final class ConversionQueueTests: XCTestCase {
 
         XCTAssertEqual(result.errorMessage, ConversionError.sourceUnavailable.errorDescription)
         XCTAssertEqual(workspaceNames(), before)
+    }
+
+    func testNativeOnlyRuntimeRejectsPythonBackedFormats() async throws {
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketNativeOnlyTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: workspace)
+        }
+        let docx = workspace.appendingPathComponent("structured.docx")
+        try Data("not a real docx, but enough to prove routing".utf8).write(to: docx)
+
+        let result = await ConversionRunner(supportsAdvancedRuntime: false)
+            .run(ConversionJob(sourceURL: docx))
+
+        XCTAssertEqual(result.errorMessage, ConversionError.unsupportedOnThisMac.errorDescription)
+    }
+
+    func testNativeOnlyRuntimeStillConvertsDigitalPDF() async throws {
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketNativePDFTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: workspace)
+        }
+        let pdf = workspace.appendingPathComponent("native.pdf")
+        var mediaBox = CGRect(x: 0, y: 0, width: 400, height: 300)
+        guard let context = CGContext(pdf as CFURL, mediaBox: &mediaBox, nil) else {
+            return XCTFail("Expected PDF context")
+        }
+        context.beginPDFPage(nil)
+        let text = NSAttributedString(
+            string: "Native PDF conversion",
+            attributes: [.font: NSFont.systemFont(ofSize: 24), .foregroundColor: NSColor.black]
+        )
+        context.textPosition = CGPoint(x: 40, y: 150)
+        CTLineDraw(CTLineCreateWithAttributedString(text), context)
+        context.endPDFPage()
+        context.closePDF()
+
+        let result = await ConversionRunner(supportsAdvancedRuntime: false)
+            .run(ConversionJob(sourceURL: pdf))
+
+        XCTAssertNil(result.errorMessage)
+        XCTAssertEqual(result.output?.format, "PDF")
+        XCTAssertTrue(result.output?.markdown.contains("Native PDF conversion") ?? false)
     }
 
     private func waitForResult(_ id: UUID, in queue: ConversionQueue) async {

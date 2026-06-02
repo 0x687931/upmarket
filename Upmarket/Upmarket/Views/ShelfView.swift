@@ -370,6 +370,7 @@ struct ShelfItemView: View {
     @State private var showActions = false
     @State private var now = Date()
     @State private var showCopied = false
+    private let device = DeviceCapability.shared
 
     private var isStalled: Bool {
         item.isStalled || item.hasNoRecentProgress(referenceDate: now, threshold: 60)
@@ -501,7 +502,9 @@ struct ShelfItemView: View {
             if sourceExists {
                 Menu("Reprocess") {
                     Button("Fast (instant)")       { reprocess(useAI: false) }
-                    Button("Upmarket AI (best)")   { reprocess(useAI: true)  }
+                    if device.supportsUpmarketAI {
+                        Button("Upmarket AI (best)")   { reprocess(useAI: true)  }
+                    }
                 }
                 Divider()
             }

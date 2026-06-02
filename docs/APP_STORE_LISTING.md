@@ -16,9 +16,9 @@ Secondary: Utilities
 
 Upmarket converts your documents to clean Markdown — entirely on your Mac. No cloud, no subscriptions, no API keys. Your files never leave your device.
 
-Drop a PDF, Word document, PowerPoint, spreadsheet, or webpage onto Upmarket and get clean, structured Markdown in seconds. Everything happens locally using Apple Silicon and on-device AI.
+Drop a PDF, Word document, PowerPoint, spreadsheet, or webpage onto Upmarket and get clean, structured Markdown in seconds. Conversion happens locally on your Mac, with advanced on-device AI available on Apple Silicon.
 
-**Works with every document type**
+**Broad document support**
 PDF · Word · PowerPoint · Excel · HTML · EPUB · CSV · JSON · XML · Images · Audio · Video
 
 **Fully offline after setup**
@@ -26,6 +26,8 @@ Upmarket downloads its AI models once, then works completely offline. No interne
 
 **Upmarket AI for complex documents**
 Upgrade to Upmarket + AI for scanned documents, dense academic papers, complex multi-column layouts, and research papers. Powered by on-device AI running directly on Apple Silicon — not in the cloud.
+
+Apple Silicon is required for Upmarket AI. Intel Macs run the native Basic conversion path for supported documents.
 
 **Lives next to your Dock**
 The Upmarket shelf sits beside your Dock, always ready. Drop multiple files, see them convert in real time, copy the results instantly. No windows to manage.
@@ -49,8 +51,8 @@ Upmarket has no analytics, no tracking, and no telemetry. Your documents are pro
 Try Upmarket free with 3 conversions — no sign-up, no credit card. Purchase once, use forever. No subscription.
 
 — 3 free conversions to try
-— Upmarket: unlimited conversions, all formats — $4.99
-— Upmarket + AI: everything plus on-device AI for complex documents — $9.99
+— Upmarket: unlimited Basic conversions — $4.99
+— Upmarket + AI: everything plus on-device AI for complex documents on Apple Silicon — $9.99
 — 5-document pack for occasional use — $0.99
 
 ---

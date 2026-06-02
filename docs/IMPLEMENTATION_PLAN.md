@@ -208,10 +208,12 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 
 ### Gate A - Build and Packaging
 - [x] Build cleanly with `xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' build`
+- [x] Build the x86_64 macOS slice on Apple Silicon with `xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS,arch=x86_64' CODE_SIGNING_ALLOWED=NO build`
 - [ ] Archive successfully in Xcode with the release team selected
 - [x] Verify sandbox entitlements in the archived app
 - [x] Confirm bundled Python runtime imports required modules from inside the app bundle
 - [ ] Confirm app works after deleting downloaded models
+- [ ] Validate signed app on a physical Intel Mac before claiming Intel support beyond build compatibility and Rosetta-hosted tests.
 
 ### Gate B - Conversion Reliability
 - [ ] Create a 20-document smoke corpus covering PDF, scanned PDF, DOCX, PPTX, XLSX, HTML, image, and audio
@@ -219,6 +221,8 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 - [ ] Bootstrap `docs/release/corpus_pathway_baseline.json` with per-document scores for every valid conversion pathway before the first release candidate
 - [ ] Run fast path with no downloaded models
 - [ ] Run enhanced/AI paths after model download where supported
+- [ ] Run batch conversion from the shelf queue across at least 5 mixed accepted inputs, including one failure, one cancellation, and one retry.
+- [ ] Run Intel validation corpus on a physical Intel Mac: native PDFKit/Vision/ImageIO/AVFoundation/Speech paths where available, Python-backed formats visibly unsupported, and explicit Enhanced/AI unavailable/download-blocked state.
 - [ ] Verify temp files are cleaned after success, failure, cancellation, and app quit
 - [ ] Verify conversion result state always resolves to result, actionable error, password prompt, or explicit in-progress state
 
@@ -279,6 +283,7 @@ This is a launch requirement, not post-launch polish.
 
 ### Native Test Coverage
 - [x] `ConversionRunner` routing and `ConversionQueue` state transitions
+- [x] x86_64 selected test run on Apple Silicon passes queue and programmatic authorization coverage; `ModelManagerTests.testDownloadProgressUpdatesBeforeCompletion` currently fails under x86_64 because Pro AI download is correctly blocked when Apple Silicon support is unavailable.
 - [ ] PDF password path
 - [x] Python bridge success/failure parsing
 - [ ] Liveness monitor state transitions
@@ -291,6 +296,9 @@ This is a launch requirement, not post-launch polish.
 
 ### v1.0 Must-Haves
 - [ ] Friendly categorized errors using the error taxonomy above
+- [ ] Batch conversion queue UX through the shelf: multiple accepted inputs must enqueue visibly, run serially, show per-job progress/result/error/cancellation, and keep copy/save actions obvious for each finished job.
+- [ ] Preferences model setup: users can check and download Enhanced/AI models before converting a complex document, with capability, disk, and availability status shown before any download.
+- [ ] Apple-native-only extraction remains internal routing/fallback behavior for v1.0; do not expose an engine-selection mode in normal UI.
 - [ ] Preferences/About links to licenses, privacy policy, support, and version
 - [ ] Dark mode pass for drop zone, shelf, output, paywall, and preferences
 - [ ] macOS compatibility pass on 13.3, 14.x, 15.x, and current beta where available
@@ -300,12 +308,10 @@ This is a launch requirement, not post-launch polish.
 ### v1.1 Candidates
 - [ ] Rendered Markdown preview toggle
 - [ ] Share button using macOS share sheet
-- [ ] Batch conversion queue UX
 - [ ] Conversion history
 - [ ] Output format options: Markdown / plain text
 - [ ] OCR toggle in drop zone
 - [ ] First-launch onboarding
-- [ ] Optional “Apple-native only” extraction mode: local-only, lower-quality fallback using Apple APIs only; do not position as Basic or Advanced unless quality and format coverage justify it.
 
 ### P2 - UX/HIG Audit Findings
 - [ ] Remove automatic paywall display at tour completion; let users experience a conversion before purchase prompts.
@@ -352,7 +358,4 @@ Manual validation remains required for Xcode Archive, App Store Connect setup, S
 
 - [ ] Domain: `upmarket.app` vs `upmarketapp.com`
 - [ ] Landing page before App Store submission or after TestFlight
-- [ ] How prominently to position Intel Mac as CPU-only / Apple Silicon recommended
-- [ ] Whether batch conversion belongs in v1.0 or v1.1
-- [ ] Whether enhanced/AI model downloads should be available from Preferences before first complex document
-- [ ] Whether Apple-native-only extraction should be a visible tool mode, a troubleshooting fallback, or remain internal.
+- [ ] How to phrase Intel support after physical Intel validation: current evidence supports x86_64 build compatibility and native-only Basic paths, while Python-backed Enhanced/AI remains Apple Silicon gated.

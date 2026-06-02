@@ -5,9 +5,14 @@ struct ConversionRunner {
     typealias ProgressHandler = (ConversionStage) -> Void
 
     let pythonWorker: PythonWorker
+    private let supportsAdvancedRuntime: Bool
 
-    nonisolated init(pythonWorker: PythonWorker = PythonWorker()) {
+    nonisolated init(
+        pythonWorker: PythonWorker = PythonWorker(),
+        supportsAdvancedRuntime: Bool = DeviceCapability.currentSupportsAdvancedRuntime
+    ) {
         self.pythonWorker = pythonWorker
+        self.supportsAdvancedRuntime = supportsAdvancedRuntime
     }
 
     func analyse(fileURL: URL) async -> ComplexityAdvice? {
@@ -35,6 +40,7 @@ struct ConversionRunner {
             )
             return classification.complexityAdvice
         }
+        guard supportsAdvancedRuntime else { return nil }
         return try? await pythonWorker.analyse(fileURL: tempURL, workspaceURL: workspace)
     }
 
@@ -128,6 +134,9 @@ struct ConversionRunner {
                         progress: progress
                     )
                 case .enhanced:
+                    guard supportsAdvancedRuntime else {
+                        return await runPDFKitConversion(fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL)
+                    }
                     return await runQualitySelectedPDFConversion(
                         fileURL: tempURL,
                         title: title,
@@ -149,6 +158,9 @@ struct ConversionRunner {
         case _ where NativeMetadataExtractor.handlesMedia(ext):
             return await NativeMetadataExtractor.mediaMetadata(url: tempURL, title: title)
         default:
+            guard supportsAdvancedRuntime else {
+                return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
+            }
             return await runPythonConversion(
                 fileURL: tempURL,
                 title: title,
@@ -219,6 +231,9 @@ struct ConversionRunner {
         } catch PDFConverter.ConversionError.passwordRequired {
             return .failure(ConversionError.passwordRequired.errorDescription ?? "This PDF is password-protected.")
         } catch {
+            guard supportsAdvancedRuntime else {
+                return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
+            }
             return await runPythonConversion(
                 fileURL: fileURL,
                 title: title,
@@ -347,6 +362,9 @@ struct ConversionRunner {
         workspaceURL: URL,
         progress: ProgressHandler?
     ) async -> ConversionResult {
+        guard supportsAdvancedRuntime else {
+            return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
+        }
         progress?(.python)
         let signpost = AppSignpost.conversion.beginInterval("pythonConvert")
         defer { AppSignpost.conversion.endInterval("pythonConvert", signpost) }

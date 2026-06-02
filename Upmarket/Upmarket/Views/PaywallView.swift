@@ -183,7 +183,7 @@ struct PaywallView: View {
                     Text(verbatim: "Upmarket")
                         .font(.headline)
                         .fontWeight(.semibold)
-                    Text("For everyday documents without AI")
+                    Text(device.supportsAdvancedRuntime ? "For everyday documents without AI" : "For native Basic conversion on this Mac")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -199,8 +199,13 @@ struct PaywallView: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                featureRow("PDF, Word, PowerPoint, HTML → Markdown", isHighlight: false)
-                featureRow("Tables and layout detection", isHighlight: false)
+                if device.supportsAdvancedRuntime {
+                    featureRow("PDF, Word, PowerPoint, HTML → Markdown", isHighlight: false)
+                    featureRow("Tables and layout detection", isHighlight: false)
+                } else {
+                    featureRow("Native PDF and media metadata conversion", isHighlight: false)
+                    featureRow("Advanced document formats require Apple Silicon", isHighlight: false)
+                }
                 featureRow("Unlimited conversions", isHighlight: false)
             }
 
