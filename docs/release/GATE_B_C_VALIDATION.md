@@ -100,6 +100,12 @@ Existing Instruments trace bundles are under `reports/gate-c-stability/` for All
 | `leaks-all-processes.trace` | all processes | 0.000s | Not usable release evidence. |
 | `allocations-all-processes.trace` | all processes | 0.000s | Not usable release evidence. |
 
+This interpretation is checked with:
+
+```sh
+scripts/ci/validate_gate_c_instruments.py
+```
+
 Gate C Instruments remains open for a targeted Leaks capture, a targeted Time Profiler capture during conversion, and Main Thread Checker evidence.
 
 Thread Sanitizer validation covers the focused conversion, model, StoreKit accounting, and pack ledger unit flows with:
