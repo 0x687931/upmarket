@@ -12,6 +12,7 @@ struct ShelfView: View {
     @State private var isTargeted = false
     @State private var showPaywall = false
     @State private var isExpanded = false
+    @State private var dragScale: CGFloat = 1.0
 
     // Hover states per button
     @State private var hoverClose  = false
@@ -21,13 +22,13 @@ struct ShelfView: View {
 
     // Closed state: two-column panel
     // Left col: 3 buttons stacked [X][+][>]  |  Right col: [↓] drop arrow
-    private let colWidth:     CGFloat = 48   // wider columns for proper padding
-    private let closedHeight: CGFloat = 135  // 3 × 45pt buttons — meets 44pt HIG minimum
+    private let colWidth:     CGFloat = 64
+    private let closedHeight: CGFloat = 132
     private let itemWidth:    CGFloat = 64
     private let itemSpacing:  CGFloat = 8
     private let maxVisible:   Int     = 5
 
-    private var buttonHeight: CGFloat { closedHeight / 3 }  // 36pt each
+    private var buttonHeight: CGFloat { closedHeight / 3 }  // 44pt each
 
     private var isAnyConverting: Bool {
         conversion.isConverting
@@ -48,10 +49,8 @@ struct ShelfView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            // Closed state: [X][+][>] | [↓]
             closedPanel
 
-            // Expanded content slides out to the right
             if isExpanded {
                 expandedContent
                     .transition(.move(edge: .leading).combined(with: .opacity))
@@ -61,12 +60,25 @@ struct ShelfView: View {
         .animation(.spring(duration: 0.35, bounce: 0.1), value: isExpanded)
         .animation(.spring(duration: 0.25), value: conversion.jobs.count)
         .background(LiquidGlassBackground(cornerRadius: 12))
+        // Drop glow ring — sits outside the shelf bounds via negative padding
+        .overlay(
+            PulseRingView(color: .accentColor, lineWidth: 2, isActive: isTargeted)
+                .padding(-8)
+                .allowsHitTesting(false)
+        )
+        // Existing accent border kept (complements the glow ring)
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(Color.accentColor.opacity(isTargeted ? 0.8 : 0), lineWidth: 2)
+                .strokeBorder(Color.accentColor.opacity(isTargeted ? 0.5 : 0), lineWidth: 1.5)
                 .animation(.easeInOut(duration: 0.15), value: isTargeted)
         )
+        .scaleEffect(dragScale)
         .onDrop(of: [.fileURL], isTargeted: $isTargeted, perform: handleDrop)
+        .onChange(of: isTargeted) { targeted in
+            withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+                dragScale = targeted ? 1.05 : 1.0
+            }
+        }
         .sheet(isPresented: $showPaywall) {
             PaywallView().environmentObject(store)
         }
@@ -107,7 +119,7 @@ struct ShelfView: View {
                     .onHover { hoverClose = $0 }
                 controlButton(symbol: "plus",   hoverColor: .green,                        isHovered: hoverAdd,    help: "Add files")  { openFilePicker() }
                     .onHover { hoverAdd = $0 }
-                controlButton(symbol: isExpanded ? "arrow.left" : "arrow.right",
+                controlButton(symbol: isExpanded ? "chevron.left" : "chevron.right",
                               hoverColor: Color(nsColor: .systemBlue),                     isHovered: hoverToggle, help: isExpanded ? "Collapse" : "Expand") {
                     withAnimation(.spring(duration: 0.35, bounce: 0.1)) { isExpanded.toggle() }
                 }
@@ -136,7 +148,6 @@ struct ShelfView: View {
     ) -> some View {
         Button(action: action) {
             ZStack {
-                // Circle grows to fill available space minus 10pt padding each side
                 Circle()
                     .fill(hoverColor.opacity(isHovered ? 0.18 : 0))
                     .frame(width: buttonHeight - 10, height: buttonHeight - 10)
@@ -176,12 +187,8 @@ struct ShelfView: View {
     // MARK: - Expanded content
 
     private var expandedContent: some View {
-        HStack(spacing: 0) {
-            Rectangle()
-                .fill(Color.primary.opacity(0.1))
-                .frame(width: 1)
-                .padding(.vertical, 10)
-
+        // No extra separator here — the closedPanel divider already separates the two zones.
+        Group {
             if conversion.jobs.isEmpty && isAnyConverting {
                 conversionView
             } else if conversion.jobs.isEmpty {
@@ -193,24 +200,12 @@ struct ShelfView: View {
     }
 
     private var emptyView: some View {
-        HStack(spacing: 12) {
-            if #available(macOS 14.0, *) {
-                Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
-                    .font(.system(size: 32))
-                    .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.6))
-                    .contentTransition(.symbolEffect(.replace.offUp))
-                    .animation(.easeInOut(duration: 0.12), value: isTargeted)
-            } else {
-                Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
-                    .font(.system(size: 32))
-                    .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.6))
-            }
-            Text(isTargeted ? "Release to convert" : "Drop documents here")
-                .font(.system(size: 12))
-                .foregroundStyle(.primary.opacity(0.6))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 16)
+        Text(isTargeted ? "Release to convert" : "Drop documents here")
+            .font(.system(size: 12, weight: isTargeted ? .semibold : .regular))
+            .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.6))
+            .animation(.easeInOut(duration: 0.15), value: isTargeted)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 16)
     }
 
     private var conversionView: some View {
@@ -238,6 +233,10 @@ struct ShelfView: View {
                         }
                     }
                     .frame(width: itemWidth)
+                    .transition(.asymmetric(
+                        insertion: .push(from: .trailing).combined(with: .opacity),
+                        removal:   .push(from: .leading).combined(with: .opacity)
+                    ))
                 }
                 if conversion.jobs.count > maxVisible {
                     overflowBadge
@@ -377,26 +376,31 @@ struct ShelfItemView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            VStack(spacing: 3) {
-                ZStack(alignment: .bottomTrailing) {
-                    fileIcon.frame(width: 36, height: 36)
-                    stateIndicator
-                }
-                Text(showCopied ? "Copied!" : item.name)
-                    .font(.system(size: 9, weight: showCopied ? .semibold : .regular))
-                    .foregroundStyle(showCopied ? Color.accentColor : .primary.opacity(0.7))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .frame(width: 56)
-                    .animation(.easeInOut(duration: 0.15), value: showCopied)
-                statusText
+        VStack(spacing: 3) {
+            iconWithArc
+            Text(showCopied ? "Copied!" : item.name)
+                .font(.system(size: 9, weight: showCopied ? .semibold : .regular))
+                .foregroundStyle(showCopied ? Color.accentColor : .primary.opacity(0.7))
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .frame(width: 56)
+                .animation(.easeInOut(duration: 0.15), value: showCopied)
+            statusText
+            // Persistent action row for terminal states; hover cancel for running
+            if item.isRunning {
+                // Reserve the same height so card doesn't shift when a job finishes
+                Color.clear.frame(height: persistentActionsHeight)
+            } else {
+                persistentActions
             }
-            .padding(.vertical, 6)
-
-            if showActions {
-                hoverActions
+        }
+        .padding(.vertical, 6)
+        // Cancel button on hover for running jobs only
+        .overlay(alignment: .bottom) {
+            if item.isRunning && showActions {
+                runningHoverActions
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                    .padding(.bottom, 6)
             }
         }
         .contentShape(Rectangle())
@@ -410,6 +414,37 @@ struct ShelfItemView: View {
                 now = Date()
             }
         }
+    }
+
+    // MARK: - Icon with arc ring
+
+    // Wraps the file icon in an arc progress ring while the job is running.
+    // The ring sits at 46×46; the icon is 32×32 centred inside it.
+    // The state badge is anchored bottom-right of the outer 46pt frame.
+    @ViewBuilder private var iconWithArc: some View {
+        ZStack {
+            if item.isRunning {
+                // Track
+                Circle()
+                    .stroke(Color.primary.opacity(0.1), lineWidth: 3)
+                    .frame(width: 46, height: 46)
+                // Progress arc
+                ArcProgressRing(progress: item.progress)
+                    .stroke(
+                        Color.accentColor,
+                        style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                    )
+                    .frame(width: 46, height: 46)
+                    .animation(.linear(duration: 0.4), value: item.progress)
+            }
+            // File icon — 32pt when ring active, 36pt when not (existing size)
+            fileIcon
+                .frame(width: item.isRunning ? 32 : 36, height: item.isRunning ? 32 : 36)
+            // State badge offset to bottom-right corner of the 46pt frame
+            stateIndicator
+                .offset(x: 13, y: 13)
+        }
+        .frame(width: 46, height: 46)
     }
 
     @ViewBuilder private var fileIcon: some View {
@@ -452,32 +487,130 @@ struct ShelfItemView: View {
         }
     }
 
-    @ViewBuilder private var hoverActions: some View {
-        HStack(spacing: 3) {
-            if item.isRunning {
-                Button(action: onCancel) {
-                    Image(systemName: "stop.fill").font(.system(size: 8))
-                }
-                .buttonStyle(ShelfActionButtonStyle()).help("Cancel")
-            } else if item.result?.errorMessage != nil {
-                Button(action: onRetry) {
-                    Image(systemName: "arrow.clockwise").font(.system(size: 9))
-                }
-                .buttonStyle(ShelfActionButtonStyle()).help("Retry")
-            }
+    // MARK: - Action rows
+
+    // Fixed height used to reserve space while a job is running so the card
+    // height doesn't shift the moment the job finishes.
+    private let persistentActionsHeight: CGFloat = 22
+
+    // Always-visible buttons for terminal (non-running) jobs.
+    private var persistentActions: some View {
+        HStack(spacing: 4) {
             if let output = item.result?.output {
                 Button {
                     FileAccessService.shared.copyMarkdown(output.markdown)
-                } label: { Image(systemName: "doc.on.doc").font(.system(size: 9)) }
-                .buttonStyle(ShelfActionButtonStyle()).help("Copy Markdown")
+                    showCopied = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { showCopied = false }
+                } label: {
+                    Image(systemName: "doc.on.doc").font(.system(size: 10))
+                }
+                .buttonStyle(ShelfActionButtonStyle())
+                .help("Copy Markdown")
+
+                Button { handleDoubleClick() } label: {
+                    Image(systemName: "arrow.up.right.square").font(.system(size: 10))
+                }
+                .buttonStyle(ShelfActionButtonStyle())
+                .help("Open in editor")
             }
+
+            if item.result?.errorMessage != nil {
+                Button(action: onRetry) {
+                    Image(systemName: "arrow.clockwise").font(.system(size: 10))
+                }
+                .buttonStyle(ShelfActionButtonStyle())
+                .help("Retry")
+            }
+
             Button(action: onRemove) {
-                Image(systemName: "xmark").font(.system(size: 9))
+                Image(systemName: "xmark").font(.system(size: 10))
             }
-            .buttonStyle(ShelfActionButtonStyle()).help("Remove")
+            .buttonStyle(ShelfActionButtonStyle())
+            .help("Remove")
         }
-        .padding(.bottom, 2)
+        .frame(height: persistentActionsHeight)
     }
+
+    // Cancel-only overlay shown on hover while the job is running.
+    private var runningHoverActions: some View {
+        HStack(spacing: 3) {
+            Button(action: onCancel) {
+                Image(systemName: "stop.fill").font(.system(size: 8))
+            }
+            .buttonStyle(ShelfActionButtonStyle())
+            .help("Cancel")
+        }
+    }
+
+    // MARK: - Status text with crossfade
+
+    @ViewBuilder private var statusText: some View {
+        Group {
+            if isStalled {
+                Text("No progress")
+                    .foregroundStyle(.yellow)
+                    .help("No progress detected. Conversion is still running; you can cancel and retry.")
+            } else if let message = item.result?.errorMessage {
+                Text(message)
+                    .foregroundStyle(.red)
+                    .truncationMode(.tail)
+                    .help(message)
+            } else if item.isRunning {
+                Text(stageLabel)
+                    .foregroundStyle(.primary.opacity(0.65))
+                    .help("Still working: \(stageLabel)")
+            } else {
+                Text(stageLabel)
+                    .foregroundStyle(.primary.opacity(0.65))
+            }
+        }
+        .font(.system(size: 9))
+        .lineLimit(1)
+        .frame(width: 56, height: 10)
+        // Stage label crossfades on every stage change
+        .contentTransition(.opacity)
+        .animation(.easeInOut(duration: 0.2), value: item.stage)
+    }
+
+    // MARK: - Interactions
+
+    private func handleSingleClick() {
+        if let output = item.result?.output {
+            FileAccessService.shared.copyMarkdown(output.markdown)
+            showCopied = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                showCopied = false
+            }
+        }
+    }
+
+    private func handleDoubleClick() {
+        if let output = item.result?.output {
+            openInDefaultApp(output.markdown, title: output.title)
+        }
+    }
+
+    private func openInDefaultApp(_ markdown: String, title: String) {
+        Task { @MainActor in
+            let savedURL = SavePreference.shared.save(markdown: markdown, title: title, sourceURL: item.sourceURL)
+            if let url = savedURL { FileAccessService.shared.open(url) }
+        }
+    }
+
+    private func saveMarkdown(_ markdown: String, title: String) {
+        Task { @MainActor in
+            _ = FileAccessService.shared.saveMarkdown(markdown, title: title)
+        }
+    }
+
+    private func reprocess(useAI: Bool) {
+        NotificationCenter.default.post(
+            name: .upmarketReprocessItem,
+            object: ReprocessRequest(url: item.sourceURL, itemID: item.id, useAI: useAI, enhanced: useAI)
+        )
+    }
+
+    // MARK: - Context menu
 
     @ViewBuilder private var contextMenuItems: some View {
         if item.isRunning {
@@ -518,73 +651,7 @@ struct ShelfItemView: View {
         Button("Remove from Shelf", role: .destructive) { onRemove() }
     }
 
-    @ViewBuilder private var statusText: some View {
-        if isStalled {
-            Text("No progress")
-                .font(.system(size: 9))
-                .foregroundStyle(.yellow)
-                .lineLimit(1)
-                .frame(width: 56, height: 10)
-                .help("No progress detected. Conversion is still running; you can cancel and retry.")
-        } else if let message = item.result?.errorMessage {
-            Text(message)
-                .font(.system(size: 9))
-                .foregroundStyle(.red)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(width: 56, height: 10)
-                .help(message)
-        } else if item.isRunning {
-            Text("Working")
-                .font(.system(size: 9))
-                .foregroundStyle(.primary.opacity(0.65))
-                .lineLimit(1)
-                .frame(width: 56, height: 10)
-                .help("Still working: \(stageLabel)")
-        } else {
-            Text(stageLabel)
-                .font(.system(size: 9))
-                .foregroundStyle(.primary.opacity(0.65))
-                .lineLimit(1)
-                .frame(width: 56, height: 10)
-        }
-    }
-
-    private func handleSingleClick() {
-        if let output = item.result?.output {
-            FileAccessService.shared.copyMarkdown(output.markdown)
-            showCopied = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                showCopied = false
-            }
-        }
-    }
-
-    private func handleDoubleClick() {
-        if let output = item.result?.output {
-            openInDefaultApp(output.markdown, title: output.title)
-        }
-    }
-
-    private func openInDefaultApp(_ markdown: String, title: String) {
-        Task { @MainActor in
-            let savedURL = SavePreference.shared.save(markdown: markdown, title: title, sourceURL: item.sourceURL)
-            if let url = savedURL { FileAccessService.shared.open(url) }
-        }
-    }
-
-    private func saveMarkdown(_ markdown: String, title: String) {
-        Task { @MainActor in
-            _ = FileAccessService.shared.saveMarkdown(markdown, title: title)
-        }
-    }
-
-    private func reprocess(useAI: Bool) {
-        NotificationCenter.default.post(
-            name: .upmarketReprocessItem,
-            object: ReprocessRequest(url: item.sourceURL, itemID: item.id, useAI: useAI, enhanced: useAI)
-        )
-    }
+    // MARK: - Helpers
 
     private var sourceExists: Bool {
         FileManager.default.fileExists(atPath: item.sourceURL.path)
@@ -605,17 +672,19 @@ struct ShelfItemView: View {
 
     private var stageLabel: String {
         switch item.stage {
-        case .queued: return "Queued"
-        case .copying: return "Copying"
-        case .extracting: return "Reading"
-        case .python: return "Processing"
+        case .queued:         return "Queued"
+        case .copying:        return "Copying"
+        case .extracting:     return "Reading"
+        case .python:         return "Processing"
         case .postProcessing: return "Refining"
-        case .complete: return "Done"
-        case .failed: return "Failed"
-        case .cancelled: return "Cancelled"
+        case .complete:       return "Done"
+        case .failed:         return "Failed"
+        case .cancelled:      return "Cancelled"
         }
     }
 }
+
+// MARK: - Button style
 
 struct ShelfActionButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {

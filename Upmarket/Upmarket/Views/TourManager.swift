@@ -19,19 +19,19 @@ final class TourManager {
         TourStep(
             id: 0,
             title: "Welcome to Upmarket",
-            body: "Convert any document to clean Markdown — entirely on your Mac.",
+            body: "Drop or choose a document. Upmarket converts it to clean Markdown on this Mac.",
             symbol: "number.square.fill",
             symbolColor: Color(nsColor: .controlAccentColor),
-            action: "Let's go →",
+            action: "Let's go",
             shelfAnchor: .none
         ),
         TourStep(
             id: 1,
             title: "Expand the shelf",
-            body: "Tap > to open the shelf. Files and results appear here.",
-            symbol: "arrow.right",
+            body: "Tap the right arrow to open the shelf. Files and results appear here.",
+            symbol: "chevron.right",
             symbolColor: Color(nsColor: .systemBlue),
-            action: "Got it >",
+            action: "Got it",
             shelfAnchor: .expandButton
         ),
         TourStep(
@@ -40,7 +40,7 @@ final class TourManager {
             body: "Tap + to choose files, or drag and drop anything onto the shelf.",
             symbol: "plus",
             symbolColor: .green,
-            action: "Got it >",
+            action: "Got it",
             shelfAnchor: .addButton
         ),
         TourStep(
@@ -49,16 +49,16 @@ final class TourManager {
             body: "Drag the shelf to any corner of your screen. It snaps into place.",
             symbol: "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left",
             symbolColor: Color(nsColor: .controlAccentColor),
-            action: "Got it >",
+            action: "Got it",
             shelfAnchor: .none
         ),
         TourStep(
             id: 4,
             title: "Menu bar",
-            body: "The # icon in your menu bar shows conversion status and lets you reopen the shelf.",
+            body: "Look for Upmarket's # icon at the top right. It shows status and reopens the shelf.",
             symbol: "number.square",
             symbolColor: Color(nsColor: .labelColor),
-            action: "Got it >",
+            action: "Got it",
             shelfAnchor: .menuBar
         ),
         TourStep(
@@ -67,7 +67,7 @@ final class TourManager {
             body: "Tap x to hide the shelf. It stays in your menu bar, ready when you need it.",
             symbol: "xmark",
             symbolColor: .red,
-            action: "Finish tour >",
+            action: "Finish tour",
             shelfAnchor: .closeButton
         ),
     ]
@@ -154,7 +154,7 @@ final class TourManager {
 
     private func performStepEffect(_ step: TourStep) {
         switch step.shelfAnchor {
-        case .expandButton, .addButton:
+        case .addButton:
             NotificationCenter.default.post(name: .upmarketSetShelfExpanded, object: true)
         case .closeButton:
             NotificationCenter.default.post(name: .upmarketSetShelfExpanded, object: false)
@@ -205,8 +205,8 @@ final class TourManager {
         case .menuBar:
             guard let screen = NSScreen.main else { return (centreFrame(size: size), .none) }
             let frame = NSRect(
-                x: screen.frame.midX - size.width / 2,
-                y: screen.frame.maxY - 60 - size.height - gap,
+                x: screen.visibleFrame.maxX - size.width - 16,
+                y: screen.frame.maxY - size.height - 36,
                 width: size.width, height: size.height
             )
             return (clamp(frame, to: screen.visibleFrame), .top)
@@ -289,6 +289,10 @@ struct TourCalloutView: View {
             VStack(alignment: .leading, spacing: 10) {
                 // Step indicator + skip
                 HStack {
+                    Label("Upmarket", systemImage: "number.square.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
                     // Dots
                     HStack(spacing: 4) {
                         ForEach(0..<total, id: \.self) { i in
@@ -298,7 +302,6 @@ struct TourCalloutView: View {
                                 .animation(.spring(duration: 0.3), value: stepIndex)
                         }
                     }
-                    Spacer()
                     Button("Skip") { onSkip() }
                         .buttonStyle(.plain)
                         .font(.caption)

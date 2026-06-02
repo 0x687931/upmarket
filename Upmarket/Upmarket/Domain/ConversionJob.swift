@@ -54,6 +54,23 @@ struct ConversionJob: Identifiable, Equatable {
     var correlationID: String { id.uuidString }
     var isRunning: Bool { stage.isRunning }
 
+    // Scalar progress used by arc ring and progress bar.
+    // Python stage owns the widest band because it is the longest phase.
+    // When the Python bridge emits fractional heartbeats, replace the .python
+    // case with an interpolation between 0.20 and 0.88 using pythonFraction.
+    var progress: Double {
+        switch stage {
+        case .queued:         return 0.0
+        case .copying:        return 0.08
+        case .extracting:     return 0.20
+        case .python:         return 0.55
+        case .postProcessing: return 0.88
+        case .complete:       return 1.0
+        case .failed:         return 1.0
+        case .cancelled:      return 1.0
+        }
+    }
+
     func hasNoRecentProgress(referenceDate: Date = Date(), threshold: TimeInterval) -> Bool {
         isRunning && referenceDate.timeIntervalSince(lastProgressAt) >= threshold
     }

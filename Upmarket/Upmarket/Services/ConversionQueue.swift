@@ -31,6 +31,14 @@ final class ConversionQueue: ObservableObject {
         jobs.contains { $0.isRunning }
     }
 
+    // Mean progress across all active jobs (0.0–1.0).
+    // Returns 1.0 when jobs exist but none are running; 0.0 when queue is empty.
+    var overallProgress: Double {
+        let active = jobs.filter(\.isRunning)
+        guard !active.isEmpty else { return jobs.isEmpty ? 0.0 : 1.0 }
+        return active.map(\.progress).reduce(0.0, +) / Double(active.count)
+    }
+
     func stalledJobs(referenceDate: Date = Date(), threshold: TimeInterval = 60) -> [ConversionJob] {
         jobs.filter { $0.isStalled || $0.hasNoRecentProgress(referenceDate: referenceDate, threshold: threshold) }
     }

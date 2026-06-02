@@ -3,59 +3,65 @@ import SwiftUI
 struct MenuBarIconView: View {
 
     let isConverting: Bool
-    @State private var isPressed = false
-    @Environment(\.colorScheme) private var colorScheme
 
-    private var iconWeight: Font.Weight { colorScheme == .light ? .semibold : .regular }
-    private var iconOpacity: Double     { colorScheme == .light ? 1.0 : 0.9 }
+    @State private var completionToken = 0
+    @State private var showCompletionDot = false
 
     var body: some View {
-        ZStack {
-            if isConverting {
-                convertingIcon
-            } else {
-                idleIcon
-                    .onTapGesture { isPressed.toggle() }
-                    .modifier(BounceOnPress(isPressed: isPressed))
+        ZStack(alignment: .bottomTrailing) {
+            iconSymbol
+            badgeDot
+        }
+        .frame(width: 22, height: 22)
+        .onReceive(NotificationCenter.default.publisher(for: .upmarketConversionEnded)) { _ in
+            completionToken += 1
+            showCompletionDot = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                withAnimation(.easeOut(duration: 0.4)) {
+                    showCompletionDot = false
+                }
             }
         }
-        .frame(width: 18, height: 18)
     }
 
-    // Indeterminate circular spinner with the # centred inside
-    private var convertingIcon: some View {
-        ZStack {
-            ProgressView()
-                .progressViewStyle(.circular)
-                .scaleEffect(0.55)
-                .tint(Color(nsColor: .labelColor).opacity(iconOpacity))
-            Image(systemName: "number")
-                .font(.system(size: 7, weight: .bold))
-                .foregroundStyle(Color(nsColor: .labelColor).opacity(iconOpacity))
-        }
-    }
+    // MARK: - Symbol
 
-    @ViewBuilder
-    private var idleIcon: some View {
+    // Always number.square — state is communicated by the badge, not the symbol shape.
+    // .primary foreground keeps the icon template-compliant so the OS renders it
+    // correctly against both light and dark menu bar backgrounds.
+    @ViewBuilder private var iconSymbol: some View {
         if #available(macOS 14.0, *) {
-            Image(systemName: colorScheme == .dark ? "number.square" : "number.square.fill")
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(Color(nsColor: .labelColor).opacity(iconOpacity))
-                .font(.system(size: 15, weight: iconWeight))
-        } else {
-            Image(systemName: "number")
+            Image(systemName: "number.square")
                 .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Color.primary)
+                .symbolRenderingMode(.hierarchical)
+                .symbolEffect(.pulse, isActive: isConverting)
+                .symbolEffect(.bounce, value: completionToken)
+                .contentTransition(.symbolEffect(.replace.byLayer.downUp))
+        } else {
+            Image(systemName: "number.square")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Color.primary)
         }
     }
-}
 
-private struct BounceOnPress: ViewModifier {
-    let isPressed: Bool
-    func body(content: Content) -> some View {
-        if #available(macOS 14.0, *) {
-            content.symbolEffect(.bounce, value: isPressed)
-        } else {
-            content
+    // MARK: - Badge dot
+
+    // 5pt circle, bottom-right of the 22pt frame.
+    // offset(x:3, y:3) pushes it just past the symbol edge — stays within
+    // the 22pt frame so it doesn't clip against the menu bar.
+    @ViewBuilder private var badgeDot: some View {
+        if isConverting {
+            Circle()
+                .fill(Color.accentColor)
+                .frame(width: 5, height: 5)
+                .offset(x: 3, y: 3)
+        } else if showCompletionDot {
+            Circle()
+                .fill(Color.green)
+                .frame(width: 5, height: 5)
+                .offset(x: 3, y: 3)
+                .transition(.opacity.combined(with: .scale(scale: 0.5)))
         }
     }
 }

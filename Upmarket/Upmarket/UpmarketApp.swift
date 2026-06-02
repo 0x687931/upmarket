@@ -32,24 +32,12 @@ struct UpmarketApp: App {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
-        // MARK: Primary conversion window
-        Window("Upmarket", id: "main") {
-            ContentView()
-                .environmentObject(conversionQueue)
-                .environmentObject(storeManager)
-                .environmentObject(modelManager)
-        }
-        .windowResizability(.contentSize)
-        .defaultSize(width: 420, height: 500)
-
-        // MARK: Preferences window
-        Window("Preferences", id: "preferences") {
+        // MARK: Settings window — OS manages title, ⌘, shortcut, and singleton behaviour
+        Settings {
             PreferencesView()
                 .environmentObject(modelManager)
                 .environmentObject(storeManager)
         }
-        .windowResizability(.contentSize)
-        .defaultSize(width: 560, height: 440)
 
         Window("Report a Problem", id: "reportProblem") {
             ReportProblemView()
@@ -89,13 +77,6 @@ struct UpmarketApp: App {
                 .keyboardShortcut("s", modifiers: [.command, .shift])
             }
 
-            CommandGroup(replacing: .appSettings) {
-                Button("Preferences…") {
-                    openWindow(id: "preferences")
-                }
-                .keyboardShortcut(",", modifiers: .command)
-            }
-
             CommandGroup(after: .help) {
                 Button("Report a Problem…") {
                     openWindow(id: "reportProblem")
@@ -118,13 +99,7 @@ struct UpmarketApp: App {
     }
 
     private func openPrimaryConversionWindow(pickFile: Bool = false) {
-        openWindow(id: "main")
-        NSApp.activate(ignoringOtherApps: true)
-
-        guard pickFile else { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            NotificationCenter.default.post(name: .openFilePicker, object: nil)
-        }
+        MainWindowController.shared.show(pickFile: pickFile)
     }
 
     init() {
@@ -140,6 +115,7 @@ struct UpmarketApp: App {
         // Show shelf then start tour on first launch
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             guard !AppRuntime.isRunningTests else { return }
+            ShelfWindowController.shared.centerForFirstLaunchTour()
             ShelfWindowController.shared.show(animate: true)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                 TourManager.shared.startIfNeeded()

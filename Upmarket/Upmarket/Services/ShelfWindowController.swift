@@ -10,7 +10,8 @@ final class ShelfWindowController: NSWindowController {
     private let positioner = ShelfPositioner.shared
     private var mouseMonitor: Any?
     private var workspaceObserver: NSObjectProtocol?
-    private let shelfSize:  CGFloat = 97   // closed: colWidth*2+1 = 97pt wide, 108pt tall
+    private let closedShelfWidth: CGFloat = 129
+    private let closedShelfHeight: CGFloat = 132
     private let shelfInset: CGFloat = 10
     private let snapRadius: CGFloat = 60
 
@@ -20,10 +21,14 @@ final class ShelfWindowController: NSWindowController {
         case bottomRight = 1
         case topLeft = 2
         case topRight = 3
+        case center = 4
     }
 
     var anchor: ShelfAnchor {
-        get { ShelfAnchor(rawValue: UserDefaults.standard.integer(forKey: "upmarket.shelfAnchor")) ?? .bottomLeft }
+        get {
+            guard UserDefaults.standard.object(forKey: "upmarket.shelfAnchor") != nil else { return .center }
+            return ShelfAnchor(rawValue: UserDefaults.standard.integer(forKey: "upmarket.shelfAnchor")) ?? .center
+        }
         set { UserDefaults.standard.set(newValue.rawValue, forKey: "upmarket.shelfAnchor") }
     }
 
@@ -90,11 +95,12 @@ final class ShelfWindowController: NSWindowController {
     private func shelfFrame() -> NSRect {
         let screen = positioner.primaryScreen
         let visible = screen.visibleFrame
-        // Start as a square — ShelfView will call resizeToContent when it expands
-        let w = shelfSize       // 97pt wide (48×2 + 1 divider)
-        let h: CGFloat = 108   // 108pt tall (3 × 36pt buttons)
+        let w = closedShelfWidth
+        let h = closedShelfHeight
 
         switch anchor {
+        case .center:
+            return NSRect(x: visible.midX - w / 2, y: visible.midY - h / 2, width: w, height: h)
         case .bottomLeft:
             return NSRect(x: visible.minX + shelfInset, y: visible.minY + shelfInset, width: w, height: h)
         case .bottomRight:
@@ -162,6 +168,12 @@ final class ShelfWindowController: NSWindowController {
         }
     }
 
+    func centerForFirstLaunchTour() {
+        guard !UserDefaults.standard.bool(forKey: "upmarket.tourComplete") else { return }
+        anchor = .center
+        reposition()
+    }
+
     func hide(animate: Bool = true) {
         guard let panel = window else { return }
         if animate {
@@ -196,11 +208,11 @@ final class ShelfWindowController: NSWindowController {
         let demoAnchors: [ShelfAnchor] = [.bottomLeft, .topLeft, .topRight, .bottomRight, originalAnchor]
 
         for (index, demoAnchor) in demoAnchors.enumerated() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.45) { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.9) { [weak self] in
                 guard let self else { return }
                 self.anchor = demoAnchor
                 NSAnimationContext.runAnimationGroup { ctx in
-                    ctx.duration = 0.35
+                    ctx.duration = 0.65
                     ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
                     panel.animator().setFrame(self.shelfFrame(), display: true)
                 }

@@ -1,350 +1,202 @@
 import SwiftUI
 import AppKit
 
-/// Settings window — layout matches Dockside's preferences exactly:
-/// Tab bar at top, NSBox-grouped sections, standard macOS controls.
-/// Tabs: General · Conversion · Models · License · About
+// Two tabs: Settings (save location + models) · About (identity + license + links + open source)
+// Every control is backed by a real service. No dead controls.
+
 struct PreferencesView: View {
 
     @EnvironmentObject private var modelManager: ModelManager
     @EnvironmentObject private var store: StoreManager
 
-    @State private var selectedTab: Tab = .general
     private let device = DeviceCapability.shared
 
-    enum Tab: String, CaseIterable {
-        case general    = "General"
-        case conversion = "Conversion"
-        case models     = "Models"
-        case license    = "License"
-        case about      = "About"
-    }
-
     var body: some View {
-        VStack(spacing: 0) {
-            // Tab bar — matches Dockside's NSTabView appearance exactly
-            tabBar
-            Divider()
-            // Content area
-            ScrollView {
-                tabContent
-                    .padding(20)
-            }
+        TabView {
+            settingsTab
+                .tabItem { Label("Settings", systemImage: "gearshape") }
+
+            aboutTab
+                .tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 540, height: 500)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .frame(width: 480, height: 440)
     }
 
-    // MARK: - Tab Bar
+    // MARK: - Settings
 
-    private var tabBar: some View {
-        HStack(spacing: 2) {
-            ForEach(Tab.allCases, id: \.self) { tab in
-                Button(tab.rawValue) {
-                    selectedTab = tab
+    private var settingsTab: some View {
+        Form {
+            Section("Save Location") {
+                LabeledContent("Save files:") {
+                    Picker("", selection: Binding(
+                        get: { SavePreference.shared.destination },
+                        set: { SavePreference.shared.destination = $0 }
+                    )) {
+                        Text("Same folder as original").tag(SavePreference.Destination.sameFolder)
+                        Text("Ask each time").tag(SavePreference.Destination.askEachTime)
+                        Text("Choose folder…").tag(SavePreference.Destination.chosenFolder)
+                    }
+                    .pickerStyle(.radioGroup)
+                    .labelsHidden()
                 }
-                .buttonStyle(TabButtonStyle(isSelected: selectedTab == tab))
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
-    }
 
-    // MARK: - Tab Content
-
-    @ViewBuilder
-    private var tabContent: some View {
-        switch selectedTab {
-        case .general:    generalTab
-        case .conversion: conversionTab
-        case .models:     modelsTab
-        case .license:    licenseTab
-        case .about:      aboutTab
-        }
-    }
-
-    // MARK: - General Tab
-
-    private var generalTab: some View {
-        VStack(alignment: .leading, spacing: 16) {
-
-            // Appearance & Behaviour
-            PrefsBox(title: "Appearance & Behaviour") {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text("Style:")
-                            .frame(width: 120, alignment: .trailing)
-                        Picker("", selection: Binding(
-                            get: { UserDefaults.standard.integer(forKey: "upmarket.shelfStyle") },
-                            set: { UserDefaults.standard.set($0, forKey: "upmarket.shelfStyle") }
-                        )) {
-                            Text("Transparent").tag(0)
-                            Text("Dock-Style").tag(1)
-                            Text("Opaque").tag(2)
-                        }
-                        .pickerStyle(.radioGroup)
-                        .horizontalRadioGroupLayout()
-                    }
-
-                    HStack {
-                        Text("Appearance:")
-                            .frame(width: 120, alignment: .trailing)
-                        Picker("", selection: Binding(
-                            get: { UserDefaults.standard.integer(forKey: "upmarket.appearance") },
-                            set: { UserDefaults.standard.set($0, forKey: "upmarket.appearance") }
-                        )) {
-                            Text("System").tag(0)
-                            Text("Light").tag(1)
-                            Text("Dark").tag(2)
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(width: 200)
-                    }
-                }
-            }
-
-            // Launch Options
-            PrefsBox(title: "Launch Options") {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("")
-                            .frame(width: 120, alignment: .trailing)
-                        VStack(alignment: .leading, spacing: 6) {
-                            Toggle("Start at Login", isOn: Binding(
-                                get: { UserDefaults.standard.bool(forKey: "upmarket.launchAtLogin") },
-                                set: { UserDefaults.standard.set($0, forKey: "upmarket.launchAtLogin") }
-                            ))
-                            Toggle("Play Sounds", isOn: Binding(
-                                get: { UserDefaults.standard.bool(forKey: "upmarket.playSounds") },
-                                set: { UserDefaults.standard.set($0, forKey: "upmarket.playSounds") }
-                            ))
-                            Toggle("Hide Menu Bar Icon", isOn: Binding(
-                                get: { UserDefaults.standard.bool(forKey: "upmarket.hideMenuBar") },
-                                set: { UserDefaults.standard.set($0, forKey: "upmarket.hideMenuBar") }
-                            ))
-                        }
-                    }
-
-                    HStack {
-                        Text("Check for Updates:")
-                            .frame(width: 120, alignment: .trailing)
-                        Toggle("Automatically", isOn: .constant(true))
-                        Button("Check Now") {}
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Conversion Tab
-
-    private var conversionTab: some View {
-        VStack(alignment: .leading, spacing: 16) {
-
-            PrefsBox(title: "Conversion Settings") {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text("Default pipeline:")
-                            .frame(width: 140, alignment: .trailing)
-                        Picker("", selection: Binding(
-                            get: { UserDefaults.standard.integer(forKey: "upmarket.defaultPipeline") },
-                            set: { UserDefaults.standard.set($0, forKey: "upmarket.defaultPipeline") }
-                        )) {
-                            Text("Fast (instant)").tag(0)
-                            if device.supportsAdvancedRuntime {
-                                Text("Enhanced (better quality)").tag(1)
-                            }
-                        }
-                        .pickerStyle(.radioGroup)
-                        .horizontalRadioGroupLayout()
-                        .onAppear {
-                            if !device.supportsAdvancedRuntime {
-                                UserDefaults.standard.set(0, forKey: "upmarket.defaultPipeline")
-                            }
-                        }
-                    }
-
-                    HStack(alignment: .top) {
-                        Text("")
-                            .frame(width: 140, alignment: .trailing)
-                        VStack(alignment: .leading, spacing: 6) {
-                            Toggle("Enable OCR for scanned documents", isOn: Binding(
-                                get: { UserDefaults.standard.bool(forKey: "upmarket.enableOCR") },
-                                set: { UserDefaults.standard.set($0, forKey: "upmarket.enableOCR") }
-                            ))
-                            if device.supportsUpmarketAI {
-                                Toggle("Suggest Upmarket AI for complex documents", isOn: Binding(
-                                    get: { UserDefaults.standard.bool(forKey: "upmarket.suggestAI") },
-                                    set: { UserDefaults.standard.set($0, forKey: "upmarket.suggestAI") }
-                                ))
-                            } else {
-                                Label(device.upmarketAIUnavailableReason, systemImage: "xmark.circle")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Toggle("Auto-convert on drop (no confirmation)", isOn: Binding(
-                                get: { UserDefaults.standard.bool(forKey: "upmarket.autoConvert") },
-                                set: { UserDefaults.standard.set($0, forKey: "upmarket.autoConvert") }
-                            ))
-                        }
-                    }
-                }
-            }
-
-            PrefsBox(title: "Drop Zone Activation") {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Activate:")
-                            .frame(width: 140, alignment: .trailing)
-                        Picker("", selection: Binding(
-                            get: { UserDefaults.standard.integer(forKey: "upmarket.dropActivation") },
-                            set: { UserDefaults.standard.set($0, forKey: "upmarket.dropActivation") }
-                        )) {
-                            Text("when dragging starts…").tag(0)
-                            Text("when dragging is near the shelf…").tag(1)
-                            Text("disabled").tag(2)
-                        }
-                        .pickerStyle(.radioGroup)
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Models Tab
-
-    private var modelsTab: some View {
-        VStack(alignment: .leading, spacing: 16) {
-
-            PrefsBox(title: "Downloaded Models") {
-                VStack(spacing: 8) {
-                    if !device.supportsAdvancedRuntime {
+                if SavePreference.shared.destination == .chosenFolder {
+                    LabeledContent("Folder:") {
                         HStack(spacing: 8) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(Color.green)
-                            Text("Fast conversion is ready. Advanced local models require Apple Silicon.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                        }
-                    } else if case .checking = modelManager.installState {
-                        HStack(spacing: 8) {
-                            ProgressView()
+                            Text(SavePreference.shared.chosenFolderURL?.lastPathComponent ?? "None chosen")
+                                .foregroundStyle(
+                                    SavePreference.shared.chosenFolderURL == nil ? .secondary : .primary
+                                )
+                            Button("Choose…") { chooseSaveFolder() }
+                                .buttonStyle(.bordered)
                                 .controlSize(.small)
-                            Text("Checking local model files...")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    } else if let error = modelManager.checkError {
-                        HStack(spacing: 8) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.red)
-                            Text(error)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Button("Check Again") { modelManager.checkModels() }
-                                .buttonStyle(.bordered)
-                                .controlSize(.mini)
-                        }
-                    } else if modelManager.models.isEmpty {
-                        HStack(spacing: 8) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(Color.green)
-                            Text("Fast conversion works without downloaded models.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Button("Check Again") { modelManager.checkModels() }
-                                .buttonStyle(.bordered)
-                                .controlSize(.mini)
                         }
                     }
+                }
+            }
 
-                    if device.supportsAdvancedRuntime {
-                        ForEach(modelManager.models, id: \.key) { model in
-                            HStack(spacing: 12) {
-                                Image(systemName: model.isDownloaded ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(model.isDownloaded ? Color.green : model.isAvailable ? .secondary : .red)
+            Section("Models") {
+                modelRows
+            }
 
-                                VStack(alignment: .leading, spacing: 1) {
-                                    HStack(spacing: 6) {
-                                        Text(model.name).fontWeight(.medium)
-                                        if model.tier == "pro" {
-                                            Text("PRO")
-                                                .font(.caption2).fontWeight(.semibold)
-                                                .foregroundStyle(.white)
-                                                .padding(.horizontal, 5).padding(.vertical, 1)
-                                                .background(Color.accentColor, in: Capsule())
-                                        }
-                                    }
-                                    Text(model.error ?? model.description)
-                                        .font(.caption).foregroundStyle(.secondary)
-                                }
-
-                                Spacer()
-
-                                Text(model.isDownloaded ? modelManager.totalStorageUsedFormatted : "\(model.sizeMB) MB")
-                                    .font(.caption).foregroundStyle(.secondary)
-
-                                if model.isDownloaded {
-                                    Button("Delete") { modelManager.deleteModel(key: model.key) }
-                                        .buttonStyle(.bordered).controlSize(.mini)
-                                        .foregroundStyle(.red)
-                                } else {
-                                    Button("Download") {
-                                        model.tier == "pro"
-                                            ? modelManager.downloadProModels(hasPro: store.hasProOrAbove)
-                                            : modelManager.downloadRequiredModels()
-                                    }
-                                    .buttonStyle(.bordered).controlSize(.mini)
-                                    .disabled(downloadUnavailable(for: model) != nil)
-                                    .help(downloadUnavailable(for: model) ?? "")
-                                }
-                            }
-                            .padding(.vertical, 4)
-                            if model.key != modelManager.models.last?.key {
-                                Divider()
-                            }
-                        }
-                    }
-
-                    if device.supportsAdvancedRuntime, modelManager.isDownloading {
-                        VStack(spacing: 6) {
+            if device.supportsAdvancedRuntime {
+                if modelManager.isDownloading {
+                    Section {
+                        VStack(alignment: .leading, spacing: 6) {
                             ProgressView(value: modelManager.downloadProgress, total: 100)
                             Text(modelManager.downloadMessage)
-                                .font(.caption).foregroundStyle(.secondary)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
                         }
-                        .padding(.top, 4)
-                    }
-
-                    if device.supportsAdvancedRuntime, let error = modelManager.downloadError {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
-            }
 
-            if modelManager.models.contains(where: \.isDownloaded) {
-                HStack {
-                    Spacer()
-                    Text("Total storage: \(modelManager.totalStorageUsedFormatted)")
-                        .font(.caption).foregroundStyle(.secondary)
-                    Button("Delete All Models") { modelManager.deleteAllModels() }
-                        .buttonStyle(.bordered).controlSize(.small)
-                        .foregroundStyle(.red)
+                if let error = modelManager.downloadError {
+                    Section {
+                        Label(error, systemImage: "exclamationmark.triangle.fill")
+                            .font(.subheadline)
+                            .foregroundStyle(.red)
+                    }
+                }
+
+                if modelManager.models.contains(where: \.isDownloaded) {
+                    Section {
+                        LabeledContent("Storage used:") {
+                            HStack {
+                                Text(modelManager.totalStorageUsedFormatted)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Button("Delete All Models") { modelManager.deleteAllModels() }
+                                    .foregroundStyle(.red)
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                            }
+                        }
+                    }
                 }
             }
         }
+        .formStyle(.grouped)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
-            if case .unchecked = modelManager.installState {
-                modelManager.checkModels()
+            if case .unchecked = modelManager.installState { modelManager.checkModels() }
+        }
+    }
+
+    private func chooseSaveFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.prompt = "Choose"
+        panel.message = "Upmarket will save converted files here."
+        panel.orderFrontRegardless()
+        if panel.runModal() == .OK, let url = panel.url {
+            SavePreference.shared.chosenFolderURL = url
+            SavePreference.shared.destination = .chosenFolder
+        }
+    }
+
+    @ViewBuilder private var modelRows: some View {
+        if !device.supportsAdvancedRuntime {
+            Label("Fast conversion available. AI models require Apple Silicon.",
+                  systemImage: "checkmark.circle.fill")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        } else if case .checking = modelManager.installState {
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text("Checking…")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        } else if let error = modelManager.checkError {
+            HStack {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(.red)
+                Spacer()
+                Button("Retry") { modelManager.checkModels() }
+                    .buttonStyle(.bordered).controlSize(.mini)
+            }
+        } else if modelManager.models.isEmpty {
+            HStack {
+                Label("No models needed for fast conversion.",
+                      systemImage: "checkmark.circle.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Check Again") { modelManager.checkModels() }
+                    .buttonStyle(.bordered).controlSize(.mini)
+            }
+        } else {
+            ForEach(modelManager.models, id: \.key) { model in
+                LabeledContent {
+                    HStack(spacing: 8) {
+                        Text("\(model.sizeMB) MB")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        if model.isDownloaded {
+                            Button("Delete") { modelManager.deleteModel(key: model.key) }
+                                .foregroundStyle(.red)
+                                .buttonStyle(.bordered).controlSize(.mini)
+                        } else {
+                            Button("Download") {
+                                model.tier == "pro"
+                                    ? modelManager.downloadProModels(hasPro: store.hasProOrAbove)
+                                    : modelManager.downloadRequiredModels()
+                            }
+                            .buttonStyle(.bordered).controlSize(.mini)
+                            .disabled(downloadUnavailable(for: model) != nil)
+                            .help(downloadUnavailable(for: model) ?? "")
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: model.isDownloaded
+                              ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(
+                                model.isDownloaded ? Color.green
+                                    : model.isAvailable ? Color.secondary
+                                    : Color.red
+                            )
+                        VStack(alignment: .leading, spacing: 1) {
+                            HStack(spacing: 6) {
+                                Text(model.name).fontWeight(.medium)
+                                if model.tier == "pro" {
+                                    Text("PRO")
+                                        .font(.caption2).fontWeight(.semibold)
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 5).padding(.vertical, 1)
+                                        .background(Color.accentColor, in: Capsule())
+                                }
+                            }
+                            Text(model.error ?? model.description)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
             }
         }
     }
@@ -355,138 +207,164 @@ struct PreferencesView: View {
             return modelManager.proDownloadUnavailableReason(hasPro: store.hasProOrAbove)
         }
         if !model.isAvailable {
-            return model.error ?? "This optional model is not available on this Mac."
+            return model.error ?? "Not available on this Mac."
         }
         return nil
     }
 
-    // MARK: - License Tab
-
-    private var licenseTab: some View {
-        VStack(alignment: .leading, spacing: 16) {
-
-            PrefsBox(title: "Upmarket License") {
-                VStack(alignment: .leading, spacing: 12) {
-                    // Current plan
-                    HStack(spacing: 14) {
-                        ZStack {
-                            Circle().fill(Color.accentColor.opacity(0.1)).frame(width: 44, height: 44)
-                            Text("#")
-                                .font(.system(size: 20, weight: .bold, design: .rounded))
-                                .foregroundStyle(Color.accentColor)
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(planName).font(.headline)
-                            Text(planDetail).font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        if !store.hasProOrAbove {
-                            Button("Upgrade") {
-                                NotificationCenter.default.post(name: .showPaywall, object: nil)
-                            }
-                            .buttonStyle(.borderedProminent).controlSize(.small)
-                        }
-                    }
-
-                    if store.packCredits > 0 {
-                        HStack {
-                            Image(systemName: "doc.text").foregroundStyle(Color.accentColor)
-                            Text("\(store.packCredits) document conversions remaining")
-                                .font(.subheadline)
-                        }
-                    }
-
-                    Divider()
-
-                    HStack {
-                        Spacer()
-                        Button("Restore Purchases") {
-                            Task { await store.restorePurchases() }
-                        }
-                        .buttonStyle(.bordered)
-                    }
-
-                    Text("✓ Use on this Mac · One-time purchase · No subscription")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-            }
-        }
-    }
-
-    // MARK: - About Tab
+    // MARK: - About
+    // Identity · License · Links · Open source (accordion)
 
     private var aboutTab: some View {
-        VStack(alignment: .leading, spacing: 16) {
-
-            PrefsBox(title: "Upmarket") {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 14) {
-                        Image(nsImage: NSApp.applicationIconImage)
-                            .resizable().frame(width: 64, height: 64)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Upmarket").font(.title3).fontWeight(.bold)
-                            Text("Version \(appVersion)").font(.subheadline).foregroundStyle(.secondary)
-                            Text("Document to Markdown, On-Device").font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-
-                    Divider()
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        linkRow(icon: "lock.shield",   label: "Privacy Policy",    url: "https://0x687931.github.io/upmarket/privacy")
-                        linkRow(icon: "doc.text",      label: "Terms of Use",      url: "https://www.apple.com/legal/macapps/stdeula/")
-                        linkRow(icon: "envelope",      label: "Support",           url: "mailto:support@upmarket.app")
-                        linkRow(icon: "star",          label: "Rate Upmarket",     url: "macappstore://")
-                        linkRow(icon: "bubble.left",   label: "Report a Bug",      url: "mailto:support@upmarket.app?subject=Bug%20Report")
+        Form {
+            // Identity
+            Section {
+                HStack(spacing: 14) {
+                    Image(nsImage: NSApp.applicationIconImage)
+                        .resizable()
+                        .frame(width: 48, height: 48)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Upmarket").font(.headline)
+                        Text("Version \(appVersion)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
 
-            PrefsBox(title: "Open Source") {
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(openSourcePackages, id: \.name) { pkg in
-                        HStack {
-                            Text(pkg.name).font(.caption).fontWeight(.medium)
-                            Text(pkg.version).font(.caption).foregroundStyle(.secondary)
-                            Spacer()
-                            Text(pkg.license)
-                                .font(.caption2).foregroundStyle(.secondary)
-                                .padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(Color.secondary.opacity(0.1), in: Capsule())
+            // License
+            Section("License") {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(planName).font(.subheadline).fontWeight(.medium)
+                        Text(planDetail).font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if !store.hasProOrAbove {
+                        Button("Upgrade") {
+                            NotificationCenter.default.post(name: .showPaywall, object: nil)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                    }
+                }
+
+                if store.packCredits > 0 {
+                    LabeledContent("Document credits:") {
+                        Text("\(store.packCredits) remaining")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Button("Restore Purchases") {
+                    Task { await store.restorePurchases() }
+                }
+            }
+
+            // Links — three equal buttons on one row
+            Section {
+                HStack(spacing: 0) {
+                    linkButton(icon: "lock.shield", label: "Privacy Policy",
+                               url: "https://0x687931.github.io/upmarket/privacy")
+                    Divider().frame(height: 28)
+                    linkButton(icon: "envelope", label: "Support",
+                               url: "mailto:support@upmarket.app")
+                    Divider().frame(height: 28)
+                    linkButton(icon: "star", label: "Rate",
+                               url: "macappstore://")
+                }
+            }
+
+            // Attributions — flat list, grouped by license family header
+            if !openSourcePackages.isEmpty {
+                Section("Attributions") {
+                    ForEach(licenseGroups) { group in
+                        // Family header
+                        Text(group.family)
+                            .font(.footnote)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 4)
+                        // Packages under this family
+                        ForEach(group.packages) { pkg in
+                            Button {
+                                if let url = URL(string: pkg.url) {
+                                    NSWorkspace.shared.open(url)
+                                }
+                            } label: {
+                                HStack {
+                                    Text(pkg.name)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    Text(pkg.version)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
             }
         }
+        .formStyle(.grouped)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - Helpers
-
-    private func linkRow(icon: String, label: String, url: String) -> some View {
+    // Equal-width tappable button: icon above label, fills 1/3 of the row
+    private func linkButton(icon: String, label: String, url: String) -> some View {
         Button {
             if let u = URL(string: url) { NSWorkspace.shared.open(u) }
         } label: {
-            HStack(spacing: 10) {
-                Image(systemName: icon).frame(width: 16).foregroundStyle(Color.accentColor)
-                Text(label).font(.subheadline)
-                Spacer()
-                Image(systemName: "arrow.up.right").font(.caption2).foregroundStyle(.tertiary)
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color.accentColor)
+                Text(label)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
         }
         .buttonStyle(.plain)
     }
+
+    private var licenseGroups: [LicenseGroup] {
+        let packages = openSourcePackages
+        guard !packages.isEmpty else { return [] }
+        var buckets: [String: [LicenseEntry]] = [:]
+        for pkg in packages {
+            buckets[normalisedFamily(pkg.license), default: []].append(pkg)
+        }
+        return ["MIT", "BSD", "Apache-2.0"].compactMap { family in
+            buckets[family].map { LicenseGroup(family: family, packages: $0) }
+        }
+    }
+
+    private func normalisedFamily(_ raw: String) -> String {
+        let l = raw.lowercased()
+        if l.contains("mit")    { return "MIT" }
+        if l.contains("apache") { return "Apache-2.0" }
+        if l.contains("bsd")    { return "BSD" }
+        return "Other"
+    }
+
+    // MARK: - Helpers
 
     private var planName: String {
         switch store.entitlement {
         case .pro:   return "Upmarket + AI"
         case .basic: return "Upmarket"
-        case .none:  return store.freeDocsRemaining > 0 ? "Free" : "Free (expired)"
+        case .none:  return store.freeDocsRemaining > 0 ? "Free Trial" : "Trial Ended"
         }
     }
 
     private var planDetail: String {
         switch store.entitlement {
-        case .pro:   return "Unlimited · Upmarket AI included"
+        case .pro:   return "Unlimited · AI included"
         case .basic: return "Unlimited · One-time purchase"
         case .none:  return store.freeDocsRemaining > 0
             ? "\(store.freeDocsRemaining) free conversions remaining"
@@ -507,68 +385,13 @@ struct PreferencesView: View {
     }
 }
 
-// MARK: - Tab Button Style (matches Dockside's NSTabView appearance)
-
-struct TabButtonStyle: ButtonStyle {
-    let isSelected: Bool
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 13))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 5)
-            .background(
-                isSelected
-                    ? Color(nsColor: .controlAccentColor).opacity(0.15)
-                    : Color.clear,
-                in: RoundedRectangle(cornerRadius: 5)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 5)
-                    .strokeBorder(
-                        isSelected ? Color.accentColor.opacity(0.4) : Color.clear,
-                        lineWidth: 1
-                    )
-            )
-            .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
-    }
-}
-
-// MARK: - PrefsBox (matches Dockside's NSBox sections)
-
-struct PrefsBox<Content: View>: View {
-    let title: String
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .padding(.leading, 2)
-
-            VStack(alignment: .leading, spacing: 0) {
-                content
-                    .padding(14)
-            }
-            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
-            )
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-#Preview {
-    PreferencesView()
-        .environmentObject(ModelManager.shared)
-        .environmentObject(StoreManager.shared)
-}
-
 // MARK: - Supporting types
+
+struct LicenseGroup: Identifiable {
+    var id: String { family }
+    let family: String
+    let packages: [LicenseEntry]
+}
 
 struct LicenseEntry: Identifiable, Codable {
     var id: String { name }
@@ -576,4 +399,10 @@ struct LicenseEntry: Identifiable, Codable {
     let version: String
     let license: String
     let url: String
+}
+
+#Preview {
+    PreferencesView()
+        .environmentObject(ModelManager.shared)
+        .environmentObject(StoreManager.shared)
 }
