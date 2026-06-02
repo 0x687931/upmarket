@@ -21,6 +21,34 @@ final class NativeMetadataExtractorTests: XCTestCase {
         XCTAssertEqual(output.format, "PNG")
     }
 
+    func testCorpusMediaMetadataUsesNativeAVFoundation() async throws {
+        let fixtures = [
+            "tests/data/audio/sample_10s_audio-flac.flac",
+            "tests/data/audio/sample_10s_video-mp4.mp4",
+            "tests/data/audio/sample_10s_video-quicktime.mov"
+        ]
+
+        for relativePath in fixtures {
+            let url = corpusDoclingPath.appendingPathComponent(relativePath)
+            guard FileManager.default.fileExists(atPath: url.path) else {
+                throw XCTSkip("Docling corpus not available - run: git submodule update --init")
+            }
+
+            let result = await NativeMetadataExtractor.mediaMetadata(
+                url: url,
+                title: url.deletingPathExtension().lastPathComponent
+            )
+
+            guard case .success(let output) = result else {
+                return XCTFail("Expected AVFoundation metadata extraction for \(relativePath)")
+            }
+            XCTAssertTrue(output.markdown.contains("# Media:"))
+            XCTAssertTrue(output.markdown.contains("**Duration:**"))
+            XCTAssertEqual(output.format, url.pathExtension.uppercased())
+            XCTAssertEqual(output.pipeline, .fast)
+        }
+    }
+
     func testWorkspaceIsAppOwned() throws {
         let workspace = try AppWorkspace.create(prefix: "workspace-test")
         defer { AppWorkspace.remove(workspace) }
@@ -52,5 +80,13 @@ final class NativeMetadataExtractorTests: XCTestCase {
         if !CGImageDestinationFinalize(destination) {
             throw NSError(domain: "NativeMetadataExtractorTests", code: 3)
         }
+    }
+
+    private var corpusDoclingPath: URL {
+        URL(fileURLWithPath: #file)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("tests/corpus/docling/docling")
     }
 }

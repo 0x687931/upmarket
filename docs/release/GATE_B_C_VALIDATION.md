@@ -29,7 +29,9 @@ python3 scripts/ci/validate_corpus_pathways.py \
   --results reports/corpus-granite-docling-scanned-or-unknown.json
 ```
 
-Gate B is not fully release-passing yet. Remaining release blockers are physical Intel validation, temp cleanup validation, native Vision/Speech/ImageIO/AVFoundation pathway baselines once their runners exist, and a targeted GUI/Metal Granite AI validation pass. The 14 corpus documents without any current pathway-result row are all audio/video fixtures; they map to the native Speech and AVFoundation registry entries whose app/Xcode runners still need release evidence.
+Gate B is not fully release-passing yet. Remaining release blockers are physical Intel validation, cancellation/app-quit temp cleanup validation, native Vision/Speech/ImageIO/AVFoundation pathway baselines once their runners exist, and a targeted GUI/Metal Granite AI validation pass. The 14 corpus documents without any current pathway-result row are all audio/video fixtures; they map to the native Speech and AVFoundation registry entries whose app/Xcode runners still need release evidence.
+
+`NativeMetadataExtractorTests.testCorpusMediaMetadataUsesNativeAVFoundation` now exercises AVFoundation metadata extraction against representative corpus audio/video fixtures: FLAC, MP4, and QuickTime/MOV. This is native media evidence, not a full audio/video pathway baseline; Speech transcription still needs app permission/runtime evidence.
 
 ### Batch Shelf Queue
 
@@ -41,7 +43,17 @@ Current evidence:
 xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/ConversionQueueTests
 ```
 
-The 2026-06-02 run passed 18 selected `ConversionQueueTests` with 0 failures.
+The 2026-06-02 rerun passed 20 selected `ConversionQueueTests` with 0 failures.
+
+### Workspace Cleanup
+
+`ConversionRunner` owns app-workspace cleanup through one `defer` path after the source is copied. Xcode now covers cleanup after native success, recoverable failure, and input-copy failure:
+
+```sh
+xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/ConversionQueueTests
+```
+
+The 2026-06-02 rerun passed 20 selected `ConversionQueueTests` with 0 failures. App startup stale-workspace cleanup remains covered by `DiagnosticsTests.testStaleWorkspaceCleanupRemovesStartupLeftovers`. Remaining release evidence needed: cancellation while a real app conversion is in flight, and cleanup after full app quit/relaunch.
 
 ### Granite AI Metal Root Cause
 

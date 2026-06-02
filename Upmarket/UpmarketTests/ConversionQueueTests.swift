@@ -426,6 +426,44 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertEqual(workspaceNames(), before)
     }
 
+    func testRunnerCleansWorkspaceAfterSuccessfulNativeConversion() async throws {
+        AppWorkspace.removeStaleWorkspaces()
+        let before = workspaceNames()
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketCleanupSuccess-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: workspace)
+        }
+        let pdf = workspace.appendingPathComponent("success.pdf")
+        try writePDF(to: pdf, text: "Cleanup success")
+
+        let result = await ConversionRunner(supportsAdvancedRuntime: false)
+            .run(ConversionJob(sourceURL: pdf))
+
+        XCTAssertNil(result.errorMessage)
+        XCTAssertEqual(workspaceNames(), before)
+    }
+
+    func testRunnerCleansWorkspaceAfterRecoverableFailure() async throws {
+        AppWorkspace.removeStaleWorkspaces()
+        let before = workspaceNames()
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketCleanupFailure-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: workspace)
+        }
+        let docx = workspace.appendingPathComponent("failure.docx")
+        try Data("not a real docx, but enough to prove cleanup".utf8).write(to: docx)
+
+        let result = await ConversionRunner(supportsAdvancedRuntime: false)
+            .run(ConversionJob(sourceURL: docx))
+
+        XCTAssertEqual(result.errorMessage, ConversionError.unsupportedOnThisMac.errorDescription)
+        XCTAssertEqual(workspaceNames(), before)
+    }
+
     func testNativeOnlyRuntimeRejectsPythonBackedFormats() async throws {
         let workspace = FileManager.default.temporaryDirectory
             .appendingPathComponent("UpmarketNativeOnlyTests-\(UUID().uuidString)", isDirectory: true)
@@ -470,6 +508,22 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertNil(result.errorMessage)
         XCTAssertEqual(result.output?.format, "PDF")
         XCTAssertTrue(result.output?.markdown.contains("Native PDF conversion") ?? false)
+    }
+
+    private func writePDF(to url: URL, text: String) throws {
+        var mediaBox = CGRect(x: 0, y: 0, width: 400, height: 300)
+        guard let context = CGContext(url as CFURL, mediaBox: &mediaBox, nil) else {
+            throw NSError(domain: "ConversionQueueTests", code: 1)
+        }
+        context.beginPDFPage(nil)
+        let attributed = NSAttributedString(
+            string: text,
+            attributes: [.font: NSFont.systemFont(ofSize: 24), .foregroundColor: NSColor.black]
+        )
+        context.textPosition = CGPoint(x: 40, y: 150)
+        CTLineDraw(CTLineCreateWithAttributedString(attributed), context)
+        context.endPDFPage()
+        context.closePDF()
     }
 
     private func waitForResult(_ id: UUID, in queue: ConversionQueue) async {
