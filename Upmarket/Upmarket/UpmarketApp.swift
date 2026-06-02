@@ -32,65 +32,6 @@ struct UpmarketApp: App {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
-
-        // MARK: Main window — hidden immediately, never shown on launch
-        // WindowGroup is kept so Preferences/output views can open windows on demand.
-        // The window is ordered out before it can be seen.
-        WindowGroup {
-            Color.clear
-                .frame(width: 0, height: 0)
-                .onAppear {
-                    // Order out instantly — no flash
-                    NSApp.windows
-                        .filter { !($0 is NSPanel) && $0.className != "NSStatusBarWindow" }
-                        .forEach { $0.orderOut(nil) }
-                }
-        }
-        .defaultSize(width: 0, height: 0)
-        .commands {
-            // File menu
-            CommandGroup(replacing: .newItem) {
-                Button("Convert Document…") {
-                    NotificationCenter.default.post(name: .openFilePicker, object: nil)
-                }
-                .keyboardShortcut("o", modifiers: .command)
-
-                Button("Show Shelf") {
-                    ShelfWindowController.shared.toggle()
-                }
-                .keyboardShortcut("s", modifiers: [.command, .shift])
-            }
-
-            // Settings
-            CommandGroup(replacing: .appSettings) {
-                Button("Preferences…") {
-                    openWindow(id: "preferences")
-                }
-                .keyboardShortcut(",", modifiers: .command)
-            }
-
-            // Help menu additions
-            CommandGroup(after: .help) {
-                Button("Report a Problem…") {
-                    openWindow(id: "reportProblem")
-                }
-                Divider()
-                Button("Join Discord Community…") {
-                    if let url = URL(string: "https://discord.gg/upmarket") {
-                        NSWorkspace.shared.open(url)
-                    }
-                }
-            }
-
-            // Ensure Quit Upmarket appears with Cmd+Q
-            CommandGroup(replacing: .appTermination) {
-                Button("Quit Upmarket") {
-                    NSApp.terminate(nil)
-                }
-                .keyboardShortcut("q", modifiers: .command)
-            }
-        }
-
         // MARK: Preferences window
         Window("Preferences", id: "preferences") {
             PreferencesView()
@@ -124,6 +65,45 @@ struct UpmarketApp: App {
             MenuBarIconView(isConverting: conversionQueue.isConverting)
         }
         .menuBarExtraStyle(.window)
+        .commands {
+            CommandGroup(replacing: .newItem) {
+                Button("Convert Document…") {
+                    NotificationCenter.default.post(name: .openFilePicker, object: nil)
+                }
+                .keyboardShortcut("o", modifiers: .command)
+
+                Button("Show Shelf") {
+                    ShelfWindowController.shared.toggle()
+                }
+                .keyboardShortcut("s", modifiers: [.command, .shift])
+            }
+
+            CommandGroup(replacing: .appSettings) {
+                Button("Preferences…") {
+                    openWindow(id: "preferences")
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+
+            CommandGroup(after: .help) {
+                Button("Report a Problem…") {
+                    openWindow(id: "reportProblem")
+                }
+                Divider()
+                Button("Join Discord Community…") {
+                    if let url = URL(string: "https://discord.gg/upmarket") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+            }
+
+            CommandGroup(replacing: .appTermination) {
+                Button("Quit Upmarket") {
+                    NSApp.terminate(nil)
+                }
+                .keyboardShortcut("q", modifiers: .command)
+            }
+        }
     }
 
     init() {
