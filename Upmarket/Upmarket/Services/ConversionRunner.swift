@@ -190,22 +190,37 @@ struct ConversionRunner {
         progress: ProgressHandler?
     ) async -> ConversionResult {
         let speech = await runSpeechTranscription(fileURL: fileURL, title: title)
-        if speech.output != nil || !supportsAdvancedRuntime {
+        if speech.output != nil {
             return speech
         }
+        guard let format = ConversionFormat(fileExtension: fileURL.pathExtension) else {
+            return await runMediaMetadataFallback(fileURL: fileURL, title: title, previous: speech)
+        }
+        if supportsAdvancedRuntime, ToolFormatCapabilityMatrix.supports(.markItDown, format) {
+            AppLog.conversion.info("Audio native transcription unavailable; trying advanced fallback ext=\(fileURL.pathExtension, privacy: .public)")
+            let advanced = await runPythonConversion(
+                fileURL: fileURL,
+                title: title,
+                useAI: useAI,
+                password: password,
+                workspaceURL: workspaceURL,
+                progress: progress
+            )
+            if advanced.output != nil {
+                return advanced
+            }
+        }
+        return await runMediaMetadataFallback(fileURL: fileURL, title: title, previous: speech)
+    }
+
+    private func runMediaMetadataFallback(fileURL: URL, title: String, previous: ConversionResult) async -> ConversionResult {
         guard let format = ConversionFormat(fileExtension: fileURL.pathExtension),
-              ToolFormatCapabilityMatrix.supports(.markItDown, format) else {
-            return speech
+              ToolFormatCapabilityMatrix.supports(.avFoundation, format) else {
+            return previous
         }
-        AppLog.conversion.info("Audio native transcription unavailable; trying advanced fallback ext=\(fileURL.pathExtension, privacy: .public)")
-        return await runPythonConversion(
-            fileURL: fileURL,
-            title: title,
-            useAI: useAI,
-            password: password,
-            workspaceURL: workspaceURL,
-            progress: progress
-        )
+        AppLog.conversion.info("Audio transcription unavailable; trying native media metadata ext=\(fileURL.pathExtension, privacy: .public)")
+        let metadata = await NativeMetadataExtractor.mediaMetadata(url: fileURL, title: title)
+        return metadata.output == nil ? previous : metadata
     }
 
     private func runVisionExtraction(fileURL: URL, title: String, password: String?, workspaceURL: URL) async -> ConversionResult {

@@ -1,4 +1,5 @@
 import Foundation
+import UniformTypeIdentifiers
 
 enum ConversionTool: String, CaseIterable, Sendable {
     case pdfKit
@@ -19,6 +20,7 @@ enum ConversionFormat: String, CaseIterable, Sendable {
     case xlsx
     case html
     case md
+    case txt
     case asciidoc
     case epub
     case csv
@@ -55,7 +57,7 @@ enum ConversionFormat: String, CaseIterable, Sendable {
     case wma
     case wmv
 
-    init?(fileExtension: String) {
+    nonisolated init?(fileExtension: String) {
         self.init(rawValue: fileExtension.lowercased())
     }
 }
@@ -103,12 +105,46 @@ enum ToolFormatCapabilityMatrix {
         add(.imageIO, [.png, .jpg, .jpeg, .gif, .tiff, .tif, .webp, .bmp, .heic, .heif], .metadataOnly)
         add(.avFoundation, [.mp3, .m4a, .wav, .aiff, .opus, .flac, .aac, .ogg, .mp4, .m4v, .mov, .avi, .mpeg, .mpg, .webm, .mkv, .wma, .wmv], .metadataOnly)
         add(.pythonPDFium, [.pdf], .fallback, advanced: true)
-        add(.markItDown, [.docx, .pptx, .xlsx, .html, .md, .csv, .json, .xml, .epub, .zip, .webvtt, .png, .jpg, .jpeg, .mp3, .m4a, .wav], .fallback, advanced: true)
-        add(.enhanced, [.pdf, .docx, .pptx, .xlsx, .html, .md, .asciidoc, .epub, .xml, .png, .jpg, .jpeg, .tif, .tiff, .webp], .primary, advanced: true)
+        add(.markItDown, [.docx, .pptx, .xlsx, .html, .md, .txt, .csv, .json, .xml, .epub, .zip, .webvtt, .png, .jpg, .jpeg, .mp3, .m4a, .wav], .fallback, advanced: true)
+        add(.enhanced, [.pdf, .docx, .pptx, .xlsx, .html, .md, .txt, .asciidoc, .epub, .xml, .png, .jpg, .jpeg, .tif, .tiff, .webp], .primary, advanced: true)
         add(.upmarketAI, [.pdf, .png, .jpg, .jpeg, .tif, .tiff, .webp], .primary, advanced: true)
 
         return entries
     }()
+
+    nonisolated static let acceptedFormats: [ConversionFormat] = {
+        let productSurface: Set<ConversionFormat> = [
+            .pdf, .html, .txt, .png, .jpg, .jpeg, .gif, .tiff,
+            .docx, .pptx, .xlsx, .epub, .csv, .json, .xml, .zip,
+            .mp3, .m4a, .wav, .aiff, .opus,
+        ]
+        return ConversionFormat.allCases.filter {
+            productSurface.contains($0) && !capabilities(for: $0).isEmpty
+        }
+    }()
+
+    nonisolated static let acceptedFileExtensions: [String] = acceptedFormats.map(\.rawValue)
+
+    nonisolated static let acceptedTypeIdentifiers: [String] = acceptedFileExtensions.compactMap {
+        UTType(filenameExtension: $0)?.identifier
+    }
+
+    nonisolated static let acceptedContentTypes: [UTType] = acceptedTypeIdentifiers.compactMap(UTType.init)
+
+    nonisolated static func accepts(fileExtension: String) -> Bool {
+        guard let format = ConversionFormat(fileExtension: fileExtension) else { return false }
+        return acceptedFormats.contains(format)
+    }
+
+    nonisolated static func hasCapability(fileExtension: String) -> Bool {
+        guard let format = ConversionFormat(fileExtension: fileExtension) else { return false }
+        return !capabilities(for: format).isEmpty
+    }
+
+    nonisolated static func accepts(_ url: URL) -> Bool {
+        guard let ownType = UTType(filenameExtension: url.pathExtension) else { return false }
+        return acceptedContentTypes.contains { ownType.conforms(to: $0) }
+    }
 
     nonisolated static func capabilities(for format: ConversionFormat) -> [ToolFormatCapability] {
         entries.filter { $0.format == format }

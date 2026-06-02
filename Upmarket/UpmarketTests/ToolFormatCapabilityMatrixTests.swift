@@ -22,6 +22,30 @@ final class ToolFormatCapabilityMatrixTests: XCTestCase {
         XCTAssertTrue(tools.contains(.upmarketAI))
     }
 
+    func testPlainTextIsAcceptedOnlyThroughAdvancedDocumentRoutes() {
+        let tools = Set(ToolFormatCapabilityMatrix.tools(for: .txt))
+
+        XCTAssertTrue(tools.contains(.markItDown))
+        XCTAssertTrue(tools.contains(.enhanced))
+        XCTAssertTrue(ToolFormatCapabilityMatrix.accepts(fileExtension: "txt"))
+    }
+
+    func testNativeMediaMetadataCapabilitiesAreTrackedWithoutExpandingProductSurface() {
+        XCTAssertTrue(ToolFormatCapabilityMatrix.supports(.avFoundation, .flac))
+        XCTAssertTrue(ToolFormatCapabilityMatrix.supports(.avFoundation, .mov))
+        XCTAssertFalse(ToolFormatCapabilityMatrix.accepts(fileExtension: "flac"))
+        XCTAssertFalse(ToolFormatCapabilityMatrix.accepts(fileExtension: "mov"))
+    }
+
+    func testAcceptedFormatsAllHaveAtLeastOneRealCapability() {
+        for format in ToolFormatCapabilityMatrix.acceptedFormats {
+            XCTAssertFalse(
+                ToolFormatCapabilityMatrix.capabilities(for: format).isEmpty,
+                "\(format.rawValue) must not be accepted without a tool route"
+            )
+        }
+    }
+
     func testUnsupportedToolFormatPairIsNotInvented() {
         XCTAssertFalse(ToolFormatCapabilityMatrix.supports(.pdfKit, .mp3))
         XCTAssertFalse(ToolFormatCapabilityMatrix.supports(.speech, .pdf))

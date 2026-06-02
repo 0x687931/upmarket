@@ -35,38 +35,12 @@ enum FileAccessError: Error, Equatable, LocalizedError {
 }
 
 enum SupportedInputPolicy {
-    nonisolated static let typeIdentifiers: [String] = [
-        UTType.pdf.identifier,
-        UTType.html.identifier,
-        UTType.plainText.identifier,
-        UTType.png.identifier,
-        UTType.jpeg.identifier,
-        UTType.gif.identifier,
-        UTType.tiff.identifier,
-        identifier(forFileExtension: "docx"),
-        identifier(forFileExtension: "pptx"),
-        identifier(forFileExtension: "xlsx"),
-        identifier(forFileExtension: "epub"),
-        identifier(forFileExtension: "csv"),
-        identifier(forFileExtension: "json"),
-        identifier(forFileExtension: "xml"),
-        identifier(forFileExtension: "zip"),
-        identifier(forFileExtension: "mp3"),
-        identifier(forFileExtension: "m4a"),
-        identifier(forFileExtension: "wav"),
-        identifier(forFileExtension: "aiff"),
-        identifier(forFileExtension: "opus"),
-    ].compactMap { $0 }
+    nonisolated static let typeIdentifiers: [String] = ToolFormatCapabilityMatrix.acceptedTypeIdentifiers
 
-    nonisolated static let contentTypes: [UTType] = typeIdentifiers.compactMap(UTType.init)
+    nonisolated static let contentTypes: [UTType] = ToolFormatCapabilityMatrix.acceptedContentTypes
 
     nonisolated static func supports(_ url: URL) -> Bool {
-        guard let ownType = UTType(filenameExtension: url.pathExtension) else { return false }
-        return contentTypes.contains { ownType.conforms(to: $0) }
-    }
-
-    private nonisolated static func identifier(forFileExtension fileExtension: String) -> String? {
-        UTType(filenameExtension: fileExtension)?.identifier
+        ToolFormatCapabilityMatrix.accepts(url)
     }
 }
 
