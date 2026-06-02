@@ -11,6 +11,7 @@ No internal library names are exposed to callers.
 import os
 import sys
 import logging
+import subprocess
 from pathlib import Path
 from docling_bridge.security import validate_file_path, validate_password, log_security_event
 
@@ -374,6 +375,21 @@ class _GraniteNoiseFilter(logging.Filter):
 _GRANITE_WARNINGS_QUIETED = False
 _AI_RUNTIME_PRECHECK: str | None = None
 
+_AI_RUNTIME_PROBE_SCRIPT = """
+import sys
+
+try:
+    import mlx.core as mx
+    if not mx.device_info():
+        print("empty graphics processor response", file=sys.stderr)
+        raise SystemExit(2)
+except Exception as exc:
+    print(str(exc), file=sys.stderr)
+    raise SystemExit(1)
+
+raise SystemExit(0)
+"""
+
 
 def _quiet_known_granite_warnings() -> None:
     global _GRANITE_WARNINGS_QUIETED
@@ -394,22 +410,33 @@ def _quiet_known_granite_warnings() -> None:
 
 
 def _upmarket_ai_runtime_unavailable_reason() -> str | None:
-    """Return a user-safe reason when the current process cannot see Metal."""
+    """Return a user-safe reason when the current session cannot run Upmarket AI."""
     global _AI_RUNTIME_PRECHECK
     if _AI_RUNTIME_PRECHECK is not None:
         return None if _AI_RUNTIME_PRECHECK == "" else _AI_RUNTIME_PRECHECK
 
-    try:
-        import mlx.core as mx
+    message = "Upmarket AI cannot access this Mac's graphics processor from the current session. Quit and reopen Upmarket, then try again."
+    env = os.environ.copy()
+    env["HF_HUB_OFFLINE"] = "1"
+    env["TRANSFORMERS_OFFLINE"] = "1"
 
-        info = mx.device_info()
-        if not info:
-            _AI_RUNTIME_PRECHECK = "Upmarket AI cannot access this Mac's graphics processor from the current session. Quit and reopen Upmarket, then try again."
-        else:
+    try:
+        completed = subprocess.run(
+            [sys.executable, "-c", _AI_RUNTIME_PROBE_SCRIPT],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            env=env,
+        )
+        if completed.returncode == 0:
             _AI_RUNTIME_PRECHECK = ""
-    except Exception as exc:
+        else:
+            detail = (completed.stderr or completed.stdout or f"exit {completed.returncode}").strip()
+            print(f"[Upmarket] AI runtime preflight failed: {detail[-300:]}", file=sys.stderr)
+            _AI_RUNTIME_PRECHECK = message
+    except (OSError, subprocess.TimeoutExpired) as exc:
         print(f"[Upmarket] AI runtime preflight failed: {exc}", file=sys.stderr)
-        _AI_RUNTIME_PRECHECK = "Upmarket AI cannot access this Mac's graphics processor from the current session. Quit and reopen Upmarket, then try again."
+        _AI_RUNTIME_PRECHECK = message
 
     return None if _AI_RUNTIME_PRECHECK == "" else _AI_RUNTIME_PRECHECK
 

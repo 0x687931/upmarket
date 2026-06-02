@@ -387,6 +387,63 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertEqual(job?.result?.errorMessage, "The conversion engine couldn't start. Please try again.")
     }
 
+    func testJobsAlwaysResolveToTerminalResultOrExplicitInProgressState() async {
+        let passwordMessage = ConversionError.passwordRequired.errorDescription!
+        var releaseRunning: CheckedContinuation<Void, Never>?
+        let queue = ConversionQueue { job, _ in
+            switch job.name {
+            case "success":
+                return .success(ConversionOutput(
+                    markdown: "# Success",
+                    pages: 1,
+                    format: "PDF",
+                    title: "success",
+                    pipeline: .fast
+                ))
+            case "password":
+                return .failure(passwordMessage)
+            case "running":
+                await withCheckedContinuation { continuation in
+                    releaseRunning = continuation
+                }
+                return .success(ConversionOutput(
+                    markdown: "# Running",
+                    pages: 1,
+                    format: "PDF",
+                    title: "running",
+                    pipeline: .fast
+                ))
+            default:
+                return .failure("Unsupported file")
+            }
+        }
+
+        let success = queue.add(URL(fileURLWithPath: "/tmp/success.pdf"))
+        let failed = queue.add(URL(fileURLWithPath: "/tmp/failed.pdf"))
+        let password = queue.add(URL(fileURLWithPath: "/tmp/password.pdf"))
+        let running = queue.add(URL(fileURLWithPath: "/tmp/running.pdf"))
+
+        await waitForResult(success, in: queue)
+        await waitForResult(failed, in: queue)
+        await waitForResult(password, in: queue)
+        await waitUntil {
+            queue.job(id: running)?.isRunning == true
+        }
+
+        assertResolved(queue.job(id: success), expectedStage: .complete, file: #filePath, line: #line)
+        assertResolved(queue.job(id: failed), expectedStage: .failed, file: #filePath, line: #line)
+        assertResolved(queue.job(id: password), expectedStage: .failed, file: #filePath, line: #line)
+        XCTAssertTrue(queue.needsPassword)
+
+        let runningJob = queue.job(id: running)
+        XCTAssertTrue(runningJob?.isRunning ?? false)
+        XCTAssertNil(runningJob?.result)
+
+        releaseRunning?.resume()
+        await waitForResult(running, in: queue)
+        assertResolved(queue.job(id: running), expectedStage: .complete, file: #filePath, line: #line)
+    }
+
     func testRetryCreatesNewJobForOriginalSource() async {
         var attempts = 0
         let queue = ConversionQueue { job, _ in
@@ -548,6 +605,17 @@ final class ConversionQueueTests: XCTestCase {
 
     private func sleep(milliseconds: UInt64) async {
         try? await Task.sleep(nanoseconds: milliseconds * 1_000_000)
+    }
+
+    private func assertResolved(
+        _ job: ConversionJob?,
+        expectedStage: ConversionStage,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertEqual(job?.stage, expectedStage, file: file, line: line)
+        XCTAssertFalse(job?.isRunning ?? true, file: file, line: line)
+        XCTAssertNotNil(job?.result, file: file, line: line)
     }
 
     private func workspaceNames() -> [String] {
