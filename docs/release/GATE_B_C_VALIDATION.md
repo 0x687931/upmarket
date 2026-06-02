@@ -102,7 +102,9 @@ Existing Instruments trace bundles are under `reports/gate-c-stability/` for All
 | --- | --- | ---: | --- |
 | `allocations.trace` | Upmarket | 105.140s | Usable Allocations capture; ended by time-limit SIGKILL. |
 | `allocations-binary.trace` | Upmarket | 10.811s | Usable Allocations capture; ended by time-limit SIGKILL. |
+| `time-profiler.trace` | Upmarket | 10.740s | Usable Time Profiler capture; ended by time-limit SIGKILL. |
 | `time-profiler-all-processes.trace` | all processes | 5.696s | Usable Time Profiler inventory, but not Upmarket-targeted enough for release pass/fail. |
+| `leaks.trace` | Upmarket | 13.313s | Targeted Leaks attempt, but not release-passing because recording reported task-port authorization errors. |
 | `leaks-all-processes.trace` | all processes | 0.000s | Not usable release evidence. |
 | `allocations-all-processes.trace` | all processes | 0.000s | Not usable release evidence. |
 
@@ -112,7 +114,7 @@ This interpretation is checked with:
 scripts/ci/validate_gate_c_instruments.py
 ```
 
-Gate C Instruments remains open for a targeted Leaks capture, a targeted Time Profiler capture during conversion, and Main Thread Checker evidence.
+Gate C Instruments remains open for a targeted Leaks capture without task-port authorization errors and Main Thread Checker evidence.
 
 Thread Sanitizer validation covers the focused conversion, model, StoreKit accounting, and pack ledger unit flows with:
 

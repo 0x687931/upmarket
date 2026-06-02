@@ -45,6 +45,15 @@ EXPECTATIONS = [
         reason="Upmarket-targeted Allocations capture",
     ),
     TraceExpectation(
+        path="time-profiler.trace",
+        template="Time Profiler",
+        target="Upmarket",
+        min_duration=8.0,
+        max_duration=20.0,
+        usable=True,
+        reason="Upmarket-targeted Time Profiler capture",
+    ),
+    TraceExpectation(
         path="time-profiler-all-processes.trace",
         template="Time Profiler",
         target="all-processes",
@@ -52,6 +61,15 @@ EXPECTATIONS = [
         max_duration=8.0,
         usable=False,
         reason="all-process inventory, not Upmarket-targeted release evidence",
+    ),
+    TraceExpectation(
+        path="leaks.trace",
+        template="Leaks",
+        target="Upmarket",
+        min_duration=8.0,
+        max_duration=20.0,
+        usable=False,
+        reason="targeted Leaks attempt hit task-port authorization errors during recording",
     ),
     TraceExpectation(
         path="leaks-all-processes.trace",

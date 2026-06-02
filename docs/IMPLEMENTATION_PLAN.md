@@ -235,7 +235,7 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 - [x] Add conversion liveness monitor based on progress/heartbeat updates, not fixed elapsed duration
 - [x] Surface stalled conversion state with "still working" vs "no progress detected" messaging
 - [x] Add memory pressure handling using Apple-native process/system signals where practical
-- [ ] Run Instruments: Allocations, Leaks, Time Profiler, Main Thread Checker. Owner interpretation is recorded in `docs/release/GATE_B_C_VALIDATION.md` and checked by `scripts/ci/validate_gate_c_instruments.py`; current Upmarket-targeted Allocations captures are usable, while Leaks, targeted Time Profiler, and Main Thread Checker still need release-quality evidence.
+- [ ] Run Instruments: Allocations, Leaks, Time Profiler, Main Thread Checker. Owner interpretation is recorded in `docs/release/GATE_B_C_VALIDATION.md` and checked by `scripts/ci/validate_gate_c_instruments.py`; current Upmarket-targeted Allocations and Time Profiler captures are usable, while Leaks and Main Thread Checker still need release-quality evidence.
 - [x] Run Thread Sanitizer on conversion, model download, and StoreKit flows. Focused TSan run passed on 2026-06-02 for `ConversionQueueTests`, `ModelManagerTests`, `StoreAccountingServiceTests`, and `PackCreditLedgerTests`.
 - [x] Define Xcode Organizer crash triage process for TestFlight/App Store diagnostics
 - [ ] Verify TestFlight/App Store crash diagnostics appear in Xcode Organizer
