@@ -129,7 +129,9 @@ struct UpmarketApp: App {
 
     init() {
         RuntimePrivilegeGuard.abortIfPrivilegedProcess()
+        AppRuntime.installTerminationSignalCleanup()
         AppWorkspace.removeStaleWorkspaces()
+        AppRuntime.writeUITestWorkspacePathIfRequested()
         Task { @MainActor in
             PythonBridge.shared.setup()
         }

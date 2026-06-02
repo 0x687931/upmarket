@@ -9,12 +9,17 @@ import XCTest
 
 final class UpmarketUITests: XCTestCase {
     private var cleanupURLs: [URL] = []
+    private var launchedApps: [XCUIApplication] = []
 
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
 
     override func tearDownWithError() throws {
+        for app in launchedApps {
+            app.terminate()
+        }
+        launchedApps.removeAll()
         for url in cleanupURLs {
             try? FileManager.default.removeItem(at: url)
         }
@@ -34,32 +39,32 @@ final class UpmarketUITests: XCTestCase {
     @MainActor
     func testGUIQuitAndRelaunchCleanAppWorkspaces() throws {
         let manager = FileManager.default
-        let workspaceRoots = candidateWorkspaceRoots()
-        XCTAssertFalse(workspaceRoots.isEmpty)
-        cleanupURLs.append(contentsOf: workspaceRoots)
-
-        for root in workspaceRoots {
-            try? manager.removeItem(at: root)
-            try manager.createDirectory(at: root, withIntermediateDirectories: true)
-        }
+        let pathFile = manager.temporaryDirectory
+            .appendingPathComponent("upmarket-ui-workspace-\(UUID().uuidString).txt")
+        cleanupURLs.append(pathFile)
 
         let app = XCUIApplication()
+        app.launchEnvironment["UPMARKET_UI_TEST_WORKSPACE_PATH_FILE"] = pathFile.path
+        launchedApps.append(app)
         app.launch()
         XCTAssertTrue(app.descendants(matching: .any)["PrimaryConversionView"].waitForExistence(timeout: 3))
 
-        let quitSentinels = try workspaceRoots.map { root in
-            try createSentinelWorkspace(named: "ui-quit-cleanup", in: root)
-        }
+        let workspaceRoot = try waitForWorkspaceRoot(pathFile: pathFile)
+        cleanupURLs.append(workspaceRoot)
+        try? manager.removeItem(at: workspaceRoot)
+        try manager.createDirectory(at: workspaceRoot, withIntermediateDirectories: true)
+        let quitSentinel = try createSentinelWorkspace(named: "ui-quit-cleanup", in: workspaceRoot)
 
         app.terminate()
         XCTAssertTrue(waitUntil(timeout: 5) {
-            quitSentinels.contains { !manager.fileExists(atPath: $0.path) }
+            !manager.fileExists(atPath: quitSentinel.path)
         })
 
-        let activeRoot = try XCTUnwrap(quitSentinels.first { !manager.fileExists(atPath: $0.path) }?.deletingLastPathComponent())
-        let relaunchSentinel = try createSentinelWorkspace(named: "ui-relaunch-cleanup", in: activeRoot)
+        let relaunchSentinel = try createSentinelWorkspace(named: "ui-relaunch-cleanup", in: workspaceRoot)
 
         let relaunched = XCUIApplication()
+        relaunched.launchEnvironment["UPMARKET_UI_TEST_WORKSPACE_PATH_FILE"] = pathFile.path
+        launchedApps.append(relaunched)
         relaunched.launch()
         XCTAssertTrue(relaunched.descendants(matching: .any)["PrimaryConversionView"].waitForExistence(timeout: 3))
         XCTAssertTrue(waitUntil(timeout: 5) {
@@ -76,21 +81,26 @@ final class UpmarketUITests: XCTestCase {
         }
     }
 
-    private func candidateWorkspaceRoots() -> [URL] {
-        let home = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
-        return [
-            home
-                .appendingPathComponent("Library/Application Support/Upmarket/Workspaces", isDirectory: true),
-            home
-                .appendingPathComponent("Library/Containers/com.upmarket.app/Data/Library/Application Support/Upmarket/Workspaces", isDirectory: true)
-        ]
-    }
-
     private func createSentinelWorkspace(named prefix: String, in root: URL) throws -> URL {
         let workspace = root.appendingPathComponent("\(prefix)-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
         try Data("stale workspace sentinel".utf8).write(to: workspace.appendingPathComponent("sentinel.txt"))
         return workspace
+    }
+
+    private func waitForWorkspaceRoot(pathFile: URL) throws -> URL {
+        let manager = FileManager.default
+        var value = ""
+        XCTAssertTrue(waitUntil(timeout: 5) {
+            guard manager.fileExists(atPath: pathFile.path),
+                  let text = try? String(contentsOf: pathFile, encoding: .utf8),
+                  !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return false
+            }
+            value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            return true
+        })
+        return URL(fileURLWithPath: value, isDirectory: true)
     }
 
     private func waitUntil(timeout: TimeInterval, condition: () -> Bool) -> Bool {

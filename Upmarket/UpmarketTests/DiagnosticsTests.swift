@@ -68,6 +68,36 @@ final class DiagnosticsTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: workspace.path))
     }
 
+    func testAppProcessQuitAndRelaunchCleanAppWorkspaces() throws {
+        let manager = FileManager.default
+        let pathFile = manager.temporaryDirectory
+            .appendingPathComponent("upmarket-process-workspace-\(UUID().uuidString).txt")
+        defer { try? manager.removeItem(at: pathFile) }
+
+        let firstLaunch = try launchAppProcess(workspacePathFile: pathFile)
+        defer { terminate(firstLaunch) }
+
+        let workspaceRoot = try waitForWorkspaceRoot(pathFile: pathFile)
+        try? manager.removeItem(at: workspaceRoot)
+        try manager.createDirectory(at: workspaceRoot, withIntermediateDirectories: true)
+        defer { try? manager.removeItem(at: workspaceRoot) }
+
+        let quitSentinel = try createSentinelWorkspace(named: "process-quit-cleanup", in: workspaceRoot)
+        firstLaunch.terminate()
+        XCTAssertTrue(waitUntil(timeout: 5) {
+            !firstLaunch.isRunning && !manager.fileExists(atPath: quitSentinel.path)
+        })
+
+        let relaunchSentinel = try createSentinelWorkspace(named: "process-relaunch-cleanup", in: workspaceRoot)
+        let secondLaunch = try launchAppProcess(workspacePathFile: pathFile)
+        defer { terminate(secondLaunch) }
+
+        _ = try waitForWorkspaceRoot(pathFile: pathFile)
+        XCTAssertTrue(waitUntil(timeout: 5) {
+            !manager.fileExists(atPath: relaunchSentinel.path)
+        })
+    }
+
     func testOversizedInputIsRejectedBeforeCopy() throws {
         let input = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
@@ -84,5 +114,71 @@ final class DiagnosticsTests: XCTestCase {
         XCTAssertThrowsError(try AppWorkspace.copy(input, into: workspace)) { error in
             XCTAssertEqual(error as? ConversionError, .fileTooLarge)
         }
+    }
+
+    private func launchAppProcess(workspacePathFile: URL) throws -> Process {
+        let executable = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/MacOS/Upmarket")
+        guard FileManager.default.isExecutableFile(atPath: executable.path) else {
+            throw XCTSkip("Upmarket executable is not available in the test host bundle")
+        }
+
+        let process = Process()
+        process.executableURL = executable
+        process.environment = [
+            "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
+            "HOME": NSHomeDirectory(),
+            "TMPDIR": FileManager.default.temporaryDirectory.path,
+            "XCTestConfigurationFilePath": "UpmarketProcessLifecycleTest",
+            "UPMARKET_UI_TEST_WORKSPACE_PATH_FILE": workspacePathFile.path
+        ]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        try process.run()
+        return process
+    }
+
+    private func terminate(_ process: Process) {
+        guard process.isRunning else { return }
+        process.terminate()
+        _ = waitUntil(timeout: 3) {
+            !process.isRunning
+        }
+        if process.isRunning {
+            process.interrupt()
+        }
+    }
+
+    private func createSentinelWorkspace(named prefix: String, in root: URL) throws -> URL {
+        let workspace = root.appendingPathComponent("\(prefix)-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        try Data("stale workspace sentinel".utf8).write(to: workspace.appendingPathComponent("sentinel.txt"))
+        return workspace
+    }
+
+    private func waitForWorkspaceRoot(pathFile: URL) throws -> URL {
+        let manager = FileManager.default
+        var value = ""
+        XCTAssertTrue(waitUntil(timeout: 5) {
+            guard manager.fileExists(atPath: pathFile.path),
+                  let text = try? String(contentsOf: pathFile, encoding: .utf8),
+                  !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return false
+            }
+            value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            return true
+        })
+        return URL(fileURLWithPath: value, isDirectory: true)
+    }
+
+    private func waitUntil(timeout: TimeInterval, condition: () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if condition() {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        }
+        return condition()
     }
 }
