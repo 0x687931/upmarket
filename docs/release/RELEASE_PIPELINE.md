@@ -20,8 +20,9 @@ Runs on every pull request with `scripts/ci/gate.sh quick`.
 
 Checks:
 
+- GitHub Actions uses `macos-26` with `DEVELOPER_DIR=/Applications/Xcode_26.5.app/Contents/Developer`, matching the project format written by local Xcode 26.5.
 - Cached generated Python runtime is present as a build input; CI runs `scripts/ci/ensure_python_runtime.sh` to rebuild it only when missing or stale.
-- Xcode project path is valid.
+- Xcode 26 or newer is selected and the project path is valid.
 - Architecture simplification holds: no hidden launch windows, zero-size placeholder scenes, or create-then-hide AppKit window workarounds.
 - Philosophy remediation regression guards pass.
 - User-facing copy hides internal toolkit names outside licenses and explicit diagnostic previews.
@@ -40,6 +41,7 @@ Runs manually or on `release/*` branches with `scripts/ci/gate.sh release` befor
 
 Checks:
 
+- GitHub Actions uses `macos-26` with Xcode 26.5 selected through `DEVELOPER_DIR`.
 - Clean runtime rebuild from release pins.
 - Clean archive build.
 - Source entitlement policy; signed app entitlements inspection when a signing identity is available.
@@ -73,6 +75,7 @@ Checks current and candidate upstream sources:
 - Xcode/macOS SDK changes
 
 Nightly should report changes, not auto-promote them. The GitHub Action runs `scripts/ci/watch_upstream.py`, uploads `reports/upstream-watch.json` and `reports/upstream-watch.md`, and creates or updates one tracking issue when candidates or blocked checks exist.
+It also prepares the ignored Python runtime through the same cached `scripts/ci/ensure_python_runtime.sh` path before validating bundled imports, so a clean checkout can run the workflow.
 
 Run the same check locally before dependency work:
 
@@ -92,6 +95,8 @@ Checks:
 - license generation;
 - vulnerability review where practical;
 - no undeclared runtime binary dependency such as `ffprobe` or `exiftool`.
+
+The audit workflow pins Python 3.12 before creating its virtualenv so dependency checks match the bundled runtime version.
 
 The dependency policy is `docs/release/DEPENDENCY_POLICY.md`. `requirements.txt` is the release-current state; `requirements-candidate.txt` is the only place proposed Python runtime updates may be staged before validation.
 

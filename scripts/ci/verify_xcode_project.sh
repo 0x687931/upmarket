@@ -20,4 +20,26 @@ if [[ ! -f "$SCHEME_FILE" ]]; then
   exit 1
 fi
 
+if ! command -v xcodebuild >/dev/null 2>&1; then
+  echo "error: xcodebuild is required to validate $PROJECT"
+  exit 1
+fi
+
+XCODE_VERSION="$(xcodebuild -version | awk '/^Xcode / { print $2; exit }')"
+XCODE_MAJOR="${XCODE_VERSION%%.*}"
+REQUIRED_MAJOR="${UPMARKET_REQUIRED_XCODE_MAJOR:-26}"
+
+if [[ -z "$XCODE_VERSION" || "$XCODE_MAJOR" == "$XCODE_VERSION" ]]; then
+  echo "error: unable to parse xcodebuild version"
+  xcodebuild -version
+  exit 1
+fi
+
+if (( XCODE_MAJOR < REQUIRED_MAJOR )); then
+  echo "error: Xcode $REQUIRED_MAJOR or newer is required for $PROJECT; found Xcode $XCODE_VERSION"
+  echo "       CI should run on macos-26 with DEVELOPER_DIR=/Applications/Xcode_26.5.app/Contents/Developer."
+  exit 1
+fi
+
+echo "ok: xcodebuild version is Xcode $XCODE_VERSION"
 echo "ok: Xcode project and scheme are valid"

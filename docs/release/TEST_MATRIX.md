@@ -4,6 +4,7 @@ This matrix defines the minimum validation surface. Add focused tests when a cha
 
 | Area | Scope | Command Or Evidence | Frequency | Blocks Release |
 | --- | --- | --- | --- | --- |
+| Xcode toolchain | Xcode 26+ selected; GitHub build/archive lanes use `macos-26` and `DEVELOPER_DIR=/Applications/Xcode_26.5.app/Contents/Developer` | `scripts/ci/verify_xcode_project.sh`; workflow `Show Xcode version` step | Every PR and release candidate | Yes |
 | Fast PR gate | Policy checks, unsigned build, effective plist, and unit tests | `scripts/ci/gate.sh quick` | Every PR | Yes |
 | Build runtime preparation | Ignored `Python.xcframework` exists so the Xcode target can compile; CI rebuilds only when cache is missing or stale | `scripts/ci/ensure_python_runtime.sh` | Every PR in CI; local only when missing | Yes |
 | Xcode project | Project opens, targets resolve, helper target is wired | `scripts/ci/verify_xcode_project.sh` | Every PR through quick gate | Yes |

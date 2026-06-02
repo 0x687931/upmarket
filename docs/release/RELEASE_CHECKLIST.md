@@ -5,6 +5,10 @@ Use this checklist for every internal beta, external beta, and App Store candida
 ## 1. Preflight
 
 - Confirm working tree is clean except intended release artifacts: `git status --short`.
+- Confirm local Xcode is 26 or newer:
+  ```sh
+  xcodebuild -version
+  ```
 - Confirm P0 registry and implementation plan sync:
   ```sh
   scripts/ci/gate.sh policy

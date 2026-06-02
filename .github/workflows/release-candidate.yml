@@ -8,26 +8,23 @@ on:
 
 jobs:
   release-candidate:
-    runs-on: macos-14
+    runs-on: macos-26
     env:
+      DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
       DERIVED_DATA_DIR: build/DerivedData
       ARCHIVE_PATH: build/Upmarket.xcarchive
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode.app
+      - name: Show Xcode version
+        run: |
+          test -d "$DEVELOPER_DIR"
+          xcodebuild -version
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Cache Python runtime
-        uses: actions/cache@v4
-        with:
-          path: Upmarket/Python/Python.xcframework
-          key: ${{ runner.os }}-python-runtime-${{ hashFiles('requirements.txt', 'scripts/build_python_env.sh', 'scripts/ci/verify_python_bundle.sh', 'UpmarketPython/**/*.py') }}
 
       - name: Release gate
         run: scripts/ci/gate.sh release
