@@ -1,0 +1,77 @@
+name: Release Candidate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "release/**"
+
+jobs:
+  release-candidate:
+    runs-on: macos-14
+    env:
+      DERIVED_DATA_DIR: build/DerivedData
+      ARCHIVE_PATH: build/Upmarket.xcarchive
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Preflight hooks
+        run: |
+          scripts/ci/verify_xcode_project.sh
+          scripts/ci/verify_entitlements.sh
+          scripts/ci/verify_python_bundle.sh
+          scripts/ci/validate_corpus.py
+          scripts/ci/validate_corpus_baseline.py
+          scripts/ci/validate_corpus_pathways.py
+          scripts/ci/validate_models.py
+          scripts/ci/test_model_faults.py
+          scripts/ci/validate_release_regression_guards.py
+
+      - name: Archive
+        run: |
+          xcodebuild archive \
+            -project Upmarket/Upmarket.xcodeproj \
+            -scheme Upmarket \
+            -destination "generic/platform=macOS" \
+            -archivePath "$ARCHIVE_PATH" \
+            -derivedDataPath "$DERIVED_DATA_DIR" \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Verify archived app package gates
+        run: |
+          APP="$ARCHIVE_PATH/Products/Applications/Upmarket.app"
+          scripts/ci/verify_release_app.sh "$APP"
+
+      - name: Corpus benchmark baseline
+        run: |
+          mkdir -p reports
+          scripts/benchmark.sh --pipeline fast --json-output reports/corpus-fast.json --fail-below 76
+          scripts/ci/validate_corpus_baseline.py --results reports/corpus-fast.json
+
+      - name: Corpus pathway benchmark baseline
+        run: |
+          mkdir -p reports
+          scripts/benchmark.sh --pathway python-fast-pdfium --json-output reports/corpus-python-fast-pdfium.json --fail-below 80
+          scripts/ci/validate_corpus_pathways.py --results reports/corpus-python-fast-pdfium.json
+          scripts/ci/summarize_corpus_pathway_reports.py reports/corpus-*.json --pathways docs/release/conversion_pathways.json --output reports/corpus-pathway-comparison.md
+
+      - name: Upload corpus benchmark comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: corpus-pathway-comparison
+          path: |
+            reports/corpus-*.json
+            reports/corpus-pathway-comparison.md
+
+      - name: UI automation tests
+        run: |
+          xcodebuild test \
+            -project Upmarket/Upmarket.xcodeproj \
+            -scheme Upmarket \
+            -destination "platform=macOS" \
+            -derivedDataPath "$DERIVED_DATA_DIR" \
+            -only-testing:UpmarketUITests \
+            CODE_SIGNING_ALLOWED=NO

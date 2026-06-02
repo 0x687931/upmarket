@@ -1,0 +1,3187 @@
+{
+  "classifier" : "Apple native preflight: PDFKit + Vision; ImageIO/AVFoundation/Speech category routing for non-PDFs",
+  "documents" : [
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "image",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/2305.03393v1-pg9-img.png",
+      "format" : "png",
+      "id" : "docling_2305.03393v1-pg9-img",
+      "reasons" : [
+        "image-only or unknown document"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "image",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/2305.03393v1-table_crop.png",
+      "format" : "png",
+      "id" : "docling_2305.03393v1-table_crop",
+      "reasons" : [
+        "image-only or unknown document"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "asciidoc",
+      "confidence" : 0.66,
+      "file" : "tests/data/asciidoc/test_01.asciidoc",
+      "format" : "asciidoc",
+      "id" : "docling_test_01",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "asciidoc",
+      "confidence" : 0.66,
+      "file" : "tests/data/asciidoc/test_02.asciidoc",
+      "format" : "asciidoc",
+      "id" : "docling_test_02",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "asciidoc",
+      "confidence" : 0.66,
+      "file" : "tests/data/asciidoc/test_03.asciidoc",
+      "format" : "asciidoc",
+      "id" : "docling_test_03",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "native",
+      "category" : "audio",
+      "confidence" : 0.72,
+      "file" : "tests/data/audio/sample_10s.mp3",
+      "format" : "mp3",
+      "id" : "docling_sample_10s",
+      "reasons" : [
+        "native media metadata/transcription route"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "audio",
+      "confidence" : 0.72,
+      "file" : "tests/data/audio/sample_10s_audio-flac.flac",
+      "format" : "flac",
+      "id" : "docling_sample_10s_audio-flac",
+      "reasons" : [
+        "native media metadata/transcription route"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "audio",
+      "confidence" : 0.72,
+      "file" : "tests/data/audio/sample_10s_audio-m4a.m4a",
+      "format" : "m4a",
+      "id" : "docling_sample_10s_audio-m4a",
+      "reasons" : [
+        "native media metadata/transcription route"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "audio",
+      "confidence" : 0.72,
+      "file" : "tests/data/audio/sample_10s_audio-mp3.mp3",
+      "format" : "mp3",
+      "id" : "docling_sample_10s_audio-mp3",
+      "reasons" : [
+        "native media metadata/transcription route"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "audio",
+      "confidence" : 0.72,
+      "file" : "tests/data/audio/sample_10s_audio-mp4.m4a",
+      "format" : "m4a",
+      "id" : "docling_sample_10s_audio-mp4",
+      "reasons" : [
+        "native media metadata/transcription route"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "audio",
+      "confidence" : 0.72,
+      "file" : "tests/data/audio/sample_10s_audio-mpeg.mp3",
+      "format" : "mp3",
+      "id" : "docling_sample_10s_audio-mpeg",
+      "reasons" : [
+        "native media metadata/transcription route"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "audio",
+      "confidence" : 0.72,
+      "file" : "tests/data/audio/sample_10s_audio-wav.wav",
+      "format" : "wav",
+      "id" : "docling_sample_10s_audio-wav",
+      "reasons" : [
+        "native media metadata/transcription route"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "audio",
+      "confidence" : 0.72,
+      "file" : "tests/data/audio/sample_10s_audio-x-flac.flac",
+      "format" : "flac",
+      "id" : "docling_sample_10s_audio-x-flac",
+      "reasons" : [
+        "native media metadata/transcription route"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "audio",
+      "confidence" : 0.72,
+      "file" : "tests/data/audio/sample_10s_audio-x-wav.wav",
+      "format" : "wav",
+      "id" : "docling_sample_10s_audio-x-wav",
+      "reasons" : [
+        "native media metadata/transcription route"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "video",
+      "confidence" : 0.72,
+      "file" : "tests/data/audio/sample_10s_video-avi.avi",
+      "format" : "avi",
+      "id" : "docling_sample_10s_video-avi",
+      "reasons" : [
+        "native media metadata/transcription route"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "video",
+      "confidence" : 0.72,
+      "file" : "tests/data/audio/sample_10s_video-mp4.mp4",
+      "format" : "mp4",
+      "id" : "docling_sample_10s_video-mp4",
+      "reasons" : [
+        "native media metadata/transcription route"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "video",
+      "confidence" : 0.72,
+      "file" : "tests/data/audio/sample_10s_video-quicktime.mov",
+      "format" : "mov",
+      "id" : "docling_sample_10s_video-quicktime",
+      "reasons" : [
+        "native media metadata/transcription route"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "video",
+      "confidence" : 0.72,
+      "file" : "tests/data/audio/sample_10s_video-x-msvideo.avi",
+      "format" : "avi",
+      "id" : "docling_sample_10s_video-x-msvideo",
+      "reasons" : [
+        "native media metadata/transcription route"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "audio",
+      "confidence" : 0.72,
+      "file" : "tests/data/audio/silent_1s.wav",
+      "format" : "wav",
+      "id" : "docling_silent_1s",
+      "reasons" : [
+        "native media metadata/transcription route"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "csv",
+      "confidence" : 0.66,
+      "file" : "tests/data/csv/csv-comma-in-cell.csv",
+      "format" : "csv",
+      "id" : "docling_csv-comma-in-cell",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "csv",
+      "confidence" : 0.66,
+      "file" : "tests/data/csv/csv-comma.csv",
+      "format" : "csv",
+      "id" : "docling_csv-comma",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "csv",
+      "confidence" : 0.66,
+      "file" : "tests/data/csv/csv-inconsistent-header.csv",
+      "format" : "csv",
+      "id" : "docling_csv-inconsistent-header",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "csv",
+      "confidence" : 0.66,
+      "file" : "tests/data/csv/csv-pipe.csv",
+      "format" : "csv",
+      "id" : "docling_csv-pipe",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "csv",
+      "confidence" : 0.66,
+      "file" : "tests/data/csv/csv-semicolon.csv",
+      "format" : "csv",
+      "id" : "docling_csv-semicolon",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "csv",
+      "confidence" : 0.66,
+      "file" : "tests/data/csv/csv-single-column.csv",
+      "format" : "csv",
+      "id" : "docling_csv-single-column",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "csv",
+      "confidence" : 0.66,
+      "file" : "tests/data/csv/csv-tab.csv",
+      "format" : "csv",
+      "id" : "docling_csv-tab",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "csv",
+      "confidence" : 0.66,
+      "file" : "tests/data/csv/csv-too-few-columns.csv",
+      "format" : "csv",
+      "id" : "docling_csv-too-few-columns",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "csv",
+      "confidence" : 0.66,
+      "file" : "tests/data/csv/csv-too-many-columns.csv",
+      "format" : "csv",
+      "id" : "docling_csv-too-many-columns",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/docx_checkboxes.docx",
+      "format" : "docx",
+      "id" : "docling_docx_checkboxes",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/docx_external_image.docx",
+      "format" : "docx",
+      "id" : "docling_docx_external_image",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/docx_grouped_images.docx",
+      "format" : "docx",
+      "id" : "docling_docx_grouped_images",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/docx_rich_cells.docx",
+      "format" : "docx",
+      "id" : "docling_docx_rich_cells",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/docx_vml_images.docx",
+      "format" : "docx",
+      "id" : "docling_docx_vml_images",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/drawingml.docx",
+      "format" : "docx",
+      "id" : "docling_drawingml",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/equations.docx",
+      "format" : "docx",
+      "id" : "docling_equations",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/list_after_num_headers.docx",
+      "format" : "docx",
+      "id" : "docling_list_after_num_headers",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/lorem_ipsum.docx",
+      "format" : "docx",
+      "id" : "docling_lorem_ipsum",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/omml_frac_superscript.docx",
+      "format" : "docx",
+      "id" : "docling_omml_frac_superscript",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/omml_func_log.docx",
+      "format" : "docx",
+      "id" : "docling_omml_func_log",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/omml_multi_equation_paragraph.docx",
+      "format" : "docx",
+      "id" : "docling_omml_multi_equation_paragraph",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/omml_text_escapes_in_math.docx",
+      "format" : "docx",
+      "id" : "docling_omml_text_escapes_in_math",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/table_with_equations.docx",
+      "format" : "docx",
+      "id" : "docling_table_with_equations",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/tablecell.docx",
+      "format" : "docx",
+      "id" : "docling_tablecell",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/test_emf_docx.docx",
+      "format" : "docx",
+      "id" : "docling_test_emf_docx",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/textbox.docx",
+      "format" : "docx",
+      "id" : "docling_textbox",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/unit_test_formatting.docx",
+      "format" : "docx",
+      "id" : "docling_unit_test_formatting",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/unit_test_headers.docx",
+      "format" : "docx",
+      "id" : "docling_unit_test_headers",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/unit_test_headers_numbered.docx",
+      "format" : "docx",
+      "id" : "docling_unit_test_headers_numbered",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/unit_test_lists.docx",
+      "format" : "docx",
+      "id" : "docling_unit_test_lists",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/word_comments.docx",
+      "format" : "docx",
+      "id" : "docling_word_comments",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/word_image_anchors.docx",
+      "format" : "docx",
+      "id" : "docling_word_image_anchors",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/word_sample.docx",
+      "format" : "docx",
+      "id" : "docling_word_sample",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "docx",
+      "confidence" : 0.66,
+      "file" : "tests/data/docx/word_tables.docx",
+      "format" : "docx",
+      "id" : "docling_word_tables",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/example_01.html",
+      "format" : "html",
+      "id" : "docling_example_01",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/example_02.html",
+      "format" : "html",
+      "id" : "docling_example_02",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/example_03.html",
+      "format" : "html",
+      "id" : "docling_example_03",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/example_04.html",
+      "format" : "html",
+      "id" : "docling_example_04",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/example_05.html",
+      "format" : "html",
+      "id" : "docling_example_05",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/example_06.html",
+      "format" : "html",
+      "id" : "docling_example_06",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/example_07.html",
+      "format" : "html",
+      "id" : "docling_example_07",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/example_08.html",
+      "format" : "html",
+      "id" : "docling_example_08",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "image",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/html/example_image_01.png",
+      "format" : "png",
+      "id" : "docling_example_image_01",
+      "reasons" : [
+        "image-only or unknown document"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/formatting.html",
+      "format" : "html",
+      "id" : "docling_formatting",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/html_code_snippets.html",
+      "format" : "html",
+      "id" : "docling_html_code_snippets",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/html_heading_in_p.html",
+      "format" : "html",
+      "id" : "docling_html_heading_in_p",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/html_inline_group_in_table_cell.html",
+      "format" : "html",
+      "id" : "docling_html_inline_group_in_table_cell",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/html_rich_table_cells.html",
+      "format" : "html",
+      "id" : "docling_html_rich_table_cells",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/hyperlink_01.html",
+      "format" : "html",
+      "id" : "docling_hyperlink_01",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/hyperlink_02.html",
+      "format" : "html",
+      "id" : "docling_hyperlink_02",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/hyperlink_03.html",
+      "format" : "html",
+      "id" : "docling_hyperlink_03",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/hyperlink_04.html",
+      "format" : "html",
+      "id" : "docling_hyperlink_04",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/hyperlink_05.html",
+      "format" : "html",
+      "id" : "docling_hyperlink_05",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/hyperlink_06.html",
+      "format" : "html",
+      "id" : "docling_hyperlink_06",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/kvp_data_example.html",
+      "format" : "html",
+      "id" : "docling_kvp_data_example",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/table_01.html",
+      "format" : "html",
+      "id" : "docling_table_01",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/table_02.html",
+      "format" : "html",
+      "id" : "docling_table_02",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/table_03.html",
+      "format" : "html",
+      "id" : "docling_table_03",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/table_04.html",
+      "format" : "html",
+      "id" : "docling_table_04",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/table_05.html",
+      "format" : "html",
+      "id" : "docling_table_05",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/table_06.html",
+      "format" : "html",
+      "id" : "docling_table_06",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/table_with_heading_01.html",
+      "format" : "html",
+      "id" : "docling_table_with_heading_01",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/table_with_heading_02.html",
+      "format" : "html",
+      "id" : "docling_table_with_heading_02",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/unit_test_01.html",
+      "format" : "html",
+      "id" : "docling_unit_test_01",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "html",
+      "confidence" : 0.66,
+      "file" : "tests/data/html/wiki_duck.html",
+      "format" : "html",
+      "id" : "docling_wiki_duck",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xml",
+      "confidence" : 0.66,
+      "file" : "tests/data/jats/elife-56337.xml",
+      "format" : "xml",
+      "id" : "docling_elife-56337",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "image",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/1706.03762/Figures/ModalNet-19.png",
+      "format" : "png",
+      "id" : "docling_ModalNet-19",
+      "reasons" : [
+        "image-only or unknown document"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "image",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/1706.03762/Figures/ModalNet-20.png",
+      "format" : "png",
+      "id" : "docling_ModalNet-20",
+      "reasons" : [
+        "image-only or unknown document"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "image",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/1706.03762/Figures/ModalNet-21.png",
+      "format" : "png",
+      "id" : "docling_ModalNet-21",
+      "reasons" : [
+        "image-only or unknown document"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "image",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/1706.03762/Figures/ModalNet-22.png",
+      "format" : "png",
+      "id" : "docling_ModalNet-22",
+      "reasons" : [
+        "image-only or unknown document"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "image",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/1706.03762/Figures/ModalNet-23.png",
+      "format" : "png",
+      "id" : "docling_ModalNet-23",
+      "reasons" : [
+        "image-only or unknown document"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "image",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/1706.03762/Figures/ModalNet-32.png",
+      "format" : "png",
+      "id" : "docling_ModalNet-32",
+      "reasons" : [
+        "image-only or unknown document"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 272,
+        "averageLinesPerSampledPage" : 55,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/1706.03762/vis/anaphora_resolution2_new.pdf",
+      "format" : "pdf",
+      "id" : "docling_anaphora_resolution2_new",
+      "reasons" : [
+        "dense multi-column layout"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 272,
+        "averageLinesPerSampledPage" : 55,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/1706.03762/vis/anaphora_resolution_new.pdf",
+      "format" : "pdf",
+      "id" : "docling_anaphora_resolution_new",
+      "reasons" : [
+        "dense multi-column layout"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 272,
+        "averageLinesPerSampledPage" : 55,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/1706.03762/vis/attending_to_head2_new.pdf",
+      "format" : "pdf",
+      "id" : "docling_attending_to_head2_new",
+      "reasons" : [
+        "dense multi-column layout"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 272,
+        "averageLinesPerSampledPage" : 55,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/1706.03762/vis/attending_to_head_new.pdf",
+      "format" : "pdf",
+      "id" : "docling_attending_to_head_new",
+      "reasons" : [
+        "dense multi-column layout"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 406,
+        "averageLinesPerSampledPage" : 67,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.029850746268656716,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/1706.03762/vis/making_more_difficult5_new.pdf",
+      "format" : "pdf",
+      "id" : "docling_making_more_difficult5_new",
+      "reasons" : [
+        "dense multi-column layout"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 406,
+        "averageLinesPerSampledPage" : 67,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.029850746268656716,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/1706.03762/vis/making_more_difficult_new.pdf",
+      "format" : "pdf",
+      "id" : "docling_making_more_difficult_new",
+      "reasons" : [
+        "dense multi-column layout"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 1740,
+        "averageLinesPerSampledPage" : 43,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.7674418604651163,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2305.03393/figs/HTMLvOTSLv7.pdf",
+      "format" : "pdf",
+      "id" : "docling_HTMLvOTSLv7",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "image",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2305.03393/figs/html_freq_v4.png",
+      "format" : "png",
+      "id" : "docling_html_freq_v4",
+      "reasons" : [
+        "image-only or unknown document"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 605,
+        "averageLinesPerSampledPage" : 45,
+        "hasAxisLikeText" : true,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.8444444444444444,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2305.03393/figs/html_v_otsl_intro_v2.pdf",
+      "format" : "pdf",
+      "id" : "docling_html_v_otsl_intro_v2",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 248,
+        "averageLinesPerSampledPage" : 42,
+        "hasAxisLikeText" : true,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.14285714285714285,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.9761904761904762,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2305.03393/figs/otsl_proof_v3.pdf",
+      "format" : "pdf",
+      "id" : "docling_otsl_proof_v3",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 221,
+        "averageLinesPerSampledPage" : 11,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.8181818181818182,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2305.03393/figs/otsl_vs_html_ex3_v2.pdf",
+      "format" : "pdf",
+      "id" : "docling_otsl_vs_html_ex3_v2",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 503,
+        "averageLinesPerSampledPage" : 60,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.18333333333333332,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2305.03393/figs/tablemodel_overview_otsl.pdf",
+      "format" : "pdf",
+      "id" : "docling_tablemodel_overview_otsl",
+      "reasons" : [
+        "dense multi-column layout"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 1780,
+        "averageLinesPerSampledPage" : 38,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.017391304347826087,
+        "pageCount" : 7,
+        "sampledPages" : 3,
+        "shortLineRatio" : 0.4260869565217391,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2305.03393/llncsdoc.pdf",
+      "format" : "pdf",
+      "id" : "docling_llncsdoc",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "image",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2310.06825/images/230927_bars.png",
+      "format" : "png",
+      "id" : "docling_230927_bars",
+      "reasons" : [
+        "image-only or unknown document"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "image",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2310.06825/images/230927_effective_sizes.png",
+      "format" : "png",
+      "id" : "docling_230927_effective_sizes",
+      "reasons" : [
+        "image-only or unknown document"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 173,
+        "averageLinesPerSampledPage" : 39,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.5384615384615384,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2310.06825/images/chunking.pdf",
+      "format" : "pdf",
+      "id" : "docling_chunking",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "image",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2310.06825/images/llama_vs_mistral_example.png",
+      "format" : "png",
+      "id" : "docling_llama_vs_mistral_example",
+      "reasons" : [
+        "image-only or unknown document"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "pdf",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2310.06825/images/rolling_buffer.pdf",
+      "format" : "pdf",
+      "id" : "docling_rolling_buffer",
+      "reasons" : [
+        "low native text",
+        "unknown page content"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "pdf",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2310.06825/images/swa.pdf",
+      "format" : "pdf",
+      "id" : "docling_swa",
+      "reasons" : [
+        "low native text",
+        "unknown page content"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 531,
+        "averageLinesPerSampledPage" : 51,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.0392156862745098,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.9803921568627451,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2412.19437/figures/basic_arch.pdf",
+      "format" : "pdf",
+      "id" : "docling_basic_arch",
+      "reasons" : [
+        "dense multi-column layout"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 443,
+        "averageLinesPerSampledPage" : 53,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.6981132075471698,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.9811320754716981,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2412.19437/figures/dsv3_performance.pdf",
+      "format" : "pdf",
+      "id" : "docling_dsv3_performance",
+      "reasons" : [
+        "dense multi-column layout"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 529,
+        "averageLinesPerSampledPage" : 10,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2412.19437/figures/dualpipe.pdf",
+      "format" : "pdf",
+      "id" : "docling_dualpipe",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 256,
+        "averageLinesPerSampledPage" : 23,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.9565217391304348,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2412.19437/figures/fp8-128accumulatorv4.pdf",
+      "format" : "pdf",
+      "id" : "docling_fp8-128accumulatorv4",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 218,
+        "averageLinesPerSampledPage" : 34,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2412.19437/figures/fp8-frameworkv3.pdf",
+      "format" : "pdf",
+      "id" : "docling_fp8-frameworkv3",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "pdf",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2412.19437/figures/fp8-v.s.-bf16.pdf",
+      "format" : "pdf",
+      "id" : "docling_fp8-v.s.-bf16",
+      "reasons" : [
+        "low native text",
+        "unknown page content"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 254,
+        "averageLinesPerSampledPage" : 30,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.8333333333333334,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.9333333333333333,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2412.19437/figures/needle_in_a_haystack.pdf",
+      "format" : "pdf",
+      "id" : "docling_needle_in_a_haystack",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 677,
+        "averageLinesPerSampledPage" : 47,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.02127659574468085,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.9787234042553191,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2412.19437/figures/nextn.pdf",
+      "format" : "pdf",
+      "id" : "docling_nextn",
+      "reasons" : [
+        "dense multi-column layout"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 169,
+        "averageLinesPerSampledPage" : 4,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.75,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2412.19437/figures/overlap.pdf",
+      "format" : "pdf",
+      "id" : "docling_overlap",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 1005,
+        "averageLinesPerSampledPage" : 14,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.35714285714285715,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2412.19437/figures/relative_expert_load_multi.pdf",
+      "format" : "pdf",
+      "id" : "docling_relative_expert_load_multi",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 2943,
+        "averageLinesPerSampledPage" : 50,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.76,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2412.19437/figures/relative_expert_load_multi_1-6.pdf",
+      "format" : "pdf",
+      "id" : "docling_relative_expert_load_multi_1-6",
+      "reasons" : [
+        "dense multi-column layout"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 2955,
+        "averageLinesPerSampledPage" : 50,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.76,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2412.19437/figures/relative_expert_load_multi_13-18.pdf",
+      "format" : "pdf",
+      "id" : "docling_relative_expert_load_multi_13-18",
+      "reasons" : [
+        "dense multi-column layout"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 2955,
+        "averageLinesPerSampledPage" : 50,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.76,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2412.19437/figures/relative_expert_load_multi_19-24.pdf",
+      "format" : "pdf",
+      "id" : "docling_relative_expert_load_multi_19-24",
+      "reasons" : [
+        "dense multi-column layout"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 1007,
+        "averageLinesPerSampledPage" : 14,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.35714285714285715,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2412.19437/figures/relative_expert_load_multi_25-26.pdf",
+      "format" : "pdf",
+      "id" : "docling_relative_expert_load_multi_25-26",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 2949,
+        "averageLinesPerSampledPage" : 50,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.76,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2412.19437/figures/relative_expert_load_multi_7-12.pdf",
+      "format" : "pdf",
+      "id" : "docling_relative_expert_load_multi_7-12",
+      "reasons" : [
+        "dense multi-column layout"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "pdf",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2412.19437/logo/DeepSeek.pdf",
+      "format" : "pdf",
+      "id" : "docling_DeepSeek",
+      "reasons" : [
+        "low native text",
+        "unknown page content"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "pdf",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 75,
+        "averageLinesPerSampledPage" : 9,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.5555555555555556,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2501.00089/138-bpt_scatter_examples_3x3.pdf",
+      "format" : "pdf",
+      "id" : "docling_138-bpt_scatter_examples_3x3",
+      "reasons" : [
+        "low native text",
+        "unknown page content"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "pdf",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 75,
+        "averageLinesPerSampledPage" : 9,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.5555555555555556,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2501.00089/157-bpt_scatter_examples_3x3.pdf",
+      "format" : "pdf",
+      "id" : "docling_157-bpt_scatter_examples_3x3",
+      "reasons" : [
+        "low native text",
+        "unknown page content"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "pdf",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 74,
+        "averageLinesPerSampledPage" : 9,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.5555555555555556,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2501.00089/17-bpt_scatter_examples_3x3.pdf",
+      "format" : "pdf",
+      "id" : "docling_17-bpt_scatter_examples_3x3",
+      "reasons" : [
+        "low native text",
+        "unknown page content"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "pdf",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 75,
+        "averageLinesPerSampledPage" : 9,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.5555555555555556,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2501.00089/322-bpt_scatter_examples_3x3.pdf",
+      "format" : "pdf",
+      "id" : "docling_322-bpt_scatter_examples_3x3",
+      "reasons" : [
+        "low native text",
+        "unknown page content"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 289,
+        "averageLinesPerSampledPage" : 22,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2501.00089/SFNet_ResNet18-TopK.pdf",
+      "format" : "pdf",
+      "id" : "docling_SFNet_ResNet18-TopK",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 220,
+        "averageLinesPerSampledPage" : 10,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.8,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2501.00089/equations.pdf",
+      "format" : "pdf",
+      "id" : "docling_latex_equations",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 163,
+        "averageLinesPerSampledPage" : 20,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.6,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/2501.00089/pca-comparison.pdf",
+      "format" : "pdf",
+      "id" : "docling_pca-comparison",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 151,
+        "averageLinesPerSampledPage" : 16,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.5625,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/arXiv-2501.01300v2/BQSC-1003.pdf",
+      "format" : "pdf",
+      "id" : "docling_BQSC-1003",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 156,
+        "averageLinesPerSampledPage" : 17,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.5294117647058824,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/arXiv-2501.01300v2/D-BQSC-0004-1003.pdf",
+      "format" : "pdf",
+      "id" : "docling_D-BQSC-0004-1003",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 163,
+        "averageLinesPerSampledPage" : 16,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.4375,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.9375,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/arXiv-2501.01300v2/P_B.pdf",
+      "format" : "pdf",
+      "id" : "docling_P_B",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 163,
+        "averageLinesPerSampledPage" : 16,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.4375,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.9375,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/arXiv-2501.01300v2/P_M.pdf",
+      "format" : "pdf",
+      "id" : "docling_P_M",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "pdf",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 74,
+        "averageLinesPerSampledPage" : 10,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.6,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/arXiv-2501.01300v2/P_q.pdf",
+      "format" : "pdf",
+      "id" : "docling_P_q",
+      "reasons" : [
+        "low native text",
+        "unknown page content"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 92,
+        "averageLinesPerSampledPage" : 12,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.5833333333333334,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 1,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/latex/arXiv-2501.01300v2/m_q.pdf",
+      "format" : "pdf",
+      "id" : "docling_m_q",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 3232,
+        "averageLinesPerSampledPage" : 68,
+        "hasAxisLikeText" : true,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.07766990291262135,
+        "pageCount" : 16,
+        "sampledPages" : 3,
+        "shortLineRatio" : 0.2087378640776699,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/pdf/2203.01017v2.pdf",
+      "format" : "pdf",
+      "id" : "docling_2203.01017v2",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 6593,
+        "averageLinesPerSampledPage" : 157,
+        "hasAxisLikeText" : true,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.012711864406779662,
+        "pageCount" : 9,
+        "sampledPages" : 3,
+        "shortLineRatio" : 0.4300847457627119,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/pdf/2206.01062.pdf",
+      "format" : "pdf",
+      "id" : "docling_2206.01062",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 2328,
+        "averageLinesPerSampledPage" : 45,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.06666666666666667,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.3111111111111111,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/pdf/2305.03393v1-pg9.pdf",
+      "format" : "pdf",
+      "id" : "docling_2305.03393v1-pg9",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 2136,
+        "averageLinesPerSampledPage" : 51,
+        "hasAxisLikeText" : true,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.0784313725490196,
+        "pageCount" : 14,
+        "sampledPages" : 3,
+        "shortLineRatio" : 0.49673202614379086,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/pdf/2305.03393v1.pdf",
+      "format" : "pdf",
+      "id" : "docling_2305.03393v1",
+      "reasons" : [
+        "dense multi-column layout"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 3682,
+        "averageLinesPerSampledPage" : 72,
+        "hasAxisLikeText" : true,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.20833333333333334,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/pdf/amt_handbook_sample.pdf",
+      "format" : "pdf",
+      "id" : "docling_amt_handbook_sample",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 2760,
+        "averageLinesPerSampledPage" : 41,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.024096385542168676,
+        "pageCount" : 2,
+        "sampledPages" : 2,
+        "shortLineRatio" : 0.13253012048192772,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/pdf/code_and_formula.pdf",
+      "format" : "pdf",
+      "id" : "docling_code_and_formula",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 1704,
+        "averageLinesPerSampledPage" : 25,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 5,
+        "sampledPages" : 3,
+        "shortLineRatio" : 0.06666666666666667,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/pdf/multi_page.pdf",
+      "format" : "pdf",
+      "id" : "docling_multi_page",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 1775,
+        "averageLinesPerSampledPage" : 68,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.01951219512195122,
+        "pageCount" : 4,
+        "sampledPages" : 3,
+        "shortLineRatio" : 0.8780487804878049,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/pdf/normal_4pages.pdf",
+      "format" : "pdf",
+      "id" : "docling_normal_4pages",
+      "reasons" : [
+        "dense multi-column layout"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 1712,
+        "averageLinesPerSampledPage" : 25,
+        "hasAxisLikeText" : true,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.04,
+        "pageCount" : 2,
+        "sampledPages" : 2,
+        "shortLineRatio" : 0.06,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/pdf/picture_classification.pdf",
+      "format" : "pdf",
+      "id" : "docling_picture_classification",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 1020,
+        "averageLinesPerSampledPage" : 31,
+        "hasAxisLikeText" : true,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 18,
+        "sampledPages" : 3,
+        "shortLineRatio" : 0.6947368421052632,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/pdf/redp5110_sampled.pdf",
+      "format" : "pdf",
+      "id" : "docling_redp5110_sampled",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 1404,
+        "averageLinesPerSampledPage" : 45,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : true,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.5777777777777777,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/pdf/right_to_left_01.pdf",
+      "format" : "pdf",
+      "id" : "docling_right_to_left_01",
+      "reasons" : [
+        "right-to-left text"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 1165,
+        "averageLinesPerSampledPage" : 39,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : true,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.05128205128205128,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.6410256410256411,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/pdf/right_to_left_02.pdf",
+      "format" : "pdf",
+      "id" : "docling_right_to_left_02",
+      "reasons" : [
+        "right-to-left text"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pdf",
+      "confidence" : 0.78,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 751,
+        "averageLinesPerSampledPage" : 71,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : true,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0.15492957746478872,
+        "pageCount" : 1,
+        "sampledPages" : 1,
+        "shortLineRatio" : 0.9577464788732394,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/pdf/right_to_left_03.pdf",
+      "format" : "pdf",
+      "id" : "docling_right_to_left_03",
+      "reasons" : [
+        "right-to-left text",
+        "dense multi-column layout"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 206,
+        "averageLinesPerSampledPage" : 11,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 3,
+        "sampledPages" : 3,
+        "shortLineRatio" : 0.8787878787878788,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/pdf/skipped_1page.pdf",
+      "format" : "pdf",
+      "id" : "docling_skipped_1page",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "native",
+      "category" : "pdf",
+      "confidence" : 0.7,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 206,
+        "averageLinesPerSampledPage" : 11,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "pageCount" : 4,
+        "sampledPages" : 3,
+        "shortLineRatio" : 0.8787878787878788,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/pdf/skipped_2pages.pdf",
+      "format" : "pdf",
+      "id" : "docling_skipped_2pages",
+      "reasons" : [
+        "digital text"
+      ],
+      "recommendation" : "native"
+    },
+    {
+      "bucket" : "blocked",
+      "category" : "pdf",
+      "confidence" : 0,
+      "error" : "Error Domain=CorpusClassifier Code=2 \"password required\" UserInfo={NSLocalizedDescription=password required}",
+      "file" : "tests/data/pdf_password/2206.01062_pg3.pdf",
+      "format" : "pdf",
+      "id" : "docling_2206.01062_pg3",
+      "reasons" : [
+
+      ],
+      "recommendation" : "blocked"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pptx",
+      "confidence" : 0.66,
+      "file" : "tests/data/pptx/powerpoint_bad_text.pptx",
+      "format" : "pptx",
+      "id" : "docling_powerpoint_bad_text",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pptx",
+      "confidence" : 0.66,
+      "file" : "tests/data/pptx/powerpoint_issue_2663.pptx",
+      "format" : "pptx",
+      "id" : "docling_powerpoint_issue_2663",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pptx",
+      "confidence" : 0.66,
+      "file" : "tests/data/pptx/powerpoint_malformed_pictures.pptx",
+      "format" : "pptx",
+      "id" : "docling_powerpoint_malformed_pictures",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pptx",
+      "confidence" : 0.66,
+      "file" : "tests/data/pptx/powerpoint_sample.pptx",
+      "format" : "pptx",
+      "id" : "docling_powerpoint_sample",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pptx",
+      "confidence" : 0.66,
+      "file" : "tests/data/pptx/powerpoint_unrecognized_shape.pptx",
+      "format" : "pptx",
+      "id" : "docling_powerpoint_unrecognized_shape",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "pptx",
+      "confidence" : 0.66,
+      "file" : "tests/data/pptx/powerpoint_with_image.pptx",
+      "format" : "pptx",
+      "id" : "docling_powerpoint_with_image",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "image",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/tiff/2206.01062.tif",
+      "format" : "tif",
+      "id" : "docling_2206.01062_tiff",
+      "reasons" : [
+        "image-only or unknown document"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xml",
+      "confidence" : 0.66,
+      "file" : "tests/data/uspto/ipa20110039701.xml",
+      "format" : "xml",
+      "id" : "docling_ipa20110039701",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xml",
+      "confidence" : 0.66,
+      "file" : "tests/data/uspto/ipa20180000016.xml",
+      "format" : "xml",
+      "id" : "docling_ipa20180000016",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xml",
+      "confidence" : 0.66,
+      "file" : "tests/data/uspto/ipa20200022300.xml",
+      "format" : "xml",
+      "id" : "docling_ipa20200022300",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xml",
+      "confidence" : 0.66,
+      "file" : "tests/data/uspto/ipg07997973.xml",
+      "format" : "xml",
+      "id" : "docling_ipg07997973",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xml",
+      "confidence" : 0.66,
+      "file" : "tests/data/uspto/ipg08672134.xml",
+      "format" : "xml",
+      "id" : "docling_ipg08672134",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xml",
+      "confidence" : 0.66,
+      "file" : "tests/data/uspto/ipgD0701016.xml",
+      "format" : "xml",
+      "id" : "docling_ipgD0701016",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xml",
+      "confidence" : 0.66,
+      "file" : "tests/data/uspto/pa20010031492.xml",
+      "format" : "xml",
+      "id" : "docling_pa20010031492",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xml",
+      "confidence" : 0.66,
+      "file" : "tests/data/uspto/pg06442728.xml",
+      "format" : "xml",
+      "id" : "docling_pg06442728",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xml",
+      "confidence" : 0.66,
+      "file" : "tests/data/uspto/tables_ipa20180000016.xml",
+      "format" : "xml",
+      "id" : "docling_tables_ipa20180000016",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "scanned-or-unknown",
+      "category" : "image",
+      "confidence" : 0.58,
+      "evidence" : {
+        "averageDigitalTextCharactersPerPage" : 0,
+        "averageLinesPerSampledPage" : 0,
+        "hasAxisLikeText" : false,
+        "hasRTLText" : false,
+        "hasTableLikeText" : false,
+        "numericLineRatio" : 0,
+        "shortLineRatio" : 0,
+        "visionAverageConfidence" : 0,
+        "visionObservedTextLines" : 0
+      },
+      "file" : "tests/data/webp/webp-test.webp",
+      "format" : "webp",
+      "id" : "docling_webp-test",
+      "reasons" : [
+        "image-only or unknown document"
+      ],
+      "recommendation" : "image-text"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "webvtt",
+      "confidence" : 0.66,
+      "file" : "tests/data/webvtt/webvtt_example_01.vtt",
+      "format" : "vtt",
+      "id" : "docling_webvtt_example_01",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "webvtt",
+      "confidence" : 0.66,
+      "file" : "tests/data/webvtt/webvtt_example_02.vtt",
+      "format" : "vtt",
+      "id" : "docling_webvtt_example_02",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "webvtt",
+      "confidence" : 0.66,
+      "file" : "tests/data/webvtt/webvtt_example_03.vtt",
+      "format" : "vtt",
+      "id" : "docling_webvtt_example_03",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "webvtt",
+      "confidence" : 0.66,
+      "file" : "tests/data/webvtt/webvtt_example_04.vtt",
+      "format" : "vtt",
+      "id" : "docling_webvtt_example_04",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xml",
+      "confidence" : 0.66,
+      "file" : "tests/data/xbrl/grve_10q_htm.xml",
+      "format" : "xml",
+      "id" : "docling_grve_10q_htm",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xml",
+      "confidence" : 0.66,
+      "file" : "tests/data/xbrl/mlac-20251231.xml",
+      "format" : "xml",
+      "id" : "docling_mlac-20251231",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xlsx",
+      "confidence" : 0.66,
+      "file" : "tests/data/xlsx/xlsx_01.xlsx",
+      "format" : "xlsx",
+      "id" : "docling_xlsx_01",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xlsx",
+      "confidence" : 0.66,
+      "file" : "tests/data/xlsx/xlsx_03_chartsheet.xlsx",
+      "format" : "xlsx",
+      "id" : "docling_xlsx_03_chartsheet",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xlsx",
+      "confidence" : 0.66,
+      "file" : "tests/data/xlsx/xlsx_04_inflated.xlsx",
+      "format" : "xlsx",
+      "id" : "docling_xlsx_04_inflated",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xlsx",
+      "confidence" : 0.66,
+      "file" : "tests/data/xlsx/xlsx_05_table_with_title.xlsx",
+      "format" : "xlsx",
+      "id" : "docling_xlsx_05_table_with_title",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xlsx",
+      "confidence" : 0.66,
+      "file" : "tests/data/xlsx/xlsx_06_edge_cases_.xlsx",
+      "format" : "xlsx",
+      "id" : "docling_xlsx_06_edge_cases_",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xlsx",
+      "confidence" : 0.66,
+      "file" : "tests/data/xlsx/xlsx_07_gap_tolerance_.xlsx",
+      "format" : "xlsx",
+      "id" : "docling_xlsx_07_gap_tolerance_",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    },
+    {
+      "bucket" : "digital-complex",
+      "category" : "xlsx",
+      "confidence" : 0.66,
+      "file" : "tests/data/xlsx/xlsx_08_one_cell_anchor.xlsx",
+      "format" : "xlsx",
+      "id" : "docling_xlsx_08_one_cell_anchor",
+      "reasons" : [
+        "structured digital document"
+      ],
+      "recommendation" : "enhanced"
+    }
+  ],
+  "generatedAt" : "2026-06-01T15:19:43Z",
+  "manifest" : "tests/corpus/manifest.json",
+  "summary" : {
+    "buckets" : {
+      "blocked" : 1,
+      "digital-complex" : 115,
+      "native" : 45,
+      "scanned-or-unknown" : 24
+    },
+    "errors" : 1,
+    "recommendations" : {
+      "blocked" : 1,
+      "enhanced" : 115,
+      "image-text" : 24,
+      "native" : 45
+    },
+    "total" : 185
+  },
+  "version" : 1
+}

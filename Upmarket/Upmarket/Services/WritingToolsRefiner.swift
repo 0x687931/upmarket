@@ -1,0 +1,138 @@
+import Foundation
+
+/// Refines structured Markdown using Apple Intelligence Writing Tools.
+/// Available on macOS 15.1+ with Apple Silicon.
+///
+/// Responsibilities:
+/// - Fix broken sentences split across PDF lines
+/// - Normalise inconsistent capitalisation from PDF extraction
+/// - Clean up repetitive or malformed text patterns
+///
+/// Gracefully degrades: returns input unchanged on unsupported OS/hardware.
+/// Must be called asynchronously — Writing Tools API is async.
+@available(macOS 15.1, *)
+struct WritingToolsRefiner {
+
+    // MARK: - Availability
+
+    static var isAvailable: Bool {
+        if #available(macOS 15.1, *) {
+            // Apple Intelligence requires Apple Silicon + opt-in
+            // Check via ProcessInfo as the API doesn't expose a direct check
+            return isAppleSilicon
+        }
+        return false
+    }
+
+    private static var isAppleSilicon: Bool {
+        var sysinfo = utsname()
+        uname(&sysinfo)
+        return withUnsafeBytes(of: &sysinfo.machine) {
+            $0.bindMemory(to: CChar.self).baseAddress
+                .map { String(cString: $0) } ?? ""
+        }.hasPrefix("arm64")
+    }
+
+    // MARK: - Refinement
+
+    struct Input {
+        let markdown: String
+        let language: String
+        /// Maximum characters to send per refinement request.
+        /// Writing Tools works best on focused chunks, not full documents.
+        var chunkSize: Int = 3000
+    }
+
+    struct Output {
+        let markdown: String
+        let wasRefined: Bool      // false if Writing Tools was unavailable
+        let chunksProcessed: Int
+    }
+
+    /// Refine markdown in chunks using Writing Tools.
+    /// Splits at paragraph boundaries to preserve structure.
+    static func refine(_ input: Input) async -> Output {
+        guard isAvailable else {
+            return Output(markdown: input.markdown, wasRefined: false, chunksProcessed: 0)
+        }
+
+        let chunks = splitIntoChunks(input.markdown, maxSize: input.chunkSize)
+        var refined: [String] = []
+        var processed = 0
+
+        for chunk in chunks {
+            if let result = await refineChunk(chunk, language: input.language) {
+                refined.append(result)
+                processed += 1
+            } else {
+                // Writing Tools failed for this chunk — use original
+                refined.append(chunk)
+            }
+        }
+
+        return Output(
+            markdown: refined.joined(separator: "\n\n"),
+            wasRefined: processed > 0,
+            chunksProcessed: processed
+        )
+    }
+
+    // MARK: - Private
+
+    /// Split markdown at paragraph boundaries, respecting headings.
+    private static func splitIntoChunks(_ text: String, maxSize: Int) -> [String] {
+        var chunks: [String] = []
+        var current = ""
+
+        for paragraph in text.components(separatedBy: "\n\n") {
+            if current.count + paragraph.count > maxSize && !current.isEmpty {
+                chunks.append(current.trimmingCharacters(in: .whitespacesAndNewlines))
+                current = paragraph
+            } else {
+                current += (current.isEmpty ? "" : "\n\n") + paragraph
+            }
+        }
+
+        if !current.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            chunks.append(current.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+
+        return chunks
+    }
+
+    /// Send a single chunk to Writing Tools for refinement.
+    /// Returns nil if Writing Tools is unavailable or fails.
+    private static func refineChunk(_ text: String, language: String) async -> String? {
+        // Writing Tools API is accessed via UITextView/NSTextView integration.
+        // On macOS, we use the NSWritingToolsCoordinator introduced in macOS 15.1.
+        // For now this is a placeholder — the actual API requires a view context.
+        // TODO: Implement NSWritingToolsCoordinator integration once API is stable.
+        // See: https://developer.apple.com/documentation/appkit/nswritingtoolscoordinator
+        return nil
+    }
+}
+
+/// Fallback for older macOS — returns input unchanged.
+struct WritingToolsRefinerFallback {
+    static func refine(markdown: String) -> String { markdown }
+}
+
+/// Version-safe wrapper that picks the right implementation at runtime.
+struct WritingToolsRefinerAdapter {
+
+    struct Output {
+        let markdown: String
+        let wasRefined: Bool
+    }
+
+    static func refine(markdown: String, language: String) async -> Output {
+        if #available(macOS 15.1, *) {
+            let result = await WritingToolsRefiner.refine(
+                WritingToolsRefiner.Input(markdown: markdown, language: language)
+            )
+            return Output(markdown: result.markdown, wasRefined: result.wasRefined)
+        } else {
+            return Output(markdown: markdown, wasRefined: false)
+        }
+    }
+}

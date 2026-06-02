@@ -49,23 +49,28 @@ Models are downloaded on first use and cached in `~/Library/Application Support/
 
 ## Development
 
-See [IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for the full technical plan.
+See [IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for the full technical plan and [USER_FLOW.md](docs/USER_FLOW.md) for the app journey.
+Generated repository documentation lives in [docs/generated](docs/generated/) and is refreshed by `scripts/docs/generate_repo_docs.py`.
+
+## Current Benchmarks
+
+See [CORPUS_BENCHMARKS.md](docs/release/CORPUS_BENCHMARKS.md) for the current corpus table: file in the first column, converter pathways in the following columns, and measured scores in each cell.
 
 ### Project Structure
 
 ```
-Upmarket/               # SwiftUI app
-  Views/                # SwiftUI views
-  ViewModels/           # ObservableObject view models
-  Models/               # Data models
-  Services/             # Python bridge, model manager, converter
-  Python/               # Bundled CPython runtime (not in git)
-  Resources/            # App resources
+Upmarket/Upmarket.xcodeproj/ # Xcode project
+Upmarket/Upmarket/       # SwiftUI app source
+  Views/                 # SwiftUI views
+  Services/              # App services, window controllers, Python bridge
+  Intents/               # App Intents
+  Resources/             # App resources and localized strings
+Upmarket/UpmarketTests/  # Xcode-managed unit tests
+Upmarket/UpmarketUITests/# Xcode-managed UI tests
+Upmarket/Python/         # Bundled CPython runtime support
 UpmarketPython/         # Python layer
   docling_bridge/       # Python wrapper around Docling
   models/               # Model download utilities
-UpmarketTests/          # Unit tests
-UpmarketUITests/        # UI tests
 scripts/                # Build and setup scripts
 docs/                   # Documentation
 ```

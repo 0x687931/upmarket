@@ -1,0 +1,85 @@
+import XCTest
+@testable import Upmarket
+
+final class StoreAccountingServiceTests: XCTestCase {
+    func testInitialStateMigratesLegacyCreditsOnce() throws {
+        let defaults = makeDefaults()
+        defaults.set(2, forKey: "upmarket.freeDocsRemaining")
+        defaults.set(3, forKey: "upmarket.packCredits")
+        defaults.set(2, forKey: "upmarket.packsEverPurchased")
+        let service = makeService(defaults: defaults)
+
+        let snapshot = service.loadInitialState()
+
+        XCTAssertEqual(snapshot.freeDocsRemaining, 2)
+        XCTAssertEqual(snapshot.packCredits, 3)
+        XCTAssertEqual(snapshot.packsEverPurchased, 2)
+        XCTAssertNil(defaults.object(forKey: "upmarket.packCredits"))
+        XCTAssertNil(defaults.object(forKey: "upmarket.packsEverPurchased"))
+        XCTAssertEqual(service.loadInitialState().packCredits, 3)
+    }
+
+    func testConsumesFreeTrialBeforePackCredit() throws {
+        let defaults = makeDefaults()
+        let service = makeService(defaults: defaults)
+        _ = try service.recordPackTransaction(transactionID: 1001, isRevoked: false, freeDocsRemaining: 1)
+
+        let result = try service.consumeConversion(freeDocsRemaining: 1, packCredits: 5)
+
+        XCTAssertTrue(result.consumed)
+        XCTAssertEqual(result.snapshot.freeDocsRemaining, 0)
+        XCTAssertEqual(result.snapshot.packCredits, 5)
+        XCTAssertEqual(defaults.integer(forKey: "upmarket.freeDocsRemaining"), 0)
+    }
+
+    func testConsumesPackCreditAfterTrial() throws {
+        let service = makeService()
+        let credited = try service.recordPackTransaction(transactionID: 1001, isRevoked: false, freeDocsRemaining: 0)
+        XCTAssertEqual(credited.packCredits, 5)
+
+        let result = try service.consumeConversion(freeDocsRemaining: 0, packCredits: credited.packCredits)
+
+        XCTAssertTrue(result.consumed)
+        XCTAssertEqual(result.snapshot.packCredits, 4)
+    }
+
+    func testTrialPaywallPromptOnlyOncePerRemainingCount() {
+        let service = makeService()
+
+        XCTAssertFalse(service.shouldShowTrialPaywallAfterConversion(
+            hasPaidEntitlement: false,
+            freeDocsRemaining: 3,
+            packCredits: 0
+        ))
+        XCTAssertTrue(service.shouldShowTrialPaywallAfterConversion(
+            hasPaidEntitlement: false,
+            freeDocsRemaining: 1,
+            packCredits: 0
+        ))
+        XCTAssertFalse(service.shouldShowTrialPaywallAfterConversion(
+            hasPaidEntitlement: false,
+            freeDocsRemaining: 1,
+            packCredits: 0
+        ))
+    }
+
+    private func makeService(defaults: UserDefaults? = nil) -> StoreAccountingService {
+        StoreAccountingService(
+            defaults: defaults ?? makeDefaults(),
+            packLedger: PackCreditLedger(fileURL: temporaryLedgerURL())
+        )
+    }
+
+    private func makeDefaults() -> UserDefaults {
+        let suiteName = "StoreAccountingServiceTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return defaults
+    }
+
+    private func temporaryLedgerURL() -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+            .appendingPathComponent("PackCreditLedger.json")
+    }
+}

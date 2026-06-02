@@ -1,0 +1,154 @@
+import XCTest
+@testable import Upmarket
+
+/// Tests for the NaturalLanguage and Writing Tools post-processing pipeline.
+/// Run these before any release to verify output quality on real documents.
+final class PostProcessingTests: XCTestCase {
+
+    // MARK: - TextStructurer Tests
+
+    func testSentenceBoundaryDetection() {
+        let input = TextStructurer.Input(
+            rawMarkdown: "This is sentence one. This is sentence two. And a third.",
+            detectedLanguage: "en"
+        )
+        let output = TextStructurer.refine(input)
+        XCTAssertEqual(output.sentenceCount, 3)
+        XCTAssertFalse(output.markdown.isEmpty)
+    }
+
+    func testHeadingsPreserved() {
+        let input = TextStructurer.Input(
+            rawMarkdown: "# Title\n\nBody text here. Another sentence.\n\n## Section\n\nMore text.",
+            detectedLanguage: "en"
+        )
+        let output = TextStructurer.refine(input)
+        XCTAssertTrue(output.markdown.contains("# Title"))
+        XCTAssertTrue(output.markdown.contains("## Section"))
+    }
+
+    func testDividerPreserved() {
+        let input = TextStructurer.Input(
+            rawMarkdown: "Page one content.\n\n---\n\nPage two content.",
+            detectedLanguage: "en"
+        )
+        let output = TextStructurer.refine(input)
+        XCTAssertTrue(output.markdown.contains("---"))
+    }
+
+    func testBrokenSentencesMerged() {
+        // PDF often splits sentences across lines
+        let input = TextStructurer.Input(
+            rawMarkdown: "This sentence was broken\nacross two lines in the PDF.",
+            detectedLanguage: "en"
+        )
+        let output = TextStructurer.refine(input)
+        // Should merge into single paragraph
+        XCTAssertFalse(output.markdown.contains("\n"))
+    }
+
+    func testLanguageDetection() {
+        let english = "The quick brown fox jumps over the lazy dog."
+        let detected = TextStructurer.detectLanguage(english)
+        XCTAssertEqual(detected, "en")
+    }
+
+    func testEmptyInputHandled() {
+        let input = TextStructurer.Input(rawMarkdown: "", detectedLanguage: nil)
+        let output = TextStructurer.refine(input)
+        XCTAssertTrue(output.markdown.isEmpty)
+        XCTAssertEqual(output.sentenceCount, 0)
+    }
+
+    func testParagraphCount() {
+        let input = TextStructurer.Input(
+            rawMarkdown: "First paragraph text.\n\nSecond paragraph text.\n\nThird paragraph.",
+            detectedLanguage: "en"
+        )
+        let output = TextStructurer.refine(input)
+        XCTAssertEqual(output.paragraphCount, 3)
+    }
+
+    func testMultipleLanguages() {
+        let inputs: [(String, String)] = [
+            ("Le renard brun rapide saute par-dessus le chien paresseux.", "fr"),
+            ("Der schnelle braune Fuchs springt über den faulen Hund.", "de"),
+        ]
+        for (text, expectedLang) in inputs {
+            let detected = TextStructurer.detectLanguage(text)
+            XCTAssertEqual(detected, expectedLang, "Failed for language: \(expectedLang)")
+        }
+    }
+
+    // MARK: - WritingToolsRefiner Tests
+
+    func testFallbackOnOlderOS() async {
+        // WritingToolsRefinerAdapter always returns input unchanged on unsupported OS
+        let input = "# Test\n\nSome content here."
+        let output = await WritingToolsRefinerAdapter.refine(markdown: input, language: "en")
+        // On macOS < 15.1 or Intel, wasRefined should be false
+        if !WritingToolsAvailabilityCheck.isAvailable {
+            XCTAssertFalse(output.wasRefined)
+            XCTAssertEqual(output.markdown, input)
+        }
+    }
+
+    func testChunkSplitting() async {
+        // Large document should be chunked without losing content
+        let longText = (0..<50).map { "Paragraph \($0). This is body text for testing." }.joined(separator: "\n\n")
+        let output = await WritingToolsRefinerAdapter.refine(markdown: longText, language: "en")
+        // Content should be preserved regardless of refinement
+        XCTAssertFalse(output.markdown.isEmpty)
+    }
+
+    func testHeadingsNotCorrupted() async {
+        let input = "# Main Title\n\n## Section One\n\nBody text here.\n\n### Subsection\n\nMore text."
+        let output = await WritingToolsRefinerAdapter.refine(markdown: input, language: "en")
+        XCTAssertTrue(output.markdown.contains("# Main Title"))
+        XCTAssertTrue(output.markdown.contains("## Section One"))
+        XCTAssertTrue(output.markdown.contains("### Subsection"))
+    }
+
+    // MARK: - Integration: NL → Writing Tools Pipeline
+
+    func testFullPipeline() async {
+        let rawPDFOutput = """
+        # Document Title
+
+        This sentence was split
+        across a line in the PDF. And this is another sentence.
+
+        ## Section Heading
+
+        Body paragraph one. It has multiple sentences. This is the third.
+
+        Body paragraph two with different content here.
+        """
+
+        // Step 1: NaturalLanguage structuring
+        let nlInput = TextStructurer.Input(rawMarkdown: rawPDFOutput, detectedLanguage: "en")
+        let nlOutput = TextStructurer.refine(nlInput)
+
+        XCTAssertTrue(nlOutput.markdown.contains("# Document Title"))
+        XCTAssertTrue(nlOutput.sentenceCount > 0)
+
+        // Step 2: Writing Tools refinement (may be no-op on older OS)
+        let wtOutput = await WritingToolsRefinerAdapter.refine(
+            markdown: nlOutput.markdown,
+            language: nlOutput.detectedLanguage
+        )
+
+        XCTAssertFalse(wtOutput.markdown.isEmpty)
+        XCTAssertTrue(wtOutput.markdown.contains("# Document Title"))
+    }
+}
+
+/// Exposes availability check for test assertions
+enum WritingToolsAvailabilityCheck {
+    static var isAvailable: Bool {
+        if #available(macOS 15.1, *) {
+            return WritingToolsRefiner.isAvailable
+        }
+        return false
+    }
+}

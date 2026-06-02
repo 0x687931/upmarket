@@ -3,6 +3,8 @@ import StoreKit
 
 struct PaywallView: View {
 
+    var onPurchaseComplete: (() -> Void)? = nil
+
     @EnvironmentObject private var store: StoreManager
     @Environment(\.dismiss) private var dismiss
 
@@ -18,11 +20,15 @@ struct PaywallView: View {
             Divider()
             ScrollView {
                 VStack(spacing: 12) {
-                    proCard
-                    if flags.aiAvailable {
-                        basicCard
+                    if canPurchasePro {
+                        proCard
+                    } else {
+                        proUnavailableCard
                     }
+                    basicCard
                     packCard
+                    productStatus
+                    purchaseStatus
                     restoreButton
                 }
                 .padding(24)
@@ -31,6 +37,9 @@ struct PaywallView: View {
         }
         .frame(width: 460)
         .fixedSize(horizontal: false, vertical: true)
+        .task {
+            await store.loadProducts()
+        }
     }
 
     // MARK: - Header
@@ -124,7 +133,7 @@ struct PaywallView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(isPurchasing != nil || store.proProduct == nil)
+            .disabled(isPurchasing != nil || store.proProduct == nil || !canPurchasePro)
         }
         .padding(18)
         .background(
@@ -137,16 +146,44 @@ struct PaywallView: View {
         )
     }
 
+    private var proUnavailableCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(.secondary)
+                Text("Upmarket + AI")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                Spacer()
+                Text("Unavailable")
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+            }
+            Text(flags.aiUnavailableReason ?? device.upmarketAIUnavailableReason)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text("Use Upmarket for unlimited private conversion on this Mac.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(Color.secondary.opacity(0.25), lineWidth: 1)
+        )
+    }
+
     // MARK: - Basic Card (secondary)
 
     private var basicCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Upmarket")
+                    Text(verbatim: "Upmarket")
                         .font(.headline)
                         .fontWeight(.semibold)
-                    Text("For everyday documents without AI")
+                    Text(device.supportsAdvancedRuntime ? "For everyday documents without AI" : "For native Basic conversion on this Mac")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -162,8 +199,13 @@ struct PaywallView: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                featureRow("PDF, Word, PowerPoint, HTML → Markdown", isHighlight: false)
-                featureRow("Tables and layout detection", isHighlight: false)
+                if device.supportsAdvancedRuntime {
+                    featureRow("PDF, Word, PowerPoint, HTML → Markdown", isHighlight: false)
+                    featureRow("Tables and layout detection", isHighlight: false)
+                } else {
+                    featureRow("Native PDF and media metadata conversion", isHighlight: false)
+                    featureRow("Advanced document formats require Apple Silicon", isHighlight: false)
+                }
                 featureRow("Unlimited conversions", isHighlight: false)
             }
 
@@ -237,8 +279,53 @@ struct PaywallView: View {
         .padding(.top, 4)
     }
 
+    @ViewBuilder private var productStatus: some View {
+        if let error = store.productLoadError {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundStyle(.orange)
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(10)
+            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        } else if !store.productsLoaded {
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text("Loading purchase options...")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 4)
+        }
+    }
+
+    @ViewBuilder private var purchaseStatus: some View {
+        if let errorMessage {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundStyle(.orange)
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Dismiss") {
+                    self.errorMessage = nil
+                }
+                .buttonStyle(.plain)
+                .font(.caption)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(10)
+            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        }
+    }
+
     private var legalFooter: some View {
-        Text("One-time purchase · No subscription · Processed by Apple")
+        Text(L("paywall.footer"))
             .font(.caption2)
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
@@ -259,14 +346,23 @@ struct PaywallView: View {
         }
     }
 
+    private var canPurchasePro: Bool {
+        flags.aiAvailable
+    }
+
     private func buy(_ product: Product) async {
+        if product.id == StoreManager.proID && !canPurchasePro {
+            errorMessage = flags.aiUnavailableReason ?? device.upmarketAIUnavailableReason
+            return
+        }
         isPurchasing = product.id
         errorMessage = nil
         do {
             try await store.purchase(product)
+            onPurchaseComplete?()
             dismiss()
         } catch {
-            errorMessage = "Purchase failed. Please try again."
+            errorMessage = "Purchase could not be completed. Please try again or use Restore Purchases."
         }
         isPurchasing = nil
     }

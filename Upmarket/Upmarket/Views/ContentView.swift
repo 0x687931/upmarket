@@ -1,13 +1,17 @@
 import SwiftUI
+import StoreKit
 import UniformTypeIdentifiers
 import AppKit
+import OSLog
 
 struct ContentView: View {
 
-    @EnvironmentObject private var conversion: ConversionService
+    @EnvironmentObject private var conversion: ConversionQueue
     @EnvironmentObject private var store: StoreManager
     @EnvironmentObject private var modelManager: ModelManager
 
+    @State private var primaryJobID: UUID?
+    @State private var isAnalysingPrimary = false
     @State private var isTargeted = false
     @State private var showPaywall = false
     @State private var showModelDownload = false
@@ -18,51 +22,39 @@ struct ContentView: View {
     @State private var pendingAdvice: ComplexityAdvice?
     @State private var languageWarning: String?
 
+    // Animation state
+    @State private var symbolScale: CGFloat = 1.0
+    @State private var symbolOpacity: Double = 1.0
+    @State private var glowRadius: CGFloat = 0
+    @State private var ringProgress: Double = 0
+    @State private var rippleScale: CGFloat = 0
+    @State private var rippleOpacity: Double = 0
+
     var body: some View {
         VStack(spacing: 0) {
             statusBanner
             Divider()
             ZStack {
-                if conversion.isConverting || conversion.isAnalysing {
-                    progressView
-                } else if let result = conversion.result {
-                    outputView(result)
+                if isAnalysingPrimary {
+                    convertingView(nil)
+                } else if let job = primaryJob {
+                    jobView(job)
                 } else {
-                    dropZone
+                    dropZoneView
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .overlay(alignment: .bottom) {
-            if let warning = languageWarning {
-                HStack(spacing: 8) {
-                    Image(systemName: "info.circle")
-                        .foregroundStyle(.orange)
-                    Text(warning)
-                        .font(.caption)
-                    Spacer()
-                    Button { languageWarning = nil } label: {
-                        Image(systemName: "xmark")
-                            .font(.caption2)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(.regularMaterial)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
-        .animation(.easeInOut(duration: 0.2), value: languageWarning)
+        .accessibilityIdentifier("PrimaryConversionView")
         .frame(
-            minWidth: conversion.result != nil ? 560 : 400,
-            idealWidth: conversion.result != nil ? 600 : 400,
-            maxWidth: conversion.result != nil ? 800 : 400,
-            minHeight: 520,
+            minWidth: isOutputPhase ? 560 : 400,
+            idealWidth: isOutputPhase ? 640 : 400,
+            maxWidth: isOutputPhase ? 900 : 400,
+            minHeight: 500,
             maxHeight: .infinity
         )
+        .animation(.spring(duration: 0.4), value: isOutputPhase)
         .sheet(isPresented: $showPaywall) {
             PaywallView().environmentObject(store)
         }
@@ -78,13 +70,10 @@ struct ContentView: View {
             if let advice = pendingAdvice, let url = pendingFileURL {
                 AISuggestionView(
                     advice: advice,
+                    proPrice: store.proProduct?.displayPrice ?? "$9.99",
                     onUseAI: {
                         showAISuggestion = false
-                        if store.hasProOrAbove {
-                            conversion.convert(fileURL: url, useAI: true)
-                        } else {
-                            showPaywall = true
-                        }
+                        showPaywall = true
                     },
                     onBasic: {
                         showAISuggestion = false
@@ -94,234 +83,273 @@ struct ContentView: View {
                 )
             }
         }
-        .onAppear {
-            // Check model status silently — don't prompt on first launch
-            // Download is triggered when user first tries to convert
-            modelManager.checkModels()
+        .overlay(alignment: .bottom) { languageWarningBanner }
+        .onAppear { startIdleAnimation() }
+        .onChange(of: isAnalysingPrimary) { analysing in
+            if analysing { startProgressAnimation() }
         }
-        .onChange(of: modelManager.allRequiredDownloaded) { ready in
-            if ready { showModelDownload = false }
+        .onChange(of: primaryJob?.stage) { stage in
+            if stage?.isRunning == true { startProgressAnimation() }
         }
-        .onChange(of: conversion.needsPassword) { needs in
-            if needs { showPasswordPrompt = true }
+        .onChange(of: primaryJob?.result) { result in
+            guard let result else { return }
+            if result.errorMessage == ConversionError.passwordRequired.errorDescription {
+                showPasswordPrompt = true
+            }
+            if case .success = result, store.shouldShowTrialPaywallAfterConversion() {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                    NotificationCenter.default.post(name: .showPaywall, object: nil)
+                }
+            }
         }
-    }
-
-    // MARK: - Status Banner
-
-    @ViewBuilder
-    private var statusBanner: some View {
-        if store.hasBasicOrAbove {
-            EmptyView()
-        } else if store.freeDocsRemaining > 0 {
-            bannerView(
-                icon: "sparkles",
-                message: store.freeDocsRemaining == 1
-                    ? "1 free conversion remaining"
-                    : "\(store.freeDocsRemaining) free conversions remaining — no sign-up needed",
-                buttonLabel: "Upgrade",
-                color: Color.accentColor.opacity(0.08),
-                action: { showPaywall = true }
-            )
-        } else if let nudge = store.nudgeMessage {
-            bannerView(
-                icon: "arrow.up.circle.fill",
-                message: nudge,
-                buttonLabel: "See Plans",
-                color: Color.accentColor.opacity(0.08),
-                action: { showPaywall = true }
-            )
-        } else if store.packCredits > 0 {
-            EmptyView()
-        } else {
-            bannerView(
-                icon: "lock.fill",
-                message: "You've used your free conversions",
-                buttonLabel: "Unlock",
-                color: Color.red.opacity(0.07),
-                action: { showPaywall = true }
-            )
+        .onReceive(NotificationCenter.default.publisher(for: .openFilePicker)) { _ in
+            openFilePicker()
         }
     }
 
-    private func bannerView(icon: String, message: String, buttonLabel: String, color: Color, action: @escaping () -> Void) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .foregroundStyle(Color.accentColor)
-            Text(message)
-                .font(.subheadline)
-                .fontWeight(.medium)
-            Spacer()
-            Button(buttonLabel, action: action)
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 9)
-        .background(color)
+    private var primaryJob: ConversionJob? {
+        guard let primaryJobID else { return nil }
+        return conversion.job(id: primaryJobID)
+    }
+
+    private var isOutputPhase: Bool {
+        primaryJob?.result?.output != nil
     }
 
     // MARK: - Drop Zone
 
-    private var dropZone: some View {
-        VStack(spacing: 0) {
-            Spacer()
-            VStack(spacing: 20) {
-                // Icon
+    private var dropZoneView: some View {
+        ZStack {
+            // Drop target border
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(
+                    isTargeted ? Color.accentColor : Color.secondary.opacity(0.15),
+                    style: StrokeStyle(
+                        lineWidth: isTargeted ? 2 : 1.5,
+                        dash: isTargeted ? [] : [10, 6]
+                    )
+                )
+                .padding(24)
+                .animation(.easeInOut(duration: 0.2), value: isTargeted)
+
+            VStack(spacing: 28) {
+                // Animated # symbol
                 ZStack {
+                    // Glow ring
                     Circle()
-                        .fill(Color.accentColor.opacity(isTargeted ? 0.15 : 0.08))
-                        .frame(width: 88, height: 88)
-                        .animation(.easeInOut(duration: 0.2), value: isTargeted)
-                    Image(systemName: "arrow.down.doc")
-                        .font(.system(size: 36, weight: .light))
+                        .fill(Color.accentColor.opacity(0.12))
+                        .frame(width: 100 + glowRadius, height: 100 + glowRadius)
+                        .blur(radius: 12)
+                        .opacity(isTargeted ? 1 : 0.6)
+                        .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true), value: glowRadius)
+
+                    // Ripple on drop target
+                    Circle()
+                        .strokeBorder(Color.accentColor.opacity(rippleOpacity), lineWidth: 2)
+                        .frame(width: 90 * rippleScale, height: 90 * rippleScale)
+
+                    // Main symbol
+                    Text("#")
+                        .font(.system(size: 64, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.accentColor)
+                        .opacity(isTargeted ? 1.0 : 0.85)
+                        .scaleEffect(symbolScale)
+                        .opacity(symbolOpacity)
+                        .animation(.easeInOut(duration: 0.2), value: isTargeted)
                 }
 
-                // Text
-                VStack(spacing: 6) {
-                    Text(isTargeted ? "Release to convert" : "Drop a document")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .animation(.easeInOut(duration: 0.15), value: isTargeted)
-
-                    Text("or")
-                        .font(.subheadline)
-                        .foregroundStyle(.tertiary)
-
-                    Button("Choose File") { openFilePicker() }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.regular)
-                }
-
-                // Format chips
-                HStack(spacing: 8) {
-                    ForEach(["PDF", "Word", "PowerPoint", "Excel", "HTML", "Images"], id: \.self) { format in
-                        Text(format)
-                            .font(.caption)
-                            .fontWeight(.medium)
+                // Format chips — no text label needed
+                HStack(spacing: 6) {
+                    ForEach(["PDF", "DOCX", "PPTX", "XLSX", "HTML", "EPUB", "CSV", "Images", "Audio"], id: \.self) { fmt in
+                        Text(fmt)
+                            .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(.secondary)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(Color.secondary.opacity(0.1), in: Capsule())
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color.secondary.opacity(0.08), in: Capsule())
                     }
                 }
-            }
-            Spacer()
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .opacity(isTargeted ? 0 : 1)
+                .animation(.easeInOut(duration: 0.15), value: isTargeted)
 
-            // Keyboard hint
-            HStack {
-                Spacer()
-                HStack(spacing: 4) {
-                    Image(systemName: "command")
-                    Text("O")
+                // Choose file button — minimal
+                Button {
+                    openFilePicker()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "folder")
+                            .font(.system(size: 13))
+                        Text(L("dropzone.button"))
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .foregroundStyle(Color.accentColor)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 7)
+                    .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
                 }
-                .font(.caption2)
-                .foregroundStyle(.quaternary)
-                .padding(.trailing, 16)
-                .padding(.bottom, 12)
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("ChooseDocumentButton")
+                .opacity(isTargeted ? 0 : 1)
+                .animation(.easeInOut(duration: 0.15), value: isTargeted)
+            }
+
+            // Cmd+O hint
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    HStack(spacing: 3) {
+                        Image(systemName: "command")
+                            .font(.system(size: 9))
+                        Text("O")
+                            .font(.system(size: 9, weight: .medium))
+                    }
+                    .foregroundStyle(.quaternary)
+                    .padding(12)
+                }
+            }
+        }
+        .contentShape(Rectangle())
+        .onDrop(of: [.fileURL], isTargeted: $isTargeted, perform: handleDrop)
+        .onTapGesture { openFilePicker() }
+        .onChange(of: isTargeted) { targeted in
+            if targeted { triggerRipple() }
+        }
+    }
+
+    // MARK: - Converting View
+
+    private func jobView(_ job: ConversionJob) -> some View {
+        if job.isRunning {
+            return AnyView(convertingView(job))
+        }
+        if let result = job.result {
+            return AnyView(outputView(result, job: job))
+        }
+        return AnyView(convertingView(job))
+    }
+
+    private func convertingView(_ job: ConversionJob?) -> some View {
+        VStack(spacing: 24) {
+            ZStack {
+                // Progress ring
+                Circle()
+                    .stroke(Color.accentColor.opacity(0.1), lineWidth: 3)
+                    .frame(width: 80, height: 80)
+
+                Circle()
+                    .trim(from: 0, to: ringProgress)
+                    .stroke(
+                        Color.accentColor,
+                        style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                    )
+                    .frame(width: 80, height: 80)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeInOut(duration: 0.5), value: ringProgress)
+
+                Text("#")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.accentColor)
+                    .scaleEffect(0.9 + (ringProgress * 0.1))
+            }
+
+            VStack(spacing: 6) {
+                Text(job?.name ?? "Checking document")
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: 280)
+
+                Text(job.map(stageText) ?? "Checking file access and document complexity")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let job, job.isRunning {
+                Button("Cancel") {
+                    conversion.cancel(job.id)
+                }
+                .buttonStyle(.bordered)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(
-                    isTargeted ? Color.accentColor : Color.secondary.opacity(0.2),
-                    style: StrokeStyle(lineWidth: isTargeted ? 2 : 1.5, dash: isTargeted ? [] : [8, 4])
-                )
-                .animation(.easeInOut(duration: 0.2), value: isTargeted)
-                .padding(20)
-        )
-        .onDrop(of: [.fileURL], isTargeted: $isTargeted, perform: handleDrop)
-        .keyboardShortcut("o", modifiers: .command)
-        .onTapGesture { openFilePicker() }
     }
 
-    // MARK: - Progress
+    // MARK: - Output View
 
-    private var progressView: some View {
-        VStack(spacing: 20) {
-            ProgressView()
-                .scaleEffect(1.2)
-                .controlSize(.large)
-
-            VStack(spacing: 6) {
-                Text(conversion.isAnalysing ? "Analysing document…" : "Converting…")
-                    .font(.title3)
-                    .fontWeight(.medium)
-
-                Text(conversion.isAnalysing
-                     ? "Checking complexity — usually a few seconds"
-                     : "This usually takes 5–30 seconds")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    // MARK: - Output
-
-    private func outputView(_ result: ConversionResult) -> some View {
+    private func outputView(_ result: ConversionResult, job: ConversionJob) -> some View {
         switch result {
         case .success(let output):
             return AnyView(successView(output))
-        case .failure(let error):
-            return AnyView(errorView(error))
+        case .failure(let message):
+            return AnyView(errorView(message, job: job))
         }
     }
 
     private func successView(_ output: ConversionOutput) -> some View {
         VStack(spacing: 0) {
-            // Toolbar
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 8) {
-                        Text(output.title)
-                            .fontWeight(.semibold)
-                            .lineLimit(1)
-                        if output.usedAI {
-                            Label("AI", systemImage: "sparkles")
-                                .font(.caption2)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(Color.accentColor)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.accentColor.opacity(0.1), in: Capsule())
-                        }
+            // Compact toolbar — icons only with tooltips
+            HStack(spacing: 10) {
+                // File info
+                HStack(spacing: 6) {
+                    Text(output.format)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 4))
+
+                    Text(output.title)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+
+                    if output.usedAI {
+                        Image(symbol: UpmarketSymbols.ai)
+                            .font(.caption)
+                            .foregroundStyle(Color.accentColor)
                     }
-                    Text("\(output.format) · \(output.pages) page\(output.pages == 1 ? "" : "s") · \(wordCount(output.markdown)) words")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
+
                 Spacer()
-                Button {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(output.markdown, forType: .string)
-                } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
-                }
-                .buttonStyle(.bordered)
-                .keyboardShortcut("c", modifiers: [.command, .shift])
 
-                Button {
-                    saveMarkdown(output)
-                } label: {
-                    Label("Save", systemImage: "square.and.arrow.down")
-                }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut("s", modifiers: .command)
+                Text("\(wordCount(output.markdown)) words")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
 
-                Button {
-                    conversion.reset()
-                } label: {
-                    Label("New", systemImage: "plus")
+                Divider().frame(height: 16)
+
+                // Icon-only actions
+                Group {
+                    Button {
+                        FileAccessService.shared.copyMarkdown(output.markdown)
+                    } label: {
+                        Image(symbol: UpmarketSymbols.copy)
+                    }
+                    .help("Copy Markdown  ⌘C")
+                    .keyboardShortcut("c", modifiers: [.command, .shift])
+
+                    Button { saveMarkdown(output) } label: {
+                        Image(symbol: UpmarketSymbols.save)
+                    }
+                    .help("Save as .md  ⌘S")
+                    .keyboardShortcut("s", modifiers: .command)
+
+                    Button { resetToIdle() } label: {
+                        Image(systemName: "plus")
+                    }
+                    .help("Convert Another  ⌘N")
+                    .keyboardShortcut("n", modifiers: .command)
                 }
-                .buttonStyle(.bordered)
-                .keyboardShortcut("n", modifiers: .command)
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .font(.system(size: 15))
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(Color(nsColor: .windowBackgroundColor))
 
             Divider()
 
@@ -333,37 +361,97 @@ struct ContentView: View {
                     .padding(20)
             }
         }
+        .transition(.asymmetric(
+            insertion: .opacity.combined(with: .move(edge: .trailing)),
+            removal: .opacity
+        ))
     }
 
-    private func errorView(_ error: String) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 40, weight: .light))
-                .foregroundStyle(.red.opacity(0.8))
+    // MARK: - Error View
 
-            VStack(spacing: 6) {
-                Text("Couldn't convert this document")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                Text(error)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 360)
-            }
+    private func errorView(_ message: String, job: ConversionJob?) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 36, weight: .light))
+                .foregroundStyle(.orange)
+
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 300)
 
             HStack(spacing: 10) {
-                Button("Try Another") { conversion.reset() }
+                Button("Convert Another") { resetToIdle() }
                     .buttonStyle(.borderedProminent)
-                if conversion.needsPassword {
-                    Button("Enter Password") {
-                        showPasswordPrompt = true
-                    }
-                    .buttonStyle(.bordered)
+                if job != nil, message == ConversionError.passwordRequired.errorDescription {
+                    Button("Enter Password") { showPasswordPrompt = true }
+                        .buttonStyle(.bordered)
+                } else if let job, job.stage != .cancelled {
+                    Button("Retry") { retry(job) }
+                        .buttonStyle(.bordered)
                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Status Banner
+
+    @ViewBuilder
+    private var statusBanner: some View {
+        if store.hasBasicOrAbove {
+            EmptyView()
+        } else if store.freeDocsRemaining > 0 {
+            bannerRow(
+                icon: "sparkles",
+                text: store.freeDocsRemaining == 1
+                    ? "1 free conversion remaining"
+                    : "\(store.freeDocsRemaining) free conversions",
+                action: ("Upgrade", { showPaywall = true }),
+                tint: Color.accentColor.opacity(0.07)
+            )
+        } else if let nudge = store.nudgeMessage {
+            bannerRow(icon: "arrow.up.circle.fill", text: nudge,
+                      action: ("See Plans", { showPaywall = true }),
+                      tint: Color.accentColor.opacity(0.07))
+        } else if store.packCredits == 0 {
+            bannerRow(icon: "lock.fill", text: "Free conversions used",
+                      action: ("Unlock", { showPaywall = true }),
+                      tint: Color.red.opacity(0.06))
+        }
+    }
+
+    private func bannerRow(icon: String, text: String, action: (String, () -> Void), tint: Color) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon).foregroundStyle(Color.accentColor).font(.caption)
+            Text(text).font(.caption).fontWeight(.medium)
+            Spacer()
+            Button(action.0, action: action.1)
+                .buttonStyle(.borderedProminent).controlSize(.mini)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 7)
+        .background(tint)
+    }
+
+    // MARK: - Language Warning
+
+    @ViewBuilder
+    private var languageWarningBanner: some View {
+        if let warning = languageWarning {
+            HStack(spacing: 8) {
+                Image(systemName: "info.circle").foregroundStyle(.orange).font(.caption)
+                Text(warning).font(.caption).lineLimit(2)
+                Spacer()
+                Button { languageWarning = nil } label: {
+                    Image(systemName: "xmark").font(.caption2)
+                }
+                .buttonStyle(.plain).foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 16).padding(.vertical, 8)
+            .background(.regularMaterial)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
     }
 
     // MARK: - Password Sheet
@@ -371,85 +459,126 @@ struct ContentView: View {
     private var passwordSheet: some View {
         VStack(spacing: 20) {
             Image(systemName: "lock.doc")
-                .font(.system(size: 40))
+                .font(.system(size: 36))
                 .foregroundStyle(Color.accentColor)
-
-            Text("This PDF is password-protected")
-                .font(.title3)
-                .fontWeight(.semibold)
-
-            Text("Enter the document password to convert it.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            SecureField("Password", text: $passwordInput)
+            Text("Password protected")
+                .font(.title3).fontWeight(.semibold)
+            SecureField("Document password", text: $passwordInput)
                 .textFieldStyle(.roundedBorder)
-                .frame(width: 260)
-
+                .frame(width: 240)
             HStack(spacing: 10) {
                 Button("Cancel") {
                     showPasswordPrompt = false
                     passwordInput = ""
-                    conversion.reset()
+                    resetToIdle()
                 }
                 .buttonStyle(.bordered)
-
                 Button("Convert") {
-                    guard let url = pendingFileURL else { return }
+                    guard let job = primaryJob else { return }
                     showPasswordPrompt = false
-                    conversion.convert(fileURL: url, password: passwordInput)
+                    let id = conversion.add(job.sourceURL, useAI: job.useAI, password: passwordInput)
+                    primaryJobID = id
                     passwordInput = ""
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(passwordInput.isEmpty)
             }
         }
-        .padding(32)
-        .frame(width: 360)
+        .padding(32).frame(width: 320)
+    }
+
+    // MARK: - Animations
+
+    private func startIdleAnimation() {
+        withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+            glowRadius = 20
+        }
+        withAnimation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true).delay(0.5)) {
+            symbolScale = 1.04
+            symbolOpacity = 0.85
+        }
+    }
+
+    private func triggerRipple() {
+        rippleScale = 0.3
+        rippleOpacity = 0.8
+        withAnimation(.easeOut(duration: 0.6)) {
+            rippleScale = 1.6
+            rippleOpacity = 0
+        }
+    }
+
+    private func startProgressAnimation() {
+        ringProgress = 0.15
+        withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: false)) {
+            ringProgress = 0.85
+        }
+    }
+
+    private func resetToIdle() {
+        conversion.reset()
+        languageWarning = nil
+        pendingFileURL = nil
+        pendingAdvice = nil
+        primaryJobID = nil
+        isAnalysingPrimary = false
+        withAnimation(.easeInOut(duration: 0.3)) {
+            ringProgress = 0
+        }
+        startIdleAnimation()
     }
 
     // MARK: - Actions
 
     private func openFilePicker() {
         guard store.canConvert else { showPaywall = true; return }
-        guard modelManager.allRequiredDownloaded else { showModelDownload = true; return }
-
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.pdf, .html, .png, .jpeg,
-            UTType(filenameExtension: "docx") ?? .data,
-            UTType(filenameExtension: "pptx") ?? .data,
-            UTType(filenameExtension: "xlsx") ?? .data]
-        panel.allowsMultipleSelection = false
-        if panel.runModal() == .OK, let url = panel.url {
+        if let url = FileAccessService.shared.chooseDocuments(allowsMultipleSelection: false).first {
             handleFile(url)
         }
     }
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
         guard store.canConvert else { showPaywall = true; return false }
-        guard modelManager.allRequiredDownloaded else { showModelDownload = true; return false }
-        guard let provider = providers.first else { return false }
+        guard !providers.isEmpty else { return false }
 
-        provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
-            guard let data = item as? Data,
-                  let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
-            DispatchQueue.main.async { self.handleFile(url) }
+        if providers.count == 1, let provider = providers.first {
+            provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
+                guard let data = item as? Data,
+                      let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
+                DispatchQueue.main.async { self.handleFile(url) }
+            }
+        } else {
+            ShelfWindowController.shared.show()
+            FileAccessService.shared.loadFileURLs(from: providers) { url in
+                NotificationCenter.default.post(name: .upmarketConvertFile, object: url)
+            }
         }
         return true
     }
 
     private func handleFile(_ url: URL) {
+        do {
+            try FileAccessService.shared.validateReadableInput(url)
+        } catch {
+            let message = FileAccessService.userVisibleMessage(for: error)
+            AppLog.fileAccess.error("Rejected input before conversion: \(message, privacy: .private)")
+            primaryJobID = conversion.addRejected(url, message: message)
+            isAnalysingPrimary = false
+            pendingFileURL = nil
+            languageWarning = nil
+            return
+        }
         store.consumeConversion()
         pendingFileURL = url
         languageWarning = nil
+        primaryJobID = nil
+        isAnalysingPrimary = true
 
         conversion.analyse(fileURL: url) { advice in
-            // Show language quality warning if applicable
+            self.isAnalysingPrimary = false
             if let warning = advice?.languageQualityWarning {
-                self.languageWarning = warning
+                withAnimation { self.languageWarning = warning }
             }
-
-            // Show AI suggestion if warranted and available
             if let advice, advice.suggestAI, !self.store.hasProOrAbove,
                FeatureFlags.shared.aiAvailable {
                 self.pendingAdvice = advice
@@ -461,30 +590,51 @@ struct ContentView: View {
     }
 
     private func beginConversion(url: URL, useAI: Bool) {
-        conversion.convert(fileURL: url, useAI: useAI)
-    }
-
-    private func saveMarkdown(_ output: ConversionOutput) {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
-        panel.nameFieldStringValue = output.title + ".md"
-        if panel.runModal() == .OK, let url = panel.url {
-            try? output.markdown.write(to: url, atomically: true, encoding: .utf8)
+        Task { @MainActor in
+            var shouldUseAI = useAI
+            if useAI, let reason = await modelManager.aiUseUnavailableReasonAfterChecking(hasPro: store.hasProOrAbove) {
+                shouldUseAI = false
+                withAnimation {
+                    languageWarning = reason
+                }
+            }
+            primaryJobID = conversion.add(url, useAI: shouldUseAI)
         }
     }
 
+    private func retry(_ job: ConversionJob) {
+        primaryJobID = conversion.retry(job.id)
+    }
+
+    private func stageText(_ job: ConversionJob) -> String {
+        if job.isStalled {
+            return "No progress detected. You can cancel and retry."
+        }
+        switch job.stage {
+        case .queued: return "Queued"
+        case .copying: return "Preparing document"
+        case .extracting: return "Reading document"
+        case .python: return "Processing document"
+        case .postProcessing: return "Cleaning Markdown"
+        case .complete: return "Done"
+        case .failed: return "Failed"
+        case .cancelled: return "Cancelled"
+        }
+    }
+
+    private func saveMarkdown(_ output: ConversionOutput) {
+        _ = FileAccessService.shared.saveMarkdown(output.markdown, title: output.title)
+    }
+
     private func wordCount(_ text: String) -> String {
-        let count = text.components(separatedBy: .whitespacesAndNewlines)
-            .filter { !$0.isEmpty }.count
-        return count > 1000
-            ? String(format: "%.1fk", Double(count) / 1000)
-            : "\(count)"
+        let n = text.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.count
+        return n > 999 ? String(format: "%.1fk", Double(n) / 1000) : "\(n)"
     }
 }
 
 #Preview {
     ContentView()
-        .environmentObject(ConversionService.shared)
+        .environmentObject(ConversionQueue.shared)
         .environmentObject(StoreManager.shared)
         .environmentObject(ModelManager.shared)
 }

@@ -1,6 +1,9 @@
 # Xcode
+*.profraw
 *.xcodeproj/xcuserdata/
+**/*.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
+**/*.xcworkspace/xcuserdata/
 *.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
 build/
 DerivedData/
@@ -41,6 +44,7 @@ Icon?
 # Environment
 .env
 .env.local
+.claude/
 
 # Dependencies
 Upmarket/Python/python-stdlib/
@@ -49,3 +53,6 @@ Upmarket/Python/Python.xcframework/
 # Archives
 *.xcarchive
 .venv/
+
+# Generated CI/local reports
+reports/

@@ -7,26 +7,76 @@ on:
     branches: [main]
 
 jobs:
-  build:
-    runs-on: macos-14  # Apple Silicon runner
+  pr-ci:
+    runs-on: macos-14
+    env:
+      DERIVED_DATA_DIR: build/DerivedData
     steps:
       - uses: actions/checkout@v4
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app
 
+      - name: Verify Xcode project
+        run: scripts/ci/verify_xcode_project.sh
+
+      - name: Validate P0 task registry
+        run: scripts/ci/validate_task_registry.py
+
+      - name: Validate P0 implementation plan sync
+        run: scripts/ci/validate_p0_plan_sync.py
+
+      - name: Validate architecture boundaries
+        run: scripts/ci/validate_architecture_boundaries.py
+
+      - name: Validate user-facing copy
+        run: scripts/ci/validate_user_facing_copy.py
+
+      - name: Validate generated repository docs
+        run: scripts/docs/generate_repo_docs.py --check
+
+      - name: Validate release regression guards
+        run: scripts/ci/validate_release_regression_guards.py
+
+      - name: Verify source entitlements
+        run: scripts/ci/verify_entitlements.sh
+
+      - name: Verify Python bundle imports
+        run: scripts/ci/verify_python_bundle.sh
+
+      - name: Validate corpus manifest
+        run: scripts/ci/validate_corpus.py
+
+      - name: Validate corpus baseline
+        run: scripts/ci/validate_corpus_baseline.py
+
+      - name: Validate corpus conversion pathways
+        run: scripts/ci/validate_corpus_pathways.py
+
+      - name: Validate local model manifests
+        run: scripts/ci/validate_models.py
+
+      - name: Validate model fault states
+        run: scripts/ci/test_model_faults.py
+
       - name: Build
         run: |
           xcodebuild build \
-            -project Upmarket.xcodeproj \
+            -project Upmarket/Upmarket.xcodeproj \
             -scheme Upmarket \
             -destination "platform=macOS" \
+            -derivedDataPath "$DERIVED_DATA_DIR" \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Test
+      - name: Verify built app package gates
+        run: scripts/ci/verify_release_app.sh "$DERIVED_DATA_DIR/Build/Products/Debug/Upmarket.app"
+
+      - name: Unit tests
         run: |
           xcodebuild test \
-            -project Upmarket.xcodeproj \
+            -project Upmarket/Upmarket.xcodeproj \
             -scheme Upmarket \
             -destination "platform=macOS" \
+            -derivedDataPath "$DERIVED_DATA_DIR" \
+            -only-testing:UpmarketTests \
             CODE_SIGNING_ALLOWED=NO

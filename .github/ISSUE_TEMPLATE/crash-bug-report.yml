@@ -1,0 +1,78 @@
+name: Crash or Bug Report
+description: Track crashes, conversion failures, purchase issues, and release regressions
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Failure Type
+      options:
+        - Crash
+        - Conversion engine crash or stall
+        - Stalled conversion
+        - Conversion failure or wrong output
+        - Enhanced conversion download issue
+        - Purchase or payment issue
+        - App update issue
+        - Unexpected feature behavior
+        - UI/accessibility bug
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened, in one or two sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      placeholder: "1. Open Upmarket\n2. Drop ...\n3. ..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App Version / Build
+      placeholder: "1.0 (123)"
+  - type: input
+    id: macos
+    attributes:
+      label: macOS Version and Hardware
+      placeholder: "macOS 15.5, M2 MacBook Air"
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Paste user-approved Help > Report a Problem preview text only. Do not include document contents, passwords, or private file paths.
+  - type: input
+    id: correlation
+    attributes:
+      label: Correlation ID
+      description: Optional job correlation ID from the report preview.
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - P0 - blocks release or corrupts user workflow
+        - P1 - major user-visible failure
+        - P2 - polish or edge case
+    validations:
+      required: true

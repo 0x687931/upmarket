@@ -9,14 +9,19 @@
 
 Key repos to watch:
 - **Docling**: https://github.com/docling-project/docling/releases
-- **PyMuPDF**: https://github.com/pymupdf/PyMuPDF/releases  
+- **pypdfium2**: https://github.com/pypdfium2-team/pypdfium2/releases
 - **BeeWare Python**: https://github.com/beeware/Python-Apple-support/releases
 - **Feature flags**: `docs/public/flags.json` (language support changes)
 
-### 2. Apply updates
+### 2. Stage candidate updates
+
+Edit `requirements-candidate.txt` with exact pins only. Do not edit `requirements.txt` until the candidate has passed validation and human review.
+
 ```bash
-./scripts/update_dependencies.sh
+./scripts/update_dependencies.sh --install-candidate
 ```
+
+If accepted, promote by copying the exact candidate pins to `requirements.txt` in the same reviewed change.
 
 ### 3. Test conversion quality
 ```bash
@@ -66,9 +71,9 @@ When Docling improves support for a language (e.g. Japanese):
 
 ## Dependency Version History
 
-| Version | Docling | PyMuPDF | PyTorch | Notes |
+| Version | Docling | pypdfium2 | PyTorch | Notes |
 |---|---|---|---|---|
-| 1.0.0 | 2.96.0 | 1.27.2 | 2.12.0 | Initial release |
+| 1.0.0 | 2.96.0 | 5.8.0 | 2.12.0 | Initial release; PyMuPDF/pymupdf4llm excluded |
 
 ---
 

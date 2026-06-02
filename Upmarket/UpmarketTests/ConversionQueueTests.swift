@@ -1,0 +1,674 @@
+import XCTest
+import AppKit
+import CoreText
+import PDFKit
+@testable import Upmarket
+
+@MainActor
+final class ConversionQueueTests: XCTestCase {
+    func testQueueRunsJobsSerially() async {
+        var events: [String] = []
+        let queue = ConversionQueue { job, progress in
+            events.append("start:\(job.name)")
+            progress?(.extracting)
+            try? await Task.sleep(nanoseconds: 20_000_000)
+            events.append("finish:\(job.name)")
+            return .success(ConversionOutput(
+                markdown: "# \(job.name)",
+                pages: 1,
+                format: job.ext,
+                title: job.name,
+                pipeline: .fast
+            ))
+        }
+
+        let first = queue.add(URL(fileURLWithPath: "/tmp/first.pdf"))
+        let second = queue.add(URL(fileURLWithPath: "/tmp/second.pdf"))
+
+        await waitForResult(first, in: queue)
+        await waitForResult(second, in: queue)
+
+        XCTAssertEqual(events, [
+            "start:first",
+            "finish:first",
+            "start:second",
+            "finish:second"
+        ])
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == first })?.stage, .complete)
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.stage, .complete)
+    }
+
+    func testBatchShelfQueueFiveMixedInputsWithFailureCancellationAndRetry() async {
+        var events: [String] = []
+        var attempts: [String: Int] = [:]
+        let queue = ConversionQueue { job, progress in
+            attempts[job.name, default: 0] += 1
+            events.append("start:\(job.name)#\(attempts[job.name]!)")
+            progress?(.extracting)
+            try? await Task.sleep(nanoseconds: 20_000_000)
+            if Task.isCancelled {
+                return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.")
+            }
+            if job.name == "bad" {
+                return .failure("Unsupported file")
+            }
+            if job.name == "retry" && attempts[job.name] == 1 {
+                return .failure("Transient extraction failure")
+            }
+            return .success(ConversionOutput(
+                markdown: "# \(job.name)",
+                pages: 1,
+                format: job.ext,
+                title: job.name,
+                pipeline: .fast
+            ))
+        }
+
+        let first = queue.add(URL(fileURLWithPath: "/tmp/first.pdf"))
+        let bad = queue.add(URL(fileURLWithPath: "/tmp/bad.docx"))
+        let retry = queue.add(URL(fileURLWithPath: "/tmp/retry.html"))
+        let cancelled = queue.add(URL(fileURLWithPath: "/tmp/cancelled.pptx"))
+        let last = queue.add(URL(fileURLWithPath: "/tmp/last.xlsx"))
+        queue.cancel(cancelled)
+
+        await waitForResult(first, in: queue)
+        await waitForResult(bad, in: queue)
+        await waitForResult(retry, in: queue)
+        let retryAgain = queue.retry(retry)
+        XCTAssertNotNil(retryAgain)
+        await waitForResult(retryAgain!, in: queue)
+        await waitForResult(last, in: queue)
+
+        XCTAssertEqual(queue.job(id: first)?.stage, .complete)
+        XCTAssertEqual(queue.job(id: bad)?.stage, .failed)
+        XCTAssertEqual(queue.job(id: retry)?.stage, .failed)
+        XCTAssertEqual(queue.job(id: retryAgain!)?.stage, .complete)
+        XCTAssertEqual(queue.job(id: cancelled)?.stage, .cancelled)
+        XCTAssertEqual(queue.job(id: last)?.stage, .complete)
+        XCTAssertEqual(queue.job(id: bad)?.result?.errorMessage, "Unsupported file")
+        XCTAssertEqual(queue.job(id: retry)?.result?.errorMessage, "Transient extraction failure")
+        XCTAssertEqual(queue.job(id: cancelled)?.result?.errorMessage, ConversionError.cancelled.errorDescription)
+        XCTAssertEqual(queue.job(id: retryAgain!)?.result?.output?.title, "retry")
+        XCTAssertFalse(queue.isConverting)
+        XCTAssertEqual(events, [
+            "start:first#1",
+            "start:bad#1",
+            "start:retry#1",
+            "start:last#1",
+            "start:retry#2"
+        ])
+    }
+
+    func testCancelPreventsQueuedJobFromRunning() async {
+        var started: [String] = []
+        let queue = ConversionQueue { job, _ in
+            started.append(job.name)
+            try? await Task.sleep(nanoseconds: 20_000_000)
+            return .success(ConversionOutput(
+                markdown: job.name,
+                pages: 1,
+                format: job.ext,
+                title: job.name,
+                pipeline: .fast
+            ))
+        }
+
+        let first = queue.add(URL(fileURLWithPath: "/tmp/first.pdf"))
+        let second = queue.add(URL(fileURLWithPath: "/tmp/second.pdf"))
+        queue.cancel(second)
+
+        await waitForResult(first, in: queue)
+
+        XCTAssertEqual(started, ["first"])
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.stage, .cancelled)
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.result?.errorMessage, ConversionError.cancelled.errorDescription)
+    }
+
+    func testCancelRunningJobStartsNextQueuedJob() async {
+        var started: [String] = []
+        let queue = ConversionQueue { job, _ in
+            started.append(job.name)
+            if job.name == "first" {
+                try? await Task.sleep(nanoseconds: 200_000_000)
+            }
+            return .success(ConversionOutput(
+                markdown: job.name,
+                pages: 1,
+                format: job.ext,
+                title: job.name,
+                pipeline: .fast
+            ))
+        }
+
+        let first = queue.add(URL(fileURLWithPath: "/tmp/first.pdf"))
+        let second = queue.add(URL(fileURLWithPath: "/tmp/second.pdf"))
+        await waitUntil { started == ["first"] }
+
+        queue.cancel(first)
+        await waitForResult(second, in: queue)
+
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == first })?.stage, .cancelled)
+        XCTAssertTrue(started.contains("second"))
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.stage, .complete)
+    }
+
+    func testCancelRunningJobDoesNotOverlapSlowRunnerWithNextJob() async {
+        var events: [String] = []
+        var releaseFirst: CheckedContinuation<Void, Never>?
+        let queue = ConversionQueue { job, _ in
+            events.append("start:\(job.name)")
+            if job.name == "first" {
+                await withCheckedContinuation { continuation in
+                    releaseFirst = continuation
+                }
+                events.append("unwound:first")
+                return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.")
+            }
+            events.append("finish:\(job.name)")
+            return .success(ConversionOutput(
+                markdown: job.name,
+                pages: 1,
+                format: job.ext,
+                title: job.name,
+                pipeline: .fast
+            ))
+        }
+
+        let first = queue.add(URL(fileURLWithPath: "/tmp/first.pdf"))
+        let second = queue.add(URL(fileURLWithPath: "/tmp/second.pdf"))
+        await waitUntil { events == ["start:first"] }
+
+        queue.cancel(first)
+        await sleep(milliseconds: 80)
+
+        XCTAssertEqual(queue.job(id: first)?.stage, .cancelled)
+        XCTAssertEqual(queue.job(id: first)?.result?.errorMessage, ConversionError.cancelled.errorDescription)
+        XCTAssertEqual(events, ["start:first"])
+
+        releaseFirst?.resume()
+        await waitForResult(second, in: queue)
+
+        XCTAssertEqual(events, [
+            "start:first",
+            "unwound:first",
+            "start:second",
+            "finish:second"
+        ])
+        XCTAssertEqual(queue.job(id: first)?.stage, .cancelled)
+        XCTAssertEqual(queue.job(id: second)?.stage, .complete)
+    }
+
+    func testCancelAllCancelsActiveAndQueuedJobs() async {
+        var started: [String] = []
+        let queue = ConversionQueue { job, _ in
+            started.append(job.name)
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            if Task.isCancelled {
+                return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.")
+            }
+            return .success(ConversionOutput(
+                markdown: job.name,
+                pages: 1,
+                format: job.ext,
+                title: job.name,
+                pipeline: .fast
+            ))
+        }
+
+        let first = queue.add(URL(fileURLWithPath: "/tmp/first.pdf"))
+        let second = queue.add(URL(fileURLWithPath: "/tmp/second.pdf"))
+        await waitUntil { started == ["first"] }
+
+        queue.cancelAll()
+
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == first })?.stage, .cancelled)
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.stage, .cancelled)
+        XCTAssertNil(queue.latestResult)
+        XCTAssertFalse(queue.isConverting)
+    }
+
+    func testRunningJobCanBeClassifiedAsStalledWithoutCancellingIt() {
+        let job = ConversionJob(
+            sourceURL: URL(fileURLWithPath: "/tmp/stalled.pdf"),
+            stage: .python,
+            lastProgressAt: Date(timeIntervalSince1970: 100)
+        )
+
+        XCTAssertTrue(job.hasNoRecentProgress(referenceDate: Date(timeIntervalSince1970: 165), threshold: 60))
+        XCTAssertTrue(job.isRunning)
+        XCTAssertEqual(job.stage, .python)
+    }
+
+    func testProgressClearsRecoverableStalledState() async {
+        let queue = ConversionQueue { _, progress in
+            progress?(.python)
+            try? await Task.sleep(nanoseconds: 20_000_000)
+            progress?(.postProcessing)
+            return .success(ConversionOutput(
+                markdown: "ok",
+                pages: 1,
+                format: "PDF",
+                title: "stalled",
+                pipeline: .fast
+            ))
+        }
+
+        let id = queue.add(URL(fileURLWithPath: "/tmp/stalled.pdf"))
+        await waitUntil {
+            queue.jobs.first(where: { $0.id == id })?.stage == .python
+        }
+
+        XCTAssertFalse(queue.jobs.first(where: { $0.id == id })?.isStalled ?? true)
+        await waitForResult(id, in: queue)
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == id })?.stage, .complete)
+        XCTAssertFalse(queue.jobs.first(where: { $0.id == id })?.isStalled ?? true)
+    }
+
+    func testCriticalMemoryPressureFailsRunningJobsRecoverably() async {
+        let queue = ConversionQueue { _, _ in
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            return .success(ConversionOutput(
+                markdown: "late",
+                pages: 1,
+                format: "PDF",
+                title: "late",
+                pipeline: .fast
+            ))
+        }
+
+        let id = queue.add(URL(fileURLWithPath: "/tmp/memory.pdf"))
+        await waitUntil {
+            queue.jobs.first(where: { $0.id == id })?.isRunning == true
+        }
+
+        queue.handleMemoryPressureCritical()
+
+        let job = queue.jobs.first { $0.id == id }
+        XCTAssertEqual(job?.stage, .failed)
+        XCTAssertEqual(job?.result?.errorMessage, ConversionError.memoryPressure.errorDescription)
+        XCTAssertFalse(job?.isRunning ?? true)
+    }
+
+    func testFailureIsStoredPerJob() async {
+        let queue = ConversionQueue { _, progress in
+            progress?(.extracting)
+            return .failure("Unsupported file")
+        }
+
+        let id = queue.add(URL(fileURLWithPath: "/tmp/bad.bin"))
+
+        await waitForResult(id, in: queue)
+
+        let job = queue.jobs.first { $0.id == id }
+        XCTAssertEqual(job?.stage, .failed)
+        XCTAssertEqual(job?.result?.errorMessage, "Unsupported file")
+    }
+
+    func testRejectedInputCreatesVisibleFailedJobWithoutRunningQueue() {
+        var didRun = false
+        let queue = ConversionQueue { _, _ in
+            didRun = true
+            return .failure("Should not run")
+        }
+        let message = FileAccessError.unsupportedType.errorDescription!
+
+        let id = queue.addRejected(URL(fileURLWithPath: "/tmp/rejected"), message: message)
+
+        let job = queue.jobs.first { $0.id == id }
+        XCTAssertEqual(job?.stage, .failed)
+        XCTAssertEqual(job?.result?.errorMessage, message)
+        XCTAssertEqual(queue.latestResult?.errorMessage, message)
+        XCTAssertFalse(queue.isConverting)
+        XCTAssertFalse(didRun)
+    }
+
+    func testJobLookupKeepsTrackedPasswordJobSeparateFromLatestResult() async {
+        let passwordMessage = ConversionError.passwordRequired.errorDescription!
+        let queue = ConversionQueue { job, _ in
+            if job.name == "locked" {
+                return .failure(passwordMessage)
+            }
+            return .success(ConversionOutput(
+                markdown: "# Plain",
+                pages: 1,
+                format: "PDF",
+                title: "plain",
+                pipeline: .fast
+            ))
+        }
+
+        let locked = queue.add(URL(fileURLWithPath: "/tmp/locked.pdf"))
+        let plain = queue.add(URL(fileURLWithPath: "/tmp/plain.pdf"))
+        await waitForResult(locked, in: queue)
+        await waitForResult(plain, in: queue)
+
+        XCTAssertEqual(queue.job(id: locked)?.result?.errorMessage, passwordMessage)
+        XCTAssertEqual(queue.job(id: plain)?.result?.output?.title, "plain")
+        XCTAssertEqual(queue.latestResult?.output?.title, "plain")
+    }
+
+    func testTrackedRunningJobSurvivesAdjacentRejectedInputLatestResult() async {
+        let queue = ConversionQueue { _, _ in
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            return .success(ConversionOutput(
+                markdown: "# Primary",
+                pages: 1,
+                format: "PDF",
+                title: "primary",
+                pipeline: .fast
+            ))
+        }
+
+        let primary = queue.add(URL(fileURLWithPath: "/tmp/primary.pdf"))
+        await waitUntil {
+            queue.job(id: primary)?.isRunning == true
+        }
+
+        let rejectedMessage = FileAccessError.unsupportedType.errorDescription!
+        let rejected = queue.addRejected(URL(fileURLWithPath: "/tmp/rejected"), message: rejectedMessage)
+
+        XCTAssertTrue(queue.job(id: primary)?.isRunning ?? false)
+        XCTAssertEqual(queue.job(id: rejected)?.result?.errorMessage, rejectedMessage)
+        XCTAssertEqual(queue.latestResult?.errorMessage, rejectedMessage)
+        await waitForResult(primary, in: queue)
+    }
+
+    func testPythonBridgeFailureIsStoredPerJob() async {
+        let queue = ConversionQueue { _, progress in
+            progress?(.python)
+            return .failure(ConversionError.pythonRuntime("Bridge unavailable").errorDescription!)
+        }
+
+        let id = queue.add(URL(fileURLWithPath: "/tmp/python.pdf"))
+        await waitForResult(id, in: queue)
+
+        let job = queue.jobs.first { $0.id == id }
+        XCTAssertEqual(job?.stage, .failed)
+        XCTAssertEqual(job?.result?.errorMessage, "The conversion engine couldn't start. Please try again.")
+    }
+
+    func testJobsAlwaysResolveToTerminalResultOrExplicitInProgressState() async {
+        let passwordMessage = ConversionError.passwordRequired.errorDescription!
+        var releaseRunning: CheckedContinuation<Void, Never>?
+        let queue = ConversionQueue { job, _ in
+            switch job.name {
+            case "success":
+                return .success(ConversionOutput(
+                    markdown: "# Success",
+                    pages: 1,
+                    format: "PDF",
+                    title: "success",
+                    pipeline: .fast
+                ))
+            case "password":
+                return .failure(passwordMessage)
+            case "running":
+                await withCheckedContinuation { continuation in
+                    releaseRunning = continuation
+                }
+                return .success(ConversionOutput(
+                    markdown: "# Running",
+                    pages: 1,
+                    format: "PDF",
+                    title: "running",
+                    pipeline: .fast
+                ))
+            default:
+                return .failure("Unsupported file")
+            }
+        }
+
+        let success = queue.add(URL(fileURLWithPath: "/tmp/success.pdf"))
+        let failed = queue.add(URL(fileURLWithPath: "/tmp/failed.pdf"))
+        let password = queue.add(URL(fileURLWithPath: "/tmp/password.pdf"))
+        let running = queue.add(URL(fileURLWithPath: "/tmp/running.pdf"))
+
+        await waitForResult(success, in: queue)
+        await waitForResult(failed, in: queue)
+        await waitForResult(password, in: queue)
+        await waitUntil {
+            queue.job(id: running)?.isRunning == true
+        }
+
+        assertResolved(queue.job(id: success), expectedStage: .complete, file: #filePath, line: #line)
+        assertResolved(queue.job(id: failed), expectedStage: .failed, file: #filePath, line: #line)
+        assertResolved(queue.job(id: password), expectedStage: .failed, file: #filePath, line: #line)
+        XCTAssertTrue(queue.needsPassword)
+
+        let runningJob = queue.job(id: running)
+        XCTAssertTrue(runningJob?.isRunning ?? false)
+        XCTAssertNil(runningJob?.result)
+
+        releaseRunning?.resume()
+        await waitForResult(running, in: queue)
+        assertResolved(queue.job(id: running), expectedStage: .complete, file: #filePath, line: #line)
+    }
+
+    func testRetryCreatesNewJobForOriginalSource() async {
+        var attempts = 0
+        let queue = ConversionQueue { job, _ in
+            attempts += 1
+            if attempts == 1 { return .failure("Try again") }
+            return .success(ConversionOutput(
+                markdown: job.name,
+                pages: 1,
+                format: job.ext,
+                title: job.name,
+                pipeline: .fast
+            ))
+        }
+
+        let first = queue.add(URL(fileURLWithPath: "/tmp/retry.pdf"))
+        await waitForResult(first, in: queue)
+
+        let second = queue.retry(first)
+        XCTAssertNotNil(second)
+        await waitForResult(second!, in: queue)
+
+        XCTAssertNotEqual(first, second)
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == first })?.stage, .failed)
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.stage, .complete)
+    }
+
+    func testRunnerCleansWorkspaceWhenInputCopyFails() async {
+        AppWorkspace.removeStaleWorkspaces()
+        let before = workspaceNames()
+        let missing = FileManager.default.temporaryDirectory
+            .appendingPathComponent("missing-\(UUID().uuidString)")
+            .appendingPathExtension("pdf")
+
+        let result = await ConversionRunner().run(ConversionJob(sourceURL: missing))
+
+        XCTAssertEqual(result.errorMessage, ConversionError.sourceUnavailable.errorDescription)
+        XCTAssertEqual(workspaceNames(), before)
+    }
+
+    func testRunnerCleansWorkspaceAfterSuccessfulNativeConversion() async throws {
+        AppWorkspace.removeStaleWorkspaces()
+        let before = workspaceNames()
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketCleanupSuccess-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: workspace)
+        }
+        let pdf = workspace.appendingPathComponent("success.pdf")
+        try writePDF(to: pdf, text: "Cleanup success")
+
+        let result = await ConversionRunner(supportsAdvancedRuntime: false)
+            .run(ConversionJob(sourceURL: pdf))
+
+        XCTAssertNil(result.errorMessage)
+        XCTAssertEqual(workspaceNames(), before)
+    }
+
+    func testRunnerCleansWorkspaceAfterRecoverableFailure() async throws {
+        AppWorkspace.removeStaleWorkspaces()
+        let before = workspaceNames()
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketCleanupFailure-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: workspace)
+        }
+        let docx = workspace.appendingPathComponent("failure.docx")
+        try Data("not a real docx, but enough to prove cleanup".utf8).write(to: docx)
+
+        let result = await ConversionRunner(supportsAdvancedRuntime: false)
+            .run(ConversionJob(sourceURL: docx))
+
+        XCTAssertEqual(result.errorMessage, ConversionError.unsupportedOnThisMac.errorDescription)
+        XCTAssertEqual(workspaceNames(), before)
+    }
+
+    func testNativeOnlyRuntimeRejectsPythonBackedFormats() async throws {
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketNativeOnlyTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: workspace)
+        }
+        let docx = workspace.appendingPathComponent("structured.docx")
+        try Data("not a real docx, but enough to prove routing".utf8).write(to: docx)
+
+        let result = await ConversionRunner(supportsAdvancedRuntime: false)
+            .run(ConversionJob(sourceURL: docx))
+
+        XCTAssertEqual(result.errorMessage, ConversionError.unsupportedOnThisMac.errorDescription)
+    }
+
+    func testNativeOnlyRuntimeStillConvertsDigitalPDF() async throws {
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketNativePDFTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: workspace)
+        }
+        let pdf = workspace.appendingPathComponent("native.pdf")
+        var mediaBox = CGRect(x: 0, y: 0, width: 400, height: 300)
+        guard let context = CGContext(pdf as CFURL, mediaBox: &mediaBox, nil) else {
+            return XCTFail("Expected PDF context")
+        }
+        context.beginPDFPage(nil)
+        let text = NSAttributedString(
+            string: "Native PDF conversion",
+            attributes: [.font: NSFont.systemFont(ofSize: 24), .foregroundColor: NSColor.black]
+        )
+        context.textPosition = CGPoint(x: 40, y: 150)
+        CTLineDraw(CTLineCreateWithAttributedString(text), context)
+        context.endPDFPage()
+        context.closePDF()
+
+        let result = await ConversionRunner(supportsAdvancedRuntime: false)
+            .run(ConversionJob(sourceURL: pdf))
+
+        XCTAssertNil(result.errorMessage)
+        XCTAssertEqual(result.output?.format, "PDF")
+        XCTAssertTrue(result.output?.markdown.contains("Native PDF conversion") ?? false)
+    }
+
+    func testAIPDFRouteIsSelectedBySwiftAndPassedToRuntimeHelper() async throws {
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketAIPDFRouteTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: workspace)
+        }
+        let pdf = workspace.appendingPathComponent("ai-route.pdf")
+        try writePDF(to: pdf, text: "AI route PDF")
+        let requestLog = workspace.appendingPathComponent("helper-request.json")
+        let helper = try makeRuntimeHelperScript(
+            requestLog: requestLog,
+            response: #"{"success":true,"needsPassword":false,"output":{"markdown":"AI PDF route output","pages":1,"format":"PDF","title":"AI PDF","pipeline":"ai"}}"#
+        )
+        let runner = ConversionRunner(
+            pythonWorker: PythonWorker(helperClient: RuntimeHelperClient(executableURL: helper, livenessInterval: 5)),
+            supportsAdvancedRuntime: true
+        )
+
+        let result = await runner.run(ConversionJob(sourceURL: pdf, useAI: true))
+
+        XCTAssertNil(result.errorMessage)
+        let request = try String(contentsOf: requestLog, encoding: .utf8)
+        XCTAssertTrue(request.contains(#""operation":"convert""#))
+        XCTAssertTrue(request.contains(#""useAI":true"#))
+        XCTAssertTrue(request.contains(#""filePath":"#))
+    }
+
+    private func writePDF(to url: URL, text: String) throws {
+        var mediaBox = CGRect(x: 0, y: 0, width: 400, height: 300)
+        guard let context = CGContext(url as CFURL, mediaBox: &mediaBox, nil) else {
+            throw NSError(domain: "ConversionQueueTests", code: 1)
+        }
+        context.beginPDFPage(nil)
+        let attributed = NSAttributedString(
+            string: text,
+            attributes: [.font: NSFont.systemFont(ofSize: 24), .foregroundColor: NSColor.black]
+        )
+        context.textPosition = CGPoint(x: 40, y: 150)
+        CTLineDraw(CTLineCreateWithAttributedString(attributed), context)
+        context.endPDFPage()
+        context.closePDF()
+    }
+
+    private func makeRuntimeHelperScript(requestLog: URL, response: String) throws -> URL {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketRouteHelperTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let helper = directory.appendingPathComponent("helper.sh")
+        let source = """
+        #!/bin/sh
+        cat > '\(requestLog.path)'
+        printf '%s\\n' '\(response)'
+        """
+        try source.write(to: helper, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: helper.path)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: directory)
+        }
+        return helper
+    }
+
+    private func waitForResult(_ id: UUID, in queue: ConversionQueue) async {
+        for _ in 0..<100 {
+            if let job = queue.jobs.first(where: { $0.id == id }),
+               job.result != nil,
+               !job.isRunning {
+                return
+            }
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTFail("Timed out waiting for conversion job \(id)")
+    }
+
+    private func waitUntil(_ predicate: @escaping () -> Bool) async {
+        for _ in 0..<100 {
+            if predicate() { return }
+            await sleep(milliseconds: 10)
+        }
+        XCTFail("Timed out waiting for condition")
+    }
+
+    private func sleep(milliseconds: UInt64) async {
+        try? await Task.sleep(nanoseconds: milliseconds * 1_000_000)
+    }
+
+    private func assertResolved(
+        _ job: ConversionJob?,
+        expectedStage: ConversionStage,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertEqual(job?.stage, expectedStage, file: file, line: line)
+        XCTAssertFalse(job?.isRunning ?? true, file: file, line: line)
+        XCTAssertNotNil(job?.result, file: file, line: line)
+    }
+
+    private func workspaceNames() -> [String] {
+        let entries = (try? FileManager.default.contentsOfDirectory(
+            at: AppWorkspace.baseDirectory,
+            includingPropertiesForKeys: nil
+        )) ?? []
+        return entries.map(\.lastPathComponent).sorted()
+    }
+}

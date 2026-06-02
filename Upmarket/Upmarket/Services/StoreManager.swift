@@ -1,21 +1,32 @@
 import Foundation
 import StoreKit
 import Combine
+import OSLog
 
 final class StoreManager: ObservableObject {
 
     static let shared = StoreManager()
 
-    // Product IDs — never expose these strings in UI
-    static let basicID    = "com.upmarket.app.basic"
-    static let proID      = "com.upmarket.app.pro"
-    static let packID     = "com.upmarket.app.doc_pack"  // 5-doc pack at $0.99
+    // Product IDs — nonisolated so they're accessible from any actor context
+    nonisolated static let basicID    = "com.upmarket.app.basic"
+    nonisolated static let proID      = "com.upmarket.app.pro"
+    nonisolated static let packID     = "com.upmarket.app.doc_pack"
 
     let objectWillChange = PassthroughSubject<Void, Never>()
 
     private(set) var basicProduct: Product?
     private(set) var proProduct:   Product?
     private(set) var packProduct:  Product?
+
+    private(set) var productsLoaded = false {
+        willSet { objectWillChange.send() }
+    }
+
+    private(set) var productLoadError: String? {
+        willSet { objectWillChange.send() }
+    }
+
+    private var isLoadingProducts = false
 
     private(set) var entitlement: Entitlement = .none {
         willSet { objectWillChange.send() }
@@ -36,15 +47,15 @@ final class StoreManager: ObservableObject {
         willSet { objectWillChange.send() }
     }
 
+    private let accounting = StoreAccountingService()
+
     private var transactionListener: Task<Void, Error>?
 
     private init() {
         transactionListener = listenForTransactions()
         Task { await loadProducts() }
         Task { await refreshEntitlement() }
-        freeDocsRemaining  = UserDefaults.standard.object(forKey: "upmarket.freeDocsRemaining") as? Int ?? 3
-        packCredits        = UserDefaults.standard.integer(forKey: "upmarket.packCredits")
-        packsEverPurchased = UserDefaults.standard.integer(forKey: "upmarket.packsEverPurchased")
+        applyAccountingSnapshot(accounting.loadInitialState())
     }
 
     deinit { transactionListener?.cancel() }
@@ -105,35 +116,42 @@ final class StoreManager: ObservableObject {
     func consumeConversion() -> Bool {
         if hasBasicOrAbove { return true }  // unlimited — nothing to consume
 
-        if freeDocsRemaining > 0 {
-            freeDocsRemaining -= 1
-            UserDefaults.standard.set(freeDocsRemaining, forKey: "upmarket.freeDocsRemaining")
-            return true
+        do {
+            let result = try accounting.consumeConversion(
+                freeDocsRemaining: freeDocsRemaining,
+                packCredits: packCredits
+            )
+            applyAccountingSnapshot(result.snapshot)
+            return result.consumed
+        } catch {
+            productLoadError = "Purchase records could not be read. Please contact support before buying another document pack."
+            AppLog.storeKit.error("Failed to consume conversion accounting: \(error.localizedDescription, privacy: .private)")
+            return false
         }
+    }
 
-        if packCredits > 0 {
-            packCredits -= 1
-            UserDefaults.standard.set(packCredits, forKey: "upmarket.packCredits")
-            return true
-        }
-
-        return false
+    /// Trial is document-count based: 3 free conversions, then paid access.
+    /// Prompt at good moments after a conversion finishes: 1 remaining, then 0.
+    func shouldShowTrialPaywallAfterConversion() -> Bool {
+        accounting.shouldShowTrialPaywallAfterConversion(
+            hasPaidEntitlement: hasBasicOrAbove,
+            freeDocsRemaining: freeDocsRemaining,
+            packCredits: packCredits
+        )
     }
 
     // MARK: - Purchasing
 
     func purchase(_ product: Product) async throws {
+        if product.id == Self.proID && !FeatureFlags.shared.aiAvailable {
+            throw StoreError.unsupportedDevice
+        }
         let result = try await product.purchase()
         switch result {
         case .success(let verification):
             let transaction = try checkVerified(verification)
             if transaction.productID == Self.packID {
-                await MainActor.run {
-                    self.packCredits += 5
-                    self.packsEverPurchased += 1
-                    UserDefaults.standard.set(self.packCredits, forKey: "upmarket.packCredits")
-                    UserDefaults.standard.set(self.packsEverPurchased, forKey: "upmarket.packsEverPurchased")
-                }
+                try await recordPackTransaction(transaction)
             } else {
                 await refreshEntitlement()
             }
@@ -148,18 +166,41 @@ final class StoreManager: ObservableObject {
         await refreshEntitlement()
     }
 
+    func refreshEntitlementForProgrammaticConversion() async {
+        await refreshEntitlement()
+    }
+
     // MARK: - Private
 
-    private func loadProducts() async {
+    func loadProducts() async {
+        guard !isLoadingProducts else { return }
+        await MainActor.run {
+            self.isLoadingProducts = true
+            self.productLoadError = nil
+        }
+        defer {
+            Task { @MainActor in
+                self.isLoadingProducts = false
+            }
+        }
+
         do {
             let products = try await Product.products(for: [Self.basicID, Self.proID, Self.packID])
             await MainActor.run {
                 self.basicProduct = products.first { $0.id == Self.basicID }
                 self.proProduct   = products.first { $0.id == Self.proID }
                 self.packProduct  = products.first { $0.id == Self.packID }
+                self.productsLoaded = true
+                if self.basicProduct == nil || self.proProduct == nil || self.packProduct == nil {
+                    self.productLoadError = "Some purchase options are unavailable. Check StoreKit configuration or App Store Connect product IDs."
+                }
             }
         } catch {
-            print("[StoreManager] Failed to load products: \(error)")
+            await MainActor.run {
+                self.productsLoaded = true
+                self.productLoadError = "Purchase options could not be loaded."
+            }
+            AppLog.storeKit.error("Failed to load products: \(error.localizedDescription, privacy: .private)")
         }
     }
 
@@ -189,11 +230,14 @@ final class StoreManager: ObservableObject {
             for await result in Transaction.updates {
                 guard let transaction = try? self.checkVerified(result) else { continue }
                 if transaction.productID == Self.packID {
-                    await MainActor.run {
-                        self.packCredits += 5
-                        self.packsEverPurchased += 1
-                        UserDefaults.standard.set(self.packCredits, forKey: "upmarket.packCredits")
-                        UserDefaults.standard.set(self.packsEverPurchased, forKey: "upmarket.packsEverPurchased")
+                    do {
+                        try await self.recordPackTransaction(transaction)
+                    } catch {
+                        await MainActor.run {
+                            self.productLoadError = "A document pack purchase could not be recorded. Keep Upmarket open and try Restore Purchases."
+                        }
+                        AppLog.storeKit.error("Failed to record pack transaction id=\(transaction.id, privacy: .public): \(error.localizedDescription, privacy: .private)")
+                        continue
                     }
                 } else {
                     await self.refreshEntitlement()
@@ -203,21 +247,30 @@ final class StoreManager: ObservableObject {
         }
     }
 
-    private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
+    nonisolated private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
         switch result {
         case .unverified: throw StoreError.failedVerification
         case .verified(let value): return value
         }
     }
-}
 
-// MARK: - Models
+    private func recordPackTransaction(_ transaction: Transaction) async throws {
+        let snapshot = try accounting.recordPackTransaction(
+            transactionID: transaction.id,
+            isRevoked: transaction.revocationDate != nil,
+            freeDocsRemaining: freeDocsRemaining
+        )
+        await MainActor.run { self.applyAccountingSnapshot(snapshot) }
+    }
 
-enum Entitlement: Equatable {
-    case none
-    case basic
-    case pro
-    // Note: trial is now doc-count based (freeDocsRemaining), not time-based
+    private func applyAccountingSnapshot(_ snapshot: StoreAccountingSnapshot) {
+        freeDocsRemaining = snapshot.freeDocsRemaining
+        packCredits = snapshot.packCredits
+        packsEverPurchased = snapshot.packsEverPurchased
+        if let userVisibleError = snapshot.userVisibleError {
+            productLoadError = userVisibleError
+        }
+    }
 }
 
 enum UpgradeNudge {
@@ -229,4 +282,5 @@ enum UpgradeNudge {
 
 enum StoreError: Error {
     case failedVerification
+    case unsupportedDevice
 }
