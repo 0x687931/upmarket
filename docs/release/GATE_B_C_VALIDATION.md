@@ -114,7 +114,17 @@ This interpretation is checked with:
 scripts/ci/validate_gate_c_instruments.py
 ```
 
-Gate C Instruments remains open for a targeted Leaks capture without task-port authorization errors and Main Thread Checker evidence.
+Gate C Instruments remains open for a targeted Leaks capture without task-port authorization errors.
+
+Main Thread Checker launch validation covers the built app with Xcode's checker runtime injected:
+
+```sh
+scripts/ci/validate_main_thread_checker.py \
+  --app-path /Users/am/Library/Developer/Xcode/DerivedData/Upmarket-ghnrfzrcpacwzsfimfknmtpxhmqj/Build/Products/Debug/Upmarket.app \
+  --duration 10
+```
+
+The 2026-06-02 rerun passed with no launch-time Main Thread Checker violations. The first sandboxed attempt failed before app launch because `xctrace` could not write its Instruments cache; the accepted run was executed outside the sandbox.
 
 Thread Sanitizer validation covers the focused conversion, model, StoreKit accounting, and pack ledger unit flows with:
 
