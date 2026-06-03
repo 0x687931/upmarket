@@ -17,6 +17,7 @@ OUT_DIR = ROOT / "docs" / "generated"
 
 SWIFT_TYPE_RE = re.compile(r"^\s*(?:@\w+\s+)*(?:nonisolated\s+)?(?:public|private|internal|fileprivate|open)?\s*(?:final\s+)?(class|struct|enum|actor|protocol)\s+([A-Za-z_][A-Za-z0-9_]*)", re.MULTILINE)
 PY_DEF_RE = re.compile(r"^\s*(class|def)\s+([A-Za-z_][A-Za-z0-9_]*)", re.MULTILINE)
+GENERATED_CACHE_PARTS = {"__pycache__", ".pytest_cache"}
 
 
 def rel(path: Path) -> str:
@@ -25,6 +26,14 @@ def rel(path: Path) -> str:
 
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
+
+
+def source_entries(path: Path) -> list[Path]:
+    return sorted(
+        entry
+        for entry in path.rglob("*")
+        if not GENERATED_CACHE_PARTS.intersection(entry.parts)
+    )
 
 
 def swift_types(path: Path) -> list[str]:
@@ -49,12 +58,13 @@ def source_map() -> str:
     python_files = sorted((ROOT / "UpmarketPython").rglob("*.py"))
     test_files = sorted((ROOT / "Upmarket").glob("Upmarket*Tests/**/*.swift"))
     docs = sorted((ROOT / "docs").rglob("*.md"))
+    scripts = source_entries(ROOT / "scripts")
 
     section_rows = [
         ["Swift app", "`Upmarket/Upmarket`", f"{len(swift_files)} Swift files", "App shell, UI, domain models, services, StoreKit, native extraction"],
         ["Python bridge", "`UpmarketPython`", f"{len(python_files)} Python files", "Conversion/model helper code copied into the packaged Python runtime"],
         ["Tests", "`Upmarket/UpmarketTests`, `Upmarket/UpmarketUITests`", f"{len(test_files)} Swift test files", "Unit and UI validation"],
-        ["Scripts", "`scripts`", f"{len(list((ROOT / 'scripts').rglob('*')))} entries", "Release, corpus, CI, dependency, and documentation automation"],
+        ["Scripts", "`scripts`", f"{len(scripts)} entries", "Release, corpus, CI, dependency, and documentation automation"],
         ["Docs", "`docs`", f"{len(docs)} Markdown files", "Plans, release process, generated source maps, runbooks"],
     ]
 
