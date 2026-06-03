@@ -8,27 +8,26 @@ on:
 
 jobs:
   release-candidate:
-    runs-on: macos-14
+    runs-on: macos-26
     env:
+      DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
       DERIVED_DATA_DIR: build/DerivedData
       ARCHIVE_PATH: build/Upmarket.xcarchive
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode.app
-
-      - name: Preflight hooks
+      - name: Show Xcode version
         run: |
-          scripts/ci/verify_xcode_project.sh
-          scripts/ci/verify_entitlements.sh
-          scripts/ci/verify_python_bundle.sh
-          scripts/ci/validate_corpus.py
-          scripts/ci/validate_corpus_baseline.py
-          scripts/ci/validate_corpus_pathways.py
-          scripts/ci/validate_models.py
-          scripts/ci/test_model_faults.py
-          scripts/ci/validate_release_regression_guards.py
+          test -d "$DEVELOPER_DIR"
+          xcodebuild -version
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Release gate
+        run: scripts/ci/gate.sh release
 
       - name: Archive
         run: |

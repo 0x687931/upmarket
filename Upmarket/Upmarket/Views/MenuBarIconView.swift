@@ -13,22 +13,19 @@ struct MenuBarIconView: View {
             badgeDot
         }
         .frame(width: 22, height: 22)
+        .task(id: completionToken) {
+            guard completionToken > 0 else { return }
+            showCompletionDot = true
+            try? await Task.sleep(for: .seconds(1.8))
+            withAnimation(.easeOut(duration: 0.4)) {
+                showCompletionDot = false
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .upmarketConversionEnded)) { _ in
             completionToken += 1
-            showCompletionDot = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
-                withAnimation(.easeOut(duration: 0.4)) {
-                    showCompletionDot = false
-                }
-            }
         }
     }
 
-    // MARK: - Symbol
-
-    // Always number.square — state is communicated by the badge, not the symbol shape.
-    // .primary foreground keeps the icon template-compliant so the OS renders it
-    // correctly against both light and dark menu bar backgrounds.
     @ViewBuilder private var iconSymbol: some View {
         if #available(macOS 14.0, *) {
             Image(systemName: "number.square")
@@ -45,21 +42,20 @@ struct MenuBarIconView: View {
         }
     }
 
-    // MARK: - Badge dot
-
-    // 5pt circle, bottom-right of the 22pt frame.
-    // offset(x:3, y:3) pushes it just past the symbol edge — stays within
-    // the 22pt frame so it doesn't clip against the menu bar.
+    // 6pt dot with a 1pt white stroke — readable on both light and dark menu bars
+    // and against the symbol itself. Offset pushes it to the corner of the 22pt frame.
     @ViewBuilder private var badgeDot: some View {
         if isConverting {
             Circle()
                 .fill(Color.accentColor)
-                .frame(width: 5, height: 5)
+                .frame(width: 6, height: 6)
+                .overlay(Circle().strokeBorder(.white, lineWidth: 1))
                 .offset(x: 3, y: 3)
         } else if showCompletionDot {
             Circle()
                 .fill(Color.green)
-                .frame(width: 5, height: 5)
+                .frame(width: 6, height: 6)
+                .overlay(Circle().strokeBorder(.white, lineWidth: 1))
                 .offset(x: 3, y: 3)
                 .transition(.opacity.combined(with: .scale(scale: 0.5)))
         }

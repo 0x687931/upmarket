@@ -16,9 +16,14 @@ on:
 
 jobs:
   dependency-audit:
-    runs-on: macos-14
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
       - name: Check Python dependency pins
         run: scripts/ci/validate_dependency_lock.py
@@ -28,7 +33,7 @@ jobs:
 
       - name: Create audit virtualenv
         run: |
-          python3 -m venv .venv
+          python -m venv .venv
           .venv/bin/pip install --upgrade pip
           .venv/bin/pip install -r requirements.txt
 

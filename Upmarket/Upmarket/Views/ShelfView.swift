@@ -18,24 +18,21 @@ struct ShelfView: View {
     @State private var hoverClose  = false
     @State private var hoverAdd    = false
     @State private var hoverToggle = false
-    @State private var hoverDrop   = false
 
-    // Closed state: two-column panel
-    // Left col: 3 buttons stacked [X][+][>]  |  Right col: [↓] drop arrow
-    private let colWidth:     CGFloat = 64
-    private let closedHeight: CGFloat = 132
-    private let itemWidth:    CGFloat = 64
-    private let itemSpacing:  CGFloat = 8
-    private let maxVisible:   Int     = 5
+    // UI-5: asymmetric closed state
+    // Left: narrow control strip  |  Right: peek panel showing live job state
+    private let controlStripWidth: CGFloat = 48
+    private let peekPanelWidth:    CGFloat = 168
+    private let closedHeight:      CGFloat = 132
+    private let itemWidth:         CGFloat = 64
+    private let itemSpacing:       CGFloat = 8
+    private let maxVisible:        Int     = 5
 
     private var buttonHeight: CGFloat { closedHeight / 3 }  // 44pt each
 
-    private var isAnyConverting: Bool {
-        conversion.isConverting
-    }
+    private var isAnyConverting: Bool { conversion.isConverting }
 
-    // Width: closed = stripWidth, open = strip + items
-    private var closedWidth: CGFloat { colWidth * 2 + 1 }  // two cols + divider
+    private var closedWidth: CGFloat { controlStripWidth + 1 + peekPanelWidth }
 
     private var totalWidth: CGFloat {
         guard isExpanded else { return closedWidth }
@@ -109,34 +106,47 @@ struct ShelfView: View {
         }
     }
 
-    // MARK: - Closed panel: [X][+][>] | [↓]
+    // MARK: - Closed panel: [control strip] | [peek panel]
 
     private var closedPanel: some View {
         HStack(spacing: 0) {
-            // Left column: 3 stacked buttons
-            VStack(spacing: 0) {
-                controlButton(symbol: "xmark",  hoverColor: .red,                          isHovered: hoverClose,  help: "Hide shelf") { ShelfWindowController.shared.hide() }
-                    .onHover { hoverClose = $0 }
-                controlButton(symbol: "plus",   hoverColor: .green,                        isHovered: hoverAdd,    help: "Add files")  { openFilePicker() }
-                    .onHover { hoverAdd = $0 }
-                controlButton(symbol: isExpanded ? "chevron.left" : "chevron.right",
-                              hoverColor: Color(nsColor: .systemBlue),                     isHovered: hoverToggle, help: isExpanded ? "Collapse" : "Expand") {
-                    withAnimation(.spring(duration: 0.35, bounce: 0.1)) { isExpanded.toggle() }
-                }
-                .onHover { hoverToggle = $0 }
-            }
-            .frame(width: colWidth, height: closedHeight)
+            controlStrip
 
-            // Thin divider between columns
             Rectangle()
                 .fill(Color.primary.opacity(0.12))
                 .frame(width: 1, height: closedHeight * 0.6)
 
-            // Right column: drop arrow centred
-            dropArrowButton
-                .onHover { hoverDrop = $0 }
-                .frame(width: colWidth, height: closedHeight)
+            peekPanel
+                .frame(width: peekPanelWidth, height: closedHeight)
+                .clipped()
         }
+    }
+
+    // MARK: - Control strip (left column)
+
+    private var controlStrip: some View {
+        VStack(spacing: 0) {
+            controlButton(symbol: "xmark",
+                          hoverColor: .red,
+                          isHovered: hoverClose,
+                          help: "Hide shelf") { ShelfWindowController.shared.hide() }
+                .onHover { hoverClose = $0 }
+
+            controlButton(symbol: "plus",
+                          hoverColor: .green,
+                          isHovered: hoverAdd,
+                          help: "Add files") { openFilePicker() }
+                .onHover { hoverAdd = $0 }
+
+            controlButton(symbol: isExpanded ? "chevron.left" : "chevron.right",
+                          hoverColor: Color(nsColor: .systemBlue),
+                          isHovered: hoverToggle,
+                          help: isExpanded ? "Collapse" : "Expand") {
+                withAnimation(.spring(duration: 0.35, bounce: 0.1)) { isExpanded.toggle() }
+            }
+            .onHover { hoverToggle = $0 }
+        }
+        .frame(width: controlStripWidth, height: closedHeight)
     }
 
     private func controlButton(
@@ -150,13 +160,13 @@ struct ShelfView: View {
             ZStack {
                 Circle()
                     .fill(hoverColor.opacity(isHovered ? 0.18 : 0))
-                    .frame(width: buttonHeight - 10, height: buttonHeight - 10)
+                    .frame(width: buttonHeight - 8, height: buttonHeight - 8)
                 Image(systemName: symbol)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(isHovered ? hoverColor : .primary.opacity(0.7))
                     .symbolRenderingMode(.hierarchical)
             }
-            .frame(width: colWidth, height: buttonHeight)
+            .frame(width: controlStripWidth, height: buttonHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -164,24 +174,137 @@ struct ShelfView: View {
         .animation(.easeInOut(duration: 0.12), value: isHovered)
     }
 
-    private var dropArrowButton: some View {
-        ZStack {
-            Circle()
-                .fill(Color.accentColor.opacity(isTargeted || hoverDrop ? 0.18 : 0))
-                .frame(width: buttonHeight - 10, height: buttonHeight - 10)
-            if #available(macOS 14.0, *) {
-                Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
-                    .font(.system(size: 18))
-                    .foregroundStyle(isTargeted || hoverDrop ? Color.accentColor : .primary.opacity(0.7))
-                    .contentTransition(.symbolEffect(.replace.offUp))
+    // MARK: - Peek panel (right column)
+
+    private var peekPanel: some View {
+        Group {
+            if let activeJob = conversion.jobs.first(where: \.isRunning) {
+                peekJobView(activeJob)
+            } else if let lastJob = conversion.jobs.last {
+                peekJobView(lastJob)
             } else {
-                Image(systemName: isTargeted ? "arrow.down.circle.fill" : "arrow.down.circle")
-                    .font(.system(size: 18))
-                    .foregroundStyle(isTargeted || hoverDrop ? Color.accentColor : .primary.opacity(0.7))
+                peekIdleView
             }
         }
-        .animation(.easeInOut(duration: 0.12), value: isTargeted)
-        .animation(.easeInOut(duration: 0.12), value: hoverDrop)
+    }
+
+    // Float driven by TimelineView — starts immediately, never double-starts
+    // on re-appear, self-contained with no @State offset variable.
+    private var peekIdleView: some View {
+        TimelineView(.animation) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            let float = sin(t * .pi / 1.5) * 2   // ±2pt, 3s period
+            VStack(spacing: 6) {
+                Group {
+                    if #available(macOS 14.0, *) {
+                        Image(systemName: isTargeted
+                              ? "arrow.down.circle.fill"
+                              : "arrow.down.circle")
+                            .font(.system(size: 20))
+                            .foregroundStyle(
+                                isTargeted ? Color.accentColor : .primary.opacity(0.45)
+                            )
+                            .symbolEffect(.bounce, value: isTargeted)
+                    } else {
+                        Image(systemName: isTargeted
+                              ? "arrow.down.circle.fill"
+                              : "arrow.down.circle")
+                            .font(.system(size: 20))
+                            .foregroundStyle(
+                                isTargeted ? Color.accentColor : .primary.opacity(0.45)
+                            )
+                    }
+                }
+                .offset(y: float)
+
+                Text(isTargeted ? "Release to convert" : "Drop files here")
+                    .font(.system(size: 11))
+                    .foregroundStyle(
+                        isTargeted ? Color.accentColor : .primary.opacity(0.4)
+                    )
+                    .multilineTextAlignment(.center)
+            }
+            .animation(.easeInOut(duration: 0.15), value: isTargeted)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, 12)
+        }
+    }
+
+    private func peekJobView(_ job: ConversionJob) -> some View {
+        HStack(spacing: 10) {
+            ZStack {
+                if job.isRunning {
+                    Circle()
+                        .stroke(Color.primary.opacity(0.1), lineWidth: 2.5)
+                        .frame(width: 42, height: 42)
+                    ArcProgressRing(progress: job.progress)
+                        .stroke(
+                            Color.accentColor,
+                            style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
+                        )
+                        .frame(width: 42, height: 42)
+                        .animation(.linear(duration: 0.4), value: job.progress)
+                }
+                peekFileIcon(job)
+                    .frame(width: 30, height: 30)
+            }
+            .frame(width: 42, height: 42)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(job.name)
+                    .font(.system(size: 11, weight: .medium))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+
+                peekStageLabel(job)
+            }
+        }
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder private func peekFileIcon(_ job: ConversionJob) -> some View {
+        if FileManager.default.fileExists(atPath: job.sourceURL.path),
+           let icon = NSWorkspace.shared.icon(forFile: job.sourceURL.path) as NSImage? {
+            Image(nsImage: icon).resizable().interpolation(.high).antialiased(true)
+        } else {
+            Image(systemName: "doc")
+                .font(.system(size: 18))
+                .foregroundStyle(.primary.opacity(0.5))
+        }
+    }
+
+    private func peekStageLabel(_ job: ConversionJob) -> some View {
+        Group {
+            switch job.stage {
+            case .complete:
+                Label("Done", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            case .failed:
+                Label("Failed", systemImage: "xmark.circle.fill")
+                    .foregroundStyle(.red)
+            case .cancelled:
+                Label("Cancelled", systemImage: "minus.circle.fill")
+                    .foregroundStyle(.secondary)
+            default:
+                Text(peekStageName(job.stage))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .font(.system(size: 10))
+        .contentTransition(.opacity)
+        .animation(.easeInOut(duration: 0.2), value: job.stage)
+    }
+
+    private func peekStageName(_ stage: ConversionStage) -> String {
+        switch stage {
+        case .queued:         return "Queued"
+        case .copying:        return "Copying…"
+        case .extracting:     return "Reading…"
+        case .python:         return "Processing…"
+        case .postProcessing: return "Refining…"
+        default:              return ""
+        }
     }
 
     // MARK: - Expanded content
@@ -386,16 +509,13 @@ struct ShelfItemView: View {
                 .frame(width: 56)
                 .animation(.easeInOut(duration: 0.15), value: showCopied)
             statusText
-            // Persistent action row for terminal states; hover cancel for running
             if item.isRunning {
-                // Reserve the same height so card doesn't shift when a job finishes
                 Color.clear.frame(height: persistentActionsHeight)
             } else {
                 persistentActions
             }
         }
         .padding(.vertical, 6)
-        // Cancel button on hover for running jobs only
         .overlay(alignment: .bottom) {
             if item.isRunning && showActions {
                 runningHoverActions
@@ -404,15 +524,22 @@ struct ShelfItemView: View {
             }
         }
         .contentShape(Rectangle())
-        .onHover { showActions = $0 }
+        .onHover { h in withAnimation(.easeInOut(duration: 0.1)) { showActions = h } }
         .onTapGesture(count: 2) { handleDoubleClick() }
         .onTapGesture(count: 1) { handleSingleClick() }
         .contextMenu { contextMenuItems }
+        // Liveness ticker — updates `now` while job is running
         .task(id: item.id) {
             while item.isRunning {
-                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                try? await Task.sleep(for: .seconds(5))
                 now = Date()
             }
+        }
+        // showCopied auto-reset — cancels if view disappears
+        .task(id: showCopied) {
+            guard showCopied else { return }
+            try? await Task.sleep(for: .seconds(1.5))
+            showCopied = false
         }
     }
 
@@ -499,8 +626,7 @@ struct ShelfItemView: View {
             if let output = item.result?.output {
                 Button {
                     FileAccessService.shared.copyMarkdown(output.markdown)
-                    showCopied = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { showCopied = false }
+                    showCopied = true   // task(id: showCopied) resets after 1.5s
                 } label: {
                     Image(systemName: "doc.on.doc").font(.system(size: 10))
                 }
@@ -577,10 +703,7 @@ struct ShelfItemView: View {
     private func handleSingleClick() {
         if let output = item.result?.output {
             FileAccessService.shared.copyMarkdown(output.markdown)
-            showCopied = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                showCopied = false
-            }
+            showCopied = true   // task(id: showCopied) resets after 1.5s
         }
     }
 

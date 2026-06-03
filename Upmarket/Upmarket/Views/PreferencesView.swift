@@ -104,14 +104,9 @@ struct PreferencesView: View {
     }
 
     private func chooseSaveFolder() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.canCreateDirectories = true
-        panel.prompt = "Choose"
-        panel.message = "Upmarket will save converted files here."
-        panel.orderFrontRegardless()
-        if panel.runModal() == .OK, let url = panel.url {
+        if let url = FileAccessService.shared.chooseSaveDirectory(
+            message: "Upmarket will save converted files here."
+        ) {
             SavePreference.shared.chosenFolderURL = url
             SavePreference.shared.destination = .chosenFolder
         }
@@ -213,26 +208,23 @@ struct PreferencesView: View {
     }
 
     // MARK: - About
-    // Identity · License · Links · Open source (accordion)
+
+    @State private var showAttributions = false
 
     private var aboutTab: some View {
         Form {
-            // Identity
             Section {
-                HStack(spacing: 14) {
-                    Image(nsImage: NSApp.applicationIconImage)
-                        .resizable()
-                        .frame(width: 48, height: 48)
+                HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Upmarket").font(.headline)
                         Text("Version \(appVersion)")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
+                    Spacer()
                 }
             }
 
-            // License
             Section("License") {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -261,7 +253,6 @@ struct PreferencesView: View {
                 }
             }
 
-            // Links — three equal buttons on one row
             Section {
                 HStack(spacing: 0) {
                     linkButton(icon: "lock.shield", label: "Privacy Policy",
@@ -275,35 +266,15 @@ struct PreferencesView: View {
                 }
             }
 
-            // Attributions — flat list, grouped by license family header
             if !openSourcePackages.isEmpty {
-                Section("Attributions") {
-                    ForEach(licenseGroups) { group in
-                        // Family header
-                        Text(group.family)
-                            .font(.footnote)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
-                            .padding(.top, 4)
-                        // Packages under this family
-                        ForEach(group.packages) { pkg in
-                            Button {
-                                if let url = URL(string: pkg.url) {
-                                    NSWorkspace.shared.open(url)
-                                }
-                            } label: {
-                                HStack {
-                                    Text(pkg.name)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.primary)
-                                    Spacer()
-                                    Text(pkg.version)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.tertiary)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                        }
+                Section {
+                    Button {
+                        showAttributions = true
+                    } label: {
+                        Label("Attributions", systemImage: "doc.text")
+                    }
+                    .sheet(isPresented: $showAttributions) {
+                        AttributionsSheet(groups: licenseGroups)
                     }
                 }
             }
@@ -382,6 +353,57 @@ struct PreferencesView: View {
               let entries = try? JSONDecoder().decode([LicenseEntry].self, from: data)
         else { return [] }
         return entries
+    }
+}
+
+// MARK: - Attributions sheet
+
+struct AttributionsSheet: View {
+    let groups: [LicenseGroup]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Title bar
+            HStack {
+                Text("Attributions")
+                    .font(.headline)
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 12)
+
+            Divider()
+
+            // Package list grouped by license family
+            List {
+                ForEach(groups) { group in
+                    Section(group.family) {
+                        ForEach(group.packages) { pkg in
+                            Button {
+                                if let url = URL(string: pkg.url) {
+                                    NSWorkspace.shared.open(url)
+                                }
+                            } label: {
+                                HStack {
+                                    Text(pkg.name)
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    Text(pkg.version)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .listStyle(.inset)
+        }
+        .frame(width: 380, height: 420)
     }
 }
 

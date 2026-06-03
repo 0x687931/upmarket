@@ -11,9 +11,20 @@ permissions:
 
 jobs:
   upstream-check:
-    runs-on: macos-14
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache Python runtime
+        uses: actions/cache@v4
+        with:
+          path: Upmarket/Python/Python.xcframework
+          key: ${{ runner.os }}-${{ runner.arch }}-python-runtime-${{ hashFiles('requirements.txt', 'scripts/build_python_env.sh', 'scripts/ci/verify_python_bundle.sh', 'UpmarketPython/**/*.py') }}
 
       - name: Generate upstream watch report
         run: scripts/ci/watch_upstream.py
@@ -124,4 +135,4 @@ jobs:
           scripts/ci/validate_corpus_baseline.py
 
       - name: Validate Python bundle imports
-        run: scripts/ci/verify_python_bundle.sh
+        run: scripts/ci/ensure_python_runtime.sh
