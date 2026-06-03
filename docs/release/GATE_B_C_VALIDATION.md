@@ -50,7 +50,7 @@ Batch shelf queue behavior is now covered through Xcode by `ConversionQueueTests
 Current evidence:
 
 ```sh
-xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/ConversionQueueTests
+xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/ConversionQueueTests
 ```
 
 The 2026-06-02 rerun passed 20 selected `ConversionQueueTests` with 0 failures.
@@ -60,7 +60,7 @@ The 2026-06-02 rerun passed 20 selected `ConversionQueueTests` with 0 failures.
 `ConversionRunner` owns app-workspace cleanup through one `defer` path after the source is copied. Xcode now covers cleanup after native success, recoverable failure, and input-copy failure:
 
 ```sh
-xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/ConversionQueueTests
+xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/ConversionQueueTests
 ```
 
 The 2026-06-02 rerun passed 20 selected `ConversionQueueTests` with 0 failures. App startup stale-workspace cleanup remains covered by `DiagnosticsTests.testStaleWorkspaceCleanupRemovesStartupLeftovers`. `PythonBridgeTests.testRunnerCleansWorkspaceWhenAdvancedConversionIsCancelled` now cancels a real `ConversionRunner` task while it is inside the advanced-runtime boundary and verifies the app-owned workspace list returns to its pre-run state. `DiagnosticsTests.testAppDelegateTerminationCleansStaleWorkspaces` covers the app-termination cleanup hook. Remaining release evidence needed: cleanup after full GUI app quit/relaunch.
@@ -79,7 +79,7 @@ The 4 non-scored Granite AI rows in `reports/corpus-granite-docling-scanned-or-u
 The current app-side availability gate was validated through Xcode on 2026-06-02:
 
 ```sh
-xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/DeviceCapabilityTests
+xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/DeviceCapabilityTests
 ```
 
 Xcode selected the arm64 macOS destination and `DeviceCapabilityTests.testUpmarketAIAvailabilityRequiresAppleSiliconAndMetalDevice` passed. `ModelManagerTests` also passed, so the Swift gate can see Apple Silicon plus a native Metal device in the app test runtime. The remaining Granite AI release gap is therefore a full conversion pass in a GUI/Metal-capable app or benchmark context, not proof that these four documents are bad.
@@ -93,7 +93,7 @@ scripts/ci/verify_python_bundle.sh
 After that package fix, the targeted Xcode Granite smoke reaches the app-packaged helper and exits through the explicit `runtime.helper.runtime-unavailable` path because the current test session cannot access this Mac's graphics processor:
 
 ```sh
-xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/PythonBridgeTests/testGraniteAIPreviouslyBlockedCorpusFixturesRouteThroughHelperWhenModelInstalled
+xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/PythonBridgeTests/testGraniteAIPreviouslyBlockedCorpusFixturesRouteThroughHelperWhenModelInstalled
 ```
 
 The 2026-06-02 rerun records this as 1 skipped test with 0 failures so the normal unit suite remains usable on machines or Xcode sessions without helper-visible Metal. That keeps Granite AI release validation open, but it is no longer the same packaging failure.
@@ -133,7 +133,7 @@ The 2026-06-02 rerun passed with no launch-time Main Thread Checker violations. 
 Thread Sanitizer validation covers the focused conversion, model, StoreKit accounting, and pack ledger unit flows with:
 
 ```sh
-xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO -enableThreadSanitizer YES test -only-testing:UpmarketTests/ConversionQueueTests -only-testing:UpmarketTests/ModelManagerTests -only-testing:UpmarketTests/StoreAccountingServiceTests -only-testing:UpmarketTests/PackCreditLedgerTests
+xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO -enableThreadSanitizer YES test -only-testing:UpmarketTests/ConversionQueueTests -only-testing:UpmarketTests/ModelManagerTests -only-testing:UpmarketTests/StoreAccountingServiceTests -only-testing:UpmarketTests/PackCreditLedgerTests
 ```
 
 The first run found test-side off-main reads in `ModelManagerTests`; the polling helper now evaluates model state on the main actor. The 2026-06-02 rerun passed 34 selected tests with 0 failures and no Thread Sanitizer findings.

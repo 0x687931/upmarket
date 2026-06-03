@@ -15,7 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = ROOT / "docs" / "generated"
 
-SWIFT_TYPE_RE = re.compile(r"^\s*(?:@\w+\s+)*(?:public|private|internal|fileprivate|open)?\s*(?:final\s+)?(class|struct|enum|actor|protocol)\s+([A-Za-z_][A-Za-z0-9_]*)", re.MULTILINE)
+SWIFT_TYPE_RE = re.compile(r"^\s*(?:@\w+\s+)*(?:nonisolated\s+)?(?:public|private|internal|fileprivate|open)?\s*(?:final\s+)?(class|struct|enum|actor|protocol)\s+([A-Za-z_][A-Za-z0-9_]*)", re.MULTILINE)
 PY_DEF_RE = re.compile(r"^\s*(class|def)\s+([A-Za-z_][A-Za-z0-9_]*)", re.MULTILINE)
 
 

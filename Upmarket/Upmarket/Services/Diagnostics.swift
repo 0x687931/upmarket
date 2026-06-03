@@ -64,7 +64,7 @@ enum Diagnostics {
         URL(fileURLWithPath: path).lastPathComponent
     }
 
-    static func neutralStageName(_ stage: String) -> String {
+    nonisolated static func neutralStageName(_ stage: String) -> String {
         switch stage {
         case ConversionStage.queued.rawValue:
             return "Queued"

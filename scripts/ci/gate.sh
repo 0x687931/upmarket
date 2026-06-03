@@ -8,7 +8,7 @@ MODE="${1:-quick}"
 DERIVED_DATA_DIR="${DERIVED_DATA_DIR:-build/DerivedData}"
 PROJECT="${UPMARKET_XCODE_PROJECT:-Upmarket/Upmarket.xcodeproj}"
 SCHEME="${UPMARKET_XCODE_SCHEME:-Upmarket}"
-DESTINATION="${UPMARKET_XCODE_DESTINATION:-platform=macOS}"
+DESTINATION="${UPMARKET_XCODE_DESTINATION:-platform=macOS,arch=arm64}"
 CODE_SIGNING="${UPMARKET_CODE_SIGNING_ALLOWED:-NO}"
 PYTHON_XCFRAMEWORK="${UPMARKET_PYTHON_XCFRAMEWORK:-Upmarket/Python/Python.xcframework}"
 
@@ -29,7 +29,7 @@ Gates:
 Environment:
   DERIVED_DATA_DIR                 Defaults to build/DerivedData.
   UPMARKET_CODE_SIGNING_ALLOWED    Defaults to NO for local/CI testing.
-  UPMARKET_XCODE_DESTINATION       Defaults to platform=macOS.
+  UPMARKET_XCODE_DESTINATION       Defaults to platform=macOS,arch=arm64.
 USAGE
 }
 

@@ -208,7 +208,7 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 ## Release Gates
 
 ### Gate A - Build and Packaging
-- [x] Build cleanly with `xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' build`
+- [x] Build cleanly with `xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS,arch=arm64' build`
 - [x] Build the x86_64 macOS slice on Apple Silicon with `xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS,arch=x86_64' CODE_SIGNING_ALLOWED=NO build`
 - [ ] Archive successfully in Xcode with the release team selected
 - [x] Verify sandbox entitlements in the archived app
@@ -348,8 +348,8 @@ This is a launch requirement, not post-launch polish.
 ## Validation Commands
 
 ```bash
-xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' build
-xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS' test -only-testing:UpmarketTests
+xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS,arch=arm64' build
+xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS,arch=arm64' test -only-testing:UpmarketTests
 ./scripts/update_dependencies.sh --check-only
 ./scripts/generate_licenses.sh
 ```

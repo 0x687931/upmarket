@@ -70,7 +70,7 @@ jobs:
           xcodebuild test \
             -project Upmarket/Upmarket.xcodeproj \
             -scheme Upmarket \
-            -destination "platform=macOS" \
+            -destination "platform=macOS,arch=arm64" \
             -derivedDataPath "$DERIVED_DATA_DIR" \
             -only-testing:UpmarketUITests \
             CODE_SIGNING_ALLOWED=NO

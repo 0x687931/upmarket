@@ -258,7 +258,7 @@ struct RuntimeHelperClient: Sendable {
     }
 }
 
-struct RuntimeHelperRequest: Codable, Sendable {
+nonisolated struct RuntimeHelperRequest: Codable, Sendable {
     let operation: String
     let filePath: String?
     let title: String?
@@ -285,7 +285,7 @@ struct RuntimeHelperRequest: Codable, Sendable {
     }
 }
 
-struct RuntimeHelperResponse: Codable, Sendable {
+nonisolated struct RuntimeHelperResponse: Codable, Sendable {
     let success: Bool
     let code: String?
     let message: String?
@@ -307,14 +307,14 @@ struct RuntimeHelperResponse: Codable, Sendable {
     }
 }
 
-struct RuntimeAdviceDTO: Codable, Sendable {
+nonisolated struct RuntimeAdviceDTO: Codable, Sendable {
     let recommendation: String
     let score: Int
     let reasons: [String]
     let detectedLanguage: String?
 }
 
-struct RuntimeConversionOutputDTO: Codable, Sendable {
+nonisolated struct RuntimeConversionOutputDTO: Codable, Sendable {
     let markdown: String
     let pages: Int
     let format: String
@@ -322,7 +322,7 @@ struct RuntimeConversionOutputDTO: Codable, Sendable {
     let pipeline: String
 }
 
-struct RuntimeModelStatusDTO: Codable, Sendable {
+nonisolated struct RuntimeModelStatusDTO: Codable, Sendable {
     let key: String
     let name: String
     let description: String
@@ -335,11 +335,11 @@ struct RuntimeModelStatusDTO: Codable, Sendable {
     let storageDirectory: String?
 }
 
-private struct RuntimeHelperEvent: Codable {
+nonisolated private struct RuntimeHelperEvent: Codable {
     let event: String
 }
 
-private final class RuntimeHelperProcessState: @unchecked Sendable {
+nonisolated private final class RuntimeHelperProcessState: @unchecked Sendable {
     private let lock = NSLock()
     private var buffer = Data()
     private var lines: [String] = []
@@ -412,7 +412,7 @@ private final class RuntimeHelperProcessState: @unchecked Sendable {
     }
 }
 
-private final class RuntimeHelperLivenessMonitor: @unchecked Sendable {
+nonisolated private final class RuntimeHelperLivenessMonitor: @unchecked Sendable {
     private let queue = DispatchQueue(label: "UpmarketRuntimeHelperLiveness")
     private let interval: TimeInterval
     private let state: RuntimeHelperProcessState

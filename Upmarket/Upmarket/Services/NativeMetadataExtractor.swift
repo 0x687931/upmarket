@@ -93,7 +93,12 @@ enum NativeMetadataExtractor {
                 }
             }
 
-            let tags = metadata.compactMap(metadataLine)
+            var tags: [String] = []
+            for item in metadata {
+                if let line = await metadataLine(item) {
+                    tags.append(line)
+                }
+            }
             if !tags.isEmpty {
                 lines.append("")
                 lines.append("## Tags")
@@ -131,10 +136,10 @@ enum NativeMetadataExtractor {
         return output
     }
 
-    private static func metadataLine(_ item: AVMetadataItem) -> String? {
+    nonisolated private static func metadataLine(_ item: AVMetadataItem) async -> String? {
         guard let key = item.commonKey?.rawValue,
               ["title", "artist", "albumName", "description", "creationDate", "copyrights"].contains(key),
-              let value = item.stringValue,
+              let value = try? await item.load(.stringValue),
               !value.isEmpty else { return nil }
         return "**\(key):** \(value)"
     }

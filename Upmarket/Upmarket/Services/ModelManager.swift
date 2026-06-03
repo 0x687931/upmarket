@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-struct ModelStatus: Equatable, Sendable {
+nonisolated struct ModelStatus: Equatable, Sendable {
     let key: String
     let name: String
     let description: String
