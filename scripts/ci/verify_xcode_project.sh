@@ -25,13 +25,14 @@ if ! command -v xcodebuild >/dev/null 2>&1; then
   exit 1
 fi
 
-XCODE_VERSION="$(xcodebuild -version | awk '/^Xcode / { print $2; exit }')"
+XCODEBUILD_VERSION_OUTPUT="$(xcodebuild -version)"
+XCODE_VERSION="$(printf '%s\n' "$XCODEBUILD_VERSION_OUTPUT" | awk '/^Xcode / { print $2; exit }')"
 XCODE_MAJOR="${XCODE_VERSION%%.*}"
 REQUIRED_MAJOR="${UPMARKET_REQUIRED_XCODE_MAJOR:-26}"
 
 if [[ -z "$XCODE_VERSION" || "$XCODE_MAJOR" == "$XCODE_VERSION" ]]; then
   echo "error: unable to parse xcodebuild version"
-  xcodebuild -version
+  printf '%s\n' "$XCODEBUILD_VERSION_OUTPUT"
   exit 1
 fi
 
