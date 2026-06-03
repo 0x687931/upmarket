@@ -29,7 +29,7 @@ struct MenuBarIconView: View {
     @ViewBuilder private var iconSymbol: some View {
         if #available(macOS 14.0, *) {
             Image(systemName: "number.square")
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(Color.primary)
                 .symbolRenderingMode(.hierarchical)
                 .symbolEffect(.pulse, isActive: isConverting)
@@ -37,7 +37,7 @@ struct MenuBarIconView: View {
                 .contentTransition(.symbolEffect(.replace.byLayer.downUp))
         } else {
             Image(systemName: "number.square")
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(Color.primary)
         }
     }
