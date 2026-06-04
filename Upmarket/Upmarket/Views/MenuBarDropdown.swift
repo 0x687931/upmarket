@@ -4,6 +4,7 @@ struct MenuBarDropdown: View {
 
     @EnvironmentObject private var store: StoreManager
     @EnvironmentObject private var conversion: ConversionQueue
+    @EnvironmentObject private var historyStore: ConversionHistoryStore
     @Environment(\.openWindow) private var openWindow
 
     @State private var primaryActionHovered = false
@@ -187,15 +188,17 @@ struct MenuBarDropdown: View {
                 }
             }
 
-            // History — visible only when there are completed jobs this session
-            let completedJobs = conversion.jobs.filter { $0.stage == .complete || $0.stage == .failed }
-            if !completedJobs.isEmpty {
-                menuItem(icon: "clock", label: "History",
-                         shortcut: nil,
-                         action: { showHistory.toggle() })
-                .popover(isPresented: $showHistory, arrowEdge: .leading) {
-                    HistoryPopover(jobs: completedJobs)
+            menuItem(icon: "clock", label: "History",
+                     shortcut: nil,
+                     action: { showHistory.toggle() }) {
+                if !historyStore.records.isEmpty {
+                    Text("(\(historyStore.records.count))")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color.accentColor)
                 }
+            }
+            .popover(isPresented: $showHistory, arrowEdge: .leading) {
+                HistoryPopover(historyStore: historyStore)
             }
 
             Divider().padding(.leading, 44)
@@ -320,88 +323,111 @@ struct MenuBarDropdown: View {
 // MARK: - History popover
 
 struct HistoryPopover: View {
-    let jobs: [ConversionJob]
+    @ObservedObject var historyStore: ConversionHistoryStore
+    @State private var query = ""
+
+    private var records: [ConversionHistoryRecord] {
+        historyStore.filteredRecords(query: query)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("This Session")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 14)
-                .padding(.top, 12)
-                .padding(.bottom, 6)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("History")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    TextField("Search", text: $query)
+                        .textFieldStyle(.plain)
+                }
+                .padding(.horizontal, 8)
+                .frame(height: 26)
+                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
 
             Divider()
 
-            ScrollView {
-                VStack(spacing: 0) {
-                    ForEach(jobs) { job in
-                        HistoryRow(job: job)
-                        if job.id != jobs.last?.id {
-                            Divider().padding(.leading, 14)
+            if !historyStore.isEnabled {
+                emptyState("History is turned off.")
+            } else if historyStore.records.isEmpty {
+                emptyState("Completed conversions will appear here.")
+            } else if records.isEmpty {
+                emptyState("No matching conversions.")
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(records) { record in
+                            HistoryRow(record: record)
+                            if record.id != records.last?.id {
+                                Divider().padding(.leading, 14)
+                            }
                         }
                     }
                 }
+                .frame(maxHeight: 260)
             }
-            .frame(maxHeight: 240)
         }
-        .frame(width: 260)
+        .frame(width: 300)
         .padding(.bottom, 8)
+    }
+
+    private func emptyState(_ message: String) -> some View {
+        Text(message)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, minHeight: 96)
     }
 }
 
 private struct HistoryRow: View {
-    let job: ConversionJob
+    let record: ConversionHistoryRecord
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: iconName)
+            Image(systemName: "doc.text")
                 .font(.system(size: 12))
-                .foregroundStyle(iconColor)
+                .foregroundStyle(Color.accentColor)
                 .frame(width: 16)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(job.name)
+                Text(record.sourceDisplayName)
                     .font(.subheadline)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                Text(job.ext)
+                Text(historyDetail)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
 
             Spacer()
 
-            if let output = job.result?.output {
-                Button {
-                    FileAccessService.shared.copyMarkdown(output.markdown)
-                } label: {
-                    Image(systemName: "doc.on.doc")
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.accentColor)
-                }
-                .buttonStyle(.plain)
-                .help("Copy Markdown")
+            Button {
+                FileAccessService.shared.copyMarkdown(
+                    OutputFormatter.format(record: record, mode: OutputPreference.shared.mode).text
+                )
+            } label: {
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.accentColor)
             }
+            .buttonStyle(.plain)
+            .help("Copy Output")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 7)
     }
 
-    private var iconName: String {
-        switch job.stage {
-        case .complete: return "checkmark.circle.fill"
-        case .failed:   return "xmark.circle.fill"
-        default:        return "circle"
-        }
-    }
-
-    private var iconColor: Color {
-        switch job.stage {
-        case .complete: return .green
-        case .failed:   return .red
-        default:        return .secondary
-        }
+    private var historyDetail: String {
+        let title = record.title == record.sourceDisplayName ? record.format : record.title
+        return "\(title) · \(record.provenanceLabel) · \(record.wordCount) words"
     }
 }

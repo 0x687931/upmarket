@@ -25,6 +25,8 @@ struct UpmarketApp: App {
 
     @StateObject private var pythonBridge    = PythonBridge.shared
     @StateObject private var conversionQueue = ConversionQueue.shared
+    @StateObject private var historyStore    = ConversionHistoryStore.shared
+    @StateObject private var watchedFolders  = WatchedFolderService.shared
     @StateObject private var storeManager    = StoreManager.shared
     @StateObject private var modelManager    = ModelManager.shared
     @StateObject private var featureFlags    = FeatureFlags.shared
@@ -37,6 +39,8 @@ struct UpmarketApp: App {
             PreferencesView()
                 .environmentObject(modelManager)
                 .environmentObject(storeManager)
+                .environmentObject(historyStore)
+                .environmentObject(watchedFolders)
         }
 
         Window("Report a Problem", id: "reportProblem") {
@@ -60,6 +64,7 @@ struct UpmarketApp: App {
             MenuBarDropdown()
                 .environmentObject(storeManager)
                 .environmentObject(conversionQueue)
+                .environmentObject(historyStore)
         } label: {
             MenuBarIconView(isConverting: conversionQueue.isConverting)
         }
@@ -111,6 +116,11 @@ struct UpmarketApp: App {
             PythonBridge.shared.setup()
         }
         FeatureFlags.shared.fetchFlags()
+        if !AppRuntime.isRunningTests {
+            Task { @MainActor in
+                WatchedFolderService.shared.start()
+            }
+        }
 
         // Show shelf then start tour on first launch
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {

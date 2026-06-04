@@ -2,20 +2,23 @@
 
 **Gate:** UI-2 — Shelf: Drop Zone + Card Actions  
 **Status:** Implemented — awaiting visual QA  
-**File changed:** `Upmarket/Views/ShelfView.swift`
+**Files changed:** `Upmarket/Views/ShelfView.swift`, `Upmarket/Views/LiquidGlass.swift`
 
 ---
 
 ## Scope of changes
 
-Four concrete changes, each testable in isolation:
+Seven concrete changes, each testable in isolation:
 
 | Sub-task | What changed |
 |---|---|
 | 2.1 | Shelf inhales on drag-enter; glow ring pulses; empty-state text and icon react |
 | 2.2 | Active shelf cards show an arc progress ring around the file icon |
-| 2.3 | Completed/failed cards show permanent action buttons (no hover required) |
+| 2.3 | Completed/failed cards show permanent action buttons; single-click selects |
 | 2.4 | Stage label crossfades instead of hard-cutting between values |
+| 2.5 | Stalled running cards surface Cancel without hover |
+| 2.6 | Shelf glass gets state-aware tint and conversion bloom |
+| 2.7 | Card insertion/removal animation remains unchanged |
 
 ---
 
@@ -187,7 +190,7 @@ All buttons use `ShelfActionButtonStyle` (existing style):
 - `HStack(spacing: 4)` between buttons
 - Row is centred horizontally within the 64pt card width
 
-### Running card: hover cancel button
+### Running card: hover and stalled cancel button
 
 When hovering a running card, a cancel button overlays at the bottom:
 - Position: `.overlay(alignment: .bottom)` with `.padding(.bottom, 6)`
@@ -195,9 +198,18 @@ When hovering a running card, a cancel button overlays at the bottom:
 - Transition: `.opacity.combined(with: .scale(scale: 0.9))`
 - This sits **above** the 22pt clear spacer — the spacer does not block it
 
+When a running card is stalled, the same cancel button must stay visible even
+when the pointer is not hovering the card.
+
+### Single-click focus
+
+Single-clicking a completed card selects/highlights the card. It must **not**
+copy Markdown to the pasteboard. Copy remains available through the persistent
+Copy button and the context menu.
+
 ### Copy feedback
 
-Tapping Copy on a completed card (either persistent button or single-click on icon):
+Tapping Copy on a completed card:
 - Name label changes to "Copied!" in `.semibold` `.accentColor`
 - Reverts after 1.5s with `.easeInOut(duration: 0.15)` animation
 - The persistent Copy button itself does **not** change state — only the name label
@@ -239,7 +251,7 @@ There must be no hard-cut.
 
 ---
 
-## 2.5 — Card insertion / removal animation
+## 2.7 — Card insertion / removal animation
 
 Cards enter the `HStack` in the expanded items view with:
 ```
@@ -252,6 +264,24 @@ removal:   .push(from: .leading).combined(with: .opacity)
 | New job added | Card slides in from right, fades in |
 | Job removed (Remove button) | Card slides out to left, fades out |
 | Multiple jobs added at once | Each card slides in from trailing edge sequentially (spring handles stagger) |
+
+---
+
+## 2.6 — State-aware glass
+
+The shelf background uses `ContextualLiquidGlassBackground`, which wraps the
+existing liquid glass material with a state tint.
+
+| State | Required treatment |
+|---|---|
+| Idle | No tint, no conversion bloom |
+| Drag hover | `accentColor.opacity(0.04)` tint |
+| Converting | Accent-colour bloom shadow, 20pt radius |
+| Error | `Color.red.opacity(0.03)` tint |
+
+If drag hover and error are both present, error tint wins. If converting and
+error are both present, the error tint remains visible and the conversion bloom
+continues until no job is running.
 
 ---
 
@@ -286,8 +316,10 @@ removal:   .push(from: .leading).combined(with: .opacity)
 - [ ] Cancelled card: Remove button visible without hovering
 - [ ] Running card: 22pt empty space at bottom (no buttons)
 - [ ] Running card on hover: Cancel button appears overlaid at bottom
+- [ ] Stalled running card: Cancel button remains visible without hovering
 - [ ] Card height is identical between running and completed state
 - [ ] Tap Copy button on completed card — name changes to "Copied!" for 1.5s
+- [ ] Single-click completed card — card highlights and clipboard is unchanged
 - [ ] Tap Remove — card slides out with animation
 
 ### Stage label crossfade (2.4)
@@ -300,10 +332,16 @@ removal:   .push(from: .leading).combined(with: .opacity)
 - [ ] Drop zone still triggers file conversion
 - [ ] Context menu (right-click) on cards still works
 - [ ] Double-click on completed card still opens file in editor
-- [ ] Single-click on completed card still copies Markdown
+- [ ] Single-click on completed card selects/highlights without copying Markdown
 - [ ] Overflow badge (`+N`) still appears when more than 5 jobs are queued
 - [ ] Paywall still shows when trial is expired and a file is dropped
 - [ ] All 20 unit tests pass: `xcodebuild test -only-testing:UpmarketTests`
+
+### State-aware glass (2.6)
+- [ ] Idle shelf has no extra tint
+- [ ] Dragging a file over the shelf adds a faint accent tint
+- [ ] Active conversion adds an accent bloom around the glass
+- [ ] Failed job adds a faint red tint
 
 ---
 

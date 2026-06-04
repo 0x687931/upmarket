@@ -1,6 +1,6 @@
 # Upmarket UI — Gated Implementation Plan
 
-**Status:** Ready for implementation  
+**Status:** Partially implemented; v1.1 polish deferred
 **Depends on:** `UI_DESIGN_SPEC.md` (design intent), `IMPLEMENTATION_PLAN.md` (release gates)  
 **Scope:** All UI changes from the design spec, broken into concrete, shippable gates
 
@@ -8,6 +8,22 @@ Each gated phase is self-contained, reviewable, and mergeable independently. Pha
 ordered by impact-to-effort ratio: the first phases ship the highest-value changes with
 the least risk. Each phase has acceptance criteria that can be verified without a
 TestFlight build.
+
+---
+
+## Current Closure Decisions
+
+- Implemented for the Panic trust pass: explicit copy behavior, selected shelf
+  focus, stalled-job cancel visibility, state-aware glass tint, persistent
+  passive actions, and the conversion pathway badge.
+- Already shipped before this plan: menu bar gradient banner and menu bar job
+  badge.
+- Deferred to v1.1: progressive active/passive card widths, corner snap ghost
+  guides, and the 4-act cinematic onboarding.
+- Required before any deferred UI code: visual criteria, reduced-motion behavior,
+  light/dark screenshots, and `scripts/ci/gate.sh major`.
+
+The v1.0 UI target is workflow trust, not spec completion.
 
 ---
 

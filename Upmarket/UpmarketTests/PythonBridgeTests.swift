@@ -48,6 +48,80 @@ final class PythonBridgeTests: XCTestCase {
 
         XCTAssertEqual(result.output?.markdown, "# Converted")
         XCTAssertEqual(result.output?.pipeline, .enhanced)
+        XCTAssertEqual(result.output?.selectedPathway, .enhanced)
+    }
+
+    func testConversionCallDecodesExplicitSelectedPathway() async throws {
+        let helper = try makeHelperScript("""
+        #!/bin/sh
+        cat >/dev/null
+        printf '{"success":true,"needsPassword":false,"output":{"markdown":"# Converted","pages":1,"format":"TXT","title":"Fixture","pipeline":"fast","selectedPathway":"metadata"}}\\n'
+        """)
+        let client = RuntimeHelperClient(executableURL: helper, livenessInterval: 2)
+
+        let result = try await client.convert(
+            fileURL: URL(fileURLWithPath: "/tmp/input.txt"),
+            title: "Fixture",
+            useAI: false,
+            password: nil,
+            workspaceURL: URL(fileURLWithPath: "/tmp")
+        )
+
+        XCTAssertEqual(result.output?.pipeline, .fast)
+        XCTAssertEqual(result.output?.selectedPathway, .metadata)
+        XCTAssertEqual(result.output?.provenanceLabel, "Fast")
+    }
+
+    func testConversionCallReportsProgressEventsBeforeFinalResponse() async throws {
+        let helper = try makeHelperScript("""
+        #!/bin/sh
+        cat >/dev/null
+        printf '{"event":"progress","stage":"python","fraction":0.42,"message":"Processing"}\\n'
+        printf '{"success":true,"needsPassword":false,"output":{"markdown":"# Converted","pages":1,"format":"TXT","title":"Fixture","pipeline":"enhanced"}}\\n'
+        """)
+        let client = RuntimeHelperClient(executableURL: helper, livenessInterval: 2)
+        let recorder = ProgressRecorder()
+
+        let result = try await client.convert(
+            fileURL: URL(fileURLWithPath: "/tmp/input.txt"),
+            title: "Fixture",
+            useAI: false,
+            password: nil,
+            workspaceURL: URL(fileURLWithPath: "/tmp"),
+            progress: { progress in
+                recorder.append(progress)
+            }
+        )
+
+        XCTAssertEqual(result.output?.markdown, "# Converted")
+        XCTAssertEqual(recorder.events, [
+            ConversionProgress(stage: .python, fraction: 0.42, message: "Processing")
+        ])
+    }
+
+    func testMalformedProgressEventDoesNotReplaceFinalResponse() async throws {
+        let helper = try makeHelperScript("""
+        #!/bin/sh
+        cat >/dev/null
+        printf '{"event":"progress","stage":"not-a-stage","fraction":"bad"}\\n'
+        printf '{"success":true,"needsPassword":false,"output":{"markdown":"# Converted","pages":1,"format":"TXT","title":"Fixture","pipeline":"enhanced"}}\\n'
+        """)
+        let client = RuntimeHelperClient(executableURL: helper, livenessInterval: 2)
+        let recorder = ProgressRecorder()
+
+        let result = try await client.convert(
+            fileURL: URL(fileURLWithPath: "/tmp/input.txt"),
+            title: "Fixture",
+            useAI: false,
+            password: nil,
+            workspaceURL: URL(fileURLWithPath: "/tmp"),
+            progress: { progress in
+                recorder.append(progress)
+            }
+        )
+
+        XCTAssertEqual(result.output?.markdown, "# Converted")
+        XCTAssertTrue(recorder.events.isEmpty)
     }
 
     func testHelperCrashMapsToTypedFailure() async throws {
@@ -353,5 +427,22 @@ final class PythonBridgeTests: XCTestCase {
             includingPropertiesForKeys: nil
         )) ?? []
         return entries.map(\.lastPathComponent).sorted()
+    }
+}
+
+private final class ProgressRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: [ConversionProgress] = []
+
+    var events: [ConversionProgress] {
+        lock.lock()
+        defer { lock.unlock() }
+        return stored
+    }
+
+    func append(_ progress: ConversionProgress) {
+        lock.lock()
+        stored.append(progress)
+        lock.unlock()
     }
 }

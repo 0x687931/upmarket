@@ -20,6 +20,8 @@ final class NativeMetadataExtractorTests: XCTestCase {
         XCTAssertTrue(output.markdown.contains("# Image: sample"))
         XCTAssertTrue(output.markdown.contains("**Dimensions:** 1 x 1 px"))
         XCTAssertEqual(output.format, "PNG")
+        XCTAssertEqual(output.pipeline, .fast)
+        XCTAssertEqual(output.selectedPathway, .metadata)
     }
 
     func testCorpusMediaMetadataUsesNativeAVFoundation() async throws {
@@ -50,6 +52,7 @@ final class NativeMetadataExtractorTests: XCTestCase {
             XCTAssertTrue(output.markdown.contains("**Duration:**"))
             XCTAssertEqual(output.format, url.pathExtension.uppercased())
             XCTAssertEqual(output.pipeline, .fast)
+            XCTAssertEqual(output.selectedPathway, .metadata)
         }
     }
 

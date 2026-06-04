@@ -48,6 +48,7 @@ struct RuntimeConversionOutputDTO: Codable {
     let format: String
     let title: String
     let pipeline: String
+    let selectedPathway: String?
 }
 
 struct RuntimeModelStatusDTO: Codable {
@@ -61,6 +62,13 @@ struct RuntimeModelStatusDTO: Codable {
     let isAvailable: Bool?
     let error: String?
     let storageDirectory: String?
+}
+
+struct RuntimeHelperProgressEvent: Encodable {
+    let event = "progress"
+    let stage: String
+    let fraction: Double?
+    let message: String?
 }
 
 struct UpmarketRuntimeHelper {
@@ -113,6 +121,7 @@ struct UpmarketRuntimeHelper {
         case "convert":
             guard let filePath = request.filePath,
                   let title = request.title else { throw HelperError.invalidRequest }
+            emitProgress(stage: "python", fraction: 0.05, message: "Preparing")
             if request.useAI == true, !aiRuntimeProbeCanRun() {
                 return RuntimeHelperResponse(
                     success: false,
@@ -120,6 +129,7 @@ struct UpmarketRuntimeHelper {
                     message: "Upmarket AI cannot access this Mac's graphics processor from the current session. Quit and reopen Upmarket, then try again."
                 )
             }
+            emitProgress(stage: "python", fraction: 0.15, message: "Processing")
             let converter = Python.import("docling_bridge.converter")
             var options: [String: PythonObject] = [
                 "use_ai": PythonObject(request.useAI ?? false),
@@ -130,6 +140,7 @@ struct UpmarketRuntimeHelper {
                 options["password"] = PythonObject(password)
             }
             let pyResult = converter.convert(filePath, PythonObject(options))
+            emitProgress(stage: "python", fraction: 0.82, message: "Processing")
             if Bool(pyResult["needs_password"]) ?? false {
                 return RuntimeHelperResponse(success: false, code: "conversion.password", message: "password required", needsPassword: true)
             }
@@ -140,12 +151,14 @@ struct UpmarketRuntimeHelper {
                 return RuntimeHelperResponse(success: false, code: code, message: message)
             }
             let meta = pyResult["metadata"]
+            emitProgress(stage: "python", fraction: 0.95, message: "Processing")
             return RuntimeHelperResponse(success: true, output: RuntimeConversionOutputDTO(
                 markdown: String(pyResult["markdown"]) ?? "",
                 pages: Int(meta["pages"]) ?? 0,
                 format: String(meta["format"]) ?? "",
                 title: title,
-                pipeline: String(pyResult["pipeline"]) ?? "fast"
+                pipeline: String(pyResult["pipeline"]) ?? "fast",
+                selectedPathway: request.useAI == true ? "ai" : "enhanced"
             ))
         case "checkModels":
             let manager = Python.import("upmarket_models.model_manager")
@@ -324,6 +337,14 @@ struct UpmarketRuntimeHelper {
 
     private static func emit(_ response: RuntimeHelperResponse) {
         let data = (try? JSONEncoder().encode(response)) ?? Data(#"{"success":false,"code":"runtime.helper.invalid-response","message":"invalid response","needsPassword":false}"#.utf8)
+        FileHandle.standardOutput.write(data)
+        FileHandle.standardOutput.write(Data("\n".utf8))
+    }
+
+    private static func emitProgress(stage: String, fraction: Double?, message: String?) {
+        let clamped = fraction.map { min(max($0, 0), 1) }
+        let event = RuntimeHelperProgressEvent(stage: stage, fraction: clamped, message: message)
+        guard let data = try? JSONEncoder().encode(event) else { return }
         FileHandle.standardOutput.write(data)
         FileHandle.standardOutput.write(Data("\n".utf8))
     }

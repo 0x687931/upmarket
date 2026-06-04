@@ -37,6 +37,10 @@ Conversion-quality changes require a corpus fixture or benchmark before adoption
 - `scripts/update_dependencies.sh --install-current` installs only exact pins from `requirements.txt`.
 - `scripts/update_dependencies.sh --install-candidate` installs only exact pins from `requirements-candidate.txt`.
 - No script may write `requirements.txt` or promote candidate pins automatically.
+- `scripts/ci/validate_upstream_watch_workflow.py` keeps the scheduled workflow
+  wired to `scripts/ci/watch_upstream.py`, the report artifacts, and the issue
+  fields for tracking mode, current version, candidate version, latest version,
+  and required adoption gate.
 
 ## Local Patch Rules
 

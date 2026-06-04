@@ -65,17 +65,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return false
     }
 
-    // MARK: - URL Scheme handler (from Quick Action extension)
+    // MARK: - URL Scheme handler (from Quick Action extension and CLI)
     // upmarket://convert?handoff=<uuid>
+    // upmarket://convert?cli=<uuid>
 
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls {
             guard url.scheme == "upmarket", url.host == "convert",
-                  let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-                  let handoffID = components.queryItems?.first(where: { $0.name == "handoff" })?.value
+                  let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
             else { continue }
 
-            openQuickActionHandoff(id: handoffID)
+            if let cliID = components.queryItems?.first(where: { $0.name == "cli" })?.value {
+                CLIConversionBroker.live()?.handle(id: cliID)
+            } else if let handoffID = components.queryItems?.first(where: { $0.name == "handoff" })?.value {
+                openQuickActionHandoff(id: handoffID)
+            }
         }
     }
 

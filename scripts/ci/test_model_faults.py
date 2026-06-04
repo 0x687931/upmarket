@@ -32,6 +32,34 @@ def assert_invalid(manager, key: str, path: Path, expected: str) -> None:
         raise AssertionError(f"expected '{expected}' in validation reason, got '{reason}'")
 
 
+def run_validate_models(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(VALIDATE_MODELS), *args],
+        cwd=REPO_ROOT,
+        env={
+            **os.environ,
+            "UPMARKET_MODELS_DIR": str(root),
+            "UPMARKET_MODEL_QUARANTINE_DIR": str(root.parent / "quarantine"),
+        },
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def write_manifestless_layout(root: Path, revision: str) -> Path:
+    layout = root / "layout"
+    layout.mkdir()
+    (layout / "config.json").write_text("{}", encoding="utf-8")
+    artifacts = layout / "model_artifacts"
+    artifacts.mkdir()
+    (artifacts / "placeholder").write_text("present", encoding="utf-8")
+    metadata = layout / ".cache" / "huggingface" / "download" / "config.json.metadata"
+    metadata.parent.mkdir(parents=True)
+    metadata.write_text(f"{revision}\nopaque-etag\n0\n", encoding="utf-8")
+    return layout
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="upmarket-model-faults-") as temp:
         root = Path(temp)
@@ -62,14 +90,7 @@ def main() -> int:
 
         staging = root / ".layout.download"
         staging.mkdir()
-        result = subprocess.run(
-            [sys.executable, str(VALIDATE_MODELS)],
-            cwd=REPO_ROOT,
-            env={**os.environ, "UPMARKET_MODELS_DIR": str(root)},
-            text=True,
-            capture_output=True,
-            check=False,
-        )
+        result = run_validate_models(root)
         if result.returncode == 0 or "incomplete staging model directory" not in result.stdout:
             raise AssertionError(
                 "validate_models.py did not reject incomplete staging directory\n"
@@ -100,30 +121,40 @@ def main() -> int:
         }
         (pro_dir / manager.MANIFEST_NAME).write_text(json.dumps(manifest), encoding="utf-8")
 
-        result = subprocess.run(
-            [sys.executable, str(VALIDATE_MODELS)],
-            cwd=REPO_ROOT,
-            env={**os.environ, "UPMARKET_MODELS_DIR": str(root)},
-            text=True,
-            capture_output=True,
-            check=False,
-        )
+        result = run_validate_models(root)
         if result.returncode != 0:
             raise AssertionError(
                 "validate_models.py rejected configured Pro storage directory\n"
                 f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
             )
 
+        current_layout = write_manifestless_layout(root, manager.MODELS["layout"]["revision"])
+        result = run_validate_models(root, "--repair")
+        if result.returncode != 0 or not (current_layout / manager.MANIFEST_NAME).exists():
+            raise AssertionError(
+                "validate_models.py did not repair pinned legacy layout cache\n"
+                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
+        valid, reason = manager.validate_model_dir("layout", current_layout)
+        if not valid:
+            raise AssertionError(f"repaired layout cache did not validate: {reason}")
+        shutil.rmtree(current_layout)
+
+        stale_layout = write_manifestless_layout(root, "stale-revision")
+        result = run_validate_models(root, "--repair")
+        if (
+            result.returncode != 0
+            or "quarantined invalid model directory layout" not in result.stdout
+            or stale_layout.exists()
+        ):
+            raise AssertionError(
+                "validate_models.py did not quarantine stale legacy layout cache\n"
+                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
+
         unexpected = root / "unexpected-model"
         unexpected.mkdir()
-        result = subprocess.run(
-            [sys.executable, str(VALIDATE_MODELS)],
-            cwd=REPO_ROOT,
-            env={**os.environ, "UPMARKET_MODELS_DIR": str(root)},
-            text=True,
-            capture_output=True,
-            check=False,
-        )
+        result = run_validate_models(root)
         if result.returncode == 0 or "unexpected model directory" not in result.stdout:
             raise AssertionError(
                 "validate_models.py did not reject unexpected model directory\n"

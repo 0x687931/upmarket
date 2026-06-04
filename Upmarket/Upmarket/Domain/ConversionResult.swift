@@ -31,7 +31,7 @@ enum ConversionResult: Equatable {
     }
 }
 
-enum Pipeline: String {
+enum Pipeline: String, Codable {
     case fast = "fast"
     case enhanced = "enhanced"
     case ai = "ai"
@@ -39,10 +39,60 @@ enum Pipeline: String {
 
     var displayName: String {
         switch self {
-        case .fast: return ""
+        case .fast: return "Fast"
         case .enhanced: return "Enhanced"
         case .ai: return "AI"
         case .none: return ""
+        }
+    }
+}
+
+enum ConversionPathway: String, Codable, Equatable {
+    case pdfKit = "pdfKit"
+    case visionOCR = "visionOCR"
+    case speech = "speech"
+    case metadata = "metadata"
+    case enhanced = "enhanced"
+    case ai = "ai"
+
+    var displayPipeline: Pipeline {
+        switch self {
+        case .ai:
+            return .ai
+        case .enhanced:
+            return .enhanced
+        case .pdfKit, .visionOCR, .speech, .metadata:
+            return .fast
+        }
+    }
+
+    static func defaultForPipeline(_ pipeline: Pipeline) -> ConversionPathway {
+        switch pipeline {
+        case .ai:
+            return .ai
+        case .enhanced:
+            return .enhanced
+        case .fast, .none:
+            return .pdfKit
+        }
+    }
+}
+
+nonisolated enum OutputMode: String, Codable, CaseIterable, Identifiable, Sendable {
+    case markdown
+    case markdownWithFrontmatter = "frontmatter"
+    case json
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .markdown:
+            return "Markdown"
+        case .markdownWithFrontmatter:
+            return "Markdown + Frontmatter"
+        case .json:
+            return "JSON"
         }
     }
 }
@@ -53,6 +103,24 @@ struct ConversionOutput: Equatable {
     let format: String
     let title: String
     let pipeline: Pipeline
+    let selectedPathway: ConversionPathway
 
     var usedAI: Bool { pipeline == .ai }
+    var provenanceLabel: String { selectedPathway.displayPipeline.displayName }
+
+    init(
+        markdown: String,
+        pages: Int,
+        format: String,
+        title: String,
+        pipeline: Pipeline,
+        selectedPathway: ConversionPathway? = nil
+    ) {
+        self.markdown = markdown
+        self.pages = pages
+        self.format = format
+        self.title = title
+        self.pipeline = pipeline
+        self.selectedPathway = selectedPathway ?? ConversionPathway.defaultForPipeline(pipeline)
+    }
 }

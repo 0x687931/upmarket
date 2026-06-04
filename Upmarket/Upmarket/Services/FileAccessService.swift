@@ -67,12 +67,21 @@ final class FileAccessService {
     }
 
     func chooseSaveDirectory(message: String, positioningNear window: NSWindow? = nil) -> URL? {
+        chooseDirectory(message: message, prompt: "Choose", canCreateDirectories: true, positioningNear: window)
+    }
+
+    func chooseDirectory(
+        message: String,
+        prompt: String = "Choose",
+        canCreateDirectories: Bool = false,
+        positioningNear window: NSWindow? = nil
+    ) -> URL? {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
-        panel.canCreateDirectories = true
-        panel.prompt = "Choose"
+        panel.canCreateDirectories = canCreateDirectories
+        panel.prompt = prompt
         panel.message = message
 
         if let window {
@@ -83,7 +92,7 @@ final class FileAccessService {
         }
 
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
-        AppLog.fileAccess.info("Selected save directory kind=\(Self.storageKind(for: url).rawValue, privacy: .public)")
+        AppLog.fileAccess.info("Selected directory kind=\(Self.storageKind(for: url).rawValue, privacy: .public)")
         return url
     }
 
@@ -113,13 +122,14 @@ final class FileAccessService {
         }
     }
 
-    func saveMarkdown(_ markdown: String, title: String) -> URL? {
+    func saveMarkdown(_ markdown: String, title: String, fileExtension: String = "md") -> URL? {
         let signpost = AppSignpost.conversion.beginInterval("saveOutput")
         defer { AppSignpost.conversion.endInterval("saveOutput", signpost) }
 
+        let normalisedExtension = Self.normalisedFileExtension(fileExtension)
         let panel = NSSavePanel()
-        panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
-        panel.nameFieldStringValue = (title.isEmpty ? "converted" : title) + ".md"
+        panel.allowedContentTypes = [UTType(filenameExtension: normalisedExtension) ?? .plainText]
+        panel.nameFieldStringValue = (title.isEmpty ? "converted" : title) + ".\(normalisedExtension)"
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
 
         do {
@@ -139,6 +149,11 @@ final class FileAccessService {
     func copyMarkdown(_ markdown: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(markdown, forType: .string)
+    }
+
+    nonisolated private static func normalisedFileExtension(_ fileExtension: String) -> String {
+        let trimmed = fileExtension.trimmingCharacters(in: CharacterSet(charactersIn: ". "))
+        return trimmed.isEmpty ? "md" : trimmed
     }
 
     func copySupportReport(_ report: String) {

@@ -95,6 +95,41 @@ def _validate_expected_paths(model_path: Path, info: dict) -> tuple[bool, str | 
     return True, None
 
 
+def downloaded_revision(model_key: str, model_path: Path | None = None) -> str | None:
+    """Best-effort revision recorded by Hugging Face local_dir metadata."""
+    if model_key not in MODELS:
+        return None
+
+    info = MODELS[model_key]
+    model_path = model_path or model_directory(model_key)
+    metadata_root = model_path / ".cache" / "huggingface" / "download"
+
+    for relative in info["expected_files"]:
+        metadata = metadata_root / f"{relative}.metadata"
+        if not metadata.is_file():
+            continue
+        try:
+            revision = metadata.read_text().splitlines()[0].strip()
+        except Exception:
+            continue
+        if revision:
+            return revision
+
+    refs = model_path / f"models--{info['repo_id'].replace('/', '--')}" / "refs"
+    if refs.is_dir():
+        for ref in sorted(refs.iterdir()):
+            if not ref.is_file():
+                continue
+            try:
+                revision = ref.read_text().strip()
+            except Exception:
+                continue
+            if revision:
+                return revision
+
+    return None
+
+
 def validate_model_dir(model_key: str, model_path: Path | None = None) -> tuple[bool, str | None]:
     """Return whether a model directory is complete, pinned, and manifest-validated."""
     if model_key not in MODELS:
@@ -140,6 +175,31 @@ def validate_model_dir(model_key: str, model_path: Path | None = None) -> tuple[
     return True, None
 
 
+def repair_missing_manifest(model_key: str, model_path: Path | None = None) -> tuple[bool, str | None]:
+    """Write a manifest for a legacy cache only when its recorded revision is pinned."""
+    if model_key not in MODELS:
+        return False, f"unknown model: {model_key}"
+
+    info = MODELS[model_key]
+    model_path = model_path or model_directory(model_key)
+    if not model_path.exists():
+        return False, "not downloaded"
+    if _manifest_path(model_path).exists():
+        return False, "validation manifest already exists"
+
+    ok, error = _validate_expected_paths(model_path, info)
+    if not ok:
+        return False, error
+
+    revision = downloaded_revision(model_key, model_path)
+    if revision != info["revision"]:
+        found = revision or "unknown"
+        return False, f"downloaded revision mismatch: expected {info['revision']}, found {found}"
+
+    _write_manifest(model_key, model_path)
+    return validate_model_dir(model_key, model_path)
+
+
 def model_available(model_key: str) -> bool:
     valid, _ = validate_model_dir(model_key)
     return valid
@@ -161,7 +221,10 @@ def _write_manifest(model_key: str, model_path: Path) -> None:
         "files": files,
         "validated_at": datetime.now(timezone.utc).isoformat(),
     }
-    _manifest_path(model_path).write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    manifest_path = _manifest_path(model_path)
+    temp_path = manifest_path.with_name(f".{manifest_path.name}.tmp")
+    temp_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    temp_path.replace(manifest_path)
 
 
 def check_models() -> dict:

@@ -13,6 +13,7 @@ struct ShelfView: View {
     @State private var showPaywall = false
     @State private var isExpanded = false
     @State private var dragScale: CGFloat = 1.0
+    @State private var selectedJobID: UUID?
 
     // Hover states per button
     @State private var hoverClose  = false
@@ -31,6 +32,10 @@ struct ShelfView: View {
     private var buttonHeight: CGFloat { closedHeight / 3 }  // 44pt each
 
     private var isAnyConverting: Bool { conversion.isConverting }
+
+    private var hasError: Bool {
+        conversion.jobs.contains { $0.stage == .failed }
+    }
 
     private var closedWidth: CGFloat { controlStripWidth + 1 + peekPanelWidth }
 
@@ -56,7 +61,14 @@ struct ShelfView: View {
         .frame(width: totalWidth, height: closedHeight)
         .animation(.spring(duration: 0.35, bounce: 0.1), value: isExpanded)
         .animation(.spring(duration: 0.25), value: conversion.jobs.count)
-        .background(LiquidGlassBackground(cornerRadius: 12))
+        .background(
+            ContextualLiquidGlassBackground(
+                cornerRadius: 12,
+                isTargeted: isTargeted,
+                isConverting: conversion.isConverting,
+                hasError: hasError
+            )
+        )
         // Drop glow ring — sits outside the shelf bounds via negative padding
         .overlay(
             PulseRingView(color: .accentColor, lineWidth: 2, isActive: isTargeted)
@@ -348,9 +360,18 @@ struct ShelfView: View {
                 ForEach(conversion.jobs.prefix(maxVisible)) { item in
                     ShelfItemView(
                         item: item,
+                        isSelected: selectedJobID == item.id,
+                        onSelect: {
+                            withAnimation(.easeInOut(duration: 0.12)) {
+                                selectedJobID = item.id
+                            }
+                        },
                         onCancel: { conversion.cancel(item.id) },
                         onRetry: { _ = conversion.retry(item.id) }
                     ) {
+                        if selectedJobID == item.id {
+                            selectedJobID = nil
+                        }
                         withAnimation(.spring(duration: 0.25)) {
                             conversion.remove(item.id)
                         }
@@ -486,6 +507,8 @@ extension View {
 
 struct ShelfItemView: View {
     let item: ConversionJob
+    let isSelected: Bool
+    let onSelect: () -> Void
     let onCancel: () -> Void
     let onRetry: () -> Void
     let onRemove: () -> Void
@@ -516,13 +539,22 @@ struct ShelfItemView: View {
             }
         }
         .padding(.vertical, 6)
+        .background(selectionBackground)
         .overlay(alignment: .bottom) {
-            if item.isRunning && showActions {
+            if item.isRunning && shouldShowRunningActions {
                 runningHoverActions
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
                     .padding(.bottom, 6)
             }
         }
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(
+                    isSelected ? Color.accentColor.opacity(0.55) : .clear,
+                    lineWidth: 1
+                )
+                .allowsHitTesting(false)
+        )
         .contentShape(Rectangle())
         .onHover { h in withAnimation(.easeInOut(duration: 0.1)) { showActions = h } }
         .onTapGesture(count: 2) { handleDoubleClick() }
@@ -541,6 +573,16 @@ struct ShelfItemView: View {
             try? await Task.sleep(for: .seconds(1.5))
             showCopied = false
         }
+    }
+
+    private var shouldShowRunningActions: Bool {
+        showActions || isStalled
+    }
+
+    private var selectionBackground: some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(isSelected ? Color.accentColor.opacity(0.08) : .clear)
+            .animation(.easeInOut(duration: 0.12), value: isSelected)
     }
 
     // MARK: - Icon with arc ring
@@ -625,13 +667,13 @@ struct ShelfItemView: View {
         HStack(spacing: 4) {
             if let output = item.result?.output {
                 Button {
-                    FileAccessService.shared.copyMarkdown(output.markdown)
+                    copyOutput(output)
                     showCopied = true   // task(id: showCopied) resets after 1.5s
                 } label: {
                     Image(systemName: "doc.on.doc").font(.system(size: 10))
                 }
                 .buttonStyle(ShelfActionButtonStyle())
-                .help("Copy Markdown")
+                .help("Copy Output")
 
                 Button { handleDoubleClick() } label: {
                     Image(systemName: "arrow.up.right.square").font(.system(size: 10))
@@ -701,29 +743,49 @@ struct ShelfItemView: View {
     // MARK: - Interactions
 
     private func handleSingleClick() {
-        if let output = item.result?.output {
-            FileAccessService.shared.copyMarkdown(output.markdown)
-            showCopied = true   // task(id: showCopied) resets after 1.5s
-        }
+        onSelect()
     }
 
     private func handleDoubleClick() {
         if let output = item.result?.output {
-            openInDefaultApp(output.markdown, title: output.title)
+            openInDefaultApp(output)
         }
     }
 
-    private func openInDefaultApp(_ markdown: String, title: String) {
+    private func openInDefaultApp(_ output: ConversionOutput) {
         Task { @MainActor in
-            let savedURL = SavePreference.shared.save(markdown: markdown, title: title, sourceURL: item.sourceURL)
+            let formatted = formattedOutput(output)
+            let savedURL = SavePreference.shared.save(
+                markdown: formatted.text,
+                title: output.title,
+                sourceURL: item.sourceURL,
+                fileExtension: formatted.fileExtension
+            )
             if let url = savedURL { FileAccessService.shared.open(url) }
         }
     }
 
-    private func saveMarkdown(_ markdown: String, title: String) {
+    private func saveOutput(_ output: ConversionOutput) {
         Task { @MainActor in
-            _ = FileAccessService.shared.saveMarkdown(markdown, title: title)
+            let formatted = formattedOutput(output)
+            _ = FileAccessService.shared.saveMarkdown(
+                formatted.text,
+                title: output.title,
+                fileExtension: formatted.fileExtension
+            )
         }
+    }
+
+    private func copyOutput(_ output: ConversionOutput) {
+        FileAccessService.shared.copyMarkdown(formattedOutput(output).text)
+    }
+
+    private func formattedOutput(_ output: ConversionOutput) -> FormattedConversionOutput {
+        OutputFormatter.format(
+            output,
+            sourceDisplayName: item.sourceURL.lastPathComponent,
+            mode: OutputPreference.shared.mode
+        )
     }
 
     private func reprocess(useAI: Bool) {
@@ -744,16 +806,16 @@ struct ShelfItemView: View {
             Divider()
         }
         if let output = item.result?.output {
-            Button("Open in Markdown Editor") { openInDefaultApp(output.markdown, title: output.title) }
+            Button("Open in Editor") { openInDefaultApp(output) }
             Divider()
-            Button("Copy Markdown") {
-                FileAccessService.shared.copyMarkdown(output.markdown)
+            Button("Copy Output") {
+                copyOutput(output)
             }
             Button("Copy File Path") {
                 FileAccessService.shared.copyFilePath(item.sourceURL)
             }
             Divider()
-            Button("Save As…") { saveMarkdown(output.markdown, title: output.title) }
+            Button("Save As…") { saveOutput(output) }
             Divider()
             if sourceExists {
                 Menu("Reprocess") {

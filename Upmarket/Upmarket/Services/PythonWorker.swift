@@ -29,7 +29,8 @@ struct PythonWorker {
         useAI: Bool,
         password: String?,
         workspaceURL: URL? = nil,
-        heartbeat: (@Sendable () -> Void)? = nil
+        heartbeat: (@Sendable () -> Void)? = nil,
+        progress: (@Sendable (ConversionProgress) -> Void)? = nil
     ) async -> ConversionResult {
         let workspace: URL
         do {
@@ -52,7 +53,8 @@ struct PythonWorker {
                 useAI: useAI,
                 password: password,
                 workspaceURL: workspace,
-                heartbeat: heartbeat
+                heartbeat: heartbeat,
+                progress: progress
             )
         } catch let error as PythonBridgeError {
             AppLog.pythonBridge.error("Advanced conversion failed code=\(error.diagnosticCode, privacy: .public)")

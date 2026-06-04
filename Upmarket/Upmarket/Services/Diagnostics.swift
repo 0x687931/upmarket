@@ -30,6 +30,38 @@ struct DiagnosticSnapshot: Codable, Equatable {
     let plistStatus: String
     let entitlementStatus: String
     let modelManifestStatus: String
+    let lastConversionPipeline: String?
+    let lastConversionPathway: String?
+
+    init(
+        appVersion: String,
+        buildNumber: String,
+        macOSVersion: String,
+        hardwareModel: String,
+        localeIdentifier: String,
+        correlationID: String?,
+        lastConversionStage: String?,
+        lastErrorCode: String?,
+        plistStatus: String,
+        entitlementStatus: String,
+        modelManifestStatus: String,
+        lastConversionPipeline: String? = nil,
+        lastConversionPathway: String? = nil
+    ) {
+        self.appVersion = appVersion
+        self.buildNumber = buildNumber
+        self.macOSVersion = macOSVersion
+        self.hardwareModel = hardwareModel
+        self.localeIdentifier = localeIdentifier
+        self.correlationID = correlationID
+        self.lastConversionStage = lastConversionStage
+        self.lastErrorCode = lastErrorCode
+        self.plistStatus = plistStatus
+        self.entitlementStatus = entitlementStatus
+        self.modelManifestStatus = modelManifestStatus
+        self.lastConversionPipeline = lastConversionPipeline
+        self.lastConversionPathway = lastConversionPathway
+    }
 }
 
 enum Diagnostics {
@@ -37,6 +69,8 @@ enum Diagnostics {
         correlationID: String? = nil,
         lastConversionStage: ConversionStage? = nil,
         lastErrorCode: String? = nil,
+        lastConversionPipeline: Pipeline? = nil,
+        lastConversionPathway: ConversionPathway? = nil,
         bundle: Bundle = .main,
         modelDirectory: URL? = nil
     ) -> DiagnosticSnapshot {
@@ -51,7 +85,9 @@ enum Diagnostics {
             lastErrorCode: lastErrorCode,
             plistStatus: plistStatus(bundle: bundle),
             entitlementStatus: entitlementStatus(),
-            modelManifestStatus: modelManifestStatus(modelDirectory: modelDirectory)
+            modelManifestStatus: modelManifestStatus(modelDirectory: modelDirectory),
+            lastConversionPipeline: lastConversionPipeline?.rawValue,
+            lastConversionPathway: lastConversionPathway?.rawValue
         )
     }
 

@@ -1,0 +1,166 @@
+import XCTest
+@testable import Upmarket
+
+@MainActor
+final class CLIConversionBrokerTests: XCTestCase {
+    func testSuccessfulRequestWritesFormattedJSONWithoutFullSourcePath() async throws {
+        let root = try makeRoot()
+        let id = UUID().uuidString
+        let directory = CLIHandoffPaths.handoffDirectory(id: id, root: root)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try Data("plain input".utf8).write(to: directory.appendingPathComponent("input.txt"))
+        try writeRequest(
+            CLIConversionRequest(
+                version: 1,
+                inputFile: "input.txt",
+                sourceDisplayName: "/Users/alice/Documents/private.txt",
+                useAI: false,
+                outputMode: OutputMode.json.rawValue
+            ),
+            to: directory
+        )
+
+        let broker = CLIConversionBroker(
+            rootURL: root,
+            authorize: { _ in },
+            convert: { url, useAI in
+                XCTAssertEqual(url.lastPathComponent, "input.txt")
+                XCTAssertFalse(useAI)
+                return .success(ConversionOutput(
+                    markdown: "# Converted",
+                    pages: 1,
+                    format: "TXT",
+                    title: "Converted",
+                    pipeline: .enhanced,
+                    selectedPathway: .enhanced
+                ))
+            }
+        )
+
+        await broker.process(id: id)
+
+        let response = try readResponse(from: directory)
+        XCTAssertEqual(response.status, .success)
+        let output = try XCTUnwrap(response.output)
+        XCTAssertTrue(output.contains(#""markdown""#))
+        XCTAssertTrue(output.contains(#""source" : "private.txt""#))
+        XCTAssertFalse(output.contains("/Users/alice"))
+    }
+
+    func testPurchaseRequiredWritesActionableStatusWithoutConverting() async throws {
+        let root = try makeRoot()
+        let id = UUID().uuidString
+        let directory = try makeHandoff(root: root, id: id)
+
+        let broker = CLIConversionBroker(
+            rootURL: root,
+            authorize: { _ in throw ProgrammaticConversionAuthorizationError.purchaseRequired },
+            convert: { _, _ in
+                XCTFail("Conversion should not run when authorization fails")
+                return .failure("Should not run")
+            }
+        )
+
+        await broker.process(id: id)
+
+        let response = try readResponse(from: directory)
+        XCTAssertEqual(response.status, .purchaseRequired)
+        XCTAssertEqual(response.message, "Open Upmarket to unlock more conversions.")
+        XCTAssertNil(response.output)
+    }
+
+    func testAIUnavailableWritesDedicatedStatusWithoutConsumingConversion() async throws {
+        let root = try makeRoot()
+        let id = UUID().uuidString
+        let directory = try makeHandoff(root: root, id: id, useAI: true)
+
+        let broker = CLIConversionBroker(
+            rootURL: root,
+            authorize: { useAI in
+                XCTAssertTrue(useAI)
+                throw ProgrammaticConversionAuthorizationError.aiUnavailable
+            },
+            convert: { _, _ in
+                XCTFail("Conversion should not run when AI is unavailable")
+                return .failure("Should not run")
+            }
+        )
+
+        await broker.process(id: id)
+
+        let response = try readResponse(from: directory)
+        XCTAssertEqual(response.status, .aiUnavailable)
+        XCTAssertNil(response.output)
+    }
+
+    func testUnsafeManifestInputIsRejectedBeforeConversion() async throws {
+        let root = try makeRoot()
+        let id = UUID().uuidString
+        let directory = CLIHandoffPaths.handoffDirectory(id: id, root: root)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try writeRequest(
+            CLIConversionRequest(
+                version: 1,
+                inputFile: "../private.txt",
+                sourceDisplayName: "private.txt",
+                useAI: false,
+                outputMode: OutputMode.markdown.rawValue
+            ),
+            to: directory
+        )
+
+        let broker = CLIConversionBroker(
+            rootURL: root,
+            authorize: { _ in XCTFail("Authorization should not run for invalid manifests") },
+            convert: { _, _ in
+                XCTFail("Conversion should not run for invalid manifests")
+                return .failure("Should not run")
+            }
+        )
+
+        await broker.process(id: id)
+
+        let response = try readResponse(from: directory)
+        XCTAssertEqual(response.status, .inputRejected)
+        XCTAssertNil(response.output)
+    }
+
+    private func makeHandoff(root: URL, id: String, useAI: Bool = false) throws -> URL {
+        let directory = CLIHandoffPaths.handoffDirectory(id: id, root: root)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try Data("plain input".utf8).write(to: directory.appendingPathComponent("input.txt"))
+        try writeRequest(
+            CLIConversionRequest(
+                version: 1,
+                inputFile: "input.txt",
+                sourceDisplayName: "input.txt",
+                useAI: useAI,
+                outputMode: OutputMode.markdown.rawValue
+            ),
+            to: directory
+        )
+        return directory
+    }
+
+    private func makeRoot() throws -> URL {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketCLIBrokerTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: root)
+        }
+        return root
+    }
+
+    private func writeRequest(_ request: CLIConversionRequest, to directory: URL) throws {
+        let encoder = JSONEncoder()
+        try encoder.encode(request).write(to: directory.appendingPathComponent("request.json"))
+    }
+
+    private func readResponse(from directory: URL) throws -> CLIConversionResponse {
+        try JSONDecoder().decode(
+            CLIConversionResponse.self,
+            from: Data(contentsOf: directory.appendingPathComponent("response.json"))
+        )
+    }
+}

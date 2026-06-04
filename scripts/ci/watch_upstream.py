@@ -146,8 +146,8 @@ def write_markdown(report: dict, path: Path) -> None:
         f"Generated: `{report['generated_at']}`",
         f"Source: `{report['source']}`",
         "",
-        "| Package | Project | Current | Candidate | Latest | Status |",
-        "| --- | --- | --- | --- | --- | --- |",
+        "| Package | Project | Tracking | Current | Candidate | Latest | Status |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
     ]
 
     for package in report["packages"]:
@@ -156,7 +156,7 @@ def write_markdown(report: dict, path: Path) -> None:
         latest = package["latest_version"] or "unknown"
         lines.append(
             f"| `{package['name']}` | {package['upstream_project']} | "
-            f"`{current}` | `{candidate}` | `{latest}` | `{package['status']}` |"
+            f"`{package['tracking_mode']}` | `{current}` | `{candidate}` | `{latest}` | `{package['status']}` |"
         )
 
     lines.extend(

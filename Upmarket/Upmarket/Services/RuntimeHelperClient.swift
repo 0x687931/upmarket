@@ -34,7 +34,8 @@ struct RuntimeHelperClient: Sendable {
         useAI: Bool,
         password: String?,
         workspaceURL: URL,
-        heartbeat: (@Sendable () -> Void)? = nil
+        heartbeat: (@Sendable () -> Void)? = nil,
+        progress: (@Sendable (ConversionProgress) -> Void)? = nil
     ) async throws -> ConversionResult {
         let response: RuntimeHelperResponse = try await perform(.convert(
             filePath: fileURL.path,
@@ -42,7 +43,7 @@ struct RuntimeHelperClient: Sendable {
             useAI: useAI,
             password: password,
             workspacePath: workspaceURL.path
-        ), heartbeat: heartbeat)
+        ), heartbeat: heartbeat, progress: progress)
         guard response.success else {
             if response.needsPassword {
                 return .failure(ConversionError.passwordRequired.errorDescription ?? "This PDF is password-protected.")
@@ -57,7 +58,8 @@ struct RuntimeHelperClient: Sendable {
             pages: output.pages,
             format: output.format,
             title: output.title,
-            pipeline: Pipeline(rawValue: output.pipeline) ?? .fast
+            pipeline: Pipeline(rawValue: output.pipeline) ?? .fast,
+            selectedPathway: output.selectedPathway.flatMap(ConversionPathway.init(rawValue:))
         ))
     }
 
@@ -100,7 +102,8 @@ struct RuntimeHelperClient: Sendable {
 
     private nonisolated func perform<T: Decodable>(
         _ request: RuntimeHelperRequest,
-        heartbeat: (@Sendable () -> Void)? = nil
+        heartbeat: (@Sendable () -> Void)? = nil,
+        progress: (@Sendable (ConversionProgress) -> Void)? = nil
     ) async throws -> T {
         let executable = try helperExecutableURL()
         let process = Process()
@@ -140,9 +143,16 @@ struct RuntimeHelperClient: Sendable {
         let decoder = JSONDecoder()
         let recordOutputLine: @Sendable (String) -> Void = { line in
             guard let lineData = line.data(using: .utf8) else { return }
-            if let event = try? decoder.decode(RuntimeHelperEvent.self, from: lineData), event.event == "heartbeat" {
+            if let event = try? decoder.decode(RuntimeHelperEvent.self, from: lineData) {
+                guard event.isRecognized else {
+                    state.recordResponseLine(line)
+                    return
+                }
                 state.markHeartbeat()
                 heartbeat?()
+                if let conversionProgress = event.conversionProgress {
+                    progress?(conversionProgress)
+                }
             } else {
                 state.recordResponseLine(line)
             }
@@ -320,6 +330,7 @@ nonisolated struct RuntimeConversionOutputDTO: Codable, Sendable {
     let format: String
     let title: String
     let pipeline: String
+    let selectedPathway: String?
 }
 
 nonisolated struct RuntimeModelStatusDTO: Codable, Sendable {
@@ -335,8 +346,36 @@ nonisolated struct RuntimeModelStatusDTO: Codable, Sendable {
     let storageDirectory: String?
 }
 
-nonisolated private struct RuntimeHelperEvent: Codable {
+nonisolated private struct RuntimeHelperEvent: Decodable {
     let event: String
+    let stage: String?
+    let fraction: Double?
+    let message: String?
+
+    var isRecognized: Bool {
+        event == "heartbeat" || event == "progress"
+    }
+
+    var conversionProgress: ConversionProgress? {
+        guard event == "progress" else { return nil }
+        guard let stage, let conversionStage = ConversionStage(rawValue: stage) else { return nil }
+        return ConversionProgress(stage: conversionStage, fraction: fraction, message: message)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case event
+        case stage
+        case fraction
+        case message
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        event = try container.decode(String.self, forKey: .event)
+        stage = try? container.decode(String.self, forKey: .stage)
+        fraction = try? container.decode(Double.self, forKey: .fraction)
+        message = try? container.decode(String.self, forKey: .message)
+    }
 }
 
 nonisolated private final class RuntimeHelperProcessState: @unchecked Sendable {

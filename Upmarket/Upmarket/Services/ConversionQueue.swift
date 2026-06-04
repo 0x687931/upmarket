@@ -7,7 +7,7 @@ final class ConversionQueue: ObservableObject {
     typealias RunHandler = (ConversionJob, ConversionRunner.ProgressHandler?) async -> ConversionResult
     typealias AnalyseHandler = (URL) async -> ComplexityAdvice?
 
-    static let shared = ConversionQueue()
+    static let shared = ConversionQueue(historyStore: ConversionHistoryStore.shared)
 
     @Published private(set) var jobs: [ConversionJob] = []
     @Published private(set) var isAnalysing = false
@@ -25,6 +25,7 @@ final class ConversionQueue: ObservableObject {
     private var continuations: [UUID: CheckedContinuation<ConversionResult, Never>] = [:]
     private var cancelledJobIDs: Set<UUID> = []
     private var lastFailedJobContext: DiagnosticJobContext?
+    private let historyStore: ConversionHistoryStore?
     private let livenessThreshold: TimeInterval = 60
 
     var isConverting: Bool {
@@ -60,21 +61,26 @@ final class ConversionQueue: ObservableObject {
         return DiagnosticsService.shared.makeSnapshot(
             correlationID: context.correlationID,
             lastConversionStage: context.stage,
-            lastErrorCode: context.errorCode
+            lastErrorCode: context.errorCode,
+            lastConversionPipeline: context.pipeline,
+            lastConversionPathway: context.pathway
         )
     }
 
-    init(runner: ConversionRunner = ConversionRunner()) {
+    init(runner: ConversionRunner = ConversionRunner(), historyStore: ConversionHistoryStore? = nil) {
         self.runHandler = runner.run
         self.analyseHandler = runner.analyse
+        self.historyStore = historyStore
     }
 
     init(
         runHandler: @escaping RunHandler,
-        analyseHandler: @escaping AnalyseHandler = { _ in nil }
+        analyseHandler: @escaping AnalyseHandler = { _ in nil },
+        historyStore: ConversionHistoryStore? = nil
     ) {
         self.runHandler = runHandler
         self.analyseHandler = analyseHandler
+        self.historyStore = historyStore
     }
 
     func reset() {
@@ -113,7 +119,9 @@ final class ConversionQueue: ObservableObject {
         lastFailedJobContext = DiagnosticJobContext(
             correlationID: job.correlationID,
             stage: .failed,
-            errorCode: result.diagnosticCode
+            errorCode: result.diagnosticCode,
+            pipeline: result.output?.pipeline,
+            pathway: result.output?.selectedPathway
         )
         AppLog.conversion.warning("Rejected conversion correlationID=\(job.correlationID, privacy: .public) ext=\(job.ext, privacy: .public)")
         return job.id
@@ -221,11 +229,11 @@ final class ConversionQueue: ObservableObject {
         update(id, stage: .copying)
 
         var lastReportedStage: ConversionStage = .copying
-        let result = await runHandler(job) { [weak self] stage in
-            lastReportedStage = stage
+        let result = await runHandler(job) { [weak self] conversionProgress in
+            lastReportedStage = conversionProgress.stage
             Task { @MainActor in
                 guard self?.cancelledJobIDs.contains(id) == false, !Task.isCancelled else { return }
-                self?.update(id, stage: stage)
+                self?.update(id, progress: conversionProgress)
             }
         }
 
@@ -246,12 +254,22 @@ final class ConversionQueue: ObservableObject {
     }
 
     private func update(_ id: UUID, stage: ConversionStage) {
+        update(id, progress: ConversionProgress(stage: stage))
+    }
+
+    private func update(_ id: UUID, progress: ConversionProgress) {
         guard let index = jobs.firstIndex(where: { $0.id == id }) else { return }
         guard jobs[index].isRunning else { return }
-        jobs[index].stage = stage
+        let previousStage = jobs[index].stage
+        jobs[index].stage = progress.stage
+        if let fraction = progress.fraction {
+            jobs[index].progressFraction = fraction
+        } else if previousStage != progress.stage {
+            jobs[index].progressFraction = nil
+        }
         jobs[index].lastProgressAt = Date()
         jobs[index].isStalled = false
-        AppLog.conversion.info("Conversion stage correlationID=\(id.uuidString, privacy: .public) stage=\(stage.rawValue, privacy: .public)")
+        AppLog.conversion.info("Conversion stage correlationID=\(id.uuidString, privacy: .public) stage=\(progress.stage.rawValue, privacy: .public)")
     }
 
     private func markHeartbeat(_ id: UUID) {
@@ -271,14 +289,20 @@ final class ConversionQueue: ObservableObject {
             lastFailedJobContext = DiagnosticJobContext(
                 correlationID: id.uuidString,
                 stage: diagnosticStage ?? jobs[index].stage,
-                errorCode: result.diagnosticCode
+                errorCode: result.diagnosticCode,
+                pipeline: result.output?.pipeline,
+                pathway: result.output?.selectedPathway
             )
         }
         jobs[index].stage = stage
         jobs[index].result = result
+        jobs[index].progressFraction = nil
         jobs[index].lastProgressAt = Date()
         jobs[index].isStalled = false
         latestResult = result
+        if stage == .complete, let output = result.output {
+            historyStore?.record(job: jobs[index], output: output)
+        }
         AppLog.conversion.info("Finished conversion correlationID=\(id.uuidString, privacy: .public) stage=\(stage.rawValue, privacy: .public)")
         continuations.removeValue(forKey: id)?.resume(returning: result)
     }
@@ -317,4 +341,6 @@ private struct DiagnosticJobContext {
     let correlationID: String
     let stage: ConversionStage
     let errorCode: String?
+    let pipeline: Pipeline?
+    let pathway: ConversionPathway?
 }

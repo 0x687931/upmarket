@@ -1,0 +1,99 @@
+{
+  "identifier": "com.upmarket.nova",
+  "name": "Upmarket",
+  "organization": "Upmarket",
+  "version": "0.1.0",
+  "description": "Convert documents to Markdown through Upmarket.",
+  "categories": ["commands"],
+  "homepage": "https://upmarket.app",
+  "bugs": "https://upmarket.app/support",
+  "license": "Proprietary",
+  "min_runtime": "5.0",
+  "main": "Scripts/main.js",
+  "activationEvents": [
+    "onCommand:upmarket.convertCurrentFile",
+    "onCommand:upmarket.convertChosenFile",
+    "onCommand:upmarket.insertConvertedFile",
+    "onCommand:upmarket.copyConvertedFile"
+  ],
+  "entitlements": {
+    "clipboard": true,
+    "filesystem": "readwrite",
+    "process": true
+  },
+  "commands": {
+    "editor": [
+      {
+        "title": "Convert Current File to Markdown",
+        "command": "upmarket.convertCurrentFile",
+        "when": "documentHasPath",
+        "filters": {
+          "types": ["pdf", "doc", "docx", "pptx", "xlsx", "html", "htm", "txt", "md", "rtf"]
+        }
+      },
+      {
+        "title": "Insert Converted Markdown...",
+        "command": "upmarket.insertConvertedFile",
+        "when": "editorHasFocus"
+      }
+    ],
+    "extensions": [
+      {
+        "title": "Convert File to Markdown...",
+        "command": "upmarket.convertChosenFile"
+      },
+      {
+        "title": "Copy Converted Markdown...",
+        "command": "upmarket.copyConvertedFile"
+      }
+    ],
+    "command-palette": [
+      {
+        "title": "Upmarket: Convert Current File to Markdown",
+        "command": "upmarket.convertCurrentFile",
+        "when": "documentHasPath"
+      },
+      {
+        "title": "Upmarket: Convert File to Markdown...",
+        "command": "upmarket.convertChosenFile"
+      },
+      {
+        "title": "Upmarket: Insert Converted Markdown...",
+        "command": "upmarket.insertConvertedFile"
+      },
+      {
+        "title": "Upmarket: Copy Converted Markdown...",
+        "command": "upmarket.copyConvertedFile"
+      }
+    ]
+  },
+  "config": [
+    {
+      "key": "upmarket.cliPath",
+      "title": "Command Line Tool",
+      "description": "Path to the installed upmarket command.",
+      "type": "path",
+      "allowFiles": true,
+      "allowFolders": false,
+      "default": "/usr/local/bin/upmarket"
+    },
+    {
+      "key": "upmarket.outputMode",
+      "title": "Output Mode",
+      "type": "enum",
+      "values": [
+        ["markdown", "Markdown"],
+        ["frontmatter", "Markdown with Frontmatter"],
+        ["json", "JSON"]
+      ],
+      "default": "markdown"
+    },
+    {
+      "key": "upmarket.useAI",
+      "title": "Use Upmarket AI",
+      "description": "Request Upmarket AI for conversions when available.",
+      "type": "boolean",
+      "default": false
+    }
+  ]
+}

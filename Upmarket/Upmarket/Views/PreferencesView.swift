@@ -8,8 +8,11 @@ struct PreferencesView: View {
 
     @EnvironmentObject private var modelManager: ModelManager
     @EnvironmentObject private var store: StoreManager
+    @EnvironmentObject private var historyStore: ConversionHistoryStore
+    @EnvironmentObject private var watchedFolderService: WatchedFolderService
 
     private let device = DeviceCapability.shared
+    @State private var watchedFolderError: String?
 
     var body: some View {
         TabView {
@@ -19,7 +22,7 @@ struct PreferencesView: View {
             aboutTab
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 480, height: 440)
+        .frame(width: 560, height: 620)
     }
 
     // MARK: - Settings
@@ -55,8 +58,94 @@ struct PreferencesView: View {
                 }
             }
 
+            Section("Output") {
+                LabeledContent("Copy and save as:") {
+                    Picker("", selection: Binding(
+                        get: { OutputPreference.shared.mode },
+                        set: { OutputPreference.shared.mode = $0 }
+                    )) {
+                        ForEach(OutputMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.radioGroup)
+                    .labelsHidden()
+                }
+
+                Text("Conversion history keeps raw Markdown and formats it when copied.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Watch Folders") {
+                if watchedFolderService.folders.isEmpty {
+                    Text("No folders are being watched.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(watchedFolderService.folders) { folder in
+                        watchedFolderRow(folder)
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    Button("Add Folder…") { chooseWatchedFolder() }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+
+                    Spacer()
+                }
+
+                LabeledContent("Include:") {
+                    TextField("*.pdf, *.docx", text: $watchedFolderService.includePatterns)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(maxWidth: 220)
+                }
+
+                LabeledContent("Exclude:") {
+                    TextField("draft, *.tmp", text: $watchedFolderService.excludePatterns)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(maxWidth: 220)
+                }
+
+                Text("Watched folders are opt-in. Upmarket only watches the selected folder level and converts stable supported files.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if let watchedFolderError {
+                    Label(watchedFolderError, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+            }
+
             Section("Models") {
                 modelRows
+            }
+
+            Section("History") {
+                Toggle("Keep conversion history", isOn: Binding(
+                    get: { historyStore.isEnabled },
+                    set: { historyStore.isEnabled = $0 }
+                ))
+
+                Text("Completed Markdown stays on this Mac for search and copy.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                LabeledContent("Saved conversions:") {
+                    HStack(spacing: 8) {
+                        Text("\(historyStore.records.count)")
+                            .foregroundStyle(.secondary)
+                        Button("Clear History") {
+                            historyStore.clear()
+                        }
+                        .foregroundStyle(.red)
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .disabled(historyStore.records.isEmpty)
+                    }
+                }
             }
 
             if device.supportsAdvancedRuntime {
@@ -109,6 +198,97 @@ struct PreferencesView: View {
         ) {
             SavePreference.shared.chosenFolderURL = url
             SavePreference.shared.destination = .chosenFolder
+        }
+    }
+
+    @ViewBuilder
+    private func watchedFolderRow(_ folder: WatchedFolder) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Label(folder.displayName, systemImage: "folder")
+                    .font(.subheadline)
+                Spacer()
+                Toggle("Notify", isOn: Binding(
+                    get: {
+                        watchedFolderService.folder(id: folder.id)?.notificationsEnabled ?? false
+                    },
+                    set: { enabled in
+                        watchedFolderService.setNotificationsEnabled(enabled, for: folder.id)
+                    }
+                ))
+                .toggleStyle(.checkbox)
+                .controlSize(.small)
+                Button("Remove") {
+                    watchedFolderService.removeFolder(id: folder.id)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+
+            HStack(spacing: 10) {
+                Text("Output:")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Picker("", selection: Binding(
+                    get: {
+                        watchedFolderService.folder(id: folder.id)?.outputDestination ?? .historyOnly
+                    },
+                    set: { destination in
+                        if destination == .chosenFolder {
+                            chooseWatchedOutputFolder(for: folder.id)
+                        } else {
+                            watchedFolderService.setOutputDestination(destination, for: folder.id)
+                        }
+                    }
+                )) {
+                    ForEach(WatchedFolderOutputDestination.allCases) { destination in
+                        Text(destination.displayName).tag(destination)
+                    }
+                }
+                .labelsHidden()
+                .controlSize(.small)
+                .frame(maxWidth: 170)
+
+                if (watchedFolderService.folder(id: folder.id)?.outputDestination ?? .historyOnly) == .chosenFolder {
+                    Button(folder.outputDisplayName ?? "Choose…") {
+                        chooseWatchedOutputFolder(for: folder.id)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+
+                Spacer()
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func chooseWatchedFolder() {
+        watchedFolderError = nil
+        guard let url = FileAccessService.shared.chooseDirectory(
+            message: "Choose a folder for Upmarket to watch.",
+            prompt: "Watch"
+        ) else { return }
+
+        do {
+            try watchedFolderService.addFolder(url)
+        } catch {
+            watchedFolderError = FileAccessService.userVisibleMessage(for: error)
+        }
+    }
+
+    private func chooseWatchedOutputFolder(for id: UUID) {
+        watchedFolderError = nil
+        guard let url = FileAccessService.shared.chooseDirectory(
+            message: "Choose where Upmarket should save watched-folder conversions.",
+            prompt: "Choose",
+            canCreateDirectories: true
+        ) else { return }
+
+        do {
+            try watchedFolderService.setOutputFolder(url, for: id)
+        } catch {
+            watchedFolderError = FileAccessService.userVisibleMessage(for: error)
         }
     }
 
@@ -427,4 +607,6 @@ struct LicenseEntry: Identifiable, Codable {
     PreferencesView()
         .environmentObject(ModelManager.shared)
         .environmentObject(StoreManager.shared)
+        .environmentObject(ConversionHistoryStore.shared)
+        .environmentObject(WatchedFolderService.shared)
 }

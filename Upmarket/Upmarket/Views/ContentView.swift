@@ -325,17 +325,17 @@ struct ContentView: View {
                 // Icon-only actions
                 Group {
                     Button {
-                        FileAccessService.shared.copyMarkdown(output.markdown)
+                        FileAccessService.shared.copyMarkdown(formattedOutput(output).text)
                     } label: {
                         Image(symbol: UpmarketSymbols.copy)
                     }
-                    .help("Copy Markdown  ⌘C")
+                    .help("Copy Output  ⌘C")
                     .keyboardShortcut("c", modifiers: [.command, .shift])
 
-                    Button { saveMarkdown(output) } label: {
+                    Button { saveOutput(output) } label: {
                         Image(symbol: UpmarketSymbols.save)
                     }
-                    .help("Save as .md  ⌘S")
+                    .help("Save Output  ⌘S")
                     .keyboardShortcut("s", modifiers: .command)
 
                     Button { resetToIdle() } label: {
@@ -353,18 +353,47 @@ struct ContentView: View {
 
             Divider()
 
-            ScrollView {
-                Text(output.markdown)
-                    .font(.system(.body, design: .monospaced))
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
+            ZStack(alignment: .bottomTrailing) {
+                ScrollView {
+                    Text(output.markdown)
+                        .font(.system(.body, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(20)
+                        .padding(.bottom, 28)
+                }
+
+                pathwayBadge(output)
+                    .padding(14)
             }
         }
         .transition(.asymmetric(
             insertion: .opacity.combined(with: .move(edge: .trailing)),
             removal: .opacity
         ))
+    }
+
+    private func pathwayBadge(_ output: ConversionOutput) -> some View {
+        Text(output.provenanceLabel)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .background(pathwayBadgeTint(output), in: Capsule())
+            .accessibilityLabel("Conversion pathway \(output.provenanceLabel)")
+    }
+
+    private func pathwayBadgeTint(_ output: ConversionOutput) -> Color {
+        switch output.selectedPathway.displayPipeline {
+        case .fast:
+            return Color.accentColor
+        case .enhanced:
+            return Color(nsColor: .systemBlue)
+        case .ai:
+            return Color(nsColor: .systemPurple)
+        case .none:
+            return Color.secondary
+        }
     }
 
     // MARK: - Error View
@@ -622,8 +651,21 @@ struct ContentView: View {
         }
     }
 
-    private func saveMarkdown(_ output: ConversionOutput) {
-        _ = FileAccessService.shared.saveMarkdown(output.markdown, title: output.title)
+    private func saveOutput(_ output: ConversionOutput) {
+        let formatted = formattedOutput(output)
+        _ = FileAccessService.shared.saveMarkdown(
+            formatted.text,
+            title: output.title,
+            fileExtension: formatted.fileExtension
+        )
+    }
+
+    private func formattedOutput(_ output: ConversionOutput) -> FormattedConversionOutput {
+        OutputFormatter.format(
+            output,
+            sourceDisplayName: primaryJob?.sourceURL.lastPathComponent,
+            mode: OutputPreference.shared.mode
+        )
     }
 
     private func wordCount(_ text: String) -> String {

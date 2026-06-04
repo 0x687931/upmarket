@@ -49,30 +49,31 @@ final class SavePreference {
     /// Returns the URL where the file was saved (nil if user cancelled).
     @discardableResult
     @MainActor
-    func save(markdown: String, title: String, sourceURL: URL?) -> URL? {
+    func save(markdown: String, title: String, sourceURL: URL?, fileExtension: String = "md") -> URL? {
         // First use — prompt once
         if !hasPrompted {
             let chosen = promptFirstUse(sourceURL: sourceURL)
             if !chosen { return nil }
         }
 
-        return performSave(markdown: markdown, title: title, sourceURL: sourceURL)
+        return performSave(markdown: markdown, title: title, sourceURL: sourceURL, fileExtension: fileExtension)
     }
 
     // MARK: - Perform save based on preference
 
     @MainActor
-    private func performSave(markdown: String, title: String, sourceURL: URL?) -> URL? {
+    private func performSave(markdown: String, title: String, sourceURL: URL?, fileExtension: String) -> URL? {
         let signpost = AppSignpost.conversion.beginInterval("saveOutput")
         defer { AppSignpost.conversion.endInterval("saveOutput", signpost) }
 
-        let fileName = (title.isEmpty ? "converted" : title.sanitisedForFilename) + ".md"
+        let normalisedExtension = Self.normalisedFileExtension(fileExtension)
+        let fileName = (title.isEmpty ? "converted" : title.sanitisedForFilename) + ".\(normalisedExtension)"
 
         switch destination {
         case .sameFolder:
             guard let sourceURL else {
                 // No source URL (e.g. dragged from elsewhere) — fall back to ask
-                return showSavePanel(defaultName: fileName, markdown: markdown)
+                return showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
             }
             let folder = sourceURL.deletingLastPathComponent()
             let scoped = folder.startAccessingSecurityScopedResource()
@@ -87,15 +88,15 @@ final class SavePreference {
                 return saveURL
             } catch {
                 // Permission denied on sandboxed path — fall back to panel
-                return showSavePanel(defaultName: fileName, markdown: markdown)
+                return showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
             }
 
         case .askEachTime:
-            return showSavePanel(defaultName: fileName, markdown: markdown)
+            return showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
 
         case .chosenFolder:
             guard let folder = chosenFolderURL else {
-                return showSavePanel(defaultName: fileName, markdown: markdown)
+                return showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
             }
             _ = folder.startAccessingSecurityScopedResource()
             defer { folder.stopAccessingSecurityScopedResource() }
@@ -104,7 +105,7 @@ final class SavePreference {
                 try markdown.write(to: saveURL, atomically: true, encoding: .utf8)
                 return saveURL
             } catch {
-                return showSavePanel(defaultName: fileName, markdown: markdown)
+                return showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
             }
         }
     }
@@ -126,9 +127,9 @@ final class SavePreference {
     }
 
     @MainActor
-    private func showSavePanel(defaultName: String, markdown: String) -> URL? {
+    private func showSavePanel(defaultName: String, markdown: String, fileExtension: String) -> URL? {
         let panel = NSSavePanel()
-        panel.allowedContentTypes = [.init(filenameExtension: "md") ?? .plainText]
+        panel.allowedContentTypes = [.init(filenameExtension: fileExtension) ?? .plainText]
         panel.nameFieldStringValue = defaultName
         panel.orderFrontRegardless()
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
@@ -140,6 +141,11 @@ final class SavePreference {
         }
         try? markdown.write(to: url, atomically: true, encoding: .utf8)
         return url
+    }
+
+    private static func normalisedFileExtension(_ fileExtension: String) -> String {
+        let trimmed = fileExtension.trimmingCharacters(in: CharacterSet(charactersIn: ". "))
+        return trimmed.isEmpty ? "md" : trimmed
     }
 
     // MARK: - First-use prompt

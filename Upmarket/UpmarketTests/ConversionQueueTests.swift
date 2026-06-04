@@ -124,6 +124,30 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.result?.errorMessage, ConversionError.cancelled.errorDescription)
     }
 
+    func testSuccessfulJobPersistsHistoryRecord() async {
+        let history = makeHistoryStore()
+        let queue = ConversionQueue(runHandler: { job, _ in
+            .success(ConversionOutput(
+                markdown: "# Persisted\n\nBody text",
+                pages: 2,
+                format: job.ext,
+                title: "Persisted",
+                pipeline: .fast,
+                selectedPathway: .pdfKit
+            ))
+        }, historyStore: history)
+
+        let id = queue.add(URL(fileURLWithPath: "/Users/alice/Documents/persisted.pdf"))
+        await waitForResult(id, in: queue)
+
+        XCTAssertEqual(history.records.count, 1)
+        XCTAssertEqual(history.records[0].sourceDisplayName, "persisted.pdf")
+        XCTAssertEqual(history.records[0].sourceExtension, "PDF")
+        XCTAssertEqual(history.records[0].selectedPathway, .pdfKit)
+        XCTAssertEqual(history.records[0].markdown, "# Persisted\n\nBody text")
+        XCTAssertFalse(history.records[0].sourceDisplayName.contains("/Users/alice"))
+    }
+
     func testCancelRunningJobStartsNextQueuedJob() async {
         var started: [String] = []
         let queue = ConversionQueue { job, _ in
@@ -262,6 +286,41 @@ final class ConversionQueueTests: XCTestCase {
         await waitForResult(id, in: queue)
         XCTAssertEqual(queue.jobs.first(where: { $0.id == id })?.stage, .complete)
         XCTAssertFalse(queue.jobs.first(where: { $0.id == id })?.isStalled ?? true)
+    }
+
+    func testPythonProgressFractionAdvancesWithinPythonBand() async {
+        let queue = ConversionQueue { _, progress in
+            progress?(ConversionProgress(stage: .python, fraction: 0.25, message: "Processing"))
+            try? await Task.sleep(nanoseconds: 30_000_000)
+            progress?(ConversionProgress(stage: .python, fraction: 0.75, message: "Processing"))
+            try? await Task.sleep(nanoseconds: 30_000_000)
+            return .success(ConversionOutput(
+                markdown: "ok",
+                pages: 1,
+                format: "PDF",
+                title: "progress",
+                pipeline: .enhanced,
+                selectedPathway: .enhanced
+            ))
+        }
+
+        let id = queue.add(URL(fileURLWithPath: "/tmp/progress.pdf"))
+        await waitUntil {
+            guard let job = queue.job(id: id), job.stage == .python else { return false }
+            return job.progress > 0.35 && job.progress < 0.45
+        }
+        let firstProgress = queue.job(id: id)?.progress ?? 0
+
+        await waitUntil {
+            guard let job = queue.job(id: id), job.stage == .python else { return false }
+            return job.progress > 0.65
+        }
+        let secondProgress = queue.job(id: id)?.progress ?? 0
+
+        XCTAssertGreaterThan(secondProgress, firstProgress)
+        await waitForResult(id, in: queue)
+        XCTAssertEqual(queue.job(id: id)?.stage, .complete)
+        XCTAssertEqual(queue.job(id: id)?.progress, 1.0)
     }
 
     func testCriticalMemoryPressureFailsRunningJobsRecoverably() async {
@@ -565,6 +624,7 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertNil(result.errorMessage)
         XCTAssertEqual(result.output?.format, "PDF")
         XCTAssertTrue(result.output?.markdown.contains("Native PDF conversion") ?? false)
+        XCTAssertEqual(result.output?.selectedPathway, .pdfKit)
     }
 
     func testAIPDFRouteIsSelectedBySwiftAndPassedToRuntimeHelper() async throws {
@@ -670,5 +730,22 @@ final class ConversionQueueTests: XCTestCase {
             includingPropertiesForKeys: nil
         )) ?? []
         return entries.map(\.lastPathComponent).sorted()
+    }
+
+    private func makeHistoryStore() -> ConversionHistoryStore {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketQueueHistoryTests-\(UUID().uuidString)", isDirectory: true)
+        let suiteName = "UpmarketQueueHistoryTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: directory)
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        return ConversionHistoryStore(
+            directoryURL: directory,
+            userDefaults: defaults,
+            loadImmediately: false
+        )
     }
 }

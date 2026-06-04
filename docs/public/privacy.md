@@ -29,6 +29,9 @@ All of the following stays on your Mac only.
 | Free conversions remaining | Tracks trial usage |
 | Pack credit ledger | Records purchased and consumed document pack credits |
 | Downloaded AI models | On-device AI for complex document conversion |
+| Conversion history | Stores completed Markdown and display-only document metadata on your Mac when history is enabled |
+
+Conversion history can be cleared or turned off in Settings.
 
 ---
 

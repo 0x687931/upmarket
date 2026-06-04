@@ -54,4 +54,11 @@ final class MarkdownQualityScorerTests: XCTestCase {
 
         XCTAssertEqual(MarkdownQualityScorer.best(candidates)?.label, "high")
     }
+
+    func testFastOutputHasVisibleProvenanceLabel() {
+        let output = ConversionOutput(markdown: "# Report", pages: 1, format: "PDF", title: "Report", pipeline: .fast)
+
+        XCTAssertEqual(output.provenanceLabel, "Fast")
+        XCTAssertEqual(output.selectedPathway, .pdfKit)
+    }
 }

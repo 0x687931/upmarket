@@ -41,7 +41,7 @@ final class ProgrammaticConversionAuthorizationTests: XCTestCase {
         do {
             try await authorizer.authorize(useAI: true)
             XCTFail("Expected AI authorization to fail")
-        } catch let error as UpmarketIntentError {
+        } catch let error as ProgrammaticConversionAuthorizationError {
             XCTAssertEqual(error, .aiUnavailable)
         }
 
@@ -62,7 +62,7 @@ final class ProgrammaticConversionAuthorizationTests: XCTestCase {
         do {
             try await authorizer.authorize(useAI: false)
             XCTFail("Expected purchase requirement")
-        } catch let error as UpmarketIntentError {
+        } catch let error as ProgrammaticConversionAuthorizationError {
             XCTAssertEqual(error, .purchaseRequired)
         }
 

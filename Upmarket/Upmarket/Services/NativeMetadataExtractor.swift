@@ -59,7 +59,8 @@ enum NativeMetadataExtractor {
             pages: 1,
             format: url.pathExtension.uppercased(),
             title: title,
-            pipeline: .fast
+            pipeline: .fast,
+            selectedPathway: .metadata
         ))
     }
 
@@ -110,7 +111,8 @@ enum NativeMetadataExtractor {
                 pages: 1,
                 format: url.pathExtension.uppercased(),
                 title: title,
-                pipeline: .fast
+                pipeline: .fast,
+                selectedPathway: .metadata
             ))
         } catch {
             return .failure("Upmarket couldn't read this media file.")

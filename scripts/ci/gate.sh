@@ -101,8 +101,10 @@ policy_gate() {
   run_step "Validate P0 implementation plan sync" scripts/ci/validate_p0_plan_sync.py
   run_step "Validate architecture boundaries" scripts/ci/validate_architecture_boundaries.py
   run_step "Validate user-facing copy" scripts/ci/validate_user_facing_copy.py
+  run_step "Validate Nova extension" scripts/ci/validate_nova_extension.py
   run_step "Validate generated repository docs" scripts/docs/generate_repo_docs.py --check
   run_step "Validate release regression guards" scripts/ci/validate_release_regression_guards.py
+  run_step "Validate upstream watch workflow" scripts/ci/validate_upstream_watch_workflow.py
   run_step "Verify source entitlements" scripts/ci/verify_entitlements.sh
 }
 
@@ -127,7 +129,7 @@ corpus_and_model_gate() {
   run_step "Validate corpus manifest" scripts/ci/validate_corpus.py
   run_step "Validate corpus baseline" scripts/ci/validate_corpus_baseline.py
   run_step "Validate corpus conversion pathways" scripts/ci/validate_corpus_pathways.py
-  run_step "Validate local model manifests" scripts/ci/validate_models.py
+  run_step "Repair and validate local model manifests" scripts/ci/validate_models.py --repair
   run_step "Validate model fault states" scripts/ci/test_model_faults.py
 }
 

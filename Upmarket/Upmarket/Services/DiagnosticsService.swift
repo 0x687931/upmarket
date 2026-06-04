@@ -8,12 +8,16 @@ final class DiagnosticsService {
     func makeSnapshot(
         correlationID: String? = nil,
         lastConversionStage: ConversionStage? = nil,
-        lastErrorCode: String? = nil
+        lastErrorCode: String? = nil,
+        lastConversionPipeline: Pipeline? = nil,
+        lastConversionPathway: ConversionPathway? = nil
     ) -> DiagnosticSnapshot {
         Diagnostics.makeSnapshot(
             correlationID: correlationID,
             lastConversionStage: lastConversionStage,
-            lastErrorCode: lastErrorCode
+            lastErrorCode: lastErrorCode,
+            lastConversionPipeline: lastConversionPipeline,
+            lastConversionPathway: lastConversionPathway
         )
     }
 

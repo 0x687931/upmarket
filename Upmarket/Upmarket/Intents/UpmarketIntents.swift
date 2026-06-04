@@ -31,9 +31,9 @@ struct UpmarketShortcuts: AppShortcutsProvider {
 
 struct ConvertDocumentIntent: AppIntent {
 
-    static var title: LocalizedStringResource = "Convert Document to Markdown"
+    static var title: LocalizedStringResource = "Convert Document"
     static var description = IntentDescription(
-        "Converts a document to clean Markdown text using Upmarket's on-device AI.",
+        "Converts a document to clean Markdown, frontmatter, or JSON output.",
         categoryName: "Documents"
     )
     static var openAppWhenRun = false  // runs silently in background
@@ -69,9 +69,13 @@ struct ConvertDocumentIntent: AppIntent {
     @Parameter(title: "Use AI", description: "Use Upmarket AI for complex or scanned documents", default: false)
     var useAI: Bool
 
+    @Parameter(title: "Output Format", default: .markdown)
+    var outputMode: OutputMode
+
     static var parameterSummary: some ParameterSummary {
-        Summary("Convert \(\.$document) to Markdown") {
+        Summary("Convert \(\.$document)") {
             \.$useAI
+            \.$outputMode
         }
     }
 
@@ -86,7 +90,12 @@ struct ConvertDocumentIntent: AppIntent {
             throw UpmarketIntentError.conversionFailed
         }
 
-        return .result(value: output.markdown)
+        let formatted = OutputFormatter.format(
+            output,
+            sourceDisplayName: document.filename,
+            mode: outputMode
+        )
+        return .result(value: formatted.text)
     }
 }
 
@@ -94,9 +103,9 @@ struct ConvertDocumentIntent: AppIntent {
 
 struct ConvertAndSaveIntent: AppIntent {
 
-    static var title: LocalizedStringResource = "Convert Document and Save Markdown"
+    static var title: LocalizedStringResource = "Convert Document and Save Output"
     static var description = IntentDescription(
-        "Converts a document to Markdown and returns a .md file to the shortcut.",
+        "Converts a document and returns a file to the shortcut.",
         categoryName: "Documents"
     )
     static var openAppWhenRun = false
@@ -128,9 +137,13 @@ struct ConvertAndSaveIntent: AppIntent {
     @Parameter(title: "Use AI", default: false)
     var useAI: Bool
 
+    @Parameter(title: "Output Format", default: .markdown)
+    var outputMode: OutputMode
+
     static var parameterSummary: some ParameterSummary {
-        Summary("Convert \(\.$document) and save Markdown") {
+        Summary("Convert \(\.$document) and save output") {
             \.$useAI
+            \.$outputMode
         }
     }
 
@@ -146,10 +159,26 @@ struct ConvertAndSaveIntent: AppIntent {
         }
 
         let baseName = document.filename.components(separatedBy: ".").dropLast().joined(separator: ".")
-        let filename = "\(baseName.isEmpty ? "converted" : baseName).md"
-        let savedFile = IntentFile(data: Data(output.markdown.utf8), filename: filename, type: .plainText)
+        let formatted = OutputFormatter.format(
+            output,
+            sourceDisplayName: document.filename,
+            mode: outputMode
+        )
+        let filename = "\(baseName.isEmpty ? "converted" : baseName).\(formatted.fileExtension)"
+        let fileType: UTType = formatted.fileExtension == "json" ? .json : .plainText
+        let savedFile = IntentFile(data: Data(formatted.text.utf8), filename: filename, type: fileType)
         return .result(value: savedFile)
     }
+}
+
+nonisolated extension OutputMode: AppEnum {
+    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Output Format"
+
+    static var caseDisplayRepresentations: [OutputMode: DisplayRepresentation] = [
+        .markdown: "Markdown",
+        .markdownWithFrontmatter: "Markdown + Frontmatter",
+        .json: "JSON",
+    ]
 }
 
 private struct ShortcutInput {
@@ -187,42 +216,17 @@ private func prepareShortcutInput(_ document: IntentFile) throws -> ShortcutInpu
 
 @MainActor
 private func authorizeShortcutConversion(useAI: Bool) async throws {
-    let store = StoreManager.shared
-    let authorizer = ProgrammaticConversionAuthorizer(
-        refreshEntitlements: {
-            await store.refreshEntitlementForProgrammaticConversion()
-        },
-        aiUnavailableReason: { useAI in
-            guard useAI else { return nil }
-            return await ModelManager.shared.aiUseUnavailableReasonAfterChecking(hasPro: store.hasProOrAbove)
-        },
-        consumeConversion: {
-            store.consumeConversion()
-        }
-    )
-    try await authorizer.authorize(useAI: useAI)
-}
-
-@MainActor
-struct ProgrammaticConversionAuthorizer {
-    typealias RefreshEntitlements = () async -> Void
-    typealias AIUnavailableReason = (_ useAI: Bool) async -> String?
-    typealias ConsumeConversion = () -> Bool
-
-    let refreshEntitlements: RefreshEntitlements
-    let aiUnavailableReason: AIUnavailableReason
-    let consumeConversion: ConsumeConversion
-
-    func authorize(useAI: Bool) async throws {
-        await refreshEntitlements()
-
-        if await aiUnavailableReason(useAI) != nil {
+    do {
+        try await ProgrammaticConversionAuthorization.authorize(useAI: useAI)
+    } catch ProgrammaticConversionAuthorizationError.aiUnavailable {
+        throw UpmarketIntentError.aiUnavailable
+    } catch ProgrammaticConversionAuthorizationError.purchaseRequired {
+        throw UpmarketIntentError.purchaseRequired
+    } catch {
+        if useAI {
             throw UpmarketIntentError.aiUnavailable
         }
-
-        guard consumeConversion() else {
-            throw UpmarketIntentError.purchaseRequired
-        }
+        throw UpmarketIntentError.purchaseRequired
     }
 }
 

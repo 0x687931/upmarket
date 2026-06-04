@@ -2,7 +2,7 @@ import Foundation
 import OSLog
 
 struct ConversionRunner {
-    typealias ProgressHandler = (ConversionStage) -> Void
+    typealias ProgressHandler = (ConversionProgress) -> Void
 
     let pythonWorker: PythonWorker
     private let supportsAdvancedRuntime: Bool
@@ -234,7 +234,8 @@ struct ConversionRunner {
                 pages: result.pageCount,
                 format: "PDF",
                 title: title,
-                pipeline: .fast
+                pipeline: .fast,
+                selectedPathway: .visionOCR
             ))
         } catch VisionDocumentExtractor.ExtractionError.passwordRequired {
             return .failure(ConversionError.passwordRequired.errorDescription ?? "This PDF is password-protected.")
@@ -259,7 +260,8 @@ struct ConversionRunner {
                 pages: 1,
                 format: fileURL.pathExtension.uppercased(),
                 title: title,
-                pipeline: .fast
+                pipeline: .fast,
+                selectedPathway: .speech
             ))
         } catch {
             return .failure(error.localizedDescription)
@@ -277,7 +279,8 @@ struct ConversionRunner {
                 pages: result.pageCount,
                 format: "PDF",
                 title: title,
-                pipeline: .fast
+                pipeline: .fast,
+                selectedPathway: .pdfKit
             ))
         } catch PDFConverter.ConversionError.passwordRequired {
             return .failure(ConversionError.passwordRequired.errorDescription ?? "This PDF is password-protected.")
@@ -427,6 +430,9 @@ struct ConversionRunner {
             workspaceURL: workspaceURL,
             heartbeat: {
                 progress?(.python)
+            },
+            progress: { helperProgress in
+                progress?(helperProgress)
             }
         )
     }
@@ -454,7 +460,8 @@ struct ConversionRunner {
             pages: output.pages,
             format: output.format,
             title: title,
-            pipeline: output.pipeline
+            pipeline: output.pipeline,
+            selectedPathway: output.selectedPathway
         )
     }
 }

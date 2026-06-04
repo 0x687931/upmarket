@@ -40,6 +40,24 @@ final class DiagnosticsTests: XCTestCase {
         XCTAssertEqual(snapshot.lastErrorCode, "runtime.bridge")
     }
 
+    func testDiagnosticSnapshotCanIncludeProductLevelProvenance() throws {
+        let snapshot = Diagnostics.makeSnapshot(
+            lastConversionStage: .complete,
+            lastConversionPipeline: .enhanced,
+            lastConversionPathway: .enhanced
+        )
+
+        let data = try Diagnostics.makeRedactedBundle(snapshot: snapshot)
+        let json = String(decoding: data, as: UTF8.self)
+
+        XCTAssertEqual(snapshot.lastConversionPipeline, "enhanced")
+        XCTAssertEqual(snapshot.lastConversionPathway, "enhanced")
+        XCTAssertTrue(json.contains(#""lastConversionPipeline":"enhanced""#))
+        XCTAssertTrue(json.contains(#""lastConversionPathway":"enhanced""#))
+        XCTAssertFalse(json.localizedCaseInsensitiveContains("docling"))
+        XCTAssertFalse(json.localizedCaseInsensitiveContains("python"))
+    }
+
     func testWorkspaceCleanupRemovesDirectory() throws {
         let workspace = try AppWorkspace.create(prefix: "diagnostics-test")
         XCTAssertTrue(FileManager.default.fileExists(atPath: workspace.path))

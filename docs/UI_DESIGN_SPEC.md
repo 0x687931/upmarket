@@ -1,8 +1,32 @@
 # Upmarket — UI/UX Design Specification
 
-**Status:** Proposed — not yet implemented  
+**Status:** Partially implemented — remaining speculative polish deferred
 **Relates to:** `USER_FLOW.md` (functional flows), `IMPLEMENTATION_PLAN.md` (phases)  
 **Scope:** Menu bar dropdown, shelf widget, onboarding tour, micro-interactions
+
+---
+
+## Implementation Status
+
+This spec is no longer a promise that every idea below ships in v1.0. The
+product-trust items are implemented or covered by the gated plan; the cinematic
+items remain v1.1 candidates.
+
+| Area | Status | Decision |
+| --- | --- | --- |
+| Menu bar gradient banner | Implemented | Keep as shipped. |
+| Menu bar job badge | Implemented | Keep as shipped. |
+| Passive shelf action buttons | Implemented | Keep visible; do not hide behind hover. |
+| Shelf single-click behavior | Implemented | Single-click selects/focuses; copy stays explicit. |
+| Stalled-job cancel affordance | Implemented | Cancel is visible when a job stalls. |
+| State-aware glass tint | Implemented | Keep tied to drag/conversion/error state. |
+| Conversion pathway badge | Implemented outside this spec | Keep product-level labels only: Fast, Enhanced, AI. |
+| Progressive 96 pt / 72 pt shelf widths | Deferred | v1.1 only; layout risk is higher than launch value. |
+| Corner snap ghost guides | Deferred | v1.1 only; needs visual criteria and accessibility review first. |
+| Four-act cinematic onboarding | Deferred | v1.1 only; must remain dismissible and never trigger paywall before conversion value. |
+
+Any new motion must still carry state or workflow meaning. Do not add decorative
+animation just to close the spec.
 
 ---
 
