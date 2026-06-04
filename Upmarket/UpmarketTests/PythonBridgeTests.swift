@@ -1,4 +1,5 @@
 import XCTest
+import Darwin
 @testable import Upmarket
 
 @MainActor
@@ -196,6 +197,46 @@ final class PythonBridgeTests: XCTestCase {
         XCTAssertEqual(result.output?.markdown, "# Converted")
     }
 
+    func testCancelledHelperIsForcedToExit() async throws {
+        let pidFile = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketRuntimeHelperPID-\(UUID().uuidString)")
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: pidFile)
+        }
+        let helper = try makeHelperScript("""
+        #!/bin/sh
+        printf "$$" > "\(pidFile.path)"
+        cat >/dev/null
+        trap '' TERM
+        while :; do :; done
+        """)
+        let client = RuntimeHelperClient(
+            executableURL: helper,
+            livenessInterval: 30,
+            terminationGraceInterval: 0.1
+        )
+
+        let task = Task {
+            try await client.readiness()
+        }
+        await waitUntil {
+            FileManager.default.fileExists(atPath: pidFile.path)
+        }
+        let pid = try pidFromFile(pidFile)
+
+        task.cancel()
+        do {
+            _ = try await task.value
+        } catch {
+            // The exact thrown helper error is less important than the process lifetime.
+        }
+
+        await waitUntil {
+            !self.isProcessRunning(pid)
+        }
+        XCTAssertFalse(isProcessRunning(pid))
+    }
+
     func testPasswordProtectedCorpusPDFReturnsPasswordFailure() async throws {
         let fixture = corpusFixture("docling/docling/tests/data/pdf_password/2206.01062_pg3.pdf")
         guard FileManager.default.fileExists(atPath: fixture.path) else {
@@ -288,6 +329,37 @@ final class PythonBridgeTests: XCTestCase {
         let result = await worker.convert(fileURL: copied, title: "right_to_left_01", useAI: false, password: nil, workspaceURL: workspace)
 
         XCTAssertNotNil(result.output)
+    }
+
+    func testPreConversionAnalysisDoesNotStartHelperForNonPDFDocuments() async throws {
+        let marker = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketAnalysisHelperMarker-\(UUID().uuidString)")
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: marker)
+        }
+        let helper = try makeHelperScript("""
+        #!/bin/sh
+        touch "\(marker.path)"
+        cat >/dev/null
+        printf '{"success":true,"needsPassword":false}\\n'
+        """)
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketAnalysisTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: directory)
+        }
+        let input = directory.appendingPathComponent("draft.docx")
+        try Data("analysis should not spawn helper".utf8).write(to: input)
+        let runner = ConversionRunner(
+            pythonWorker: PythonWorker(helperClient: RuntimeHelperClient(executableURL: helper)),
+            supportsAdvancedRuntime: true
+        )
+
+        let advice = await runner.analyse(fileURL: input)
+
+        XCTAssertNil(advice)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: marker.path))
     }
 
     func testRunnerCleansWorkspaceWhenAdvancedConversionIsCancelled() async throws {
@@ -427,6 +499,18 @@ final class PythonBridgeTests: XCTestCase {
             includingPropertiesForKeys: nil
         )) ?? []
         return entries.map(\.lastPathComponent).sorted()
+    }
+
+    private func pidFromFile(_ url: URL) throws -> pid_t {
+        let raw = try String(contentsOf: url, encoding: .utf8)
+        guard let pid = Int32(raw.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+            throw NSError(domain: "UpmarketTests", code: 1)
+        }
+        return pid
+    }
+
+    private func isProcessRunning(_ pid: pid_t) -> Bool {
+        Darwin.kill(pid, 0) == 0
     }
 }
 

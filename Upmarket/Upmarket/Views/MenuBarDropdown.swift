@@ -209,6 +209,12 @@ struct MenuBarDropdown: View {
                      action: {
                 NSApp.sendAction(Selector(("orderFrontPreferencesPanel:")), to: nil, from: nil)
             })
+
+            Divider().padding(.leading, 44)
+
+            menuItem(icon: "power", label: "Quit Upmarket",
+                     shortcut: "⌘Q",
+                     action: { NSApp.terminate(nil) })
         }
         .padding(.vertical, 4)
     }
@@ -291,7 +297,7 @@ struct MenuBarDropdown: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Footer — version only; Quit lives in the app menu (⌘Q)
+    // MARK: - Footer
 
     private var footer: some View {
         HStack {

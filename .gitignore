@@ -56,3 +56,4 @@ Upmarket/Python/Python.xcframework/
 
 # Generated CI/local reports
 reports/
+Upmarket/LocalDev.xcconfig

@@ -243,6 +243,9 @@ struct UpmarketRuntimeHelper {
 
         do {
             try process.run()
+            defer {
+                terminateProbeIfNeeded(process)
+            }
             try stdin.fileHandleForWriting.write(JSONEncoder().encode(request))
             stdin.fileHandleForWriting.closeFile()
             let deadline = Date().addingTimeInterval(15)
@@ -250,11 +253,10 @@ struct UpmarketRuntimeHelper {
                 usleep(50_000)
             }
             if process.isRunning {
-                process.terminate()
-                process.waitUntilExit()
                 return false
             }
         } catch {
+            terminateProbeIfNeeded(process)
             return false
         }
 
@@ -275,6 +277,19 @@ struct UpmarketRuntimeHelper {
             }
             return response.success
         }
+    }
+
+    private static func terminateProbeIfNeeded(_ process: Process) {
+        guard process.isRunning else { return }
+        let deadline = Date().addingTimeInterval(1)
+        process.terminate()
+        while process.isRunning && Date() < deadline {
+            usleep(20_000)
+        }
+        if process.isRunning {
+            Darwin.kill(process.processIdentifier, SIGKILL)
+        }
+        process.waitUntilExit()
     }
 
     private static func configureRuntime(workspacePath: String?) {

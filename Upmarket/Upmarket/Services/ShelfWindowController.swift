@@ -10,8 +10,7 @@ final class ShelfWindowController: NSWindowController {
     private let positioner = ShelfPositioner.shared
     private var mouseMonitor: Any?
     private var workspaceObserver: NSObjectProtocol?
-    private let closedShelfWidth: CGFloat = 129
-    private let closedShelfHeight: CGFloat = 132
+    private let restingShelfSize = ShelfLayout.miniSize
     private let shelfInset: CGFloat = 10
     private let snapRadius: CGFloat = 60
 
@@ -95,8 +94,8 @@ final class ShelfWindowController: NSWindowController {
     private func shelfFrame() -> NSRect {
         let screen = positioner.primaryScreen
         let visible = screen.visibleFrame
-        let w = closedShelfWidth
-        let h = closedShelfHeight
+        let w = restingShelfSize.width
+        let h = restingShelfSize.height
 
         switch anchor {
         case .center:
@@ -194,11 +193,32 @@ final class ShelfWindowController: NSWindowController {
         panel.isVisible ? hide() : show()
     }
 
-    /// Called when user drags the resize handle — updates window width.
     func resizeToContent(width: CGFloat) {
+        resizeToContent(width: width, height: window?.frame.height ?? ShelfLayout.closedHeight)
+    }
+
+    func resizeToContent(width: CGFloat, height: CGFloat) {
         guard let panel = window else { return }
         var frame = panel.frame
+        let oldSize = frame.size
         frame.size.width = width
+        frame.size.height = height
+
+        switch anchor {
+        case .bottomLeft:
+            break
+        case .bottomRight:
+            frame.origin.x += oldSize.width - width
+        case .topLeft:
+            frame.origin.y += oldSize.height - height
+        case .topRight:
+            frame.origin.x += oldSize.width - width
+            frame.origin.y += oldSize.height - height
+        case .center:
+            frame.origin.x += (oldSize.width - width) / 2
+            frame.origin.y += (oldSize.height - height) / 2
+        }
+
         panel.setFrame(frame, display: true)
     }
 

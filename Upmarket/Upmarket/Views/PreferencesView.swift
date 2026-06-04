@@ -13,6 +13,7 @@ struct PreferencesView: View {
 
     private let device = DeviceCapability.shared
     @State private var watchedFolderError: String?
+    @AppStorage(AppVisibilityPreference.showDockIconKey) private var showDockIcon = AppVisibilityPreference.defaultShowDockIcon
 
     var body: some View {
         TabView {
@@ -29,6 +30,15 @@ struct PreferencesView: View {
 
     private var settingsTab: some View {
         Form {
+            Section("App") {
+                Toggle("Show Dock icon", isOn: $showDockIcon)
+                    .toggleStyle(.checkbox)
+
+                Text("When hidden, Upmarket keeps running from the menu bar and shelf.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Save Location") {
                 LabeledContent("Save files:") {
                     Picker("", selection: Binding(
@@ -187,7 +197,11 @@ struct PreferencesView: View {
         }
         .formStyle(.grouped)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onChange(of: showDockIcon) { value in
+            AppVisibilityPreference.apply(showDockIcon: value)
+        }
         .onAppear {
+            AppVisibilityPreference.apply(showDockIcon: showDockIcon)
             if case .unchecked = modelManager.installState { modelManager.checkModels() }
         }
     }

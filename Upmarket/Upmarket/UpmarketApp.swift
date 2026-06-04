@@ -23,7 +23,6 @@ struct UpmarketApp: App {
 
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    @StateObject private var pythonBridge    = PythonBridge.shared
     @StateObject private var conversionQueue = ConversionQueue.shared
     @StateObject private var historyStore    = ConversionHistoryStore.shared
     @StateObject private var watchedFolders  = WatchedFolderService.shared
@@ -109,12 +108,10 @@ struct UpmarketApp: App {
 
     init() {
         RuntimePrivilegeGuard.abortIfPrivilegedProcess()
+        AppRuntime.exitIfDuplicateInstance()
         AppRuntime.installTerminationSignalCleanup()
         AppWorkspace.removeStaleWorkspaces()
         AppRuntime.writeUITestWorkspacePathIfRequested()
-        Task { @MainActor in
-            PythonBridge.shared.setup()
-        }
         FeatureFlags.shared.fetchFlags()
         if !AppRuntime.isRunningTests {
             Task { @MainActor in

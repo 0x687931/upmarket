@@ -27,9 +27,9 @@ final class TourManager {
         ),
         TourStep(
             id: 1,
-            title: "Expand the shelf",
-            body: "Tap the right arrow to open the shelf. Files and results appear here.",
-            symbol: "chevron.right",
+            title: "Open the shelf",
+            body: "Tap the arrow to open the queue. Files and results appear here.",
+            symbol: "arrow.right",
             symbolColor: Color(nsColor: .systemBlue),
             action: "Got it",
             shelfAnchor: .expandButton
@@ -101,6 +101,7 @@ final class TourManager {
 
     private func finish() {
         dismissCallout()
+        NotificationCenter.default.post(name: .upmarketSetShelfSpotlight, object: nil)
         isActive = false
         UserDefaults.standard.set(true, forKey: "upmarket.tourComplete")
     }
@@ -121,6 +122,10 @@ final class TourManager {
 
         let hosting = NSHostingView(rootView: calloutView)
         hosting.autoresizingMask = [.width, .height]
+        hosting.wantsLayer = true
+        hosting.layer?.backgroundColor = NSColor.clear.cgColor
+        hosting.layer?.isOpaque = false
+        hosting.layer?.masksToBounds = false
 
         let panel = NSPanel(
             contentRect: .zero,
@@ -131,7 +136,10 @@ final class TourManager {
         panel.level = .popUpMenu   // above everything including shelf
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        panel.hasShadow = false
+        panel.animationBehavior = .none
+        panel.isMovable = false
+        panel.isMovableByWindowBackground = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.contentView = hosting
 
@@ -153,6 +161,11 @@ final class TourManager {
     }
 
     private func performStepEffect(_ step: TourStep) {
+        NotificationCenter.default.post(
+            name: .upmarketSetShelfSpotlight,
+            object: step.shelfAnchor.spotlightID
+        )
+
         switch step.shelfAnchor {
         case .addButton:
             NotificationCenter.default.post(name: .upmarketSetShelfExpanded, object: true)
@@ -262,6 +275,15 @@ struct TourStep {
 
     enum ShelfAnchorPosition {
         case none, closeButton, addButton, expandButton, menuBar
+
+        var spotlightID: String? {
+            switch self {
+            case .closeButton: return "closeButton"
+            case .addButton: return "addButton"
+            case .expandButton: return "expandButton"
+            case .none, .menuBar: return nil
+            }
+        }
     }
 }
 
@@ -277,21 +299,25 @@ struct TourCalloutView: View {
 
     var body: some View {
         ZStack {
-            // Glass background
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(nsColor: .windowBackgroundColor))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(Color.white.opacity(0.25), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
                 )
-                .shadow(color: .black.opacity(0.2), radius: 16, y: 8)
 
             VStack(alignment: .leading, spacing: 10) {
                 // Step indicator + skip
                 HStack {
-                    Label("Upmarket", systemImage: "number.square.fill")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                    ZStack(alignment: .leading) {
+                        TourWindowDragHandle()
+                            .frame(width: 132, height: 24)
+                        Label("Upmarket", systemImage: "number.square.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .allowsHitTesting(false)
+                    }
+                    .help("Drag tour")
                     Spacer()
                     // Dots
                     HStack(spacing: 4) {
@@ -352,21 +378,63 @@ struct TourCalloutView: View {
             EmptyView()
         case .left:
             Triangle()
-                .fill(.ultraThinMaterial)
+                .fill(Color(nsColor: .windowBackgroundColor))
                 .frame(width: 14, height: 20)
                 .rotationEffect(.degrees(-90))
                 .offset(x: -157)
         case .right:
             Triangle()
-                .fill(.ultraThinMaterial)
+                .fill(Color(nsColor: .windowBackgroundColor))
                 .frame(width: 14, height: 20)
                 .rotationEffect(.degrees(90))
                 .offset(x: 157)
         case .top:
             Triangle()
-                .fill(.ultraThinMaterial)
+                .fill(Color(nsColor: .windowBackgroundColor))
                 .frame(width: 18, height: 14)
                 .offset(y: -100)
+        }
+    }
+}
+
+private struct TourWindowDragHandle: NSViewRepresentable {
+    func makeNSView(context: Context) -> DragHandleView {
+        DragHandleView()
+    }
+
+    func updateNSView(_ nsView: DragHandleView, context: Context) {}
+
+    final class DragHandleView: NSView {
+        private var initialMouseLocation: NSPoint = .zero
+        private var initialWindowOrigin: NSPoint = .zero
+        private var pushedCursor = false
+
+        override func mouseDown(with event: NSEvent) {
+            guard let window else { return }
+            initialMouseLocation = NSEvent.mouseLocation
+            initialWindowOrigin = window.frame.origin
+            NSCursor.closedHand.push()
+            pushedCursor = true
+        }
+
+        override func mouseDragged(with event: NSEvent) {
+            guard let window else { return }
+            let current = NSEvent.mouseLocation
+            window.setFrameOrigin(NSPoint(
+                x: initialWindowOrigin.x + current.x - initialMouseLocation.x,
+                y: initialWindowOrigin.y + current.y - initialMouseLocation.y
+            ))
+        }
+
+        override func mouseUp(with event: NSEvent) {
+            if pushedCursor {
+                NSCursor.pop()
+                pushedCursor = false
+            }
+        }
+
+        override func resetCursorRects() {
+            addCursorRect(bounds, cursor: .openHand)
         }
     }
 }
