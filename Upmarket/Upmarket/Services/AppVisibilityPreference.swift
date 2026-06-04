@@ -3,10 +3,15 @@ import Foundation
 
 enum AppVisibilityPreference {
     static let showDockIconKey = "upmarket.showDockIcon"
-    static let defaultShowDockIcon = false
+    static let defaultShowDockIcon = true
 
     static var showDockIcon: Bool {
-        get { UserDefaults.standard.bool(forKey: showDockIconKey) }
+        get {
+            guard let value = UserDefaults.standard.object(forKey: showDockIconKey) as? Bool else {
+                return defaultShowDockIcon
+            }
+            return value
+        }
         set { UserDefaults.standard.set(newValue, forKey: showDockIconKey) }
     }
 

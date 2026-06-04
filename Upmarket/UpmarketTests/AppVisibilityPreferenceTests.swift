@@ -34,7 +34,7 @@ final class AppVisibilityPreferenceTests: XCTestCase {
         }
 
         defaults.removeObject(forKey: AppVisibilityPreference.showDockIconKey)
-        XCTAssertFalse(AppVisibilityPreference.showDockIcon)
+        XCTAssertTrue(AppVisibilityPreference.showDockIcon)
 
         AppVisibilityPreference.showDockIcon = true
         XCTAssertTrue(defaults.bool(forKey: AppVisibilityPreference.showDockIconKey))
