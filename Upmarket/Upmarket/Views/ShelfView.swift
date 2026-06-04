@@ -3,6 +3,32 @@ import UniformTypeIdentifiers
 import AppKit
 import OSLog
 
+enum ShelfLayout {
+    static let miniSize = CGSize(width: 56, height: 56)
+    static let controlStripWidth: CGFloat = 48
+    static let peekPanelWidth: CGFloat = 168
+    static let closedHeight: CGFloat = 132
+    static let itemWidth: CGFloat = 64
+    static let itemSpacing: CGFloat = 8
+    static let maxVisible = 5
+
+    static var closedWidth: CGFloat {
+        controlStripWidth + 1 + peekPanelWidth
+    }
+}
+
+private enum ShelfTourSpotlight: String {
+    case closeButton
+    case addButton
+    case expandButton
+}
+
+private enum ShelfDisplayMode: Equatable {
+    case mini
+    case peek
+    case queue
+}
+
 struct ShelfView: View {
 
     @EnvironmentObject private var conversion: ConversionQueue
@@ -10,10 +36,12 @@ struct ShelfView: View {
     @EnvironmentObject private var modelManager: ModelManager
 
     @State private var isTargeted = false
+    @State private var isShelfHovered = false
     @State private var showPaywall = false
-    @State private var isExpanded = false
+    @State private var displayMode: ShelfDisplayMode = .mini
     @State private var dragScale: CGFloat = 1.0
     @State private var selectedJobID: UUID?
+    @State private var tourSpotlight: ShelfTourSpotlight?
 
     // Hover states per button
     @State private var hoverClose  = false
@@ -22,66 +50,111 @@ struct ShelfView: View {
 
     // UI-5: asymmetric closed state
     // Left: narrow control strip  |  Right: peek panel showing live job state
-    private let controlStripWidth: CGFloat = 48
-    private let peekPanelWidth:    CGFloat = 168
-    private let closedHeight:      CGFloat = 132
-    private let itemWidth:         CGFloat = 64
-    private let itemSpacing:       CGFloat = 8
-    private let maxVisible:        Int     = 5
+    private let controlStripWidth = ShelfLayout.controlStripWidth
+    private let peekPanelWidth = ShelfLayout.peekPanelWidth
+    private let closedHeight = ShelfLayout.closedHeight
+    private let itemWidth = ShelfLayout.itemWidth
+    private let itemSpacing = ShelfLayout.itemSpacing
+    private let maxVisible = ShelfLayout.maxVisible
 
     private var buttonHeight: CGFloat { closedHeight / 3 }  // 44pt each
-
-    private var isAnyConverting: Bool { conversion.isConverting }
 
     private var hasError: Bool {
         conversion.jobs.contains { $0.stage == .failed }
     }
 
+    private var hasQueueItems: Bool { !conversion.jobs.isEmpty }
+
+    private var effectiveMode: ShelfDisplayMode {
+        if displayMode == .queue, hasQueueItems {
+            return .queue
+        }
+
+        if isShelfHovered || isTargeted || tourSpotlight != nil {
+            return .peek
+        }
+
+        switch displayMode {
+        case .mini:
+            return .mini
+        case .peek:
+            return .peek
+        case .queue:
+            return hasQueueItems ? .queue : .mini
+        }
+    }
+
+    private var isShelfActive: Bool {
+        effectiveMode != .mini || isTargeted || selectedJobID != nil
+    }
+
+    private var shelfGlassOpacity: CGFloat {
+        isShelfActive ? 1.0 : 0.72
+    }
+
+    private var shelfSolidFillOpacity: Double {
+        isShelfActive ? 0.72 : 0
+    }
+
     private var closedWidth: CGFloat { controlStripWidth + 1 + peekPanelWidth }
 
     private var totalWidth: CGFloat {
-        guard isExpanded else { return closedWidth }
+        switch effectiveMode {
+        case .mini:
+            return ShelfLayout.miniSize.width
+        case .peek:
+            return closedWidth
+        case .queue:
+            break
+        }
+
         let count = min(conversion.jobs.count, maxVisible)
-        let content: CGFloat = count > 0
-            ? CGFloat(count) * (itemWidth + itemSpacing) + itemSpacing
-            : 200
+        let content = CGFloat(count) * (itemWidth + itemSpacing) + itemSpacing
         let overflow: CGFloat = conversion.jobs.count > maxVisible ? itemWidth + itemSpacing : 0
         return closedWidth + 8 + content + overflow
     }
 
+    private var totalHeight: CGFloat {
+        effectiveMode == .mini ? ShelfLayout.miniSize.height : closedHeight
+    }
+
     var body: some View {
         HStack(spacing: 0) {
-            closedPanel
-
-            if isExpanded {
-                expandedContent
+            if effectiveMode == .mini {
+                miniShelf
+                    .transition(.scale(scale: 0.86).combined(with: .opacity))
+            } else {
+                closedPanel
                     .transition(.move(edge: .leading).combined(with: .opacity))
+
+                if effectiveMode == .queue {
+                    itemsView
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                }
             }
         }
-        .frame(width: totalWidth, height: closedHeight)
-        .animation(.spring(duration: 0.35, bounce: 0.1), value: isExpanded)
+        .frame(width: totalWidth, height: totalHeight)
+        .animation(.spring(duration: 0.35, bounce: 0.1), value: effectiveMode)
         .animation(.spring(duration: 0.25), value: conversion.jobs.count)
         .background(
             ContextualLiquidGlassBackground(
                 cornerRadius: 12,
+                opacity: shelfGlassOpacity,
+                solidFillOpacity: shelfSolidFillOpacity,
                 isTargeted: isTargeted,
                 isConverting: conversion.isConverting,
                 hasError: hasError
             )
         )
-        // Drop glow ring — sits outside the shelf bounds via negative padding
-        .overlay(
-            PulseRingView(color: .accentColor, lineWidth: 2, isActive: isTargeted)
-                .padding(-8)
-                .allowsHitTesting(false)
-        )
-        // Existing accent border kept (complements the glow ring)
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(Color.accentColor.opacity(isTargeted ? 0.5 : 0), lineWidth: 1.5)
+                .strokeBorder(Color.primary.opacity(isTargeted ? 0.28 : 0), lineWidth: 1.5)
                 .animation(.easeInOut(duration: 0.15), value: isTargeted)
         )
         .scaleEffect(dragScale)
+        .onHover { hovering in
+            isShelfHovered = hovering
+        }
         .onDrop(of: [.fileURL], isTargeted: $isTargeted, perform: handleDrop)
         .onChange(of: isTargeted) { targeted in
             withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
@@ -90,6 +163,9 @@ struct ShelfView: View {
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView().environmentObject(store)
+        }
+        .onAppear {
+            resizeShelfWindow()
         }
         .onReceive(NotificationCenter.default.publisher(for: .upmarketConvertFile)) { note in
             if let handoff = note.object as? QuickActionHandoffFile {
@@ -110,12 +186,99 @@ struct ShelfView: View {
         .onReceive(NotificationCenter.default.publisher(for: .upmarketSetShelfExpanded)) { note in
             guard let expanded = note.object as? Bool else { return }
             withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
-                isExpanded = expanded
+                displayMode = expanded ? (hasQueueItems ? .queue : .peek) : .mini
             }
         }
-        .onChange(of: totalWidth) { w in
-            ShelfWindowController.shared.resizeToContent(width: w)
+        .onReceive(NotificationCenter.default.publisher(for: .upmarketSetShelfSpotlight)) { note in
+            withAnimation(.easeInOut(duration: 0.18)) {
+                tourSpotlight = (note.object as? String).flatMap(ShelfTourSpotlight.init(rawValue:))
+            }
         }
+        .onChange(of: conversion.jobs.count) { count in
+            if count == 0 {
+                withAnimation(.spring(duration: 0.25)) {
+                    displayMode = .mini
+                    selectedJobID = nil
+                }
+            }
+        }
+        .onChange(of: totalWidth) { _ in
+            resizeShelfWindow()
+        }
+        .onChange(of: totalHeight) { _ in
+            resizeShelfWindow()
+        }
+    }
+
+    private func resizeShelfWindow() {
+        let width = totalWidth
+        let height = totalHeight
+        DispatchQueue.main.async {
+            ShelfWindowController.shared.resizeToContent(width: width, height: height)
+        }
+    }
+
+    // MARK: - Mini shelf
+
+    private var miniShelf: some View {
+        ZStack(alignment: .topTrailing) {
+            miniSymbol
+
+            if hasQueueItems {
+                Text("\(min(conversion.jobs.count, 99))")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.primary.opacity(0.78))
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .overlay(
+                        Capsule()
+                            .strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5)
+                    )
+                    .offset(x: 4, y: -4)
+            }
+        }
+        .frame(width: ShelfLayout.miniSize.width, height: ShelfLayout.miniSize.height)
+        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .onTapGesture {
+            withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
+                displayMode = hasQueueItems ? .queue : .peek
+            }
+        }
+        .help(hasQueueItems ? "Show queue" : "Drop files")
+    }
+
+    @ViewBuilder private var miniSymbol: some View {
+        if let activeJob = conversion.jobs.first(where: \.isRunning) {
+            ZStack {
+                Circle()
+                    .stroke(Color.primary.opacity(0.12), lineWidth: 2.5)
+                    .frame(width: 34, height: 34)
+                ArcProgressRing(progress: activeJob.progress)
+                    .stroke(
+                        Color.primary.opacity(0.58),
+                        style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
+                    )
+                    .frame(width: 34, height: 34)
+                Image(systemName: "doc")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(.primary.opacity(0.62))
+            }
+        } else if hasQueueItems {
+            Image(systemName: "tray.full")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(.primary.opacity(0.62))
+                .symbolRenderingMode(.hierarchical)
+        } else {
+            idleMiniSymbol
+        }
+    }
+
+    private var idleMiniSymbol: some View {
+        Image(systemName: "number")
+            .font(.system(size: 20, weight: .semibold))
+            .foregroundStyle(.primary.opacity(0.62))
+            .symbolRenderingMode(.hierarchical)
     }
 
     // MARK: - Closed panel: [control strip] | [peek panel]
@@ -125,7 +288,7 @@ struct ShelfView: View {
             controlStrip
 
             Rectangle()
-                .fill(Color.primary.opacity(0.12))
+                .fill(Color.primary.opacity(0.07))
                 .frame(width: 1, height: closedHeight * 0.6)
 
             peekPanel
@@ -141,49 +304,95 @@ struct ShelfView: View {
             controlButton(symbol: "xmark",
                           hoverColor: .red,
                           isHovered: hoverClose,
+                          isSpotlighted: tourSpotlight == .closeButton,
                           help: "Hide shelf") { ShelfWindowController.shared.hide() }
                 .onHover { hoverClose = $0 }
 
             controlButton(symbol: "plus",
-                          hoverColor: .green,
+                          hoverColor: Color(nsColor: .labelColor),
                           isHovered: hoverAdd,
+                          isSpotlighted: tourSpotlight == .addButton,
                           help: "Add files") { openFilePicker() }
                 .onHover { hoverAdd = $0 }
 
-            controlButton(symbol: isExpanded ? "chevron.left" : "chevron.right",
-                          hoverColor: Color(nsColor: .systemBlue),
+            controlButton(symbol: queueControlSymbol,
+                          hoverColor: Color(nsColor: .labelColor),
                           isHovered: hoverToggle,
-                          help: isExpanded ? "Collapse" : "Expand") {
-                withAnimation(.spring(duration: 0.35, bounce: 0.1)) { isExpanded.toggle() }
+                          isSpotlighted: tourSpotlight == .expandButton,
+                          help: queueControlHelp) {
+                toggleQueueMode()
             }
             .onHover { hoverToggle = $0 }
         }
         .frame(width: controlStripWidth, height: closedHeight)
     }
 
+    private var queueControlSymbol: String {
+        if effectiveMode == .queue || !hasQueueItems {
+            return "arrow.left"
+        }
+        return "arrow.right"
+    }
+
+    private var queueControlHelp: String {
+        if effectiveMode == .queue || !hasQueueItems {
+            return "Collapse shelf"
+        }
+        return "Show queue"
+    }
+
+    private func toggleQueueMode() {
+        withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
+            if effectiveMode == .queue || !hasQueueItems {
+                displayMode = .mini
+                selectedJobID = nil
+            } else {
+                displayMode = .queue
+            }
+        }
+    }
+
     private func controlButton(
         symbol: String,
         hoverColor: Color,
         isHovered: Bool,
+        isSpotlighted: Bool,
+        isEnabled: Bool = true,
         help: String,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             ZStack {
-                Circle()
-                    .fill(hoverColor.opacity(isHovered ? 0.18 : 0))
-                    .frame(width: buttonHeight - 8, height: buttonHeight - 8)
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.primary.opacity(isSpotlighted ? 0.08 : (isHovered ? 0.045 : 0)))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(Color.primary.opacity(isSpotlighted ? 0.24 : 0), lineWidth: 1)
+                    )
+                    .frame(width: controlStripWidth - 10, height: buttonHeight - 8)
                 Image(systemName: symbol)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(isHovered ? hoverColor : .primary.opacity(0.7))
+                    .foregroundStyle(controlSymbolColor(hoverColor: hoverColor, isHovered: isHovered, isSpotlighted: isSpotlighted, isEnabled: isEnabled))
                     .symbolRenderingMode(.hierarchical)
             }
             .frame(width: controlStripWidth, height: buttonHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(!isEnabled)
         .help(help)
         .animation(.easeInOut(duration: 0.12), value: isHovered)
+        .animation(.easeInOut(duration: 0.18), value: isSpotlighted)
+    }
+
+    private func controlSymbolColor(
+        hoverColor: Color,
+        isHovered: Bool,
+        isSpotlighted: Bool,
+        isEnabled: Bool
+    ) -> Color {
+        guard isEnabled else { return .primary.opacity(0.26) }
+        return isHovered ? hoverColor : .primary.opacity(isSpotlighted ? 0.88 : 0.68)
     }
 
     // MARK: - Peek panel (right column)
@@ -209,31 +418,21 @@ struct ShelfView: View {
             VStack(spacing: 6) {
                 Group {
                     if #available(macOS 14.0, *) {
-                        Image(systemName: isTargeted
-                              ? "arrow.down.circle.fill"
-                              : "arrow.down.circle")
+                        Image(systemName: "arrow.down")
                             .font(.system(size: 20))
-                            .foregroundStyle(
-                                isTargeted ? Color.accentColor : .primary.opacity(0.45)
-                            )
+                            .foregroundStyle(.primary.opacity(isTargeted ? 0.65 : 0.45))
                             .symbolEffect(.bounce, value: isTargeted)
                     } else {
-                        Image(systemName: isTargeted
-                              ? "arrow.down.circle.fill"
-                              : "arrow.down.circle")
+                        Image(systemName: "arrow.down")
                             .font(.system(size: 20))
-                            .foregroundStyle(
-                                isTargeted ? Color.accentColor : .primary.opacity(0.45)
-                            )
+                            .foregroundStyle(.primary.opacity(isTargeted ? 0.65 : 0.45))
                     }
                 }
                 .offset(y: float)
 
                 Text(isTargeted ? "Release to convert" : "Drop files here")
                     .font(.system(size: 11))
-                    .foregroundStyle(
-                        isTargeted ? Color.accentColor : .primary.opacity(0.4)
-                    )
+                    .foregroundStyle(.primary.opacity(isTargeted ? 0.65 : 0.4))
                     .multilineTextAlignment(.center)
             }
             .animation(.easeInOut(duration: 0.15), value: isTargeted)
@@ -251,7 +450,7 @@ struct ShelfView: View {
                         .frame(width: 42, height: 42)
                     ArcProgressRing(progress: job.progress)
                         .stroke(
-                            Color.accentColor,
+                            Color.primary.opacity(0.55),
                             style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
                         )
                         .frame(width: 42, height: 42)
@@ -290,8 +489,8 @@ struct ShelfView: View {
         Group {
             switch job.stage {
             case .complete:
-                Label("Done", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                Label("Done", systemImage: "checkmark")
+                    .foregroundStyle(.secondary)
             case .failed:
                 Label("Failed", systemImage: "xmark.circle.fill")
                     .foregroundStyle(.red)
@@ -319,40 +518,7 @@ struct ShelfView: View {
         }
     }
 
-    // MARK: - Expanded content
-
-    private var expandedContent: some View {
-        // No extra separator here — the closedPanel divider already separates the two zones.
-        Group {
-            if conversion.jobs.isEmpty && isAnyConverting {
-                conversionView
-            } else if conversion.jobs.isEmpty {
-                emptyView
-            } else {
-                itemsView
-            }
-        }
-    }
-
-    private var emptyView: some View {
-        Text(isTargeted ? "Release to convert" : "Drop documents here")
-            .font(.system(size: 12, weight: isTargeted ? .semibold : .regular))
-            .foregroundStyle(isTargeted ? Color.accentColor : .primary.opacity(0.6))
-            .animation(.easeInOut(duration: 0.15), value: isTargeted)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 16)
-    }
-
-    private var conversionView: some View {
-        HStack(spacing: 8) {
-            ConversionIconView(isAnimating: isAnyConverting, size: 36)
-            Text("Converting…")
-                .font(.system(size: 11))
-                .foregroundStyle(.primary.opacity(0.4))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 12)
-    }
+    // MARK: - Expanded queue
 
     private var itemsView: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -406,14 +572,16 @@ struct ShelfView: View {
         }
         .frame(width: itemWidth)
         .help("\(extra) more queued")
-        .onTapGesture { withAnimation { isExpanded = true } }
+        .onTapGesture { withAnimation { displayMode = .queue } }
     }
 
     // MARK: - File picker (appears near shelf)
 
     private func openFilePicker() {
         guard store.canConvert else { showPaywall = true; return }
-        withAnimation(.spring(duration: 0.35, bounce: 0.1)) { isExpanded = true }
+        withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
+            displayMode = hasQueueItems ? .queue : .peek
+        }
         FileAccessService.shared
             .chooseDocuments(allowsMultipleSelection: true, positioningNear: ShelfWindowController.shared.window)
             .forEach { addToQueue($0) }
@@ -423,7 +591,9 @@ struct ShelfView: View {
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
         guard store.canConvert else { showPaywall = true; return false }
-        withAnimation(.spring(duration: 0.35, bounce: 0.1)) { isExpanded = true }
+        withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
+            displayMode = .peek
+        }
         FileAccessService.shared.loadFileURLs(from: providers) { url in
             self.addToQueue(url)
         }
@@ -453,6 +623,9 @@ struct ShelfView: View {
         }
         NotificationCenter.default.post(name: .upmarketConversionStarted, object: nil)
         let id = conversion.add(url)
+        withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
+            displayMode = .queue
+        }
         Task { @MainActor in
             while conversion.jobs.first(where: { $0.id == id })?.isRunning == true {
                 try? await Task.sleep(nanoseconds: 100_000_000)
@@ -526,7 +699,7 @@ struct ShelfItemView: View {
             iconWithArc
             Text(showCopied ? "Copied!" : item.name)
                 .font(.system(size: 9, weight: showCopied ? .semibold : .regular))
-                .foregroundStyle(showCopied ? Color.accentColor : .primary.opacity(0.7))
+                .foregroundStyle(showCopied ? Color.primary : Color.primary.opacity(0.7))
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .frame(width: 56)
@@ -550,7 +723,7 @@ struct ShelfItemView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(
-                    isSelected ? Color.accentColor.opacity(0.55) : .clear,
+                    isSelected ? Color.primary.opacity(0.45) : .clear,
                     lineWidth: 1
                 )
                 .allowsHitTesting(false)
@@ -581,7 +754,7 @@ struct ShelfItemView: View {
 
     private var selectionBackground: some View {
         RoundedRectangle(cornerRadius: 8)
-            .fill(isSelected ? Color.accentColor.opacity(0.08) : .clear)
+            .fill(isSelected ? Color.primary.opacity(0.06) : .clear)
             .animation(.easeInOut(duration: 0.12), value: isSelected)
     }
 
@@ -600,7 +773,7 @@ struct ShelfItemView: View {
                 // Progress arc
                 ArcProgressRing(progress: item.progress)
                     .stroke(
-                        Color.accentColor,
+                        Color.primary.opacity(0.55),
                         style: StrokeStyle(lineWidth: 3, lineCap: .round)
                     )
                     .frame(width: 46, height: 46)
@@ -632,27 +805,26 @@ struct ShelfItemView: View {
             EmptyView()
         case .copying, .extracting, .python, .postProcessing:
             if isStalled {
-                Image(systemName: "exclamationmark.circle.fill")
+                Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 11)).foregroundStyle(.yellow)
-                    .background(Color.black.opacity(0.4), in: Circle())
             } else if #available(macOS 15.0, *) {
                 Image(systemName: "arrow.triangle.2.circlepath")
-                    .font(.system(size: 9, weight: .bold)).foregroundStyle(.white)
-                    .padding(2).background(Color.accentColor, in: Circle())
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.secondary)
                     .symbolEffect(.rotate, isActive: true)
             } else {
-                ProgressView().scaleEffect(0.5).frame(width: 12, height: 12)
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.secondary)
             }
         case .complete:
             if case .success = item.result {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 11)).foregroundStyle(.green)
-                    .background(Color.black.opacity(0.4), in: Circle())
+                Image(systemName: "checkmark")
+                    .font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
             }
         case .failed, .cancelled:
-            Image(systemName: "xmark.circle.fill")
+            Image(systemName: "xmark")
                 .font(.system(size: 11)).foregroundStyle(.red)
-                .background(Color.black.opacity(0.4), in: Circle())
         }
     }
 
@@ -874,8 +1046,12 @@ struct ShelfItemView: View {
 struct ShelfActionButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundStyle(.white)
+            .foregroundStyle(.primary.opacity(configuration.isPressed ? 0.95 : 0.78))
             .padding(4)
-            .background(Color.black.opacity(configuration.isPressed ? 0.85 : 0.65), in: Circle())
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 5))
+            .overlay(
+                RoundedRectangle(cornerRadius: 5)
+                    .strokeBorder(Color.primary.opacity(configuration.isPressed ? 0.22 : 0.12), lineWidth: 0.5)
+            )
     }
 }

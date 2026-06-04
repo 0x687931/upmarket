@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 
 private let appGroupID = "group.com.upmarket.app"
 
@@ -16,6 +17,8 @@ struct QuickActionHandoffFile {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
+    private var progressCancellable: AnyCancellable?
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return false  // Stay alive as menu bar + shelf app
     }
@@ -26,7 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        AppVisibilityPreference.apply()
         NSApp.servicesProvider = self
         MemoryPressureMonitor.shared.start()
         removeStaleQuickActionHandoffs()
@@ -48,10 +51,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func conversionStarted() {
         ConversionIconLayerView.startDockAnimation()
+        progressCancellable = ConversionQueue.shared.$jobs
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updateDockProgress()
+            }
     }
 
     @objc private func conversionEnded() {
+        progressCancellable = nil
         ConversionIconLayerView.stopDockAnimation()
+    }
+
+    private func updateDockProgress() {
+        let progress = ConversionQueue.shared.overallProgress
+        ConversionIconLayerView.updateDockProgress(progress)
     }
 
     @objc private func showPaywall() {

@@ -1,13 +1,20 @@
 import Foundation
+import Darwin
 import OSLog
 
 struct RuntimeHelperClient: Sendable {
     private let executableURL: URL?
     private let livenessInterval: TimeInterval
+    private let terminationGraceInterval: TimeInterval
 
-    nonisolated init(executableURL: URL? = nil, livenessInterval: TimeInterval = 90) {
+    nonisolated init(
+        executableURL: URL? = nil,
+        livenessInterval: TimeInterval = 90,
+        terminationGraceInterval: TimeInterval = 2
+    ) {
         self.executableURL = executableURL
         self.livenessInterval = livenessInterval
+        self.terminationGraceInterval = terminationGraceInterval
     }
 
     nonisolated func readiness() async throws -> PythonRuntimeStatus {
@@ -181,6 +188,7 @@ struct RuntimeHelperClient: Sendable {
                     stdin.fileHandleForWriting.write(requestData)
                     stdin.fileHandleForWriting.closeFile()
                 } catch {
+                    RuntimeHelperProcessTerminator.terminate(process, graceInterval: terminationGraceInterval)
                     continuation.resume(throwing: PythonBridgeError.helperUnavailable(error.localizedDescription))
                     return
                 }
@@ -190,7 +198,7 @@ struct RuntimeHelperClient: Sendable {
                     interval: livenessInterval,
                     state: state
                 ) {
-                    process.terminate()
+                    RuntimeHelperProcessTerminator.terminate(process, graceInterval: terminationGraceInterval)
                     continuation.resume(throwing: PythonBridgeError.helperStalled)
                 }
                 monitor.start()
@@ -240,7 +248,7 @@ struct RuntimeHelperClient: Sendable {
                 }
             }
         } onCancel: {
-            process.terminate()
+            RuntimeHelperProcessTerminator.terminate(process, graceInterval: terminationGraceInterval)
         }
     }
 
@@ -264,6 +272,20 @@ struct RuntimeHelperClient: Sendable {
             return .invalidResponse(response.message ?? "invalid")
         default:
             return .callFailed(response.message ?? "failed")
+        }
+    }
+}
+
+nonisolated private enum RuntimeHelperProcessTerminator {
+    static func terminate(_ process: Process, graceInterval: TimeInterval) {
+        guard process.isRunning else { return }
+        let pid = process.processIdentifier
+        process.terminate()
+
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + graceInterval) {
+            guard process.isRunning else { return }
+            AppLog.pythonBridge.error("Runtime helper ignored termination; forcing exit pid=\(pid, privacy: .public)")
+            Darwin.kill(pid, SIGKILL)
         }
     }
 }

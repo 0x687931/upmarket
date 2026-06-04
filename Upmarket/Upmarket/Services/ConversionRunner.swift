@@ -40,8 +40,7 @@ struct ConversionRunner {
             )
             return classification.complexityAdvice
         }
-        guard supportsAdvancedRuntime else { return nil }
-        return try? await pythonWorker.analyse(fileURL: tempURL, workspaceURL: workspace)
+        return nil
     }
 
     func run(_ job: ConversionJob, progress: ProgressHandler? = nil) async -> ConversionResult {

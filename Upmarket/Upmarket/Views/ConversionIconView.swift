@@ -202,19 +202,91 @@ final class ConversionIconLayerView: NSView {
     }
 }
 
-// MARK: - Dock tile integration
+// MARK: - Dock progress bar
 
 extension ConversionIconLayerView {
-    /// Update the Dock tile with the animated icon view during conversion.
+
+    private static let progressTrackHeight: CGFloat = 8
+    private static let progressTrackInset: CGFloat  = 6
+
+    func setProgress(_ fraction: Double) {
+        let w = bounds.width
+        let inset = Self.progressTrackInset
+        let barH  = Self.progressTrackHeight
+        let trackW = w - inset * 2
+        let y: CGFloat = 2
+
+        if progressTrackLayer.superlayer == nil {
+            progressTrackLayer.cornerRadius = barH / 2
+            progressTrackLayer.backgroundColor = NSColor.black.withAlphaComponent(0.18).cgColor
+            layer?.addSublayer(progressTrackLayer)
+
+            progressFillLayer.cornerRadius = barH / 2
+            progressFillLayer.backgroundColor = NSColor.white.cgColor
+            progressFillLayer.shadowColor = NSColor.white.cgColor
+            progressFillLayer.shadowOpacity = 0.5
+            progressFillLayer.shadowRadius = 3
+            progressFillLayer.shadowOffset = .zero
+            layer?.addSublayer(progressFillLayer)
+        }
+
+        progressTrackLayer.frame = CGRect(x: inset, y: y, width: trackW, height: barH)
+
+        let fillW = max(barH, trackW * CGFloat(fraction))
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(0.25)
+        progressFillLayer.frame = CGRect(x: inset, y: y, width: fillW, height: barH)
+        CATransaction.commit()
+    }
+
+    func removeProgress() {
+        progressTrackLayer.removeFromSuperlayer()
+        progressFillLayer.removeFromSuperlayer()
+    }
+}
+
+// MARK: - Dock tile integration
+
+private var progressTrackKey: UInt8 = 0
+private var progressFillKey:  UInt8 = 1
+
+extension ConversionIconLayerView {
+
+    fileprivate var progressTrackLayer: CALayer {
+        if let l = objc_getAssociatedObject(self, &progressTrackKey) as? CALayer { return l }
+        let l = CALayer()
+        objc_setAssociatedObject(self, &progressTrackKey, l, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        return l
+    }
+
+    fileprivate var progressFillLayer: CALayer {
+        if let l = objc_getAssociatedObject(self, &progressFillKey) as? CALayer { return l }
+        let l = CALayer()
+        objc_setAssociatedObject(self, &progressFillKey, l, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        return l
+    }
+
+    /// The shared dock tile view — retained for the lifetime of a conversion.
+    private static var activeDockView: ConversionIconLayerView?
+
     static func startDockAnimation() {
         let view = ConversionIconLayerView(frame: NSRect(x: 0, y: 0, width: 128, height: 128))
         view.startAnimation()
+        activeDockView = view
         NSApp.dockTile.contentView = view
         NSApp.dockTile.display()
     }
 
     static func stopDockAnimation() {
+        activeDockView?.removeProgress()
+        activeDockView = nil
         NSApp.dockTile.contentView = nil
+        NSApp.dockTile.display()
+    }
+
+    static func updateDockProgress(_ fraction: Double) {
+        guard let view = activeDockView else { return }
+        view.setProgress(fraction)
         NSApp.dockTile.display()
     }
 }
