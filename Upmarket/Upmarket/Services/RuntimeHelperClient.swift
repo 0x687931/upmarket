@@ -147,6 +147,7 @@ struct RuntimeHelperClient: Sendable {
         process.standardError = stderr
 
         let state = RuntimeHelperProcessState()
+        let outputQueue = DispatchQueue(label: "UpmarketRuntimeHelperOutput")
         let decoder = JSONDecoder()
         let recordOutputLine: @Sendable (String) -> Void = { line in
             guard let lineData = line.data(using: .utf8) else { return }
@@ -164,13 +165,19 @@ struct RuntimeHelperClient: Sendable {
                 state.recordResponseLine(line)
             }
         }
-
-        stdout.fileHandleForReading.readabilityHandler = { handle in
-            let data = handle.availableData
+        let processOutputData: @Sendable (Data) -> Void = { data in
             guard !data.isEmpty else { return }
             state.append(data)
             for line in state.drainLines() {
                 recordOutputLine(line)
+            }
+        }
+
+        stdout.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            guard !data.isEmpty else { return }
+            outputQueue.sync {
+                processOutputData(data)
             }
         }
 
@@ -204,20 +211,16 @@ struct RuntimeHelperClient: Sendable {
                 monitor.start()
 
                 process.terminationHandler = { terminated in
-                    stdout.fileHandleForReading.readabilityHandler = nil
                     let remainingOutput = stdout.fileHandleForReading.readDataToEndOfFile()
-                    if !remainingOutput.isEmpty {
-                        state.append(remainingOutput)
-                    }
-                    for line in state.drainLines() {
-                        recordOutputLine(line)
-                    }
-                    if let line = state.drainRemainingLine() {
-                        recordOutputLine(line)
-                    }
                     stdout.fileHandleForReading.readabilityHandler = nil
                     stderr.fileHandleForReading.readabilityHandler = nil
                     monitor.cancel()
+                    outputQueue.sync {
+                        processOutputData(remainingOutput)
+                        if let line = state.drainRemainingLine() {
+                            recordOutputLine(line)
+                        }
+                    }
 
                     if state.wasResumed {
                         return
