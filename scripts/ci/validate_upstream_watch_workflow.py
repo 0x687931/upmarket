@@ -23,6 +23,8 @@ def main() -> int:
         require(workflow, "scripts/ci/watch_upstream.py", "report generator"),
         require(workflow, "reports/upstream-watch.json", "JSON artifact"),
         require(workflow, "reports/upstream-watch.md", "Markdown artifact"),
+        require(workflow, "python -m venv .venv", "dependency check virtualenv setup"),
+        require(workflow, ".venv/bin/pip install -r requirements.txt", "current dependency install"),
         require(workflow, "scripts/update_dependencies.sh --check-only", "check-only dependency validation"),
         require(workflow, "issues: write", "issue write permission"),
         require(workflow, "pkg.tracking_mode", "issue tracking-mode field"),
