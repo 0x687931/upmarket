@@ -26,6 +26,7 @@ def main() -> int:
         require(workflow, "python -m venv .venv", "dependency check virtualenv setup"),
         require(workflow, ".venv/bin/pip install -r requirements.txt", "current dependency install"),
         require(workflow, "scripts/update_dependencies.sh --check-only", "check-only dependency validation"),
+        require(workflow, "scripts/ci/validate_corpus_baseline.py", "corpus baseline validation"),
         require(workflow, "issues: write", "issue write permission"),
         require(workflow, "pkg.tracking_mode", "issue tracking-mode field"),
         require(workflow, "pkg.current_version", "issue current-version field"),

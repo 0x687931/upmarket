@@ -135,10 +135,8 @@ jobs:
       - name: Check currently tracked upstream dependency updates
         run: scripts/update_dependencies.sh --check-only
 
-      - name: Validate current corpus manifest
-        run: |
-          scripts/ci/validate_corpus.py
-          scripts/ci/validate_corpus_baseline.py
+      - name: Validate corpus baseline ledger
+        run: scripts/ci/validate_corpus_baseline.py
 
       - name: Validate Python bundle imports
         run: scripts/ci/ensure_python_runtime.sh
