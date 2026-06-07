@@ -210,10 +210,10 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 ### Gate A - Build and Packaging
 - [x] Build cleanly with `xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS,arch=arm64' build`
 - [x] Build the x86_64 macOS slice on Apple Silicon with `xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS,arch=x86_64' CODE_SIGNING_ALLOWED=NO build`
-- [ ] Archive successfully in Xcode with the release team selected
+- [x] Archive successfully in Xcode with the release team selected
 - [x] Verify sandbox entitlements in the archived app
 - [x] Confirm bundled Python runtime imports required modules from inside the app bundle
-- [ ] Confirm app works after deleting downloaded models
+- [x] Confirm app works after deleting downloaded models
 - [x] Do not block v1.0 on physical Intel hardware validation. Do not claim Intel support beyond build compatibility/native-only positioning until actual Intel hardware evidence exists.
 
 ### Gate B - Conversion Reliability

@@ -14,7 +14,9 @@ fi
 
 run_bundle_preflight() {
   local bundle_path="$1"
-  xcrun swift -e '
+  local module_cache="${UPMARKET_SWIFT_MODULE_CACHE:-${TMPDIR:-/tmp}/upmarket-swift-module-cache}"
+  mkdir -p "$module_cache"
+  xcrun swift -module-cache-path "$module_cache" -e '
 import Darwin
 import Foundation
 

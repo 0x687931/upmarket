@@ -576,6 +576,8 @@
 				"$(SRCROOT)/UpmarketRuntimeHelper/main.swift",
 				"$(SRCROOT)/Vendor/PythonKit/UPMARKET_VENDOR.md",
 				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)",
+				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/Contents/Info.plist",
+				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/Contents/MacOS/Upmarket",
 				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/Contents/MacOS/UpmarketRuntimeHelper",
 				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/Contents/MacOS/upmarket-cli",
 				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/Contents/MacOS/upmarket-mcp",
@@ -584,6 +586,8 @@
 			outputPaths = (
 				"$(TARGET_TEMP_DIR)/upmarket-entitlements.plist",
 				"$(TARGET_TEMP_DIR)/upmarket-helper-entitlements.plist",
+				"$(TARGET_TEMP_DIR)/upmarket-cli-entitlements.plist",
+				"$(TARGET_TEMP_DIR)/upmarket-mcp-entitlements.plist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -1038,6 +1042,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = UpmarketRuntimeHelper/UpmarketRuntimeHelper.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Q54Q5726NT;
 				ENABLE_APP_SANDBOX = YES;
@@ -1068,6 +1073,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = UpmarketRuntimeHelper/UpmarketRuntimeHelper.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Q54Q5726NT;
 				ENABLE_APP_SANDBOX = YES;
@@ -1098,6 +1104,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = UpmarketCLI/UpmarketCLI.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Q54Q5726NT;
 				ENABLE_APP_SANDBOX = NO;
@@ -1120,6 +1127,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = UpmarketCLI/UpmarketCLI.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Q54Q5726NT;
 				ENABLE_APP_SANDBOX = NO;
@@ -1142,6 +1150,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = UpmarketMCP/UpmarketMCP.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Q54Q5726NT;
 				ENABLE_APP_SANDBOX = NO;
@@ -1164,6 +1173,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = UpmarketMCP/UpmarketMCP.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Q54Q5726NT;
 				ENABLE_APP_SANDBOX = NO;

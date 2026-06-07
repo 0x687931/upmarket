@@ -22,11 +22,104 @@ check_file "$HELPER_ENTITLEMENTS"
 check_file "$CLI_ENTITLEMENTS"
 check_file "$MCP_ENTITLEMENTS"
 
+is_codesign_text_plist() {
+  local file="$1"
+  [[ -f "$file" ]] && head -n 1 "$file" | grep -qx '\[Dict\]'
+}
+
+text_entitlement_has_bool_true() {
+  local file="$1"
+  local key="$2"
+  awk -v key="$key" '
+    /^\t\[Key\] / {
+      if (in_key) {
+        exit
+      }
+      if (index($0, "[Key] " key) > 0) {
+        in_key = 1
+      }
+      next
+    }
+    in_key && index($0, "[Bool] true") > 0 {
+      found = 1
+      exit
+    }
+    END {
+      exit(found ? 0 : 1)
+    }
+  ' "$file"
+}
+
+text_entitlement_has_string() {
+  local file="$1"
+  local key="$2"
+  local value="$3"
+  awk -v key="$key" -v value="$value" '
+    /^\t\[Key\] / {
+      if (in_key) {
+        exit
+      }
+      if (index($0, "[Key] " key) > 0) {
+        in_key = 1
+      }
+      next
+    }
+    in_key && index($0, "[String] " value) > 0 {
+      found = 1
+      exit
+    }
+    END {
+      exit(found ? 0 : 1)
+    }
+  ' "$file"
+}
+
+entitlement_value_matches() {
+  local file="$1"
+  local key="$2"
+  local pattern="$3"
+  local value
+  if is_codesign_text_plist "$file"; then
+    awk -v key="$key" -v pattern="$pattern" '
+      /^\t\[Key\] / {
+        if (in_key) {
+          exit
+        }
+        if (index($0, "[Key] " key) > 0) {
+          in_key = 1
+        }
+        next
+      }
+      in_key && index($0, "[String] ") > 0 {
+        value = $0
+        sub(/^.*\[String\] /, "", value)
+        if (value ~ pattern) {
+          found = 1
+        }
+        exit
+      }
+      END {
+        exit(found ? 0 : 1)
+      }
+    ' "$file"
+    return
+  fi
+  value=$(/usr/libexec/PlistBuddy -c "Print :$key" "$file" 2>/dev/null || true)
+  printf "%s\n" "$value" | grep -Eq "$pattern"
+}
+
 require_entitlement_true() {
   local file="$1"
   local key="$2"
   local label="$3"
   local value
+  if is_codesign_text_plist "$file"; then
+    if ! text_entitlement_has_bool_true "$file" "$key"; then
+      echo "error: $label must be enabled in $file"
+      exit 1
+    fi
+    return
+  fi
   value=$(/usr/libexec/PlistBuddy -c "Print :$key" "$file" 2>/dev/null || true)
   if [[ "$value" != "true" ]]; then
     echo "error: $label must be enabled in $file"
@@ -46,8 +139,15 @@ require_entitlement_value() {
   local value="$3"
   local label="$4"
   local values
+  if is_codesign_text_plist "$file"; then
+    if ! text_entitlement_has_string "$file" "$key" "$value"; then
+      echo "error: $label must include $value in $file"
+      exit 1
+    fi
+    return
+  fi
   values=$(/usr/libexec/PlistBuddy -c "Print :$key" "$file" 2>/dev/null || true)
-  if ! printf "%s\n" "$values" | grep -q "$value"; then
+  if ! printf "%s\n" "$values" | grep -Fq "$value"; then
     echo "error: $label must include $value in $file"
     exit 1
   fi
@@ -96,12 +196,15 @@ if [[ $# -gt 0 ]]; then
     local path="$1"
     local dump="$2"
     local label="$3"
-    codesign -d --entitlements :- "$path" >"$dump" 2>/dev/null || {
+    codesign -d --entitlements - "$path" >"$dump" 2>/dev/null || {
       echo "error: unable to read signed $label entitlements from $path"
       exit 1
     }
     if [[ -s "$dump" ]]; then
-      plutil -lint "$dump" >/dev/null
+      if ! plutil -lint "$dump" >/dev/null 2>&1 && ! is_codesign_text_plist "$dump"; then
+        echo "error: signed $label entitlements are not parseable for $path"
+        exit 1
+      fi
     elif [[ "${UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS:-0}" == "1" ]]; then
       echo "error: signed $label entitlements are empty for $path"
       exit 1
@@ -118,6 +221,11 @@ if [[ $# -gt 0 ]]; then
   fi
   if [[ "${CODE_SIGNING_ALLOWED:-YES}" == "NO" ]]; then
     echo "warning: skipping embedded entitlement read because code signing is disabled"
+    echo "ok: entitlements pass policy checks"
+    exit 0
+  fi
+  if [[ "${ENABLE_USER_SCRIPT_SANDBOXING:-NO}" == "YES" && "${UPMARKET_VERIFY_SIGNED_ENTITLEMENTS_IN_BUILD:-0}" != "1" ]]; then
+    echo "warning: skipping embedded entitlement read inside Xcode's user script sandbox; verify the signed archive with scripts/ci/verify_release_app.sh"
     echo "ok: entitlements pass policy checks"
     exit 0
   fi
@@ -140,7 +248,7 @@ if [[ $# -gt 0 ]]; then
     require_entitlement_true "$APP_ENTITLEMENTS_DUMP" "com.apple.security.app-sandbox" "signed app sandbox"
     require_entitlement_value "$APP_ENTITLEMENTS_DUMP" "com.apple.developer.icloud-services" "CloudKit" "signed app iCloud services"
     require_entitlement_value "$APP_ENTITLEMENTS_DUMP" "com.apple.developer.icloud-container-identifiers" "iCloud.com.upmarket.app" "signed app iCloud containers"
-    if ! /usr/libexec/PlistBuddy -c "Print :com.apple.developer.icloud-container-environment" "$APP_ENTITLEMENTS_DUMP" 2>/dev/null | grep -Eq "^(Development|Production)$"; then
+    if ! entitlement_value_matches "$APP_ENTITLEMENTS_DUMP" "com.apple.developer.icloud-container-environment" "^(Development|Production)$"; then
       echo "error: signed app iCloud container environment must be Development or Production"
       exit 1
     fi

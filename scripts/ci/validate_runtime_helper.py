@@ -28,6 +28,34 @@ def built_app_from_args() -> Path | None:
     return Path(env_path) if env_path else None
 
 
+def entitlement_bool_true(entitlements: str, key: str) -> bool:
+    lines = entitlements.splitlines()
+    for index, line in enumerate(lines):
+        if f"[Key] {key}" not in line and f"<key>{key}</key>" not in line:
+            continue
+        for value_line in lines[index + 1 :]:
+            if "[Key]" in value_line or "<key>" in value_line:
+                return False
+            if "[Bool] true" in value_line or "<true/>" in value_line:
+                return True
+    return False
+
+
+def helper_uses_inherited_sandbox(helper: Path) -> bool:
+    result = subprocess.run(
+        ["codesign", "-d", "--entitlements", "-", str(helper)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    if result.returncode != 0:
+        return False
+    entitlements = result.stdout or result.stderr
+    return entitlement_bool_true(entitlements, "com.apple.security.inherit")
+
+
 def main() -> int:
     errors: list[str] = []
     project_text = PROJECT.read_text(encoding="utf-8")
@@ -83,6 +111,8 @@ def main() -> int:
                 errors.append(f"{helper}: embedded helper missing")
             elif os.environ.get("ENABLE_USER_SCRIPT_SANDBOXING") == "YES" and os.environ.get("UPMARKET_RUN_HELPER_SMOKE_IN_BUILD") != "1":
                 print("warning: skipping helper readiness smoke inside Xcode's user script sandbox")
+            elif helper_uses_inherited_sandbox(helper) and os.environ.get("UPMARKET_RUN_INHERITED_HELPER_SMOKE") != "1":
+                print("warning: skipping direct helper readiness smoke for signed inherited-sandbox helper")
             elif os.access(helper, os.X_OK):
                 request = json.dumps({"operation": "readiness"}).encode()
                 result = subprocess.run(

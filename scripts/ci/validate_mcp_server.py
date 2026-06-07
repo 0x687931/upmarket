@@ -8,10 +8,12 @@ import os
 import subprocess
 import sys
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+APP_GROUP_ID = "group.com.upmarket.app"
 
 
 def resolve_binary(argument: str) -> Path:
@@ -60,6 +62,50 @@ def run_session(binary: Path, state_root: Path, messages: list[dict]) -> list[di
     return responses
 
 
+def signed_entitlements(binary: Path) -> str:
+    result = subprocess.run(
+        ["codesign", "-d", "--entitlements", "-", str(binary)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    if result.returncode != 0:
+        return ""
+    return result.stdout or result.stderr
+
+
+def signed_binary_uses_app_group_sandbox(binary: Path) -> bool:
+    entitlements = signed_entitlements(binary)
+    return (
+        "com.apple.security.app-sandbox" in entitlements
+        and "[Bool] true" in entitlements
+        and APP_GROUP_ID in entitlements
+    )
+
+
+@contextmanager
+def temporary_state_root(binary: Path, prefix: str):
+    parent: Path | None = None
+    if signed_binary_uses_app_group_sandbox(binary):
+        parent = Path.home() / "Library" / "Group Containers" / APP_GROUP_ID / "MCPValidation"
+        try:
+            parent.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise AssertionError(f"unable to prepare app group MCP smoke root: {parent}") from exc
+
+    with tempfile.TemporaryDirectory(prefix=prefix, dir=parent) as tmp:
+        yield Path(tmp)
+
+
+def should_skip_stdio_smoke_in_xcode_script_sandbox() -> bool:
+    return (
+        os.environ.get("ENABLE_USER_SCRIPT_SANDBOXING") == "YES"
+        and os.environ.get("UPMARKET_RUN_MCP_SMOKE_IN_BUILD") != "1"
+    )
+
+
 def write_state(state_root: Path, enabled: bool) -> None:
     state_dir = state_root / "MCP"
     state_dir.mkdir(parents=True, exist_ok=True)
@@ -84,10 +130,10 @@ def response_by_id(responses: list[dict], response_id: int) -> dict:
 
 
 def assert_disabled(binary: Path) -> None:
-    with tempfile.TemporaryDirectory(prefix="upmarket-mcp-disabled-") as tmp:
+    with temporary_state_root(binary, "upmarket-mcp-disabled-") as root:
         responses = run_session(
             binary,
-            Path(tmp),
+            root,
             [
                 {
                     "jsonrpc": "2.0",
@@ -114,8 +160,7 @@ def assert_disabled(binary: Path) -> None:
 
 
 def assert_enabled(binary: Path) -> None:
-    with tempfile.TemporaryDirectory(prefix="upmarket-mcp-enabled-") as tmp:
-        root = Path(tmp)
+    with temporary_state_root(binary, "upmarket-mcp-enabled-") as root:
         write_state(root, enabled=True)
         responses = run_session(
             binary,
@@ -166,6 +211,11 @@ def main() -> int:
     if not os.access(binary, os.X_OK):
         print(f"error: MCP server binary is not executable: {binary}", file=sys.stderr)
         return 1
+
+    if should_skip_stdio_smoke_in_xcode_script_sandbox():
+        print("warning: skipping MCP stdio smoke inside Xcode's user script sandbox")
+        print("ok: Upmarket MCP server packaging is configured")
+        return 0
 
     assert_disabled(binary)
     assert_enabled(binary)
