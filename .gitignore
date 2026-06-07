@@ -5,7 +5,8 @@
 *.xcworkspace/xcuserdata/
 **/*.xcworkspace/xcuserdata/
 *.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
-build/
+/build/
+Upmarket/build/
 DerivedData/
 *.pbxuser
 *.mode1v3

@@ -31,6 +31,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppVisibilityPreference.apply()
+        if AppRuntime.isRunningUITests {
+            MainWindowController.shared.show()
+        }
+
         NSApp.servicesProvider = self
         MemoryPressureMonitor.shared.start()
         removeStaleQuickActionHandoffs()

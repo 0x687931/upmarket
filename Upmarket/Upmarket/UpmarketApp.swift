@@ -110,12 +110,7 @@ struct UpmarketApp: App {
             }
         }
 
-        if AppRuntime.isRunningUITests {
-            DispatchQueue.main.async {
-                MainWindowController.shared.show()
-            }
-            return
-        }
+        if AppRuntime.isRunningUITests { return }
 
         // Show shelf then start tour on first launch
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {

@@ -8,6 +8,7 @@
 import XCTest
 
 final class UpmarketUITests: XCTestCase {
+    private let targetBundleIdentifier = "com.upmarket.app"
     private var cleanupURLs: [URL] = []
     private var launchedApps: [XCUIApplication] = []
 
@@ -43,8 +44,9 @@ final class UpmarketUITests: XCTestCase {
     @MainActor
     func testGUIQuitAndRelaunchCleanAppWorkspaces() throws {
         let manager = FileManager.default
-        let pathFile = manager.temporaryDirectory
-            .appendingPathComponent("upmarket-ui-workspace-\(UUID().uuidString).txt")
+        let pathFile = try targetAppWritableTemporaryFile(
+            named: "upmarket-ui-workspace-\(UUID().uuidString).txt"
+        )
         cleanupURLs.append(pathFile)
 
         let app = makeApp()
@@ -82,6 +84,15 @@ final class UpmarketUITests: XCTestCase {
         app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launchEnvironment["UPMARKET_UI_TESTING"] = "1"
         return app
+    }
+
+    private func targetAppWritableTemporaryFile(named name: String) throws -> URL {
+        let directory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Containers", isDirectory: true)
+            .appendingPathComponent(targetBundleIdentifier, isDirectory: true)
+            .appendingPathComponent("Data/tmp", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory.appendingPathComponent(name, isDirectory: false)
     }
 
     private func createSentinelWorkspace(named prefix: String, in root: URL) throws -> URL {

@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/ui-automation.yml"
+      - "scripts/build/**"
       - "scripts/ci/gate.sh"
       - "Upmarket/Upmarket.xcodeproj/**"
       - "Upmarket/Upmarket/AppDelegate.swift"
@@ -21,6 +22,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/ui-automation.yml"
+      - "scripts/build/**"
       - "scripts/ci/gate.sh"
       - "Upmarket/Upmarket.xcodeproj/**"
       - "Upmarket/Upmarket/AppDelegate.swift"
