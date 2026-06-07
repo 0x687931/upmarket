@@ -109,12 +109,32 @@ final class ModelManagerTests: XCTestCase {
             manager.isDownloading && manager.downloadProgress >= 25
         }
         XCTAssertGreaterThanOrEqual(manager.downloadProgress, 25)
+        XCTAssertEqual(manager.downloadingModelKey, "upmarket_ai")
 
         try await waitUntil(timeout: 8) {
             !manager.isDownloading
         }
         XCTAssertEqual(manager.downloadProgress, 100)
         XCTAssertNil(manager.downloadError)
+        XCTAssertNil(manager.downloadingModelKey)
+    }
+
+    func testDownloadFailureSetsVisibleErrorAndClearsActiveModel() async throws {
+        let manager = ModelManager(
+            models: [Self.enhancedModel(isDownloaded: false)],
+            downloadModelHandler: { _, _ in
+                ModelDownloadResult(success: false, error: "Connection failed")
+            }
+        )
+
+        manager.downloadModel(key: "layout", hasPro: true)
+
+        try await waitUntil(timeout: 5) {
+            !manager.isDownloading && manager.downloadError != nil
+        }
+
+        XCTAssertEqual(manager.downloadError, "Connection failed")
+        XCTAssertNil(manager.downloadingModelKey)
     }
 
     func testProModelKeepsConfiguredStorageDirectory() {
@@ -123,6 +143,77 @@ final class ModelManagerTests: XCTestCase {
 
         XCTAssertTrue(manager.proDownloaded)
         XCTAssertEqual(manager.models[0].storageDirectory, "ibm-granite--granite-docling-258M-mlx")
+    }
+
+    func testStorageCountsOnlyDownloadedRecognizedModelDirectories() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("upmarket-model-storage-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        try writeBytes(11, to: root.appendingPathComponent("layout/model.bin"))
+        try writeBytes(17, to: root.appendingPathComponent("ibm-granite--granite-docling-258M-mlx/model.bin"))
+        try writeBytes(23, to: root.appendingPathComponent("stale-cache/model.bin"))
+
+        let manager = ModelManager(
+            models: [
+                Self.enhancedModel(isDownloaded: true),
+                Self.proModel(isDownloaded: false, storageDirectory: "ibm-granite--granite-docling-258M-mlx")
+            ],
+            modelsDirectoryURL: root
+        )
+
+        XCTAssertEqual(manager.downloadedModelCount, 1)
+        XCTAssertEqual(manager.downloadedModelEstimatedSizeMB, 172)
+        XCTAssertEqual(manager.totalStorageUsed, 11)
+    }
+
+    func testDeleteModelKeepsRowAvailableForRedownload() {
+        let manager = ModelManager(
+            models: [Self.proModel(isDownloaded: true)],
+            checkModelsHandler: {
+                [Self.proModel(isDownloaded: false)]
+            }
+        )
+
+        manager.deleteModel(key: "upmarket_ai")
+
+        XCTAssertEqual(manager.models.count, 1)
+        XCTAssertEqual(manager.models[0].key, "upmarket_ai")
+        XCTAssertFalse(manager.models[0].isDownloaded)
+        XCTAssertEqual(manager.models[0].error, "not downloaded")
+    }
+
+    func testIndividualDownloadUsesSelectedOptionalModelKey() async throws {
+        let recorder = DownloadKeyRecorder()
+        let manager = ModelManager(
+            models: [Self.enhancedModel(isDownloaded: false)],
+            checkModelsHandler: {
+                [Self.enhancedModel(isDownloaded: true)]
+            },
+            downloadModelHandler: { key, _ in
+                await recorder.record(key)
+                return ModelDownloadResult(success: true, error: nil)
+            }
+        )
+
+        manager.downloadModel(key: "layout", hasPro: true)
+
+        try await waitUntil(timeout: 5) {
+            !manager.isDownloading
+        }
+
+        let keys = await recorder.keys
+        XCTAssertEqual(keys, ["layout"])
+        XCTAssertNil(manager.downloadError)
+        XCTAssertEqual(manager.models, [Self.enhancedModel(isDownloaded: true)])
+    }
+
+    private func writeBytes(_ count: Int, to url: URL) throws {
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try Data(repeating: 0, count: count).write(to: url)
     }
 
     private static func proModel(isDownloaded: Bool, storageDirectory: String? = nil) -> ModelStatus {
@@ -138,6 +229,19 @@ final class ModelManagerTests: XCTestCase {
         )
     }
 
+    private static func enhancedModel(isDownloaded: Bool) -> ModelStatus {
+        ModelStatus(
+            key: "layout",
+            name: "Upmarket Enhanced",
+            description: "Better results for complex PDFs",
+            isDownloaded: isDownloaded,
+            sizeMB: 172,
+            isRequired: false,
+            tier: "enhanced",
+            error: isDownloaded ? nil : "not downloaded"
+        )
+    }
+
     private func waitUntil(
         timeout: TimeInterval = 3,
         condition: @MainActor @escaping () -> Bool
@@ -148,6 +252,18 @@ final class ModelManagerTests: XCTestCase {
             try await Task.sleep(nanoseconds: 50_000_000)
         }
         XCTFail("Timed out waiting for condition")
+    }
+}
+
+private actor DownloadKeyRecorder {
+    private var recordedKeys: [String] = []
+
+    var keys: [String] {
+        recordedKeys
+    }
+
+    func record(_ key: String) {
+        recordedKeys.append(key)
     }
 }
 

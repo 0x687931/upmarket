@@ -41,33 +41,6 @@ struct UpmarketApp: App {
                 .environmentObject(historyStore)
                 .environmentObject(watchedFolders)
         }
-
-        Window("Report a Problem", id: "reportProblem") {
-            ReportProblemView()
-                .environmentObject(conversionQueue)
-        }
-        .windowResizability(.contentSize)
-        .defaultSize(width: 620, height: 560)
-
-        // MARK: Onboarding window — shown on first launch
-        Window("Welcome to Upmarket", id: "onboarding") {
-            OnboardingView()
-                .environmentObject(storeManager)
-                .environmentObject(modelManager)
-        }
-        .windowResizability(.contentSize)
-        .defaultSize(width: 480, height: 400)
-
-        // MARK: Menu bar icon
-        MenuBarExtra {
-            MenuBarDropdown()
-                .environmentObject(storeManager)
-                .environmentObject(conversionQueue)
-                .environmentObject(historyStore)
-        } label: {
-            MenuBarIconView(isConverting: conversionQueue.isConverting)
-        }
-        .menuBarExtraStyle(.window)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("Convert Document…") {
@@ -76,7 +49,8 @@ struct UpmarketApp: App {
                 .keyboardShortcut("o", modifiers: .command)
 
                 Button("Show Shelf") {
-                    ShelfWindowController.shared.toggle()
+                    AppVisibilityPreference.showShelf = true
+                    ShelfWindowController.shared.show(ignoringPreference: true)
                 }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
             }
@@ -100,6 +74,22 @@ struct UpmarketApp: App {
                 .keyboardShortcut("q", modifiers: .command)
             }
         }
+
+        Window("Report a Problem", id: "reportProblem") {
+            ReportProblemView()
+                .environmentObject(conversionQueue)
+        }
+        .windowResizability(.contentSize)
+        .defaultSize(width: 620, height: 560)
+
+        // MARK: Onboarding window — shown on first launch
+        Window("Welcome to Upmarket", id: "onboarding") {
+            OnboardingView()
+                .environmentObject(storeManager)
+                .environmentObject(modelManager)
+        }
+        .windowResizability(.contentSize)
+        .defaultSize(width: 480, height: 400)
     }
 
     private func openPrimaryConversionWindow(pickFile: Bool = false) {
@@ -108,20 +98,34 @@ struct UpmarketApp: App {
 
     init() {
         RuntimePrivilegeGuard.abortIfPrivilegedProcess()
+        AppVisibilityPreference.normalizePersistentVisibility()
         AppRuntime.exitIfDuplicateInstance()
         AppRuntime.installTerminationSignalCleanup()
         AppWorkspace.removeStaleWorkspaces()
         AppRuntime.writeUITestWorkspacePathIfRequested()
-        FeatureFlags.shared.fetchFlags()
         if !AppRuntime.isRunningTests {
+            FeatureFlags.shared.fetchFlags()
             Task { @MainActor in
                 WatchedFolderService.shared.start()
             }
         }
 
+        if AppRuntime.isRunningUITests {
+            DispatchQueue.main.async {
+                MainWindowController.shared.show()
+            }
+            return
+        }
+
         // Show shelf then start tour on first launch
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             guard !AppRuntime.isRunningTests else { return }
+            guard AppVisibilityPreference.showShelf else {
+                if AppVisibilityPreference.showDockIcon {
+                    MainWindowController.shared.show()
+                }
+                return
+            }
             ShelfWindowController.shared.centerForFirstLaunchTour()
             ShelfWindowController.shared.show(animate: true)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {

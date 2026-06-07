@@ -37,6 +37,10 @@ Use this checklist for every internal beta, external beta, and App Store candida
   ```sh
   scripts/ci/gate.sh major
   ```
+- For a focused UI change, run Apple's UI automation gate directly:
+  ```sh
+  scripts/ci/gate.sh ui
+  ```
 - For signed release verification, require embedded entitlements:
   ```sh
   UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS=1 scripts/ci/verify_entitlements.sh /path/to/Upmarket.app
@@ -46,8 +50,9 @@ Use this checklist for every internal beta, external beta, and App Store candida
 ## 3. Tests
 
 - `scripts/ci/gate.sh quick` covers policy checks, build, effective plist, and unit tests.
-- `scripts/ci/gate.sh runtime` covers runtime packaging, app package verification, offline smoke, and helper boundary checks.
+- `scripts/ci/gate.sh runtime` covers runtime packaging, app package verification, Python bridge security preflight, offline smoke, and helper boundary checks.
 - `scripts/ci/gate.sh minor` adds corpus, model, and fault-state checks.
+- `scripts/ci/gate.sh ui` runs Apple XCTest UI automation and writes an `.xcresult` bundle under `build/TestResults/`.
 - `scripts/ci/gate.sh major` adds UI automation for major candidates and explicit UI changes.
 
 ## 4. Benchmarks
@@ -59,6 +64,11 @@ Use this checklist for every internal beta, external beta, and App Store candida
 
 ## 5. App Store Readiness
 
+- Create or update TestFlight test information: beta description, What to Test, feedback email, support contact, and any review notes needed for external beta.
+- Upload the signed archive to App Store Connect. Do not mark a build as TestFlight Internal Only if it may later be used for external testing or App Store submission.
+- Assign the build to the internal TestFlight group first. Record tester list, build number, upload time, and the 90-day beta expiry date in the release issue.
+- Review TestFlight feedback, crash/session metrics, and Xcode Organizer diagnostics after internal testing before inviting external testers.
+- For external beta, create the external group after internal validation, submit the build for TestFlight App Review when required, and keep distribution limited until sandbox purchase and restore paths are proven.
 - Verify StoreKit products in sandbox: subscriptions, packs, restore, failed purchase, pending transaction, and ledger migration.
 - Review crash reports in Xcode Organizer for the candidate build.
 - Confirm signed archive/export behavior once a developer account is available; local testing remains unsigned.
@@ -68,5 +78,6 @@ Use this checklist for every internal beta, external beta, and App Store candida
 ## 6. Release Decision
 
 - Attach CI run links, benchmark reports, signed archive evidence, and known issues to the release issue.
+- Attach the UI `.xcresult` artifact for UI changes and major/release candidates.
 - The owner approves or rejects the candidate.
 - Tag only approved candidates.

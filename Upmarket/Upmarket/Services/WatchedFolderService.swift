@@ -65,6 +65,7 @@ final class WatchedFolderService: ObservableObject {
     private static let foldersKey = "upmarket.watchedFolders"
     private static let includePatternsKey = "upmarket.watchedFolders.includePatterns"
     private static let excludePatternsKey = "upmarket.watchedFolders.excludePatterns"
+    private static let defaultExcludePatterns = "*.md, *.markdown, *.json, *.tmp, *.download, *.part, *.crdownload, ~$*"
 
     private let userDefaults: UserDefaults
     private let fileManager: FileManager
@@ -93,7 +94,7 @@ final class WatchedFolderService: ObservableObject {
         self.convert = convert
         self.notify = notify
         self.includePatterns = userDefaults.string(forKey: Self.includePatternsKey) ?? ""
-        self.excludePatterns = userDefaults.string(forKey: Self.excludePatternsKey) ?? ""
+        self.excludePatterns = userDefaults.string(forKey: Self.excludePatternsKey) ?? Self.defaultExcludePatterns
         self.folders = Self.loadFolders(from: userDefaults)
     }
 

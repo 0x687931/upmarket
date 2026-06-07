@@ -20,6 +20,29 @@ if [[ ! -f "$SCHEME_FILE" ]]; then
   exit 1
 fi
 
+STOREKIT_IDENTIFIER="$(sed -n '/StoreKitConfigurationFileReference/,/<\/StoreKitConfigurationFileReference>/ s/.*identifier = "\([^"]*\)".*/\1/p' "$SCHEME_FILE")"
+if [[ -z "$STOREKIT_IDENTIFIER" ]]; then
+  echo "error: $SCHEME scheme is missing a StoreKit configuration file reference"
+  exit 1
+fi
+
+if [[ "$STOREKIT_IDENTIFIER" == container:* ]]; then
+  echo "error: $SCHEME StoreKit configuration must use a filesystem path, got: $STOREKIT_IDENTIFIER"
+  echo "       Xcode may treat malformed container references as missing paths under project.xcworkspace."
+  exit 1
+fi
+
+if [[ "$STOREKIT_IDENTIFIER" = /* ]]; then
+  STOREKIT_PATH="$STOREKIT_IDENTIFIER"
+else
+  STOREKIT_PATH="$PROJECT/$STOREKIT_IDENTIFIER"
+fi
+
+if [[ ! -f "$STOREKIT_PATH" ]]; then
+  echo "error: $SCHEME StoreKit configuration file not found: $STOREKIT_PATH"
+  exit 1
+fi
+
 if ! command -v xcodebuild >/dev/null 2>&1; then
   echo "error: xcodebuild is required to validate $PROJECT"
   exit 1
@@ -43,4 +66,5 @@ if (( XCODE_MAJOR < REQUIRED_MAJOR )); then
 fi
 
 echo "ok: xcodebuild version is Xcode $XCODE_VERSION"
+echo "ok: StoreKit configuration exists at $STOREKIT_PATH"
 echo "ok: Xcode project and scheme are valid"

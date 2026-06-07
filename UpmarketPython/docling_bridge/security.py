@@ -76,19 +76,27 @@ def _runtime_audit_hook(event: str, args: tuple) -> None:
     }
     if event in blocked_events:
         raise PermissionError(f"Runtime sandbox blocked {event}")
-    if event.startswith("socket.") and os.environ.get("UPMARKET_ALLOW_NETWORK") != "1":
+    if event.startswith("socket.") and not _network_allowed():
         raise PermissionError("Runtime sandbox blocked network access")
 
 
 def _patch_runtime_escape_hatches() -> None:
     original_socket = socket.socket
 
-    def guarded_socket(*args, **kwargs):
-        if os.environ.get("UPMARKET_ALLOW_NETWORK") != "1":
-            raise PermissionError("Runtime sandbox blocked network access")
-        return original_socket(*args, **kwargs)
+    class GuardedSocket(original_socket):
+        def __init__(self, *args, **kwargs):
+            if not _network_allowed():
+                raise PermissionError("Runtime sandbox blocked network access")
+            super().__init__(*args, **kwargs)
 
-    socket.socket = guarded_socket
+    GuardedSocket.__name__ = original_socket.__name__
+    GuardedSocket.__qualname__ = original_socket.__qualname__
+    GuardedSocket.__module__ = original_socket.__module__
+    socket.socket = GuardedSocket
+
+
+def _network_allowed() -> bool:
+    return os.environ.get("UPMARKET_ALLOW_NETWORK") == "1"
 
 # ── File path validation ──────────────────────────────────────────────────────
 

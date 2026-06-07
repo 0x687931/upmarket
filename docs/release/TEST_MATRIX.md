@@ -16,9 +16,12 @@ This matrix defines the minimum validation surface. Add focused tests when a cha
 | Signed entitlements | Signed archive has embedded app/helper entitlements | `UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS=1 scripts/ci/verify_entitlements.sh /path/to/Upmarket.app` | Release candidate | Yes |
 | Build | App, Quick Action, runtime helper compile | `scripts/ci/gate.sh quick` or `xcodebuild build ... CODE_SIGNING_ALLOWED=NO` | Every PR | Yes |
 | Unit tests | Domain, services, StoreKit accounting, diagnostics, helper, native extraction | `scripts/ci/gate.sh quick` or `xcodebuild test ... -only-testing:UpmarketTests` | Every PR | Yes |
-| UI tests | Launch, shelf, paywall, preferences, appearance-sensitive flows | `scripts/ci/gate.sh major` or `scripts/ci/gate.sh ui` | Major/release candidate and explicit UI changes | Yes |
+| UI tests | Apple XCTest/XCUIAutomation coverage for launch, shelf, paywall, preferences, appearance-sensitive flows, and release-facing workflows | `scripts/ci/gate.sh ui`; `scripts/ci/gate.sh major`; `.github/workflows/ui-automation.yml`; `.github/workflows/release-candidate.yml` | UI-sensitive PRs, manual runs, major/release candidates, and explicit UI changes | Yes |
+| Swift Testing adoption | New pure Swift unit/integration tests may use Swift Testing; existing XCTest files migrate only when touched for meaningful behavior changes | Same `xcodebuild test ... -only-testing:UpmarketTests` path; do not mix Swift Testing and XCTest APIs in one file | New focused service/domain tests | Yes when touched |
 | Runtime package | Embedded runtime imports first-party bridge, pinned deps, native extension ABI tags, `pip check` | `scripts/ci/gate.sh runtime` | Runtime/dependency/package changes and release candidates | Yes |
-| App package | Effective plist, entitlements, runtime imports, helper, offline smoke | `scripts/ci/gate.sh runtime` or `scripts/ci/verify_release_app.sh /path/to/Upmarket.app` | Runtime/package changes and RC | Yes |
+| Apple bundle preflight | Foundation `Bundle.preflight()` can load-check embedded executable bundles before runtime import smoke | `scripts/ci/verify_release_app.sh /path/to/Upmarket.app` | Runtime/package changes and RC | Yes |
+| Python bridge security | First-party bridge rejects unsafe archives, extension/content mismatches, pathological images/PDFs, subprocess launch, and conversion-time network access | `scripts/ci/verify_release_app.sh /path/to/Upmarket.app`; direct form: `PYTHONPATH=<bundled site-packages> python3.12 scripts/ci/test_archive_security.py` | Python bridge, runtime, dependency, package changes and RC | Yes |
+| App package | Effective plist, entitlements, Apple bundle preflight, runtime imports, helper, offline smoke | `scripts/ci/gate.sh runtime` or `scripts/ci/verify_release_app.sh /path/to/Upmarket.app` | Runtime/package changes and RC | Yes |
 | Model states | Missing, partial, corrupt, stale, and unexpected model dirs fail safely; release gate repair mode manifests pinned legacy caches and quarantines unusable local caches | `scripts/ci/gate.sh minor`; `scripts/ci/validate_models.py`; `scripts/ci/test_model_faults.py` | Model/runtime changes and RC | Yes |
 | Corpus manifest | Corpus files and ground truth are present and well formed | `scripts/ci/gate.sh minor` or `scripts/ci/validate_corpus.py` | Conversion/corpus changes and RC | Yes |
 | Corpus baseline | Current benchmark output does not regress stored baseline | `scripts/ci/validate_corpus_baseline.py --results <json>` | Release candidate and conversion changes | Yes |
@@ -28,6 +31,8 @@ This matrix defines the minimum validation surface. Add focused tests when a cha
 | Storage access | iCloud/local/security-scoped file behavior | `docs/release/STORAGE_VALIDATION.md` evidence and focused tests | Storage changes and RC | Yes |
 | Diagnostics | Redacted bug report, OSLog, crash/support runbook | `UpmarketTests/DiagnosticsTests.swift`; `UpmarketTests/SupportReporterTests.swift` | Every PR touching diagnostics | Yes |
 | StoreKit | Product loading, purchases, pack ledger, restore, pending transaction | StoreKit sandbox/manual evidence plus unit tests | Store changes and RC | Yes |
+| TestFlight internal beta | Signed archive uploaded to App Store Connect, internal group assigned, What to Test populated, feedback/crash triage checked | App Store Connect TestFlight build page, tester feedback, and Xcode Organizer evidence | Every internal beta candidate | Yes for beta |
+| TestFlight external beta | Internal beta issues resolved, external group ready, TestFlight App Review information complete, sandbox IAP exercised | App Store Connect external group approval plus sandbox purchase evidence | External beta candidate | Yes for external beta |
 | App Store metadata | Privacy, licenses, support, screenshots, listing, age rating | App Store Connect review checklist | Release candidate | Yes |
 
 ## Touched-Code Rule
@@ -40,4 +45,22 @@ A corpus document that needs missing user input, such as a password-protected PD
 
 ## Automation Boundary
 
-UI automation is intentionally release-candidate scoped because it can alter the user's system appearance. Unit, package, copy, corpus, and model checks should remain safe for normal PR/local runs.
+UI automation runs in the dedicated `.github/workflows/ui-automation.yml` lane for UI-sensitive changes and in release-candidate CI. It stays out of the normal fast PR gate so backend-only changes keep quick feedback. Unit, package, copy, corpus, and model checks should remain safe for normal PR/local runs.
+
+## Apple Test Framework Policy
+
+Use Swift Testing for new pure Swift unit and integration coverage where its assertions, async support, and parameterized tests make the test smaller or clearer. Keep XCTest for UI automation, performance measurement, and existing test files that are not otherwise being changed. Apple supports Swift Testing and XCTest in the same test bundle, but individual files should use one framework at a time.
+
+Upmarket's preflight policy has two layers. Runtime input preflight stays in app code and uses native Apple APIs where practical before heavyweight conversion. Release-package preflight belongs in CI and uses Foundation bundle preflight before Python/runtime import smoke so load/link failures are caught before a candidate reaches TestFlight.
+
+## Python Test Policy
+
+Yes, Upmarket needs Python tests where Python is part of the shipped conversion boundary. Keep them focused on first-party bridge behavior, package integrity, sandbox behavior, model state faults, dependency pins, and offline conversion smoke. Do not run or edit the vendored upstream Docling pytest suite as Upmarket's normal Python test surface; those files are corpus/reference material unless the task is explicitly about upstream corpus validation.
+
+Run Python bridge tests with the bundled Python minor version and bundled `site-packages`, not whichever `python3` happens to be on the machine. `scripts/ci/verify_release_app.sh` owns that package-level test path so release candidates exercise the same bridge files and native wheels that TestFlight users receive.
+
+## TestFlight Policy
+
+Use TestFlight as a release-candidate validation lane, not a substitute for local gates. A build is eligible for beta only after `scripts/ci/gate.sh minor` passes, signed entitlements are verified on the archived app, and StoreKit/App Store Connect metadata needed for beta review is complete.
+
+Start with one internal group for owner/dev validation. Move to external testing only after internal feedback, Xcode Organizer crash diagnostics, and sandbox purchase paths have been reviewed. External groups require TestFlight App Review, so every external beta issue should have an owner, reproduction note, and release decision before widening distribution.

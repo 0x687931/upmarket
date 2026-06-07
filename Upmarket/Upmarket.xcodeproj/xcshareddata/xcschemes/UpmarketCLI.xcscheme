@@ -15,8 +15,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "DD000006000000000000006D"
-               BuildableName = "upmarket"
-               BlueprintName = "upmarket"
+               BuildableName = "upmarket-cli"
+               BlueprintName = "UpmarketCLI"
                ReferencedContainer = "container:Upmarket.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -28,8 +28,6 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
       shouldAutocreateTestPlan = "YES">
-      <Testables>
-      </Testables>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -46,8 +44,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "DD000006000000000000006D"
-            BuildableName = "upmarket"
-            BlueprintName = "upmarket"
+            BuildableName = "upmarket-cli"
+            BlueprintName = "UpmarketCLI"
             ReferencedContainer = "container:Upmarket.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -63,8 +61,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "DD000006000000000000006D"
-            BuildableName = "upmarket"
-            BlueprintName = "upmarket"
+            BuildableName = "upmarket-cli"
+            BlueprintName = "UpmarketCLI"
             ReferencedContainer = "container:Upmarket.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

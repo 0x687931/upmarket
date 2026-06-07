@@ -25,11 +25,11 @@ enum UpmarketSymbols {
 
     // MARK: - App identity
 
-    /// The # symbol — app icon, menu bar, shelf header
-    /// Use Text("#") with .rounded design for the actual logo
-    static let appMark = "number"
-    static let appMarkFill = "number.circle.fill"
-    static let appMarkSquare = "number.square.fill"
+    /// Storefront mark used by the Dock icon, menu bar, and shelf identity surfaces.
+    /// Keep this as an SF Symbol so state-specific color and animation can be layered on top.
+    static let appMark = "storefront"
+    static let appMarkFill = "storefront.fill"
+    static let appMarkSquare = "storefront"
 
     // MARK: - Conversion actions
 
@@ -99,9 +99,9 @@ enum UpmarketSymbols {
 
     // MARK: - Menu bar
 
-    /// Idle: plain number. Converting: filled circle with pulse animation.
+    /// The menu bar uses the Dock icon glyph for every state; color/animation is applied by callers.
     static func menuBarIcon(isConverting: Bool) -> String {
-        isConverting ? appMarkFill : appMark
+        appMark
     }
 
     // MARK: - Shelf

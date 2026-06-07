@@ -32,8 +32,8 @@ final class StoreManager: ObservableObject {
         willSet { objectWillChange.send() }
     }
 
-    // Free trial: 3 docs, counted down
-    private(set) var freeDocsRemaining: Int = 3 {
+    // Beta access is granted only by verified non-consumable StoreKit entitlements.
+    private(set) var freeDocsRemaining: Int = 0 {
         willSet { objectWillChange.send() }
     }
 
@@ -73,25 +73,15 @@ final class StoreManager: ObservableObject {
         entitlement == .pro
     }
 
-    /// Can convert right now — has unlimited access, free docs, or pack credits
+    /// Can convert right now — requires a verified non-consumable unlock.
     var canConvert: Bool {
-        hasBasicOrAbove || freeDocsRemaining > 0 || packCredits > 0
+        hasBasicOrAbove
     }
 
     /// Nudge level based on pack purchase history
     var upgradeNudge: UpgradeNudge {
         guard !hasBasicOrAbove else { return .none }
 
-        if packCredits <= 2 && packsEverPurchased >= 1 {
-            // Running low on a pack they bought
-            if packsEverPurchased >= 3 {
-                return .mathsNudge  // "You've spent $X, unlimited is just $Y more"
-            } else if packsEverPurchased >= 2 {
-                return .strongNudge  // "You've bought 2 packs — unlimited is better value"
-            } else {
-                return .softNudge    // "Running low — unlimited for $4.99"
-            }
-        }
         return .none
     }
 
@@ -130,8 +120,6 @@ final class StoreManager: ObservableObject {
         }
     }
 
-    /// Trial is document-count based: 3 free conversions, then paid access.
-    /// Prompt at good moments after a conversion finishes: 1 remaining, then 0.
     func shouldShowTrialPaywallAfterConversion() -> Bool {
         accounting.shouldShowTrialPaywallAfterConversion(
             hasPaidEntitlement: hasBasicOrAbove,
@@ -143,6 +131,9 @@ final class StoreManager: ObservableObject {
     // MARK: - Purchasing
 
     func purchase(_ product: Product) async throws {
+        if product.id == Self.packID {
+            throw StoreError.unsupportedProduct
+        }
         if product.id == Self.proID && !FeatureFlags.shared.aiAvailable {
             throw StoreError.unsupportedDevice
         }
@@ -185,13 +176,13 @@ final class StoreManager: ObservableObject {
         }
 
         do {
-            let products = try await Product.products(for: [Self.basicID, Self.proID, Self.packID])
+            let products = try await Product.products(for: [Self.basicID, Self.proID])
             await MainActor.run {
                 self.basicProduct = products.first { $0.id == Self.basicID }
                 self.proProduct   = products.first { $0.id == Self.proID }
-                self.packProduct  = products.first { $0.id == Self.packID }
+                self.packProduct  = nil
                 self.productsLoaded = true
-                if self.basicProduct == nil || self.proProduct == nil || self.packProduct == nil {
+                if self.basicProduct == nil || self.proProduct == nil {
                     self.productLoadError = "Some purchase options are unavailable. Check StoreKit configuration or App Store Connect product IDs."
                 }
             }
@@ -283,4 +274,5 @@ enum UpgradeNudge {
 enum StoreError: Error {
     case failedVerification
     case unsupportedDevice
+    case unsupportedProduct
 }

@@ -80,6 +80,25 @@ final class WatchedFolderServiceTests: XCTestCase {
         XCTAssertEqual(convertedNames, ["keep.pdf"])
     }
 
+    func testDefaultRulesIgnoreGeneratedOutputsAndTemporaryFiles() async throws {
+        let folderURL = try makeDirectory("Inbox")
+        try write("keep", to: folderURL.appendingPathComponent("keep.pdf"))
+        try write("converted", to: folderURL.appendingPathComponent("converted.md"))
+        try write("json", to: folderURL.appendingPathComponent("converted.json"))
+        try write("partial", to: folderURL.appendingPathComponent("download.part"))
+        var convertedNames: [String] = []
+        let service = makeService { url in
+            convertedNames.append(url.lastPathComponent)
+            return .success(Self.output(title: "Filtered"))
+        }
+        try service.addFolder(folderURL)
+        let id = try XCTUnwrap(service.folders.first?.id)
+
+        await service.scanFolder(id: id)
+
+        XCTAssertEqual(convertedNames, ["keep.pdf"])
+    }
+
     func testChosenOutputFolderWritesFormattedResult() async throws {
         let inboxURL = try makeDirectory("Inbox")
         let outputURL = try makeDirectory("Outbox")

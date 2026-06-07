@@ -21,6 +21,7 @@ Files/modules intentionally not changed:
 
 - [ ] `scripts/ci/gate.sh quick`
 - [ ] Runtime/package gate if Python, packaging, dependencies, entitlements, corpus, models, or release automation changed: `scripts/ci/gate.sh runtime`
+- [ ] UI automation gate if visible UI, launch, menu bar, paywall, preferences, or UI tests changed: `scripts/ci/gate.sh ui`
 - [ ] Release gate for minor candidates: `scripts/ci/gate.sh minor`
 - [ ] Release gate for major candidates: `scripts/ci/gate.sh major`
 - [ ] Manual check:

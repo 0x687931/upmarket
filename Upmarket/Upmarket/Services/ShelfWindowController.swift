@@ -150,8 +150,9 @@ final class ShelfWindowController: NSWindowController {
 
     // MARK: - Show / Hide
 
-    func show(animate: Bool = true) {
+    func show(animate: Bool = true, ignoringPreference: Bool = false) {
         guard let panel = window else { return }
+        guard ignoringPreference || AppVisibilityPreference.showShelf else { return }
         reposition()
         if animate {
             panel.alphaValue = 0
@@ -190,7 +191,12 @@ final class ShelfWindowController: NSWindowController {
 
     func toggle() {
         guard let panel = window else { return }
-        panel.isVisible ? hide() : show()
+        if panel.isVisible {
+            hide()
+        } else {
+            AppVisibilityPreference.showShelf = true
+            show(ignoringPreference: true)
+        }
     }
 
     func resizeToContent(width: CGFloat) {

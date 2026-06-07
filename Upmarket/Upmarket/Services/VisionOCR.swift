@@ -119,6 +119,42 @@ struct VisionOCR {
     }
 
     private static func recogniseCGImage(_ cgImage: CGImage, pageIndex: Int) async throws -> PageResult {
+        let preparedImage = await preprocessedImageForOCR(cgImage) ?? cgImage
+        return try await recognisePreparedCGImage(preparedImage, pageIndex: pageIndex)
+    }
+
+    static func preprocessedImageForOCR(_ cgImage: CGImage) async -> CGImage? {
+        await withCheckedContinuation { continuation in
+            let request = VNDetectRectanglesRequest()
+            request.maximumObservations = 1
+            request.minimumConfidence = 0.60
+
+            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+            do {
+                try handler.perform([request])
+            } catch {
+                continuation.resume(returning: nil)
+                return
+            }
+
+            guard let rectangle = request.results?.first else {
+                continuation.resume(returning: nil)
+                return
+            }
+            let coverage = rectangleCoverage(rectangle)
+            let skew = rectangleSkewDegrees(rectangle)
+            guard coverage >= 0.35,
+                  coverage < 0.96,
+                  coverage < 0.90 || skew >= 2 else {
+                continuation.resume(returning: nil)
+                return
+            }
+
+            continuation.resume(returning: perspectiveCorrectedImage(from: cgImage, rectangle: rectangle))
+        }
+    }
+
+    private static func recognisePreparedCGImage(_ cgImage: CGImage, pageIndex: Int) async throws -> PageResult {
         return try await withCheckedThrowingContinuation { continuation in
             let request = VNRecognizeTextRequest { request, error in
                 if let error {
@@ -157,6 +193,45 @@ struct VisionOCR {
                 continuation.resume(throwing: error)
             }
         }
+    }
+
+    private static func perspectiveCorrectedImage(from cgImage: CGImage, rectangle: VNRectangleObservation) -> CGImage? {
+        let input = CIImage(cgImage: cgImage)
+        guard let filter = CIFilter(name: "CIPerspectiveCorrection") else { return nil }
+
+        filter.setValue(input, forKey: kCIInputImageKey)
+        filter.setValue(CIVector(cgPoint: imagePoint(rectangle.topLeft, extent: input.extent)), forKey: "inputTopLeft")
+        filter.setValue(CIVector(cgPoint: imagePoint(rectangle.topRight, extent: input.extent)), forKey: "inputTopRight")
+        filter.setValue(CIVector(cgPoint: imagePoint(rectangle.bottomLeft, extent: input.extent)), forKey: "inputBottomLeft")
+        filter.setValue(CIVector(cgPoint: imagePoint(rectangle.bottomRight, extent: input.extent)), forKey: "inputBottomRight")
+
+        guard let output = filter.outputImage,
+              output.extent.width > 1,
+              output.extent.height > 1 else { return nil }
+        return CIContext().createCGImage(output, from: output.extent)
+    }
+
+    private static func imagePoint(_ point: CGPoint, extent: CGRect) -> CGPoint {
+        CGPoint(
+            x: extent.minX + point.x * extent.width,
+            y: extent.minY + point.y * extent.height
+        )
+    }
+
+    private static func rectangleCoverage(_ rectangle: VNRectangleObservation) -> CGFloat {
+        let points = [rectangle.topLeft, rectangle.topRight, rectangle.bottomRight, rectangle.bottomLeft]
+        var area: CGFloat = 0
+        for index in points.indices {
+            let next = points[(index + 1) % points.count]
+            area += points[index].x * next.y - next.x * points[index].y
+        }
+        return abs(area) / 2
+    }
+
+    private static func rectangleSkewDegrees(_ rectangle: VNRectangleObservation) -> Double {
+        let radians = atan2(rectangle.topRight.y - rectangle.topLeft.y, rectangle.topRight.x - rectangle.topLeft.x)
+        let degrees = abs(Double(radians * 180 / .pi))
+        return min(degrees, abs(180 - degrees))
     }
 
     private static func extractLanguages(_ observations: [VNRecognizedTextObservation]) -> [String] {

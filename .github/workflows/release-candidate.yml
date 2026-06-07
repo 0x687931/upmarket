@@ -12,6 +12,7 @@ jobs:
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
       DERIVED_DATA_DIR: build/DerivedData
+      UPMARKET_RESULT_BUNDLE_DIR: build/TestResults
       ARCHIVE_PATH: build/Upmarket.xcarchive
     steps:
       - uses: actions/checkout@v4
@@ -66,11 +67,12 @@ jobs:
             reports/corpus-pathway-comparison.md
 
       - name: UI automation tests
-        run: |
-          xcodebuild test \
-            -project Upmarket/Upmarket.xcodeproj \
-            -scheme Upmarket \
-            -destination "platform=macOS,arch=arm64" \
-            -derivedDataPath "$DERIVED_DATA_DIR" \
-            -only-testing:UpmarketUITests \
-            CODE_SIGNING_ALLOWED=NO
+        run: scripts/ci/gate.sh ui
+
+      - name: Upload UI test result bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-candidate-ui-xcresult
+          path: build/TestResults/*.xcresult
+          if-no-files-found: ignore

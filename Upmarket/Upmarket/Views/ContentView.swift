@@ -188,6 +188,9 @@ struct ContentView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 7)
                     .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(L("dropzone.button"))
+                    .accessibilityIdentifier("ChooseDocumentButton")
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("ChooseDocumentButton")
@@ -431,21 +434,12 @@ struct ContentView: View {
     private var statusBanner: some View {
         if store.hasBasicOrAbove {
             EmptyView()
-        } else if store.freeDocsRemaining > 0 {
-            bannerRow(
-                icon: "sparkles",
-                text: store.freeDocsRemaining == 1
-                    ? "1 free conversion remaining"
-                    : "\(store.freeDocsRemaining) free conversions",
-                action: ("Upgrade", { showPaywall = true }),
-                tint: Color.accentColor.opacity(0.07)
-            )
         } else if let nudge = store.nudgeMessage {
             bannerRow(icon: "arrow.up.circle.fill", text: nudge,
                       action: ("See Plans", { showPaywall = true }),
                       tint: Color.accentColor.opacity(0.07))
-        } else if store.packCredits == 0 {
-            bannerRow(icon: "lock.fill", text: "Free conversions used",
+        } else {
+            bannerRow(icon: "lock.fill", text: "Unlock Upmarket to convert",
                       action: ("Unlock", { showPaywall = true }),
                       tint: Color.red.opacity(0.06))
         }

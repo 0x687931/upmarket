@@ -51,6 +51,15 @@ Models are downloaded on first use and cached in `~/Library/Application Support/
 
 See [IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for the full technical plan and [USER_FLOW.md](docs/USER_FLOW.md) for the app journey.
 Generated repository documentation lives in [docs/generated](docs/generated/) and is refreshed by `scripts/docs/generate_repo_docs.py`.
+Build, shipping, deployment, TestFlight, and App Store release steps live in [BUILD_SHIP_DEPLOY.md](docs/BUILD_SHIP_DEPLOY.md). Apple XCTest UI automation policy lives in [UI_AUTOMATION.md](docs/release/UI_AUTOMATION.md).
+
+For a deterministic local build and launch, use:
+
+```sh
+scripts/dev/run_app.sh
+```
+
+That command builds into `build/DerivedData`, ad-hoc signs a sandboxed local launch bundle, and opens `build/DerivedData/Build/Products/Debug/Upmarket.app`. If an older Upmarket process is already running, use `scripts/dev/run_app.sh --relaunch`. CloudKit and App Group capabilities still require normal Apple development or release signing.
 
 ## Current Benchmarks
 

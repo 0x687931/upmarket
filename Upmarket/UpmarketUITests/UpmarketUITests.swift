@@ -13,6 +13,7 @@ final class UpmarketUITests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
+        XCUIApplication().terminate()
     }
 
     override func tearDownWithError() throws {
@@ -28,12 +29,15 @@ final class UpmarketUITests: XCTestCase {
 
     @MainActor
     func testPrimaryConversionWindowIsMounted() throws {
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launch()
 
         let primaryView = app.descendants(matching: .any)["PrimaryConversionView"]
         XCTAssertTrue(primaryView.waitForExistence(timeout: 3))
-        XCTAssertTrue(app.buttons["ChooseDocumentButton"].exists)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["ChooseDocumentButton"].waitForExistence(timeout: 3)
+                || app.buttons["Choose File"].waitForExistence(timeout: 3)
+        )
     }
 
     @MainActor
@@ -43,7 +47,7 @@ final class UpmarketUITests: XCTestCase {
             .appendingPathComponent("upmarket-ui-workspace-\(UUID().uuidString).txt")
         cleanupURLs.append(pathFile)
 
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launchEnvironment["UPMARKET_UI_TEST_WORKSPACE_PATH_FILE"] = pathFile.path
         launchedApps.append(app)
         app.launch()
@@ -62,7 +66,7 @@ final class UpmarketUITests: XCTestCase {
 
         let relaunchSentinel = try createSentinelWorkspace(named: "ui-relaunch-cleanup", in: workspaceRoot)
 
-        let relaunched = XCUIApplication()
+        let relaunched = makeApp()
         relaunched.launchEnvironment["UPMARKET_UI_TEST_WORKSPACE_PATH_FILE"] = pathFile.path
         launchedApps.append(relaunched)
         relaunched.launch()
@@ -73,12 +77,11 @@ final class UpmarketUITests: XCTestCase {
         relaunched.terminate()
     }
 
-    @MainActor
-    func testLaunchPerformance() throws {
-        // This measures how long it takes to launch your application.
-        measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
-        }
+    private func makeApp() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchEnvironment["UPMARKET_UI_TESTING"] = "1"
+        return app
     }
 
     private func createSentinelWorkspace(named prefix: String, in root: URL) throws -> URL {

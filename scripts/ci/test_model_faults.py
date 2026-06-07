@@ -47,6 +47,47 @@ def run_validate_models(root: Path, *args: str) -> subprocess.CompletedProcess[s
     )
 
 
+def assert_runtime_sandbox_preserves_ssl_import() -> None:
+    code = """
+import socket
+
+from docling_bridge.security import install_runtime_sandbox
+
+install_runtime_sandbox()
+
+import encodings.idna  # noqa: F401
+import ssl  # noqa: F401
+
+if not isinstance(socket.socket, type):
+    raise AssertionError(f"socket.socket must remain a class, got {type(socket.socket)!r}")
+
+try:
+    socket.socket()
+except PermissionError:
+    pass
+else:
+    raise AssertionError("runtime sandbox did not block socket creation")
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=REPO_ROOT,
+        env={
+            **os.environ,
+            "PYTHONPATH": str(REPO_ROOT / "UpmarketPython"),
+            "UPMARKET_RUNTIME_SANDBOX": "1",
+            "UPMARKET_ALLOW_NETWORK": "0",
+        },
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise AssertionError(
+            "runtime sandbox broke SSL/socket imports\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+
 def write_manifestless_layout(root: Path, revision: str) -> Path:
     layout = root / "layout"
     layout.mkdir()
@@ -61,6 +102,8 @@ def write_manifestless_layout(root: Path, revision: str) -> Path:
 
 
 def main() -> int:
+    assert_runtime_sandbox_preserves_ssl_import()
+
     with tempfile.TemporaryDirectory(prefix="upmarket-model-faults-") as temp:
         root = Path(temp)
         manager = load_model_manager(root)

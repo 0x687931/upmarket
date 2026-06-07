@@ -43,7 +43,7 @@ The App makes network requests for three purposes only.
 
 2. **App Store purchases.** Purchase verification and restore use Apple's standard App Store APIs. Upmarket has no payment server.
 
-3. **Feature availability.** The app fetches a small public configuration file to check which features are available for your device language. The request contains no document data or app-specific identifiers.
+3. **Feature availability.** The app fetches a small public Apple CloudKit record to check which features are available for your device language. The request contains no document data.
 
 Conversion is always performed offline. The AI runs entirely on your Mac.
 

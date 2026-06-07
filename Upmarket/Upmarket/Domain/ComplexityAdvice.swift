@@ -19,7 +19,8 @@ struct ComplexityAdvice {
     }
 
     var languageQualityWarning: String? {
-        guard let lang = detectedLanguage,
+        guard recommendation != .basic,
+              let lang = detectedLanguage,
               Self.lowQualityLanguages.contains(lang) else { return nil }
         let name = Locale.current.localizedString(forLanguageCode: lang) ?? lang.uppercased()
         return "This looks like a \(name) document. We're working on improving quality for \(name) — results may vary."

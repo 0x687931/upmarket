@@ -19,5 +19,17 @@
     <array>
         <string>group.com.upmarket.app</string>
     </array>
+
+    <!-- CloudKit: public feature availability flags only -->
+    <key>com.apple.developer.icloud-container-identifiers</key>
+    <array>
+        <string>iCloud.com.upmarket.app</string>
+    </array>
+    <key>com.apple.developer.icloud-services</key>
+    <array>
+        <string>CloudKit</string>
+    </array>
+    <key>com.apple.developer.icloud-container-environment</key>
+    <string>$(UPMARKET_CLOUDKIT_ENVIRONMENT)</string>
 </dict>
 </plist>

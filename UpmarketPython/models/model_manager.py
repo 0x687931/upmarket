@@ -227,6 +227,13 @@ def _write_manifest(model_key: str, model_path: Path) -> None:
     temp_path.replace(manifest_path)
 
 
+def _download_allow_patterns(info: dict) -> list[str]:
+    patterns = list(info["expected_files"])
+    for relative in info.get("expected_dirs", []):
+        patterns.append(f"{relative}/**")
+    return patterns
+
+
 def check_models() -> dict:
     """
     Returns status of each model.
@@ -292,7 +299,8 @@ def download_model(model_key: str, progress_file: str | None = None) -> dict:
             repo_id=info["repo_id"],
             revision=info["revision"],
             local_dir=str(staging),
-            local_dir_use_symlinks=False,
+            allow_patterns=_download_allow_patterns(info),
+            max_workers=4,
         )
 
         write_progress(90.0, "Validating model files…")

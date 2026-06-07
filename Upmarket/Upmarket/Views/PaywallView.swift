@@ -26,7 +26,6 @@ struct PaywallView: View {
                         proUnavailableCard
                     }
                     basicCard
-                    packCard
                     productStatus
                     purchaseStatus
                     restoreButton
@@ -46,7 +45,7 @@ struct PaywallView: View {
 
     private var header: some View {
         VStack(spacing: 6) {
-            Text("#")
+            Image(systemName: "number")
                 .font(.system(size: 48, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.accentColor)
                 .padding(.top, 28)
@@ -231,40 +230,6 @@ struct PaywallView: View {
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(Color.secondary.opacity(0.25), lineWidth: 1)
         )
-    }
-
-    // MARK: - Pack Card (last resort)
-
-    private var packCard: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Just need a few conversions?")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Text("5 documents for \(store.packProduct?.displayPrice ?? "$0.99")")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Button {
-                guard let product = store.packProduct else { return }
-                Task { await buy(product) }
-            } label: {
-                HStack(spacing: 6) {
-                    if isPurchasing == StoreManager.packID {
-                        ProgressView().controlSize(.small)
-                    }
-                    Text(store.packProduct?.displayPrice ?? "$0.99")
-                        .fontWeight(.medium)
-                }
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .disabled(isPurchasing != nil || store.packProduct == nil)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: - Footer

@@ -1,0 +1,5 @@
+{
+  "ai_supported_locales": ["en"],
+  "ai_experimental_locales": ["ar", "ja", "zh"],
+  "version": 1
+}

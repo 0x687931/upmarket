@@ -3,6 +3,7 @@ set -euo pipefail
 
 SITE="${1:-Upmarket/Python/Python.xcframework/macos-arm64_x86_64/Python.framework/Versions/3.12/lib/python3.12/site-packages}"
 LOCK="requirements.txt"
+STDLIB="$(dirname "$SITE")"
 SITE_PYTHON_VERSION="$(printf '%s\n' "$SITE" | sed -nE 's#.*lib/python([0-9]+[.][0-9]+)/site-packages$#\1#p')"
 PYTHON_CHECK_BIN="${PYTHON_CHECK_BIN:-python$SITE_PYTHON_VERSION}"
 
@@ -30,6 +31,8 @@ fi
 scripts/ci/validate_dependency_lock.py --current "$LOCK" --candidate requirements-candidate.txt >/dev/null
 
 required_paths=(
+  "$STDLIB/encodings/idna.py"
+  "$STDLIB/encodings/cp437.py"
   "$SITE/docling_bridge"
   "$SITE/docling_bridge/converter.py"
   "$SITE/docling_bridge/security.py"
@@ -96,6 +99,7 @@ rm -rf "$CHECK_VENV"
 PYTHONPATH="$SITE" HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 "$PYTHON_CHECK_BIN" - "$SITE" "$LOCK" <<'PY'
 import importlib
 import importlib.util
+import codecs
 from importlib import metadata
 import os
 from pathlib import Path
@@ -116,6 +120,8 @@ modules = [
 
 for module in modules:
     importlib.import_module(module)
+
+codecs.lookup("cp437")
 
 bundle_required_modules = [
     "docling.datamodel.vlm_model_specs",

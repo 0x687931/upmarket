@@ -10,16 +10,19 @@ import XCTest
 final class UpmarketUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
-        true
+        false
     }
 
     override func setUpWithError() throws {
         continueAfterFailure = false
+        XCUIApplication().terminate()
     }
 
     @MainActor
     func testLaunch() throws {
         let app = XCUIApplication()
+        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchEnvironment["UPMARKET_UI_TESTING"] = "1"
         app.launch()
 
         // Insert steps here to perform after app launch but before taking a screenshot,

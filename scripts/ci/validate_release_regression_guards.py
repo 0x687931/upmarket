@@ -162,11 +162,12 @@ def main() -> int:
     require_text(
         "Upmarket/UpmarketTests/StoreAccountingServiceTests.swift",
         [
-            "testTrialPaywallPromptOnlyOncePerRemainingCount",
-            "freeDocsRemaining: 3",
-            "freeDocsRemaining: 1",
+            "testInitialStateDiscardsLegacyLocalCredits",
+            "testDoesNotConsumeEditableFreeTrialOrPackCreditState",
+            "testVerifiedPackTransactionsDoNotGrantBetaConversionCredits",
+            "testTrialPaywallPromptIsDisabledWhenLocalTrialCreditsAreNotAuthoritative",
         ],
-        "post-conversion paywall timing regression tests",
+        "local conversion-credit authority regression tests",
         errors,
     )
     require_text(

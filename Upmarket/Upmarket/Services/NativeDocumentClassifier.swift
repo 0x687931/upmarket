@@ -1,4 +1,5 @@
 import Foundation
+import NaturalLanguage
 import PDFKit
 
 #if canImport(Vision)
@@ -81,10 +82,84 @@ struct NativeDocumentClassifier {
         let coreMLAvailable: Bool
         let visionObservedTextLines: Int
         let visionAverageConfidence: Float
+        let detectedLanguage: String?
+        let languageConfidence: Double
+        let detectedLanguages: [String]
+        let hasMixedLanguages: Bool
+        let sampledRotatedPages: Int
+        let sampledLandscapePages: Int
+        let sampledPagesRequiringRenderDownscale: Int
+        let visionInspectedPages: Int
+        let visionPagesWithText: Int
+        let visionTextBoxCount: Int
+        let visionEstimatedColumns: Int
+        let visionDenseTextLayoutPages: Int
+        let visionDocumentRectanglePages: Int
+        let visionAverageDocumentSkewDegrees: Double
+
+        init(
+            pageCount: Int,
+            sampledPages: Int,
+            averageDigitalTextCharactersPerPage: Int,
+            averageLinesPerSampledPage: Int,
+            shortLineRatio: Double,
+            numericLineRatio: Double,
+            hasAxisLikeText: Bool,
+            hasRTLText: Bool,
+            hasTableLikeText: Bool,
+            visionTextRecognitionAvailable: Bool,
+            coreMLAvailable: Bool,
+            visionObservedTextLines: Int,
+            visionAverageConfidence: Float,
+            detectedLanguage: String? = nil,
+            languageConfidence: Double = 0,
+            detectedLanguages: [String] = [],
+            hasMixedLanguages: Bool = false,
+            sampledRotatedPages: Int = 0,
+            sampledLandscapePages: Int = 0,
+            sampledPagesRequiringRenderDownscale: Int = 0,
+            visionInspectedPages: Int = 0,
+            visionPagesWithText: Int = -1,
+            visionTextBoxCount: Int = 0,
+            visionEstimatedColumns: Int = 1,
+            visionDenseTextLayoutPages: Int = 0,
+            visionDocumentRectanglePages: Int = 0,
+            visionAverageDocumentSkewDegrees: Double = 0
+        ) {
+            self.pageCount = pageCount
+            self.sampledPages = sampledPages
+            self.averageDigitalTextCharactersPerPage = averageDigitalTextCharactersPerPage
+            self.averageLinesPerSampledPage = averageLinesPerSampledPage
+            self.shortLineRatio = shortLineRatio
+            self.numericLineRatio = numericLineRatio
+            self.hasAxisLikeText = hasAxisLikeText
+            self.hasRTLText = hasRTLText
+            self.hasTableLikeText = hasTableLikeText
+            self.visionTextRecognitionAvailable = visionTextRecognitionAvailable
+            self.coreMLAvailable = coreMLAvailable
+            self.visionObservedTextLines = visionObservedTextLines
+            self.visionAverageConfidence = visionAverageConfidence
+            self.detectedLanguage = detectedLanguage
+            self.languageConfidence = languageConfidence
+            let languages = detectedLanguages.isEmpty ? detectedLanguage.map { [$0] } ?? [] : detectedLanguages
+            self.detectedLanguages = languages
+            self.hasMixedLanguages = hasMixedLanguages || Set(languages).count > 1
+            self.sampledRotatedPages = sampledRotatedPages
+            self.sampledLandscapePages = sampledLandscapePages
+            self.sampledPagesRequiringRenderDownscale = sampledPagesRequiringRenderDownscale
+            self.visionInspectedPages = visionInspectedPages
+            self.visionPagesWithText = visionPagesWithText < 0 ? (visionObservedTextLines > 0 ? 1 : 0) : visionPagesWithText
+            self.visionTextBoxCount = visionTextBoxCount
+            self.visionEstimatedColumns = max(1, visionEstimatedColumns)
+            self.visionDenseTextLayoutPages = visionDenseTextLayoutPages
+            self.visionDocumentRectanglePages = visionDocumentRectanglePages
+            self.visionAverageDocumentSkewDegrees = visionAverageDocumentSkewDegrees
+        }
 
         var isLikelyScanned: Bool {
             averageDigitalTextCharactersPerPage < 80
                 && visionTextRecognitionAvailable
+                && visionPagesWithText > 0
                 && visionObservedTextLines > 8
                 && visionAverageConfidence > 0.35
         }
@@ -98,7 +173,38 @@ struct NativeDocumentClassifier {
         var isLikelyComplexLayout: Bool {
             hasTableLikeText
                 || hasRTLText
+                || hasVisionMultiColumnLayout
+                || hasVisionDenseTextLayout
                 || (averageLinesPerSampledPage > 45 && shortLineRatio > 0.45)
+        }
+
+        var hasVisionMultiColumnLayout: Bool {
+            visionEstimatedColumns > 1
+        }
+
+        var hasVisionDenseTextLayout: Bool {
+            visionDenseTextLayoutPages > 0
+        }
+
+        var hasCameraCapturedPage: Bool {
+            visionDocumentRectanglePages > 0 || visionAverageDocumentSkewDegrees >= 2
+        }
+
+        var needsImageNormalization: Bool {
+            sampledRotatedPages > 0
+                || sampledPagesRequiringRenderDownscale > 0
+                || hasCameraCapturedPage
+        }
+
+        var preprocessingHints: [String] {
+            var hints: [String] = []
+            if sampledPagesRequiringRenderDownscale > 0 { hints.append("bounded image render") }
+            if sampledRotatedPages > 0 { hints.append("normalize page rotation") }
+            if hasCameraCapturedPage { hints.append("crop or deskew document image") }
+            if hasVisionMultiColumnLayout { hints.append("preserve multi-column layout") }
+            if hasVisionDenseTextLayout { hints.append("inspect dense text layout") }
+            if hasMixedLanguages { hints.append("preserve mixed-language text") }
+            return hints
         }
     }
 
@@ -130,21 +236,21 @@ struct NativeDocumentClassifier {
                     recommendation: .basic,
                     score: Int(confidence * 100),
                     reasons: reasons,
-                    detectedLanguage: nil
+                    detectedLanguage: evidence.detectedLanguage
                 )
             case .digitalComplex:
                 return ComplexityAdvice(
                     recommendation: .aiRecommended,
                     score: Int(confidence * 100),
                     reasons: reasons,
-                    detectedLanguage: nil
+                    detectedLanguage: evidence.detectedLanguage
                 )
             case .scannedOrUnknown:
                 return ComplexityAdvice(
                     recommendation: .aiRequired,
                     score: Int(confidence * 100),
                     reasons: reasons,
-                    detectedLanguage: nil
+                    detectedLanguage: evidence.detectedLanguage
                 )
             }
         }
@@ -197,11 +303,15 @@ struct NativeDocumentClassifier {
 
     static func recommend(from evidence: Evidence) -> Classification {
         if evidence.isLikelyScanned {
+            var reasons = ["low native text", "image text detected"]
+            if evidence.needsImageNormalization {
+                reasons.append("image normalization available")
+            }
             return Classification(
                 recommendedPathway: .visionOCR,
                 confidence: 0.86,
                 evidence: evidence,
-                reasons: ["low native text", "image text detected"]
+                reasons: reasons
             )
         }
 
@@ -209,6 +319,8 @@ struct NativeDocumentClassifier {
             var reasons: [String] = []
             if evidence.hasTableLikeText { reasons.append("table-like text") }
             if evidence.hasRTLText { reasons.append("right-to-left text") }
+            if evidence.hasVisionMultiColumnLayout { reasons.append("multi-column layout") }
+            if evidence.hasVisionDenseTextLayout { reasons.append("dense text layout") }
             if evidence.averageLinesPerSampledPage > 45 && evidence.shortLineRatio > 0.45 {
                 reasons.append("dense multi-column layout")
             }
@@ -243,11 +355,102 @@ struct NativeDocumentClassifier {
         let page: PDFPage
     }
 
+    private struct PagePreflight {
+        let textCharacters: Int
+        let lineCount: Int
+        let detectedLanguage: String?
+        let languageConfidence: Double
+        let hasRTLText: Bool
+        let isRotated: Bool
+        let isLandscape: Bool
+        let requiresRenderDownscale: Bool
+    }
+
     private struct VisionInspection {
+        let inspectedPages: Int
+        let pagesWithText: Int
         let observedTextLines: Int
         let averageConfidence: Float
+        let textBoxCount: Int
+        let estimatedColumns: Int
+        let denseTextLayoutPages: Int
+        let documentRectanglePages: Int
+        let averageDocumentSkewDegrees: Double
 
-        static let unavailable = VisionInspection(observedTextLines: 0, averageConfidence: 0)
+        static let unavailable = VisionInspection(
+            inspectedPages: 0,
+            pagesWithText: 0,
+            observedTextLines: 0,
+            averageConfidence: 0,
+            textBoxCount: 0,
+            estimatedColumns: 1,
+            denseTextLayoutPages: 0,
+            documentRectanglePages: 0,
+            averageDocumentSkewDegrees: 0
+        )
+
+        init(results: [VisionPageInspection]) {
+            guard !results.isEmpty else {
+                self = .unavailable
+                return
+            }
+
+            inspectedPages = results.count
+            pagesWithText = results.filter { $0.observedTextLines > 0 }.count
+            observedTextLines = results.reduce(0) { $0 + $1.observedTextLines }
+            textBoxCount = results.reduce(0) { $0 + $1.textBoxCount }
+            estimatedColumns = max(1, results.map(\.estimatedColumns).max() ?? 1)
+            denseTextLayoutPages = results.filter(\.hasDenseTextLayout).count
+            documentRectanglePages = results.filter(\.hasDocumentRectangle).count
+
+            let confidences = results.filter { $0.averageConfidence > 0 }.map(\.averageConfidence)
+            averageConfidence = confidences.isEmpty ? 0 : confidences.reduce(0, +) / Float(confidences.count)
+
+            let skew = results.compactMap(\.documentSkewDegrees)
+            averageDocumentSkewDegrees = skew.isEmpty ? 0 : skew.reduce(0, +) / Double(skew.count)
+        }
+
+        private init(
+            inspectedPages: Int,
+            pagesWithText: Int,
+            observedTextLines: Int,
+            averageConfidence: Float,
+            textBoxCount: Int,
+            estimatedColumns: Int,
+            denseTextLayoutPages: Int,
+            documentRectanglePages: Int,
+            averageDocumentSkewDegrees: Double
+        ) {
+            self.inspectedPages = inspectedPages
+            self.pagesWithText = pagesWithText
+            self.observedTextLines = observedTextLines
+            self.averageConfidence = averageConfidence
+            self.textBoxCount = textBoxCount
+            self.estimatedColumns = estimatedColumns
+            self.denseTextLayoutPages = denseTextLayoutPages
+            self.documentRectanglePages = documentRectanglePages
+            self.averageDocumentSkewDegrees = averageDocumentSkewDegrees
+        }
+    }
+
+    private struct VisionPageInspection {
+        let observedTextLines: Int
+        let averageConfidence: Float
+        let textBoxCount: Int
+        let estimatedColumns: Int
+        let hasDenseTextLayout: Bool
+        let hasDocumentRectangle: Bool
+        let documentSkewDegrees: Double?
+
+        static let unavailable = VisionPageInspection(
+            observedTextLines: 0,
+            averageConfidence: 0,
+            textBoxCount: 0,
+            estimatedColumns: 1,
+            hasDenseTextLayout: false,
+            hasDocumentRectangle: false,
+            documentSkewDegrees: nil
+        )
     }
 
     private static func sampledPageIndexes(pageCount: Int, maximum: Int) -> [Int] {
@@ -262,6 +465,7 @@ struct NativeDocumentClassifier {
         capabilities: Capabilities,
         vision: VisionInspection
     ) -> Evidence {
+        let pagePreflights = samples.map { preflight(page: $0) }
         let sampledTexts = samples.map(\.text)
         let lines = sampledTexts.flatMap {
             $0.components(separatedBy: .newlines)
@@ -280,6 +484,12 @@ struct NativeDocumentClassifier {
                 || $0.range(of: #"\S\s{2,}\S\s{2,}\S"#, options: .regularExpression) != nil
         }.count
         let joined = lines.joined(separator: " ")
+        let languageHypotheses = detectLanguageHypotheses(in: joined, maximum: 3)
+        let language = languageHypotheses.first
+        let pageLanguages = pagePreflights.compactMap(\.detectedLanguage)
+        let detectedLanguages = uniqueLanguageCodes(pageLanguages + languageHypotheses.map { $0.code })
+        let hasMixedLanguages = Set(pageLanguages).count > 1
+            || languageHypotheses.dropFirst().contains { $0.confidence >= 0.15 }
 
         return Evidence(
             pageCount: pageCount,
@@ -294,18 +504,108 @@ struct NativeDocumentClassifier {
             visionTextRecognitionAvailable: capabilities.visionTextRecognitionAvailable,
             coreMLAvailable: capabilities.coreMLAvailable,
             visionObservedTextLines: vision.observedTextLines,
-            visionAverageConfidence: vision.averageConfidence
+            visionAverageConfidence: vision.averageConfidence,
+            detectedLanguage: language?.code,
+            languageConfidence: language?.confidence ?? 0,
+            detectedLanguages: detectedLanguages,
+            hasMixedLanguages: hasMixedLanguages,
+            sampledRotatedPages: pagePreflights.filter(\.isRotated).count,
+            sampledLandscapePages: pagePreflights.filter(\.isLandscape).count,
+            sampledPagesRequiringRenderDownscale: pagePreflights.filter(\.requiresRenderDownscale).count,
+            visionInspectedPages: vision.inspectedPages,
+            visionPagesWithText: vision.pagesWithText,
+            visionTextBoxCount: vision.textBoxCount,
+            visionEstimatedColumns: vision.estimatedColumns,
+            visionDenseTextLayoutPages: vision.denseTextLayoutPages,
+            visionDocumentRectanglePages: vision.documentRectanglePages,
+            visionAverageDocumentSkewDegrees: vision.averageDocumentSkewDegrees
         )
     }
 
+    private static func preflight(page sample: PageSample) -> PagePreflight {
+        let trimmedText = sample.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lines = trimmedText.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        let language = detectLanguage(in: trimmedText)
+        let bounds = sample.page.bounds(for: .mediaBox)
+        let rotation = normalizedRotation(sample.page.rotation)
+
+        return PagePreflight(
+            textCharacters: trimmedText.count,
+            lineCount: lines.count,
+            detectedLanguage: language.code,
+            languageConfidence: language.confidence,
+            hasRTLText: containsRTLScript(trimmedText),
+            isRotated: rotation != 0,
+            isLandscape: bounds.width > bounds.height,
+            requiresRenderDownscale: requiresRenderDownscale(bounds: bounds, dpi: 150)
+        )
+    }
+
+    private static func uniqueLanguageCodes(_ codes: [String]) -> [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        for code in codes where seen.insert(code).inserted {
+            result.append(code)
+        }
+        return result
+    }
+
+    private static func normalizedRotation(_ rotation: Int) -> Int {
+        let normalized = rotation % 360
+        return normalized >= 0 ? normalized : normalized + 360
+    }
+
+    private static func requiresRenderDownscale(bounds: CGRect, dpi: CGFloat) -> Bool {
+        guard bounds.width.isFinite,
+              bounds.height.isFinite,
+              bounds.width > 0,
+              bounds.height > 0 else { return false }
+
+        let scale = dpi / 72.0
+        let width = max(Int(bounds.width * scale), 1)
+        let height = max(Int(bounds.height * scale), 1)
+        let pixels = Double(width) * Double(height)
+        return max(width, height) > VisionProcessingLimits.maximumRenderedSide
+            || pixels > Double(VisionProcessingLimits.maximumRenderedPixels)
+    }
+
+    private static func detectLanguage(in text: String) -> (code: String?, confidence: Double) {
+        guard let best = detectLanguageHypotheses(in: text, maximum: 1).first,
+              best.confidence >= 0.20 else {
+            return (nil, 0)
+        }
+        return (best.code, best.confidence)
+    }
+
+    private static func detectLanguageHypotheses(in text: String, maximum: Int) -> [(code: String, confidence: Double)] {
+        let sample = String(text.prefix(4_000)).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard sample.unicodeScalars.filter({ CharacterSet.letters.contains($0) }).count >= 20 else {
+            return []
+        }
+
+        let recognizer = NLLanguageRecognizer()
+        recognizer.processString(sample)
+        return recognizer.languageHypotheses(withMaximum: maximum)
+            .map { (code: $0.key.rawValue, confidence: Double($0.value)) }
+            .filter { $0.confidence >= 0.15 }
+            .sorted { $0.confidence > $1.confidence }
+    }
+
     private static func inspectWithVision(samples: [PageSample], capabilities: Capabilities) async -> VisionInspection {
-        guard capabilities.visionTextRecognitionAvailable, let first = samples.first else {
+        guard capabilities.visionTextRecognitionAvailable, !samples.isEmpty else {
             return .unavailable
         }
 
         #if canImport(Vision)
-        guard let image = autoreleasepool(invoking: { render(page: first.page) }) else { return .unavailable }
-        return await recogniseText(in: image)
+        var results: [VisionPageInspection] = []
+        for sample in samples {
+            if Task.isCancelled { break }
+            guard let image = autoreleasepool(invoking: { render(page: sample.page) }) else { continue }
+            results.append(await inspectTextAndLayout(in: image))
+        }
+        return VisionInspection(results: results)
         #else
         return .unavailable
         #endif
@@ -321,26 +621,80 @@ struct NativeDocumentClassifier {
     }
 
     #if canImport(Vision)
-    private static func recogniseText(in image: CGImage) async -> VisionInspection {
+    private static func inspectTextAndLayout(in image: CGImage) async -> VisionPageInspection {
         await withCheckedContinuation { continuation in
-            let request = VNRecognizeTextRequest { request, _ in
-                let observations = request.results as? [VNRecognizedTextObservation] ?? []
-                let confidences = observations.compactMap { $0.topCandidates(1).first?.confidence }
-                let average = confidences.isEmpty ? 0 : confidences.reduce(0, +) / Float(confidences.count)
-                continuation.resume(returning: VisionInspection(
-                    observedTextLines: observations.count,
-                    averageConfidence: average
-                ))
+            let textRequest = VNRecognizeTextRequest()
+            textRequest.recognitionLevel = .fast
+            textRequest.usesLanguageCorrection = false
+            if #available(macOS 13, *) {
+                textRequest.automaticallyDetectsLanguage = true
             }
-            request.recognitionLevel = .fast
-            request.usesLanguageCorrection = false
 
+            let rectangleRequest = VNDetectRectanglesRequest()
+            rectangleRequest.maximumObservations = 1
+            rectangleRequest.minimumConfidence = 0.55
+
+            let handler = VNImageRequestHandler(cgImage: image, options: [:])
             do {
-                try VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
+                try handler.perform([textRequest, rectangleRequest])
             } catch {
-                continuation.resume(returning: .unavailable)
+                continuation.resume(returning: VisionPageInspection.unavailable)
+                return
             }
+
+            let observations = textRequest.results ?? []
+            let confidentObservations = observations.filter { observation in
+                guard let candidate = observation.topCandidates(1).first else { return false }
+                return candidate.confidence > 0.30
+            }
+            let confidences = observations.compactMap { $0.topCandidates(1).first?.confidence }
+            let average = confidences.isEmpty ? 0 : confidences.reduce(0, +) / Float(confidences.count)
+            let boxes = confidentObservations.map(\.boundingBox)
+            let rectangles = (rectangleRequest.results ?? []).filter { rectangleCoverage($0) >= 0.35 && rectangleCoverage($0) < 0.98 }
+            let skew = rectangles.first.map { rectangleSkewDegrees($0) }
+
+            continuation.resume(returning: VisionPageInspection(
+                observedTextLines: confidentObservations.count,
+                averageConfidence: average,
+                textBoxCount: boxes.count,
+                estimatedColumns: estimatedColumnCount(from: boxes),
+                hasDenseTextLayout: hasDenseTextLayout(boxes: boxes),
+                hasDocumentRectangle: !rectangles.isEmpty,
+                documentSkewDegrees: skew
+            ))
         }
+    }
+
+    private static func estimatedColumnCount(from boxes: [CGRect]) -> Int {
+        guard boxes.count >= 10 else { return 1 }
+        let centers = boxes
+            .filter { $0.width > 0.03 && $0.height > 0.005 }
+            .map(\.midX)
+        let left = centers.filter { $0 < 0.45 }.count
+        let right = centers.filter { $0 > 0.55 }.count
+        return left >= 4 && right >= 4 ? 2 : 1
+    }
+
+    private static func hasDenseTextLayout(boxes: [CGRect]) -> Bool {
+        guard boxes.count >= 25 else { return false }
+        let averageHeight = boxes.reduce(0) { $0 + $1.height } / CGFloat(boxes.count)
+        return boxes.count >= 45 || averageHeight < 0.018
+    }
+
+    private static func rectangleCoverage(_ rectangle: VNRectangleObservation) -> CGFloat {
+        let points = [rectangle.topLeft, rectangle.topRight, rectangle.bottomRight, rectangle.bottomLeft]
+        var area: CGFloat = 0
+        for index in points.indices {
+            let next = points[(index + 1) % points.count]
+            area += points[index].x * next.y - next.x * points[index].y
+        }
+        return abs(area) / 2
+    }
+
+    private static func rectangleSkewDegrees(_ rectangle: VNRectangleObservation) -> Double {
+        let radians = atan2(rectangle.topRight.y - rectangle.topLeft.y, rectangle.topRight.x - rectangle.topLeft.x)
+        let degrees = abs(Double(radians * 180 / .pi))
+        return min(degrees, abs(180 - degrees))
     }
     #endif
 

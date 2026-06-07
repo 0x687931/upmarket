@@ -27,19 +27,46 @@ struct MenuBarIconView: View {
     }
 
     @ViewBuilder private var iconSymbol: some View {
-        if #available(macOS 14.0, *) {
-            Image(systemName: "number.square")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Color.primary)
-                .symbolRenderingMode(.hierarchical)
-                .symbolEffect(.pulse, isActive: isConverting)
-                .symbolEffect(.bounce, value: completionToken)
-                .contentTransition(.symbolEffect(.replace.byLayer.downUp))
-        } else {
-            Image(systemName: "number.square")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Color.primary)
+        ZStack {
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .fill(iconGradient)
+            Ellipse()
+                .fill(.white.opacity(0.12))
+                .frame(width: 12, height: 3)
+                .offset(y: -6)
+
+            if #available(macOS 14.0, *) {
+                Image(systemName: UpmarketSymbols.menuBarIcon(isConverting: isConverting))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .symbolEffect(.pulse, isActive: isConverting)
+                    .symbolEffect(.bounce, value: completionToken)
+                    .contentTransition(.symbolEffect(.replace.byLayer.downUp))
+            } else {
+                Image(systemName: UpmarketSymbols.menuBarIcon(isConverting: isConverting))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
         }
+        .frame(width: 19, height: 19)
+    }
+
+    private var iconGradient: LinearGradient {
+        LinearGradient(
+            colors: isConverting
+                ? [
+                    Color(red: 1.00, green: 0.77, blue: 0.24),
+                    Color(red: 0.97, green: 0.42, blue: 0.00),
+                    Color(red: 0.73, green: 0.17, blue: 0.00)
+                ]
+                : [
+                    Color(red: 1.00, green: 0.75, blue: 0.25),
+                    Color(red: 0.91, green: 0.47, blue: 0.00),
+                    Color(red: 0.66, green: 0.22, blue: 0.00)
+                ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
     }
 
     // 6pt dot with a 1pt white stroke — readable on both light and dark menu bars

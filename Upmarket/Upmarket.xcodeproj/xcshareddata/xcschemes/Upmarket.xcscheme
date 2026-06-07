@@ -74,7 +74,7 @@
          </BuildableReference>
       </BuildableProductRunnable>
       <StoreKitConfigurationFileReference
-         identifier = "container:Upmarket/Store.storekit">
+         identifier = "../Upmarket/Store.storekit">
       </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction

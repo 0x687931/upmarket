@@ -1,40 +1,184 @@
 import SwiftUI
 import AppKit
 
-// Two tabs: Settings (save location + models) · About (identity + license + links + open source)
+// Three tabs: General (app + storage) · Conversion (output + automation + models) · About
 // Every control is backed by a real service. No dead controls.
 
 struct PreferencesView: View {
-
     @EnvironmentObject private var modelManager: ModelManager
     @EnvironmentObject private var store: StoreManager
     @EnvironmentObject private var historyStore: ConversionHistoryStore
     @EnvironmentObject private var watchedFolderService: WatchedFolderService
 
+    @StateObject private var mcpIntegration = MCPIntegrationService.shared
     private let device = DeviceCapability.shared
     @State private var watchedFolderError: String?
+    @State private var showWatchedInputSheet = false
     @AppStorage(AppVisibilityPreference.showDockIconKey) private var showDockIcon = AppVisibilityPreference.defaultShowDockIcon
+    @AppStorage(AppVisibilityPreference.showMenuBarIconKey) private var showMenuBarIcon = AppVisibilityPreference.defaultShowMenuBarIcon
+    @AppStorage(AppVisibilityPreference.showShelfKey) private var showShelf = AppVisibilityPreference.defaultShowShelf
+
+    private static let watchDocumentOptions: [WatchPatternOption] = [
+        WatchPatternOption(
+            title: "PDF",
+            detail: ".pdf",
+            patterns: ["*.pdf"]
+        ),
+        WatchPatternOption(
+            title: "Word",
+            detail: ".docx",
+            patterns: ["*.docx"]
+        ),
+        WatchPatternOption(
+            title: "Slides",
+            detail: ".pptx",
+            patterns: ["*.pptx"]
+        ),
+        WatchPatternOption(
+            title: "Sheets",
+            detail: ".xlsx",
+            patterns: ["*.xlsx"]
+        ),
+        WatchPatternOption(
+            title: "HTML",
+            detail: ".html",
+            patterns: ["*.html", "*.htm"]
+        ),
+        WatchPatternOption(
+            title: "Text",
+            detail: ".txt",
+            patterns: ["*.txt"]
+        ),
+        WatchPatternOption(
+            title: "EPUB",
+            detail: ".epub",
+            patterns: ["*.epub"]
+        ),
+        WatchPatternOption(
+            title: "ZIP",
+            detail: ".zip",
+            patterns: ["*.zip"]
+        ),
+        WatchPatternOption(
+            title: "CSV",
+            detail: ".csv",
+            patterns: ["*.csv"]
+        ),
+        WatchPatternOption(
+            title: "XML",
+            detail: ".xml",
+            patterns: ["*.xml"]
+        )
+    ]
+
+    private static let watchImageOptions: [WatchPatternOption] = [
+        WatchPatternOption(
+            title: "PNG",
+            detail: ".png",
+            patterns: ["*.png"]
+        ),
+        WatchPatternOption(
+            title: "JPEG",
+            detail: ".jpg",
+            patterns: ["*.jpg", "*.jpeg"]
+        ),
+        WatchPatternOption(
+            title: "GIF",
+            detail: ".gif",
+            patterns: ["*.gif"]
+        ),
+        WatchPatternOption(
+            title: "TIFF",
+            detail: ".tiff",
+            patterns: ["*.tif", "*.tiff"]
+        )
+    ]
+
+    private static let watchAudioOptions: [WatchPatternOption] = [
+        WatchPatternOption(
+            title: "MP3/M4A",
+            detail: ".mp3 .m4a",
+            patterns: ["*.mp3", "*.m4a"]
+        ),
+        WatchPatternOption(
+            title: "WAV/AIFF",
+            detail: "+ Opus",
+            patterns: ["*.wav", "*.aiff", "*.opus"]
+        )
+    ]
+
+    private static let watchIncludeOptions =
+        watchDocumentOptions + watchImageOptions + watchAudioOptions
+
+    private static let watchExcludeOptions: [WatchPatternOption] = [
+        WatchPatternOption(
+            title: "Converted outputs",
+            detail: "Markdown and JSON files Upmarket may create",
+            patterns: ["*.md", "*.markdown", "*.json"]
+        ),
+        WatchPatternOption(
+            title: "Temporary downloads",
+            detail: "Partial browser and system download files",
+            patterns: ["*.tmp", "*.download", "*.part", "*.crdownload", "~$*"]
+        ),
+        WatchPatternOption(
+            title: "Drafts",
+            detail: "Files with draft in the name",
+            patterns: ["*draft*"]
+        )
+    ]
 
     var body: some View {
         TabView {
-            settingsTab
-                .tabItem { Label("Settings", systemImage: "gearshape") }
+            generalTab
+                .tabItem { Label("General", systemImage: "gearshape") }
+
+            conversionTab
+                .tabItem { Label("Conversion", systemImage: "doc.text") }
 
             aboutTab
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 560, height: 620)
+        .frame(width: 600, height: 680)
+        .onChange(of: showDockIcon) { value in
+            AppVisibilityPreference.apply(showDockIcon: value)
+            showDockIcon = AppVisibilityPreference.showDockIcon
+        }
+        .onChange(of: showMenuBarIcon) { _ in
+            AppVisibilityPreference.normalizePersistentVisibility()
+            AppVisibilityPreference.applyMenuBarVisibility(showMenuBarIcon: showMenuBarIcon)
+        }
+        .onChange(of: showShelf) { value in
+            AppVisibilityPreference.applyShelfVisibility(showShelf: value)
+        }
+        .onAppear {
+            AppVisibilityPreference.normalizePersistentVisibility()
+            showDockIcon = AppVisibilityPreference.showDockIcon
+            AppVisibilityPreference.apply(showDockIcon: showDockIcon)
+            AppVisibilityPreference.applyMenuBarVisibility(showMenuBarIcon: showMenuBarIcon)
+            if !showShelf {
+                ShelfWindowController.shared.hide(animate: false)
+            }
+            if case .unchecked = modelManager.installState { modelManager.checkModels() }
+        }
     }
 
-    // MARK: - Settings
+    // MARK: - General
 
-    private var settingsTab: some View {
+    private var generalTab: some View {
         Form {
             Section("App") {
-                Toggle("Show Dock icon", isOn: $showDockIcon)
+                Toggle("Show Dock icon", isOn: dockIconBinding)
+                    .toggleStyle(.checkbox)
+                    .disabled(AppVisibilityPreference.requiresDockIcon)
+
+                Toggle("Show menu bar icon", isOn: menuBarIconBinding)
                     .toggleStyle(.checkbox)
 
-                Text("When hidden, Upmarket keeps running from the menu bar and shelf.")
+                Toggle("Show shelf", isOn: $showShelf)
+                    .toggleStyle(.checkbox)
+
+                Text("The Dock icon stays visible so you can always reopen Upmarket, change settings, and quit.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -68,71 +212,6 @@ struct PreferencesView: View {
                 }
             }
 
-            Section("Output") {
-                LabeledContent("Copy and save as:") {
-                    Picker("", selection: Binding(
-                        get: { OutputPreference.shared.mode },
-                        set: { OutputPreference.shared.mode = $0 }
-                    )) {
-                        ForEach(OutputMode.allCases) { mode in
-                            Text(mode.displayName).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.radioGroup)
-                    .labelsHidden()
-                }
-
-                Text("Conversion history keeps raw Markdown and formats it when copied.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Watch Folders") {
-                if watchedFolderService.folders.isEmpty {
-                    Text("No folders are being watched.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(watchedFolderService.folders) { folder in
-                        watchedFolderRow(folder)
-                    }
-                }
-
-                HStack(spacing: 8) {
-                    Button("Add Folder…") { chooseWatchedFolder() }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-
-                    Spacer()
-                }
-
-                LabeledContent("Include:") {
-                    TextField("*.pdf, *.docx", text: $watchedFolderService.includePatterns)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(maxWidth: 220)
-                }
-
-                LabeledContent("Exclude:") {
-                    TextField("draft, *.tmp", text: $watchedFolderService.excludePatterns)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(maxWidth: 220)
-                }
-
-                Text("Watched folders are opt-in. Upmarket only watches the selected folder level and converts stable supported files.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                if let watchedFolderError {
-                    Label(watchedFolderError, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                }
-            }
-
-            Section("Models") {
-                modelRows
-            }
-
             Section("History") {
                 Toggle("Keep conversion history", isOn: Binding(
                     get: { historyStore.isEnabled },
@@ -157,53 +236,336 @@ struct PreferencesView: View {
                     }
                 }
             }
+        }
+        .formStyle(.grouped)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 
-            if device.supportsAdvancedRuntime {
-                if modelManager.isDownloading {
-                    Section {
-                        VStack(alignment: .leading, spacing: 6) {
-                            ProgressView(value: modelManager.downloadProgress, total: 100)
-                            Text(modelManager.downloadMessage)
-                                .font(.subheadline)
+    private var dockIconBinding: Binding<Bool> {
+        Binding(
+            get: { AppVisibilityPreference.showDockIcon },
+            set: { value in
+                AppVisibilityPreference.showDockIcon = value
+                showDockIcon = AppVisibilityPreference.showDockIcon
+            }
+        )
+    }
+
+    private var menuBarIconBinding: Binding<Bool> {
+        Binding(
+            get: { showMenuBarIcon },
+            set: { value in
+                showMenuBarIcon = value
+            }
+        )
+    }
+
+    // MARK: - Conversion
+
+    private var conversionTab: some View {
+        Form {
+            Section("Output") {
+                LabeledContent("Format:") {
+                    Picker("Output format", selection: outputModeBinding) {
+                        ForEach(OutputMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .frame(maxWidth: 320)
+                }
+            }
+
+            MCPIntegrationSection(integration: mcpIntegration)
+
+            Section("Watch Folders") {
+                if watchedFolderService.folders.isEmpty {
+                    watchFolderEmptyRow
+                } else {
+                    ForEach(watchedFolderService.folders) { folder in
+                        watchedFolderRow(folder)
+                    }
+
+                    Button {
+                        chooseWatchedFolder()
+                    } label: {
+                        Label("Add Folder…", systemImage: "folder.badge.plus")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+
+            Section("Watched Input") {
+                LabeledContent("Accepted files:") {
+                    Picker("Accepted files", selection: watchedInputPresetBinding) {
+                        ForEach(WatchedInputPreset.allCases) { preset in
+                            Text(preset.displayName).tag(preset)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .frame(maxWidth: 190)
+                }
+
+                if watchedInputPreset == .custom {
+                    LabeledContent("Custom types:") {
+                        HStack(spacing: 8) {
+                            Text(watchedInputSummary)
+                                .font(.caption)
                                 .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-
-                if let error = modelManager.downloadError {
-                    Section {
-                        Label(error, systemImage: "exclamationmark.triangle.fill")
-                            .font(.subheadline)
-                            .foregroundStyle(.red)
-                    }
-                }
-
-                if modelManager.models.contains(where: \.isDownloaded) {
-                    Section {
-                        LabeledContent("Storage used:") {
-                            HStack {
-                                Text(modelManager.totalStorageUsedFormatted)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                Button("Delete All Models") { modelManager.deleteAllModels() }
-                                    .foregroundStyle(.red)
-                                    .buttonStyle(.bordered)
-                                    .controlSize(.small)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                            Button("Edit…") {
+                                showWatchedInputSheet = true
                             }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
                         }
                     }
                 }
+
+                Toggle("Skip generated and temporary files", isOn: defaultWatchedExclusionsBinding)
+                    .toggleStyle(.checkbox)
+
+                if !usesDefaultWatchedExclusions {
+                    ForEach(Self.watchExcludeOptions) { option in
+                        watchPatternListRow(option, isOn: watchedExcludeBinding(for: option))
+                    }
+                }
+
+                if let watchedFolderError {
+                    Label(watchedFolderError, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+            }
+
+            Section("AI") {
+                modelRows
+                aiModelStatusRows
             }
         }
         .formStyle(.grouped)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onChange(of: showDockIcon) { value in
-            AppVisibilityPreference.apply(showDockIcon: value)
+        .sheet(isPresented: $showWatchedInputSheet) {
+            watchedInputEditor
         }
-        .onAppear {
-            AppVisibilityPreference.apply(showDockIcon: showDockIcon)
-            if case .unchecked = modelManager.installState { modelManager.checkModels() }
+    }
+
+    private var outputModeBinding: Binding<OutputMode> {
+        Binding(
+            get: { OutputPreference.shared.mode },
+            set: { OutputPreference.shared.mode = $0 }
+        )
+    }
+
+    private var watchedInputPreset: WatchedInputPreset {
+        if usesAllWatchedFileTypes {
+            return .all
         }
+        if patternsEqual(Self.watchDocumentOptions.flatMap(\.patterns), watchedFolderService.includePatterns) {
+            return .documents
+        }
+        if patternsEqual(Self.watchDocumentAndImagePatterns, watchedFolderService.includePatterns) {
+            return .documentsAndImages
+        }
+        return .custom
+    }
+
+    private var watchedInputPresetBinding: Binding<WatchedInputPreset> {
+        Binding(
+            get: { watchedInputPreset },
+            set: { preset in
+                switch preset {
+                case .all:
+                    watchedFolderService.includePatterns = ""
+                case .documents:
+                    watchedFolderService.includePatterns = Self.watchDocumentOptions
+                        .flatMap(\.patterns)
+                        .joined(separator: ", ")
+                case .documentsAndImages:
+                    watchedFolderService.includePatterns = Self.watchDocumentAndImagePatterns
+                        .joined(separator: ", ")
+                case .custom:
+                    if usesAllWatchedFileTypes {
+                        watchedFolderService.includePatterns = Self.watchIncludeOptions
+                            .flatMap(\.patterns)
+                            .joined(separator: ", ")
+                    }
+                    showWatchedInputSheet = true
+                }
+            }
+        )
+    }
+
+    private static var watchDocumentAndImagePatterns: [String] {
+        (watchDocumentOptions + watchImageOptions).flatMap(\.patterns)
+    }
+
+    private var watchedInputSummary: String {
+        let selected = Self.watchIncludeOptions
+            .filter { containsAll($0.patterns, in: watchedFolderService.includePatterns) }
+            .map(\.title)
+        return selected.isEmpty ? "No file types selected" : selected.joined(separator: ", ")
+    }
+
+    private var watchedInputEditor: some View {
+        VStack(spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Watched File Types")
+                        .font(.headline)
+                    Text("Choose which supported inputs the watched folders should convert.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("Done") {
+                    showWatchedInputSheet = false
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(20)
+
+            Divider()
+
+            Form {
+                Section("Documents") {
+                    ForEach(Self.watchDocumentOptions) { option in
+                        watchPatternListRow(option, isOn: watchedIncludeBinding(for: option))
+                    }
+                }
+
+                Section("Images") {
+                    ForEach(Self.watchImageOptions) { option in
+                        watchPatternListRow(option, isOn: watchedIncludeBinding(for: option))
+                    }
+                }
+
+                Section("Audio") {
+                    ForEach(Self.watchAudioOptions) { option in
+                        watchPatternListRow(option, isOn: watchedIncludeBinding(for: option))
+                    }
+                }
+            }
+            .formStyle(.grouped)
+        }
+        .frame(width: 460, height: 520)
+    }
+
+    private var usesAllWatchedFileTypes: Bool {
+        watchedFolderService.includePatterns
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .isEmpty
+    }
+
+    private var defaultWatchedExclusionPatterns: [String] {
+        Self.watchExcludeOptions.flatMap(\.patterns)
+    }
+
+    private var usesDefaultWatchedExclusions: Bool {
+        containsAll(defaultWatchedExclusionPatterns, in: watchedFolderService.excludePatterns)
+    }
+
+    private var defaultWatchedExclusionsBinding: Binding<Bool> {
+        Binding(
+            get: { usesDefaultWatchedExclusions },
+            set: { enabled in
+                watchedFolderService.excludePatterns = enabled
+                    ? defaultWatchedExclusionPatterns.joined(separator: ", ")
+                    : ""
+            }
+        )
+    }
+
+    private func watchedIncludeBinding(for option: WatchPatternOption) -> Binding<Bool> {
+        Binding(
+            get: {
+                usesAllWatchedFileTypes || containsAll(
+                    option.patterns,
+                    in: watchedFolderService.includePatterns
+                )
+            },
+            set: { enabled in
+                if usesAllWatchedFileTypes {
+                    watchedFolderService.includePatterns = Self.watchIncludeOptions
+                        .flatMap(\.patterns)
+                        .joined(separator: ", ")
+                }
+                watchedFolderService.includePatterns = updatedPatterns(
+                    watchedFolderService.includePatterns,
+                    setting: option.patterns,
+                    enabled: enabled
+                )
+            }
+        )
+    }
+
+    private func watchedExcludeBinding(for option: WatchPatternOption) -> Binding<Bool> {
+        Binding(
+            get: { containsAll(option.patterns, in: watchedFolderService.excludePatterns) },
+            set: { enabled in
+                watchedFolderService.excludePatterns = updatedPatterns(
+                    watchedFolderService.excludePatterns,
+                    setting: option.patterns,
+                    enabled: enabled
+                )
+            }
+        )
+    }
+
+    @ViewBuilder
+    private func watchPatternListRow(_ option: WatchPatternOption, isOn: Binding<Bool>) -> some View {
+        Toggle(isOn: isOn) {
+            HStack(spacing: 8) {
+                Text(option.title)
+                Spacer()
+                Text(option.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .toggleStyle(.checkbox)
+        .controlSize(.small)
+        .help(option.patterns.joined(separator: ", "))
+    }
+
+    private func containsAll(_ patterns: [String], in rawPatterns: String) -> Bool {
+        let tokens = Set(patternTokens(rawPatterns))
+        return patterns
+            .map { $0.lowercased() }
+            .allSatisfy { tokens.contains($0) }
+    }
+
+    private func patternsEqual(_ patterns: [String], _ rawPatterns: String) -> Bool {
+        Set(patterns.map { $0.lowercased() }) == Set(patternTokens(rawPatterns))
+    }
+
+    private func updatedPatterns(_ rawPatterns: String, setting patterns: [String], enabled: Bool) -> String {
+        var tokens = patternTokens(rawPatterns)
+        let target = Set(patterns.map { $0.lowercased() })
+        if enabled {
+            for pattern in patterns.map({ $0.lowercased() }) where !tokens.contains(pattern) {
+                tokens.append(pattern)
+            }
+        } else {
+            tokens.removeAll { target.contains($0) }
+        }
+        return tokens.joined(separator: ", ")
+    }
+
+    private func patternTokens(_ rawPatterns: String) -> [String] {
+        var seen = Set<String>()
+        return rawPatterns
+            .split { $0 == "," || $0 == "\n" || $0 == " " || $0 == "\t" }
+            .map { String($0).lowercased() }
+            .filter { token in
+                guard !seen.contains(token) else { return false }
+                seen.insert(token)
+                return true
+            }
     }
 
     private func chooseSaveFolder() {
@@ -215,66 +577,94 @@ struct PreferencesView: View {
         }
     }
 
-    @ViewBuilder
-    private func watchedFolderRow(_ folder: WatchedFolder) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Label(folder.displayName, systemImage: "folder")
+    private var watchFolderEmptyRow: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: "folder.badge.plus")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("No folders are being watched.")
                     .font(.subheadline)
-                Spacer()
-                Toggle("Notify", isOn: Binding(
-                    get: {
-                        watchedFolderService.folder(id: folder.id)?.notificationsEnabled ?? false
-                    },
-                    set: { enabled in
-                        watchedFolderService.setNotificationsEnabled(enabled, for: folder.id)
+                Text("Add a folder to convert new documents as they arrive.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Button("Add Folder…") {
+                chooseWatchedFolder()
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func watchedFolderRow(_ folder: WatchedFolder) -> some View {
+        HStack(spacing: 8) {
+            Label(folder.displayName, systemImage: "folder")
+                .font(.subheadline)
+                .lineLimit(1)
+                .truncationMode(.middle)
+
+            Spacer(minLength: 8)
+
+            Picker("Output", selection: Binding(
+                get: {
+                    watchedFolderService.folder(id: folder.id)?.outputDestination ?? .historyOnly
+                },
+                set: { destination in
+                    if destination == .chosenFolder {
+                        chooseWatchedOutputFolder(for: folder.id)
+                    } else {
+                        watchedFolderService.setOutputDestination(destination, for: folder.id)
                     }
-                ))
-                .toggleStyle(.checkbox)
-                .controlSize(.small)
-                Button("Remove") {
-                    watchedFolderService.removeFolder(id: folder.id)
+                }
+            )) {
+                ForEach(WatchedFolderOutputDestination.allCases) { destination in
+                    Text(destination.displayName).tag(destination)
+                }
+            }
+            .pickerStyle(.menu)
+            .labelsHidden()
+            .controlSize(.small)
+            .frame(width: 130)
+
+            if (watchedFolderService.folder(id: folder.id)?.outputDestination ?? .historyOnly) == .chosenFolder {
+                Button {
+                    chooseWatchedOutputFolder(for: folder.id)
+                } label: {
+                    Image(systemName: "folder")
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
+                .help(folder.outputDisplayName ?? "Choose output folder")
             }
 
-            HStack(spacing: 10) {
-                Text("Output:")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Picker("", selection: Binding(
-                    get: {
-                        watchedFolderService.folder(id: folder.id)?.outputDestination ?? .historyOnly
-                    },
-                    set: { destination in
-                        if destination == .chosenFolder {
-                            chooseWatchedOutputFolder(for: folder.id)
-                        } else {
-                            watchedFolderService.setOutputDestination(destination, for: folder.id)
-                        }
-                    }
-                )) {
-                    ForEach(WatchedFolderOutputDestination.allCases) { destination in
-                        Text(destination.displayName).tag(destination)
-                    }
+            Toggle("Notify", isOn: Binding(
+                get: {
+                    watchedFolderService.folder(id: folder.id)?.notificationsEnabled ?? false
+                },
+                set: { enabled in
+                    watchedFolderService.setNotificationsEnabled(enabled, for: folder.id)
                 }
-                .labelsHidden()
-                .controlSize(.small)
-                .frame(maxWidth: 170)
+            ))
+            .toggleStyle(.checkbox)
+            .controlSize(.small)
 
-                if (watchedFolderService.folder(id: folder.id)?.outputDestination ?? .historyOnly) == .chosenFolder {
-                    Button(folder.outputDisplayName ?? "Choose…") {
-                        chooseWatchedOutputFolder(for: folder.id)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-
-                Spacer()
+            Button(role: .destructive) {
+                watchedFolderService.removeFolder(id: folder.id)
+            } label: {
+                Image(systemName: "trash")
             }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .help("Remove watched folder")
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
     }
 
     private func chooseWatchedFolder() {
@@ -312,7 +702,7 @@ struct PreferencesView: View {
                   systemImage: "checkmark.circle.fill")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-        } else if case .checking = modelManager.installState {
+        } else if case .checking = modelManager.installState, modelManager.models.isEmpty {
             HStack(spacing: 8) {
                 ProgressView().controlSize(.small)
                 Text("Checking…")
@@ -342,22 +732,27 @@ struct PreferencesView: View {
             ForEach(modelManager.models, id: \.key) { model in
                 LabeledContent {
                     HStack(spacing: 8) {
-                        Text("\(model.sizeMB) MB")
+                        Text("Est. \(model.sizeMB) MB")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         if model.isDownloaded {
                             Button("Delete") { modelManager.deleteModel(key: model.key) }
                                 .foregroundStyle(.red)
                                 .buttonStyle(.bordered).controlSize(.mini)
+                        } else if modelManager.downloadingModelKey == model.key {
+                            ProgressView()
+                                .controlSize(.mini)
+                            Text("Downloading…")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         } else {
+                            let unavailable = downloadUnavailable(for: model)
                             Button("Download") {
-                                model.tier == "pro"
-                                    ? modelManager.downloadProModels(hasPro: store.hasProOrAbove)
-                                    : modelManager.downloadRequiredModels()
+                                modelManager.downloadModel(key: model.key, hasPro: store.hasProOrAbove)
                             }
                             .buttonStyle(.bordered).controlSize(.mini)
-                            .disabled(downloadUnavailable(for: model) != nil)
-                            .help(downloadUnavailable(for: model) ?? "")
+                            .disabled(unavailable != nil || modelManager.isDownloading)
+                            .help(unavailable ?? (modelManager.isDownloading ? "Another model is downloading." : ""))
                         }
                     }
                 } label: {
@@ -380,14 +775,65 @@ struct PreferencesView: View {
                                         .background(Color.accentColor, in: Capsule())
                                 }
                             }
-                            Text(model.error ?? model.description)
+                            Text(modelDetail(for: model))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                            if let unavailable = downloadUnavailable(for: model) {
+                                Text(unavailable)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    @ViewBuilder private var aiModelStatusRows: some View {
+        if device.supportsAdvancedRuntime {
+            if modelManager.isDownloading {
+                VStack(alignment: .leading, spacing: 6) {
+                    ProgressView(value: modelManager.downloadProgress, total: 100)
+                    Text(modelManager.downloadMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            if let error = modelManager.downloadError {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+
+            if modelManager.downloadedModelCount > 0 {
+                LabeledContent("Installed storage:") {
+                    HStack(spacing: 8) {
+                        VStack(alignment: .trailing, spacing: 1) {
+                            Text(modelManager.totalStorageUsedFormatted)
+                                .foregroundStyle(.secondary)
+                            Text(downloadedModelStorageSummary)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Button("Delete All") { modelManager.deleteAllModels() }
+                            .foregroundStyle(.red)
+                            .buttonStyle(.bordered)
+                            .controlSize(.mini)
+                    }
+                }
+            }
+        }
+    }
+
+    private var downloadedModelStorageSummary: String {
+        let count = modelManager.downloadedModelCount
+        let noun = count == 1 ? "model" : "models"
+        return "\(count) \(noun) installed · est. \(modelManager.downloadedModelEstimatedSizeMB) MB"
     }
 
     private func downloadUnavailable(for model: ModelStatus) -> String? {
@@ -401,6 +847,14 @@ struct PreferencesView: View {
         return nil
     }
 
+    private func modelDetail(for model: ModelStatus) -> String {
+        if model.isDownloaded { return "Ready" }
+        if model.error == nil || model.error == "not downloaded" {
+            return model.description
+        }
+        return model.error ?? model.description
+    }
+
     // MARK: - About
 
     @State private var showAttributions = false
@@ -411,7 +865,7 @@ struct PreferencesView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Upmarket").font(.headline)
-                        Text("Version \(appVersion)")
+                        Text(appVersionLabel)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -523,7 +977,7 @@ struct PreferencesView: View {
         switch store.entitlement {
         case .pro:   return "Upmarket + AI"
         case .basic: return "Upmarket"
-        case .none:  return store.freeDocsRemaining > 0 ? "Free Trial" : "Trial Ended"
+        case .none:  return "Not Purchased"
         }
     }
 
@@ -531,14 +985,31 @@ struct PreferencesView: View {
         switch store.entitlement {
         case .pro:   return "Unlimited · AI included"
         case .basic: return "Unlimited · One-time purchase"
-        case .none:  return store.freeDocsRemaining > 0
-            ? "\(store.freeDocsRemaining) free conversions remaining"
-            : "Upgrade to continue converting"
+        case .none:  return "Unlock to continue converting"
         }
     }
 
-    private var appVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    private var appVersionLabel: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+
+        let baseLabel: String
+        switch (version?.isEmpty == false ? version : nil, build?.isEmpty == false ? build : nil) {
+        case let (.some(version), .some(build)):
+            baseLabel = "Version \(version) (\(build))"
+        case let (.some(version), .none):
+            baseLabel = "Version \(version)"
+        case let (.none, .some(build)):
+            baseLabel = "Build \(build)"
+        case (.none, .none):
+            baseLabel = "Version unknown"
+        }
+
+        if BuildMetadata.shouldShowCommitInAbout,
+           let commit = BuildMetadata.displayCommit {
+            return "\(baseLabel) · \(commit)"
+        }
+        return baseLabel
     }
 
     private var openSourcePackages: [LicenseEntry] {
@@ -615,6 +1086,31 @@ struct LicenseEntry: Identifiable, Codable {
     let version: String
     let license: String
     let url: String
+}
+
+private struct WatchPatternOption: Identifiable {
+    var id: String { title }
+    let title: String
+    let detail: String
+    let patterns: [String]
+}
+
+private enum WatchedInputPreset: String, CaseIterable, Identifiable {
+    case all
+    case documents
+    case documentsAndImages
+    case custom
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .all: return "All supported"
+        case .documents: return "Documents"
+        case .documentsAndImages: return "Documents + images"
+        case .custom: return "Custom…"
+        }
+    }
 }
 
 #Preview {

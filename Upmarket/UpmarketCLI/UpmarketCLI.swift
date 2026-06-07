@@ -67,6 +67,18 @@ private enum HandoffPaths {
             .appendingPathComponent("CLIHandoffs", isDirectory: true)
             .appendingPathComponent(id, isDirectory: true)
     }
+
+    static func mcpInputDirectory(root: URL) -> URL {
+        root
+            .appendingPathComponent("MCP", isDirectory: true)
+            .appendingPathComponent("Inputs", isDirectory: true)
+    }
+
+    static func mcpOutputDirectory(root: URL) -> URL {
+        root
+            .appendingPathComponent("MCP", isDirectory: true)
+            .appendingPathComponent("Outputs", isDirectory: true)
+    }
 }
 
 @main
@@ -88,12 +100,15 @@ private enum UpmarketCLI {
     }
 
     private static func run(_ options: Options) throws {
-        try validateInput(options.inputURL)
-        try validateOutputDestination(options.outputURL, force: options.force)
-
         guard let root = HandoffPaths.rootURL() else {
             throw CommandError(.conversionFailed, "Upmarket could not create a conversion request.")
         }
+        try validateInput(options.inputURL, authorizedRoot: HandoffPaths.mcpInputDirectory(root: root))
+        try validateOutputDestination(
+            options.outputURL,
+            force: options.force,
+            authorizedRoot: HandoffPaths.mcpOutputDirectory(root: root)
+        )
 
         let id = UUID().uuidString
         let directory = HandoffPaths.handoffDirectory(id: id, root: root)
@@ -207,8 +222,9 @@ private enum UpmarketCLI {
         )
     }
 
-    private static func validateInput(_ url: URL) throws {
-        guard SupportedInputPolicy.supports(url),
+    private static func validateInput(_ url: URL, authorizedRoot: URL) throws {
+        guard isDescendant(url, of: authorizedRoot),
+              SupportedInputPolicy.supports(url),
               (try? url.checkResourceIsReachable()) == true,
               let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isReadableKey, .fileSizeKey]),
               values.isRegularFile != false,
@@ -219,7 +235,10 @@ private enum UpmarketCLI {
         }
     }
 
-    private static func validateOutputDestination(_ url: URL, force: Bool) throws {
+    private static func validateOutputDestination(_ url: URL, force: Bool, authorizedRoot: URL) throws {
+        guard isDescendant(url, of: authorizedRoot) else {
+            throw CommandError(.outputWriteFailed, "Output must be written to Upmarket MCP output storage.")
+        }
         if FileManager.default.fileExists(atPath: url.path), !force {
             throw CommandError(.outputWriteFailed, "Output file already exists. Pass --force to replace it.")
         }
@@ -273,7 +292,7 @@ private enum UpmarketCLI {
     private static func printUsage() {
         print("""
         Usage:
-          upmarket convert input.pdf -o output.md [--ai] [--format markdown|frontmatter|json] [--force]
+          upmarket-cli convert input.pdf -o output.md [--ai] [--format markdown|frontmatter|json] [--force]
         """)
     }
 
@@ -289,6 +308,14 @@ private enum UpmarketCLI {
             return fallback
         }
         return candidate
+    }
+
+    private static func isDescendant(_ url: URL, of directory: URL) -> Bool {
+        let resolvedURL = url.resolvingSymlinksInPath().standardizedFileURL
+        let resolvedDirectory = directory.resolvingSymlinksInPath().standardizedFileURL
+        let path = resolvedURL.path
+        let directoryPath = resolvedDirectory.path
+        return path == directoryPath || path.hasPrefix(directoryPath + "/")
     }
 }
 

@@ -19,7 +19,7 @@ find "$STDLIB" -type d -name "test" -exec rm -rf {} + 2>/dev/null || true
 find "$STDLIB" -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true
 
 echo "  Removing unused encodings..."
-# Keep utf-8, ascii, latin-1, utf-16, utf-32 — remove the rest
+# Keep text basics, IDNA for HTTPS downloads, and CP437 for ZIP metadata.
 ENCODINGS="$STDLIB/lib/python*/encodings"
 for enc_dir in $ENCODINGS; do
     find "$enc_dir" -name "*.py" \
@@ -27,6 +27,8 @@ for enc_dir in $ENCODINGS; do
         ! -name "utf_8*" \
         ! -name "ascii*" \
         ! -name "latin_1*" \
+        ! -name "idna*" \
+        ! -name "cp437*" \
         ! -name "utf_16*" \
         ! -name "utf_32*" \
         ! -name "aliases*" \

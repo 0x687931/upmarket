@@ -187,15 +187,15 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 
 ### Monetisation
 - [x] StoreKit 2 product loading, purchase, restore, and transaction listener
-- [x] Three free conversions, Basic, Pro, and 5-doc pack product IDs
-- [x] Pack credit tracking and upgrade nudges
+- [x] Basic and Pro product IDs
+- [x] Local trial and doc-pack balances do not grant beta conversion access
 - [x] StoreKit configuration wired into the shared Xcode scheme
 
 ### Models and Feature Gating
 - [x] ModelManager download/check/delete/offload flow
 - [x] On-demand model prompts instead of first-launch downloads
 - [x] Device capability checks for Apple Silicon and OS features
-- [x] Remote feature flags at `docs/public/flags.json`
+- [x] Remote feature flags in CloudKit public database record `FeatureFlags/global`, governed by `docs/release/FEATURE_FLAG_LANGUAGE_POLICY.md`
 - [x] Language quality warnings and AI gating
 
 ### App Store Technical
@@ -219,14 +219,14 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 ### Gate B - Conversion Reliability
 - [x] Maintain a corpus benchmark covering the release formats. Current corpus manifest validates 185 documents across PDF, DOCX, PPTX, XLSX, HTML, image, audio, CSV, XML, WebVTT, video, and AsciiDoc.
 - [x] For each corpus document, record expected status: success, unsupported, password required, or degraded output. `docs/release/corpus_expected_status.json` covers all 185 manifest documents and validates with `scripts/ci/validate_corpus_expected_status.py`; current counts are 161 success, 23 degraded output, 1 password required, and 0 unsupported.
-- [x] Bootstrap `docs/release/corpus_pathway_baseline.json` with per-document scores for current report-backed pathways. `scripts/ci/validate_corpus_pathways.py` now passes across the eight current report JSON files, including the split packaged MarkItDown audio report and native ImageIO/AVFoundation metadata reports. Every corpus document now has at least one current report-backed pathway baseline row; native Vision OCR and Speech transcription still need app/Xcode permission-runtime evidence before release.
+- [x] Bootstrap `docs/release/corpus_pathway_baseline.json` with per-document scores for current report-backed pathways. `scripts/ci/validate_corpus_pathways.py` now passes across the eight current report JSON files, including the split packaged MarkItDown audio report and native ImageIO/AVFoundation metadata reports. Every corpus document now has at least one current report-backed pathway baseline row; native Vision OCR runtime evidence is covered by `IntelligenceServicesTests`.
 - [x] Run fast path with no downloaded models. Evidence exists in `reports/corpus-python-fast-pdfium.json`, `reports/corpus-python-fast-markitdown.json`, and `reports/corpus-swift-pdfkit.json`; the password-protected PDF is now recorded as expected-blocked in the per-document pathway baseline.
 - [x] Run enhanced path after model/runtime setup where supported. Evidence exists in `reports/corpus-python-enhanced-docling.json`; the password-protected PDF is now recorded as expected-blocked in the per-document pathway baseline.
-- [ ] Run AI path after model download where supported. Current valid Granite AI evidence is `reports/corpus-granite-docling-scanned-or-unknown.json`; it is baselined but not release-passing because 4 rows are environment-blocked by Metal/runtime availability in the benchmark context and need a targeted GUI/Metal validation pass before release.
-- [x] Run batch conversion from the shelf queue across at least 5 mixed accepted inputs, including one failure, one cancellation, and one retry. Covered by `ConversionQueueTests.testBatchShelfQueueFiveMixedInputsWithFailureCancellationAndRetry`; the 2026-06-02 Xcode rerun passed all 20 selected `ConversionQueueTests`.
+- [ ] Run AI path after model download where supported. Current valid Granite AI evidence is `reports/corpus-granite-docling-scanned-or-unknown.json`; it is baselined but not release-passing because 4 rows are environment-blocked by Metal/runtime availability in the benchmark context. The 2026-06-06 targeted Xcode smoke skipped because the Upmarket AI model is not installed in Application Support, so a model-installed GUI/Metal validation pass remains required.
+- [x] Run batch conversion from the shelf queue across at least 5 mixed accepted inputs, including one failure, one cancellation, and one retry. Covered by `ConversionQueueTests.testBatchShelfQueueFiveMixedInputsWithFailureCancellationAndRetry`; the 2026-06-06 Xcode rerun passed all 24 selected `ConversionQueueTests`.
 - [x] Defer physical Intel corpus validation from v1.0 release blocking. Current release positioning must keep Intel claims limited to build compatibility/native-only behavior until physical Intel evidence exists.
-- [ ] Verify temp files are cleaned after success, failure, cancellation, and app quit. Xcode now covers app-owned workspace cleanup after native success, recoverable failure, input-copy failure, advanced-runtime cancellation, stale startup cleanup, and the app-termination cleanup hook; full GUI app quit/relaunch cleanup still needs release evidence.
-- [ ] Verify conversion result state always resolves to result, actionable error, password prompt, or explicit in-progress state
+- [x] Verify temp files are cleaned after success, failure, cancellation, and app quit. Xcode covers app-owned workspace cleanup after native success, recoverable failure, input-copy failure, advanced-runtime cancellation, stale startup cleanup, app-termination cleanup, and process quit/relaunch cleanup; the 2026-06-06 focused Gate B run passed `ConversionQueueTests`, `DiagnosticsTests`, and the targeted Granite AI smoke with one model-missing skip.
+- [x] Verify conversion result state always resolves to result, actionable error, password prompt, or explicit in-progress state. Covered by `ConversionQueueTests.testJobsAlwaysResolveToTerminalResultOrExplicitInProgressState`, passed on 2026-06-06.
 
 ### Gate C - Stability and Diagnostics
 - [x] Replace `print` diagnostics in Swift services with `OSLog.Logger`
@@ -242,7 +242,7 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 
 ### Gate D - StoreKit and App Store
 - [ ] Register bundle ID `com.upmarket.app` in Apple Developer/App Store Connect
-- [ ] Set release Team ID in Xcode signing settings
+- [x] Set release Team ID in Xcode signing settings
 - [ ] Register App Store app record: name, category, age rating, pricing
 - [ ] Create App Store Connect IAP products:
   - [ ] `com.upmarket.app.basic` - $4.99
@@ -250,6 +250,10 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
   - [ ] `com.upmarket.app.doc_pack` - $0.99
 - [ ] Test purchases, pending purchases, restore, refunds/revocations, and interrupted network in StoreKit testing
 - [ ] Test StoreKit sandbox with App Store Connect products before submission
+- [ ] Create TestFlight internal tester group and beta test information: description, What to Test, feedback email, and support contact
+- [ ] Upload signed archive to TestFlight and record build number, commit SHA, archive path, tester group, and 90-day expiry in the release issue
+- [ ] Complete internal TestFlight pass: install, launch, conversion smoke, diagnostic bundle, StoreKit sandbox purchase/restore, feedback review, and Xcode Organizer crash check
+- [ ] Prepare external TestFlight group and submit for TestFlight App Review when internal beta issues are resolved
 
 ### Gate E - Legal, Privacy, and Listing
 - [x] Finalize privacy policy draft at `docs/public/privacy.md`
@@ -304,8 +308,8 @@ This is a launch requirement, not post-launch polish.
 - [ ] Preferences/About links to licenses, privacy policy, support, and version
 - [ ] Dark mode pass for drop zone, shelf, output, paywall, and preferences
 - [ ] macOS compatibility pass on 13.3, 14.x, 15.x, and current beta where available
-- [ ] GitHub Pages enabled for `/docs/public`
-- [ ] Verify `https://0x687931.github.io/upmarket/flags.json`
+- [ ] CloudKit container `iCloud.com.upmarket.app` created with public record `FeatureFlags/global` using `docs/release/cloudkit_feature_flags_seed.json`
+- [ ] Verify production CloudKit feature flags through a signed app build with `com.apple.developer.icloud-container-environment=Production`
 
 ### v1.1 Candidates
 - [ ] Rendered Markdown preview toggle

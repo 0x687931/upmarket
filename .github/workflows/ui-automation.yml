@@ -1,0 +1,74 @@
+name: UI Automation
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/ui-automation.yml"
+      - "scripts/ci/gate.sh"
+      - "Upmarket/Upmarket.xcodeproj/**"
+      - "Upmarket/Upmarket/AppDelegate.swift"
+      - "Upmarket/Upmarket/AppRuntime.swift"
+      - "Upmarket/Upmarket/UpmarketApp.swift"
+      - "Upmarket/Upmarket/Assets.xcassets/**"
+      - "Upmarket/Upmarket/Views/**"
+      - "Upmarket/Upmarket/Services/ShelfWindowController.swift"
+      - "Upmarket/Upmarket/Services/AppVisibilityPreference.swift"
+      - "Upmarket/Upmarket/Services/StoreManager.swift"
+      - "Upmarket/UpmarketUITests/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ui-automation.yml"
+      - "scripts/ci/gate.sh"
+      - "Upmarket/Upmarket.xcodeproj/**"
+      - "Upmarket/Upmarket/AppDelegate.swift"
+      - "Upmarket/Upmarket/AppRuntime.swift"
+      - "Upmarket/Upmarket/UpmarketApp.swift"
+      - "Upmarket/Upmarket/Assets.xcassets/**"
+      - "Upmarket/Upmarket/Views/**"
+      - "Upmarket/Upmarket/Services/ShelfWindowController.swift"
+      - "Upmarket/Upmarket/Services/AppVisibilityPreference.swift"
+      - "Upmarket/Upmarket/Services/StoreManager.swift"
+      - "Upmarket/UpmarketUITests/**"
+
+jobs:
+  xctest-ui:
+    runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
+      DERIVED_DATA_DIR: build/DerivedData
+      UPMARKET_RESULT_BUNDLE_DIR: build/TestResults
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: |
+          test -d "$DEVELOPER_DIR"
+          xcodebuild -version
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache Python runtime
+        uses: actions/cache@v4
+        with:
+          path: Upmarket/Python/Python.xcframework
+          key: ${{ runner.os }}-${{ runner.arch }}-python-runtime-${{ hashFiles('requirements.txt', 'scripts/build_python_env.sh', 'scripts/ci/verify_python_bundle.sh', 'UpmarketPython/**/*.py') }}
+
+      - name: Prepare Python runtime
+        run: scripts/ci/ensure_python_runtime.sh
+
+      - name: Apple XCTest UI automation
+        run: scripts/ci/gate.sh ui
+
+      - name: Upload UI test result bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upmarket-ui-xcresult
+          path: build/TestResults/*.xcresult
+          if-no-files-found: ignore

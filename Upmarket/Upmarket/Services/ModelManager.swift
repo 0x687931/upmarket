@@ -36,6 +36,21 @@ nonisolated struct ModelStatus: Equatable, Sendable {
         self.error = error
         self.storageDirectory = storageDirectory ?? key
     }
+
+    func withDownloadState(isDownloaded: Bool, error: String?) -> ModelStatus {
+        ModelStatus(
+            key: key,
+            name: name,
+            description: description,
+            isDownloaded: isDownloaded,
+            sizeMB: sizeMB,
+            isRequired: isRequired,
+            tier: tier,
+            isAvailable: isAvailable,
+            error: error,
+            storageDirectory: storageDirectory
+        )
+    }
 }
 
 enum ModelInstallState: Equatable, Sendable {
@@ -71,6 +86,10 @@ final class ModelManager: ObservableObject {
         willSet { objectWillChange.send() }
     }
 
+    private(set) var downloadingModelKey: String? {
+        willSet { objectWillChange.send() }
+    }
+
     private(set) var downloadError: String? {
         willSet { objectWillChange.send() }
     }
@@ -82,9 +101,11 @@ final class ModelManager: ObservableObject {
     private let checkModelsHandler: CheckModelsHandler
     private let downloadModelHandler: DownloadModelHandler
     private let offlineModeHandler: OfflineModeHandler
+    private let modelsDirectoryURL: URL
 
     init(
         models: [ModelStatus] = [],
+        modelsDirectoryURL: URL? = nil,
         checkModelsHandler: @escaping CheckModelsHandler = {
             try await PythonWorker().checkModels()
         },
@@ -96,6 +117,7 @@ final class ModelManager: ObservableObject {
         }
     ) {
         self.models = models
+        self.modelsDirectoryURL = modelsDirectoryURL ?? Self.defaultModelsDirectoryURL()
         self.checkModelsHandler = checkModelsHandler
         self.downloadModelHandler = downloadModelHandler
         self.offlineModeHandler = offlineModeHandler
@@ -133,12 +155,20 @@ final class ModelManager: ObservableObject {
 
     // MARK: - Storage
 
-    /// Total disk space used by downloaded models in bytes
+    var downloadedModelCount: Int {
+        models.filter(\.isDownloaded).count
+    }
+
+    var downloadedModelEstimatedSizeMB: Int {
+        models.filter(\.isDownloaded).reduce(0) { $0 + $1.sizeMB }
+    }
+
+    /// Total disk space used by currently installed, recognized models in bytes.
     var totalStorageUsed: Int64 {
-        let cacheURL = FileManager.default
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Upmarket/models")
-        return directorySize(cacheURL)
+        let directories = Set(models.filter(\.isDownloaded).map(\.storageDirectory))
+        return directories.reduce(Int64(0)) { total, directory in
+            total + directorySize(modelsDirectoryURL.appendingPathComponent(directory, isDirectory: true))
+        }
     }
 
     var totalStorageUsedFormatted: String {
@@ -147,21 +177,26 @@ final class ModelManager: ObservableObject {
 
     /// Remove a specific model — user can re-download later
     func deleteModel(key: String) {
+        if let index = models.firstIndex(where: { $0.key == key }) {
+            models[index] = models[index].withDownloadState(isDownloaded: false, error: "not downloaded")
+        }
         let directory = models.first { $0.key == key }?.storageDirectory ?? key
-        let cacheURL = FileManager.default
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Upmarket/models/\(directory)")
+        let cacheURL = modelsDirectoryURL.appendingPathComponent(directory, isDirectory: true)
         try? FileManager.default.removeItem(at: cacheURL)
         checkModels()
     }
 
     /// Remove all downloaded models — app falls back to fast path
     func deleteAllModels() {
-        let cacheURL = FileManager.default
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Upmarket/models")
-        try? FileManager.default.removeItem(at: cacheURL)
+        models = models.map { $0.withDownloadState(isDownloaded: false, error: "not downloaded") }
+        try? FileManager.default.removeItem(at: modelsDirectoryURL)
         checkModels()
+    }
+
+    private static func defaultModelsDirectoryURL() -> URL {
+        FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Upmarket/models", isDirectory: true)
     }
 
     private func directorySize(_ url: URL) -> Int64 {
@@ -194,6 +229,18 @@ final class ModelManager: ObservableObject {
 
     func downloadRequiredModels() {
         downloadModels(keys: models.filter(\.isRequired).map(\.key))
+    }
+
+    func downloadModel(key: String, hasPro: Bool) {
+        guard let model = models.first(where: { $0.key == key }) else {
+            downloadError = "Check local model status before downloading."
+            return
+        }
+        if model.tier == "pro", let reason = proDownloadUnavailableReason(hasPro: hasPro) {
+            downloadError = reason
+            return
+        }
+        downloadModels(keys: [key])
     }
 
     func proDownloadUnavailableReason(
@@ -282,19 +329,29 @@ final class ModelManager: ObservableObject {
         downloadError = nil
         downloadProgress = 0
         downloadMessage = "Starting download..."
+        downloadingModelKey = keys.first
 
         Task.detached(priority: .userInitiated) {
             for key in keys {
+                await MainActor.run {
+                    self.downloadingModelKey = key
+                }
                 await self.downloadSingleModel(key: key)
                 let hasError = await MainActor.run { self.downloadError != nil }
                 if hasError { break }
             }
 
-            await self.offlineModeHandler()
+            let hadError = await MainActor.run { self.downloadError != nil }
+            if !hadError {
+                await self.offlineModeHandler()
+            }
 
             await MainActor.run {
                 self.isDownloading = false
-                self.checkModels()
+                self.downloadingModelKey = nil
+                if !hadError {
+                    self.checkModels()
+                }
             }
         }
     }

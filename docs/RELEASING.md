@@ -1,5 +1,9 @@
 # Upmarket — Release Process
 
+The canonical build, shipping, and deployment process is `docs/BUILD_SHIP_DEPLOY.md`. Use that document for release commands, UI automation, archive verification, TestFlight, App Store submission, and deployment evidence.
+
+This file keeps dependency-specific notes that are still useful during release preparation.
+
 ## Before Every Release
 
 ### 1. Check upstream dependencies for updates
@@ -11,7 +15,7 @@ Key repos to watch:
 - **Docling**: https://github.com/docling-project/docling/releases
 - **pypdfium2**: https://github.com/pypdfium2-team/pypdfium2/releases
 - **BeeWare Python**: https://github.com/beeware/Python-Apple-support/releases
-- **Feature flags**: `docs/public/flags.json` (language support changes)
+- **Feature flags**: CloudKit public record `FeatureFlags/global` in `iCloud.com.upmarket.app` (language support changes; see `docs/release/FEATURE_FLAG_LANGUAGE_POLICY.md`)
 
 ### 2. Stage candidate updates
 
@@ -58,14 +62,19 @@ Bump: patch for bug fixes (1.0.1), minor for features (1.1.0), major for breakin
 
 ## Enabling New Languages for Upmarket AI
 
-When Docling improves support for a language (e.g. Japanese):
+Feature flags describe Upmarket's shipped app behavior, not every upstream Docling or Granite Docling capability claim. Use `docs/release/cloudkit_feature_flags_seed.json` as the initial beta record.
 
-1. Test conversion quality manually
-2. Edit `docs/public/flags.json`:
-   - Move language code from `ai_experimental_locales` to `ai_supported_locales`
-   - Bump `version` number
-3. Push to `main` — GitHub Pages serves the updated file instantly
-4. No app update needed — users get AI for that language immediately
+When Docling or Granite Docling improves support for a language:
+
+1. Confirm the upstream claim from a primary source and record it in `docs/release/FEATURE_FLAG_LANGUAGE_POLICY.md`
+2. Add or identify representative fixtures for that language
+3. Test Upmarket AI conversion quality on Apple Silicon with the pinned release runtime/model
+4. Keep the language in `ai_experimental_locales` while the evidence is upstream-explicit early support only
+5. Move the language to `ai_supported_locales` only after the shipped Upmarket path meets beta quality
+6. Bump the CloudKit record `version`
+7. Deploy the CloudKit schema/record change to production before release users need it
+8. Verify the signed release build has `com.apple.developer.icloud-container-environment=Production`
+9. No app update needed — users get AI for that language after the next feature availability check
 
 ---
 

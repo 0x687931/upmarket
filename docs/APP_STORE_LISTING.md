@@ -14,7 +14,7 @@ Secondary: Utilities
 
 ## Description (4000 chars max)
 
-Upmarket converts your documents to clean Markdown — entirely on your Mac. No cloud, no subscriptions, no API keys. Your files never leave your device.
+Upmarket converts your documents to clean Markdown — entirely on your Mac. No cloud conversion, no subscriptions, no API keys. Your files never leave your device.
 
 Drop a PDF, Word document, PowerPoint, spreadsheet, or webpage onto Upmarket and get clean, structured Markdown in seconds. Conversion happens locally on your Mac, with advanced on-device AI available on Apple Silicon.
 
@@ -22,7 +22,7 @@ Drop a PDF, Word document, PowerPoint, spreadsheet, or webpage onto Upmarket and
 PDF · Word · PowerPoint · Excel · HTML · EPUB · CSV · JSON · XML · Images · Audio · Video
 
 **Fully offline after setup**
-Upmarket downloads its AI models once, then works completely offline. No internet connection needed for conversion. No data sent to servers. Ever.
+Upmarket downloads its AI models once, then works completely offline for conversion. No internet connection needed to convert documents. Document contents are never sent to servers.
 
 **Upmarket AI for complex documents**
 Upgrade to Upmarket + AI for scanned documents, dense academic papers, complex multi-column layouts, and research papers. Powered by on-device AI running directly on Apple Silicon — not in the cloud.
@@ -48,12 +48,10 @@ Upmarket has no analytics, no tracking, and no telemetry. Your documents are pro
 — ZIP archives (converts contents)
 
 **Flexible pricing**
-Try Upmarket free with 3 conversions — no sign-up, no credit card. Purchase once, use forever. No subscription.
+Purchase once, use forever. No subscription.
 
-— 3 free conversions to try
 — Upmarket: unlimited Basic conversions — $4.99
 — Upmarket + AI: everything plus on-device AI for complex documents on Apple Silicon — $9.99
-— 5-document pack for occasional use — $0.99
 
 ---
 
@@ -97,8 +95,8 @@ https://0x687931.github.io/upmarket/privacy
 **Shows:** The AI suggestion sheet appearing after dropping a complex PDF, explaining "This document looks complex" with the complexity reasons, showing the upgrade prompt.
 
 ### Screenshot 5 — Pricing
-**Caption:** Try free. Pay once. No subscription.
-**Shows:** The paywall view with Pro as the hero ($9.99 BEST), Basic below it ($4.99), 5-doc pack at the bottom ($0.99), clean comparison layout.
+**Caption:** Pay once. No subscription.
+**Shows:** The paywall view with Pro as the hero ($9.99 BEST), Basic below it ($4.99), clean comparison layout.
 
 ---
 

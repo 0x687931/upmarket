@@ -1,6 +1,6 @@
 # Gate B/C Validation Evidence
 
-Last updated: 2026-06-02
+Last updated: 2026-06-06
 
 ## Gate B - Corpus Benchmark
 
@@ -39,9 +39,9 @@ python3 scripts/ci/validate_corpus_pathways.py \
 
 Per-document expected status is recorded in `docs/release/corpus_expected_status.json` and validates with `scripts/ci/validate_corpus_expected_status.py`. Current coverage is all 185 manifest documents: 161 success, 23 degraded output, 1 password required, and 0 unsupported.
 
-Gate B is not fully release-passing yet. Remaining release blockers are full GUI app quit/relaunch temp cleanup validation, native Vision OCR and Speech transcription permission/runtime evidence, and a targeted GUI/Metal Granite AI validation pass. Physical Intel validation is not a v1.0 blocker; Intel-facing copy must stay limited to build compatibility/native-only positioning until actual Intel hardware evidence exists. Every corpus document now has at least one current pathway-result row.
+Gate B is not fully release-passing yet. The remaining release blocker is a targeted GUI/Metal Granite AI validation pass after the Upmarket AI model is installed in Application Support. Physical Intel validation is not a v1.0 blocker; Intel-facing copy must stay limited to build compatibility/native-only positioning until actual Intel hardware evidence exists. Every corpus document now has at least one current pathway-result row.
 
-`NativeMetadataExtractorTests.testCorpusMediaMetadataUsesNativeAVFoundation` now exercises AVFoundation metadata extraction against representative corpus audio/video fixtures: FLAC, MP4, and QuickTime/MOV. This is native media evidence, not a full audio/video pathway baseline; Speech transcription still needs app permission/runtime evidence.
+`NativeMetadataExtractorTests.testCorpusMediaMetadataUsesNativeAVFoundation` exercises AVFoundation metadata extraction against representative corpus audio/video fixtures: FLAC, MP4, and QuickTime/MOV. `IntelligenceServicesTests` passed on 2026-06-06, covering native Vision OCR on corpus PDFs, Vision document extraction fallback behavior, NaturalLanguage post-processing, and SpeechTranscriber language-list/Markdown formatting coverage. This is not a microphone permission test.
 
 ### Batch Shelf Queue
 
@@ -53,7 +53,9 @@ Current evidence:
 xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/ConversionQueueTests
 ```
 
-The 2026-06-02 rerun passed 20 selected `ConversionQueueTests` with 0 failures.
+The 2026-06-06 rerun passed 24 selected `ConversionQueueTests` with 0 failures.
+
+The 2026-06-06 focused Gate B evidence command also passed the result-state invariant through `ConversionQueueTests.testJobsAlwaysResolveToTerminalResultOrExplicitInProgressState`.
 
 ### Workspace Cleanup
 
@@ -63,7 +65,7 @@ The 2026-06-02 rerun passed 20 selected `ConversionQueueTests` with 0 failures.
 xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/ConversionQueueTests
 ```
 
-The 2026-06-02 rerun passed 20 selected `ConversionQueueTests` with 0 failures. App startup stale-workspace cleanup remains covered by `DiagnosticsTests.testStaleWorkspaceCleanupRemovesStartupLeftovers`. `PythonBridgeTests.testRunnerCleansWorkspaceWhenAdvancedConversionIsCancelled` now cancels a real `ConversionRunner` task while it is inside the advanced-runtime boundary and verifies the app-owned workspace list returns to its pre-run state. `DiagnosticsTests.testAppDelegateTerminationCleansStaleWorkspaces` covers the app-termination cleanup hook. Remaining release evidence needed: cleanup after full GUI app quit/relaunch.
+The 2026-06-06 rerun passed 24 selected `ConversionQueueTests` with 0 failures. App startup stale-workspace cleanup remains covered by `DiagnosticsTests.testStaleWorkspaceCleanupRemovesStartupLeftovers`. `PythonBridgeTests.testRunnerCleansWorkspaceWhenAdvancedConversionIsCancelled` cancels a real `ConversionRunner` task while it is inside the advanced-runtime boundary and verifies the app-owned workspace list returns to its pre-run state. `DiagnosticsTests.testAppDelegateTerminationCleansStaleWorkspaces` covers the app-termination cleanup hook. `DiagnosticsTests.testAppProcessQuitAndRelaunchCleanAppWorkspaces` passed on 2026-06-06 and covers process quit/relaunch cleanup for app-owned workspaces.
 
 ### Granite AI Metal Root Cause
 
@@ -90,13 +92,13 @@ The 2026-06-02 packaged-helper smoke also exposed a real package-gate defect bef
 scripts/ci/verify_python_bundle.sh
 ```
 
-After that package fix, the targeted Xcode Granite smoke reaches the app-packaged helper and exits through the explicit `runtime.helper.runtime-unavailable` path because the current test session cannot access this Mac's graphics processor:
+After that package fix, the targeted Xcode Granite smoke can exercise the app-packaged helper when the model is installed:
 
 ```sh
 xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/PythonBridgeTests/testGraniteAIPreviouslyBlockedCorpusFixturesRouteThroughHelperWhenModelInstalled
 ```
 
-The 2026-06-02 rerun records this as 1 skipped test with 0 failures so the normal unit suite remains usable on machines or Xcode sessions without helper-visible Metal. That keeps Granite AI release validation open, but it is no longer the same packaging failure.
+The 2026-06-06 rerun recorded this as 1 skipped test with 0 failures because the Upmarket AI model is not installed in Application Support. `python3 scripts/ci/validate_models.py` passed immediately after, confirming the current local model directories are empty or manifest-validated rather than corrupt. That keeps Granite AI release validation open until a model-installed GUI/Metal pass succeeds.
 
 ## Gate C - Stability Diagnostics
 

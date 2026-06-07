@@ -6,10 +6,12 @@ cd "$ROOT"
 
 MODE="${1:-quick}"
 DERIVED_DATA_DIR="${DERIVED_DATA_DIR:-build/DerivedData}"
+RESULT_BUNDLE_DIR="${UPMARKET_RESULT_BUNDLE_DIR:-build/TestResults}"
 PROJECT="${UPMARKET_XCODE_PROJECT:-Upmarket/Upmarket.xcodeproj}"
 SCHEME="${UPMARKET_XCODE_SCHEME:-Upmarket}"
 DESTINATION="${UPMARKET_XCODE_DESTINATION:-platform=macOS,arch=arm64}"
 CODE_SIGNING="${UPMARKET_CODE_SIGNING_ALLOWED:-NO}"
+UI_CODE_SIGN_IDENTITY="${UPMARKET_UI_CODE_SIGN_IDENTITY:--}"
 PYTHON_XCFRAMEWORK="${UPMARKET_PYTHON_XCFRAMEWORK:-Upmarket/Python/Python.xcframework}"
 
 usage() {
@@ -28,7 +30,9 @@ Gates:
 
 Environment:
   DERIVED_DATA_DIR                 Defaults to build/DerivedData.
+  UPMARKET_RESULT_BUNDLE_DIR       Defaults to build/TestResults for UI test .xcresult bundles.
   UPMARKET_CODE_SIGNING_ALLOWED    Defaults to NO for local/CI testing.
+  UPMARKET_UI_CODE_SIGN_IDENTITY   Defaults to - for post-build ad-hoc UI test signing.
   UPMARKET_XCODE_DESTINATION       Defaults to platform=macOS,arch=arm64.
 USAGE
 }
@@ -76,13 +80,41 @@ xcode_unit_tests() {
 }
 
 xcode_ui_tests() {
-  xcodebuild test \
+  local result_bundle
+  result_bundle="${UPMARKET_UI_RESULT_BUNDLE_PATH:-$RESULT_BUNDLE_DIR/UpmarketUITests-${GITHUB_RUN_ID:-local}-$(date +%Y%m%d%H%M%S).xcresult}"
+  mkdir -p "$(dirname "$result_bundle")"
+
+  xcodebuild build-for-testing \
     -project "$PROJECT" \
     -scheme "$SCHEME" \
     -destination "$DESTINATION" \
     -derivedDataPath "$DERIVED_DATA_DIR" \
     -only-testing:UpmarketUITests \
     CODE_SIGNING_ALLOWED="$CODE_SIGNING"
+
+  local products_dir="$DERIVED_DATA_DIR/Build/Products"
+  local app="$products_dir/Debug/Upmarket.app"
+  local runner="$products_dir/Debug/UpmarketUITests-Runner.app"
+  if [[ -d "$app" ]]; then
+    codesign --force --deep --sign "$UI_CODE_SIGN_IDENTITY" "$app"
+  fi
+  if [[ -d "$runner" ]]; then
+    codesign --force --deep --sign "$UI_CODE_SIGN_IDENTITY" "$runner"
+  fi
+
+  local xctestrun
+  xctestrun="$(find "$products_dir" -name "*.xctestrun" -print | sort | tail -n 1)"
+  if [[ -z "$xctestrun" ]]; then
+    echo "error: unable to find .xctestrun under $products_dir"
+    exit 1
+  fi
+
+  xcodebuild test-without-building \
+    -xctestrun "$xctestrun" \
+    -destination "$DESTINATION" \
+    -resultBundlePath "$result_bundle" \
+    -parallel-testing-enabled NO \
+    -only-testing:UpmarketUITests
 }
 
 require_build_runtime() {
@@ -112,6 +144,7 @@ build_gate() {
   run_step "Check build runtime" require_build_runtime
   run_step "Build unsigned app" xcode_build
   run_step "Verify effective plist" scripts/ci/verify_effective_plist.sh
+  run_step "Validate MCP server smoke" scripts/ci/validate_mcp_server.py "$DERIVED_DATA_DIR/Build/Products/Debug/Upmarket.app"
 }
 
 unit_gate() {

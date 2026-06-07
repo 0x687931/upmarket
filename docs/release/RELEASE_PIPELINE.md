@@ -35,6 +35,19 @@ Checks:
 
 PR CI intentionally skips UI automation, release-level runtime rebuilding, packaged-app smoke, and corpus/model baselines. The ignored runtime framework is still prepared because the Xcode target needs it to compile. Run `scripts/ci/gate.sh runtime` for Python, dependency, entitlement, model, corpus, or packaging changes, then broaden to the release-candidate gate before shipping.
 
+### UI Automation CI
+
+Runs automatically through `.github/workflows/ui-automation.yml` when a pull request or main-branch push touches UI-sensitive files, the Xcode project, `UpmarketUITests`, or the UI gate script. It also supports manual dispatch.
+
+Checks:
+
+- Xcode 26.5 is selected.
+- Cached generated Python runtime is prepared so the app target can build.
+- `scripts/ci/gate.sh ui` runs Apple XCTest UI automation against `UpmarketUITests`.
+- The generated `.xcresult` bundle under `build/TestResults/` is uploaded for triage.
+
+This workflow is the automatic UI lane. Release candidates still run UI automation again through `.github/workflows/release-candidate.yml`.
+
 ### Release Candidate CI
 
 Runs manually or on `release/*` branches with `scripts/ci/gate.sh release` before archive and benchmark steps.
@@ -54,10 +67,35 @@ Checks:
 - Release-candidate CI uploads `corpus-pathway-comparison`, containing the Markdown comparison and JSON document-level results for owner review before shipping.
 - Forensic benchmark inventory records exact benchmark package versions, binary versions, corpus source commits, benchmark-only model cache artifacts, and cache roots.
 - Model missing/corrupt behavior.
+- Python bridge security preflight for unsafe archives, mismatched file signatures, pathological image/PDF inputs, subprocess launch, and conversion-time network blocking.
 - Diagnostic bundle generation.
 - Privacy-sensitive logs are redacted.
 
-`scripts/ci/verify_release_app.sh <Upmarket.app>` is the shared app-package gate for runtime and release-candidate CI. It verifies the effective plist, entitlement policy, embedded runtime imports, runtime helper boundary, offline smoke conversion, and model-missing behavior against the built app bundle. Unsigned local/CI builds validate source entitlement policy; signed release verification must run with `UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS=1` so missing embedded entitlements fail.
+`scripts/ci/verify_release_app.sh <Upmarket.app>` is the shared app-package gate for runtime and release-candidate CI. It verifies the effective plist, entitlement policy, Apple Foundation bundle preflight for the embedded runtime framework, embedded runtime imports, Python bridge security preflight, runtime helper boundary, offline smoke conversion, and model-missing behavior against the built app bundle. Unsigned local/CI builds validate source entitlement policy; signed release verification must run with `UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS=1` so missing embedded entitlements fail.
+
+Swift Testing is allowed for new pure Swift unit and integration tests in `UpmarketTests`, and XCTest remains required for UI automation and performance tests. Both frameworks may coexist in the test bundle, but do not mix their APIs inside one test file.
+
+Detailed UI automation policy lives in `docs/release/UI_AUTOMATION.md`.
+
+Python tests are required for Python bridge, runtime, dependency, model, and packaging changes, but they should stay boundary-focused. Use script gates that run against the bundled Python 3.12 `site-packages`, such as `scripts/ci/test_archive_security.py`, `scripts/ci/test_model_faults.py`, `scripts/ci/verify_python_bundle.sh`, and `scripts/ci/smoke_convert_offline.sh`. Do not make the vendored upstream Docling pytest suite part of normal Upmarket CI unless a scoped corpus/upstream task calls for it.
+
+### TestFlight Beta Lane
+
+TestFlight starts only after the release-candidate gate, signed archive, and package verification pass. It is for validating distribution, feedback, crash diagnostics, sandbox purchases, and real-user workflow confidence; it is not a replacement for local gates.
+
+Internal beta:
+
+- Upload a signed archive to App Store Connect with normal App Store/TestFlight eligibility, not an internal-only build unless the build will never go external.
+- Assign the build to an internal TestFlight group first.
+- Record build number, commit SHA, archive path, tester group, and 90-day expiry date in the release issue.
+- Review TestFlight feedback, sessions/crashes, Xcode Organizer crash diagnostics, StoreKit sandbox behavior, and diagnostic bundle quality before widening.
+
+External beta:
+
+- Complete TestFlight test information: beta app description, What to Test, feedback email, support contact, and review notes.
+- Submit for TestFlight App Review when required.
+- Use a small external group or constrained public link first.
+- Do not widen distribution until external feedback has an owner decision: fix now, document known issue, or reject the candidate.
 
 ### Nightly Upstream Validation
 
@@ -195,8 +233,10 @@ scripts/ci/verify_xcode_project.sh
 scripts/ci/verify_effective_plist.sh
 scripts/ci/verify_entitlements.sh
 scripts/ci/verify_python_bundle.sh
+scripts/ci/test_archive_security.py
 scripts/ci/smoke_convert_offline.sh
 scripts/ci/validate_models.py
+scripts/ci/test_model_faults.py
 scripts/ci/validate_corpus.py
 scripts/ci/validate_corpus_baseline.py
 scripts/ci/validate_corpus_expected_status.py
