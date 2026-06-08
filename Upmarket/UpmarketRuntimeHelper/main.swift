@@ -216,6 +216,12 @@ struct UpmarketRuntimeHelper {
     }
 
     private static func aiRuntimeProbeCanRun() -> Bool {
+        if getenv("UPMARKET_ENABLE_TEST_DOUBLES").map({ String(cString: $0) }) == "1" {
+            let runtimeDouble = getenv("UPMARKET_TEST_UPMARKET_AI_RUNTIME").map { String(cString: $0) } ?? ""
+            if runtimeDouble == "available" { return true }
+            if runtimeDouble == "unavailable" { return false }
+        }
+
         let executableURL = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
         let request = RuntimeHelperRequest(
             operation: "aiRuntimeProbe",
