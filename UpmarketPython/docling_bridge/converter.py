@@ -309,6 +309,42 @@ def _convert_enhanced(path: Path, opts: dict) -> dict:
     return _success(markdown, page_count, path, pipeline="enhanced")
 
 
+_VLM_MAX_SIDE = 4096  # Granite MLX context limit; larger images return empty output
+
+def _prepare_image_for_vlm(path: Path) -> Path:
+    """Normalise an image for the VLM: flatten RGBA→RGB and downsample oversized images.
+
+    Returns the original path unchanged when no normalisation is needed, or a
+    temp path to a converted copy that the caller should treat as ephemeral.
+    RGBA images cause the model to silently return empty Markdown; images wider
+    or taller than _VLM_MAX_SIDE exhaust the VLM context window similarly.
+    """
+    from PIL import Image
+    import tempfile
+
+    img = Image.open(path)
+    needs_mode = img.mode in ("RGBA", "LA", "P")
+    w, h = img.size
+    needs_resize = max(w, h) > _VLM_MAX_SIDE
+
+    if not needs_mode and not needs_resize:
+        return path
+
+    if needs_mode:
+        img = img.convert("RGB")
+
+    if needs_resize:
+        scale = _VLM_MAX_SIDE / max(img.size)
+        img = img.resize((int(img.width * scale), int(img.height * scale)), Image.LANCZOS)
+
+    suffix = path.suffix.lower()
+    fmt = "JPEG" if suffix in (".jpg", ".jpeg") else "PNG"
+    tmp = tempfile.NamedTemporaryFile(suffix=f".{fmt.lower()}", delete=False)
+    img.save(tmp.name, format=fmt)
+    print(f"[Upmarket] VLM image prepared: {path.name} {w}x{h} {img.mode} → {img.width}x{img.height} RGB saved to temp", file=sys.stderr)
+    return Path(tmp.name)
+
+
 def _convert_ai(path: Path, opts: dict) -> dict:
     """Upmarket AI — Pro tier, Granite Docling MLX path for image/scanned documents."""
     manager = _model_manager()
@@ -355,7 +391,8 @@ def _convert_ai(path: Path, opts: dict) -> dict:
         }
 
     converter = DocumentConverter(format_options=format_options)
-    result = converter.convert(path)
+    convert_path = _prepare_image_for_vlm(path) if suffix != ".pdf" else path
+    result = converter.convert(convert_path)
     markdown = result.document.export_to_markdown()
     if not markdown.strip():
         raise RuntimeError("AI model returned empty Markdown")
