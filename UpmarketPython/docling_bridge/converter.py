@@ -425,9 +425,13 @@ def _convert_ai(path: Path, opts: dict) -> dict:
     convert_path = _prepare_image_for_vlm(path) if suffix != ".pdf" else path
     result = converter.convert(convert_path)
     markdown = result.document.export_to_markdown()
-    if not markdown.strip():
-        raise RuntimeError("AI model returned empty Markdown")
     page_count = result.document.num_pages() if callable(result.document.num_pages) else 0
+    if not markdown.strip():
+        # Diagram-only images (no extractable text) legitimately produce empty
+        # output from the VLM. Return a minimal placeholder rather than failing
+        # — the same convention used by the enhanced pipeline for non-text images.
+        print(f"[Upmarket] VLM returned empty output for {path.name}; using image placeholder", file=sys.stderr)
+        markdown = "<!-- image -->"
     return _success(markdown, page_count, path, pipeline="ai")
 
 
