@@ -265,33 +265,29 @@ def run_document(doc_meta: dict, corpus_dir: Path, tier: str) -> dict:
 
     pathways = PATHWAYS[tier]
 
-    # MLX (used by the AI pathway) initialises its GPU stream on the thread
-    # that first calls into it and cannot be used from other threads. Running
-    # the AI pathway inside ThreadPoolExecutor causes "There is no Stream(gpu,
-    # 0) in current thread" after the first document.
+    # GPU scheduling — avoid concurrent Metal/MPS use:
     #
-    # Strategy: split pathways into two groups —
-    #   thread-safe: pdfkit, vision, enhanced (CPU / OS-managed, no MLX)
-    #   main-thread: ai (MLX GPU stream must stay on the calling thread)
+    #   pdfkit    — CPU + CoreGraphics          safe to parallelise freely
+    #   vision    — Apple Neural Engine (ANE)   safe alongside CPU and MLX
+    #   enhanced  — PyTorch MPS (GPU)           must finish before AI starts
+    #   ai        — MLX Metal (GPU)             main-thread only; after enhanced
     #
-    # The thread-safe group runs concurrently in the pool while the main
-    # thread kicks off (and then awaits) the AI call. This mirrors the app:
-    # Swift async let runs PDFKit/Vision on the cooperative thread pool while
-    # Python/AI runs in a separate process with its own GPU context.
+    # Phase 1: pdfkit + vision + enhanced run concurrently.
+    #          PDFKit and Vision use CPU/ANE; Enhanced uses MPS but MLX has
+    #          not yet initialised its Metal stream, so there is no conflict.
+    # Phase 2: pool joins (enhanced done); AI runs on main thread with sole
+    #          Metal access. Vision's ANE work continues safely in parallel.
+    #
+    # This mirrors the app: Swift runs PDFKit/Vision via async let on the
+    # cooperative pool while Python/AI runs in a separate helper process.
 
-    thread_safe = [p for p in pathways if p != "ai"]
+    phase1 = [p for p in pathways if p != "ai"]
     run_ai = "ai" in pathways
-
     results = {}
 
-    # Submit thread-safe pathways to pool
-    with ThreadPoolExecutor(max_workers=max(len(thread_safe), 1)) as pool:
-        futures = {pool.submit(run_pathway, p, file_path): p for p in thread_safe}
-
-        # Run AI on the calling (main) thread while pool works concurrently
-        if run_ai:
-            results["ai"] = run_pathway("ai", file_path)
-
+    # Phase 1 — CPU/ANE/MPS pathways concurrently
+    with ThreadPoolExecutor(max_workers=max(len(phase1), 1)) as pool:
+        futures = {pool.submit(run_pathway, p, file_path): p for p in phase1}
         for future in as_completed(futures):
             p = futures[future]
             _, timeout = PATHWAY_FN[p]
@@ -301,6 +297,10 @@ def run_document(doc_meta: dict, corpus_dir: Path, tier: str) -> dict:
                 r = {"pathway": p, "ok": False, "markdown": "", "elapsed": timeout,
                      "error": f"timed out after {timeout}s"}
             results[p] = r
+
+    # Phase 2 — AI on main thread; Enhanced MPS work is now complete
+    if run_ai:
+        results["ai"] = run_pathway("ai", file_path)
 
     # Score each successful result
     vision_md = results.get("vision", {}).get("markdown") if results.get("vision", {}).get("ok") else None

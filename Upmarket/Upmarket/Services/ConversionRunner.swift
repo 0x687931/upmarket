@@ -324,9 +324,10 @@ struct ConversionRunner {
         progress: ProgressHandler?
     ) async -> ConversionResult {
         // For the full multi-pathway case (Pro+AI), run all three candidates
-        // concurrently: PDFKit (CoreGraphics/CPU), Vision OCR (GPU/ANE), and
-        // Python/AI (helper process). Each uses independent hardware resources
-        // so parallel execution reduces total wall time to ~max(slowest path).
+        // concurrently: PDFKit (CoreGraphics/CPU), Vision OCR (ANE, OS-managed),
+        // and Python/AI (helper process with its own Metal context).
+        // Each pathway uses independent hardware or an isolated process, so
+        // concurrent execution is safe and reduces wall time to ~max(slowest).
         if case .all(let useAI) = secondary {
             async let basicResult = runPDFKitConversion(
                 fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL
