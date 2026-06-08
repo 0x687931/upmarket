@@ -19,6 +19,15 @@ struct MenuBarDropdown: View {
         }
         .keyboardShortcut("o", modifiers: .command)
 
+        if let lastRecord = historyStore.records.first {
+            Button {
+                let formatted = OutputFormatter.format(record: lastRecord, mode: OutputPreference.shared.mode)
+                FileAccessService.shared.copyMarkdown(formatted.text)
+            } label: {
+                Label("Copy Last Result", systemImage: "doc.on.doc")
+            }
+        }
+
         Button {
             MainWindowController.shared.show()
         } label: {
@@ -56,7 +65,21 @@ struct MenuBarDropdown: View {
 
         Divider()
 
-        Text(entitlementTitle)
+        if store.hasProOrAbove {
+            Text("Upmarket + AI")
+        } else if store.hasBasicOrAbove {
+            Button {
+                NotificationCenter.default.post(name: .showPaywall, object: nil)
+            } label: {
+                Label("Upgrade to Upmarket + AI...", systemImage: "arrow.up.circle")
+            }
+        } else {
+            Button {
+                NotificationCenter.default.post(name: .showPaywall, object: nil)
+            } label: {
+                Label("Unlock Upmarket...", systemImage: "lock.open")
+            }
+        }
 
         Divider()
 
