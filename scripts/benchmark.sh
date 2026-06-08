@@ -14,6 +14,13 @@
 #   ./scripts/benchmark.sh --fail-below 85        # fail if score < 85%
 #   ./scripts/benchmark.sh --json-output reports/corpus-fast.json
 #   ./scripts/benchmark.sh --compare fast enhanced # diff two pipelines
+#
+# Multi-pathway quality mode (mirrors ConversionRunner quality selection):
+#   ./scripts/benchmark.sh --quality                        # pro_ai tier (all pathways)
+#   ./scripts/benchmark.sh --quality --tier basic           # PDFKit + Vision only
+#   ./scripts/benchmark.sh --quality --bucket scanned-or-unknown
+#   ./scripts/benchmark.sh --quality --doc docling_test_01
+#   ./scripts/benchmark.sh --quality --json-output reports/quality.json
 
 set -euo pipefail
 
@@ -25,6 +32,9 @@ PATHWAY=""
 CATEGORY=""
 BUCKET=""
 COMPARE_MODE=false
+QUALITY_MODE=false
+QUALITY_TIER="pro_ai"
+QUALITY_DOC=""
 JSON_OUTPUT=""
 REPEAT=1
 COMPUTE_MODE="auto"
@@ -41,6 +51,9 @@ while [[ $# -gt 0 ]]; do
         --repeat) REPEAT="$2"; shift 2 ;;
         --compute-mode) COMPUTE_MODE="$2"; shift 2 ;;
         --compare) PIPELINE="$2"; COMPARE_PIPELINE="$3"; COMPARE_MODE=true; shift 3 ;;
+        --quality) QUALITY_MODE=true; shift ;;
+        --tier) QUALITY_TIER="$2"; shift 2 ;;
+        --doc) QUALITY_DOC="$2"; shift 2 ;;
         *) echo "Unknown arg: $1"; exit 1 ;;
     esac
 done
@@ -97,6 +110,31 @@ export TRANSFORMERS_OFFLINE=1
 # Point scorer at the installed model directory so its setdefault() does not
 # redirect to the benchmark cache, which is empty for user-installed models.
 export UPMARKET_MODELS_DIR="${HOME}/Library/Application Support/Upmarket/models"
+
+# Multi-pathway quality mode — mirrors ConversionRunner's quality selection
+if [ "$QUALITY_MODE" = true ]; then
+    if [ "$QUALITY_TIER" = "pro_ai" ]; then
+        if ! "$PYTHON" -c "
+import sys; sys.path.insert(0, 'UpmarketPython')
+from models.model_manager import validate_model_dir
+ok, err = validate_model_dir('upmarket_ai')
+if not ok:
+    print(f'ERROR: AI model missing — use --tier basic or download from Settings > Models.')
+    sys.exit(1)
+" 2>&1; then
+            exit 1
+        fi
+        echo "  AI model: ready"
+        echo ""
+    fi
+    "$PYTHON" scripts/benchmark_quality.py \
+        --corpus "$CORPUS_DIR" \
+        --tier "$QUALITY_TIER" \
+        ${BUCKET:+--bucket "$BUCKET"} \
+        ${QUALITY_DOC:+--doc "$QUALITY_DOC"} \
+        ${JSON_OUTPUT:+--json-output "$JSON_OUTPUT"}
+    exit $?
+fi
 
 "$PYTHON" scripts/benchmark_scorer.py \
     --corpus "$CORPUS_DIR" \
