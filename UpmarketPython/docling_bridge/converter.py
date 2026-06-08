@@ -633,6 +633,15 @@ def _upmarket_ai_runtime_unavailable_reason() -> str | None:
     if _AI_RUNTIME_PRECHECK is not None:
         return None if _AI_RUNTIME_PRECHECK == "" else _AI_RUNTIME_PRECHECK
 
+    if os.environ.get("UPMARKET_ENABLE_TEST_DOUBLES") == "1":
+        runtime_double = os.environ.get("UPMARKET_TEST_UPMARKET_AI_RUNTIME", "")
+        if runtime_double == "available":
+            _AI_RUNTIME_PRECHECK = ""
+            return None
+        if runtime_double == "unavailable":
+            _AI_RUNTIME_PRECHECK = "Upmarket AI cannot access this Mac's graphics processor from the current session. Quit and reopen Upmarket, then try again."
+            return _AI_RUNTIME_PRECHECK
+
     message = "Upmarket AI cannot access this Mac's graphics processor from the current session. Quit and reopen Upmarket, then try again."
     env = os.environ.copy()
     env["HF_HUB_OFFLINE"] = "1"
