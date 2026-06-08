@@ -37,7 +37,6 @@ struct ShelfView: View {
 
     @State private var isTargeted = false
     @State private var isShelfHovered = false
-    @State private var showPaywall = false
     @State private var displayMode: ShelfDisplayMode = .mini
     @State private var dragScale: CGFloat = 1.0
     @State private var selectedJobID: UUID?
@@ -160,9 +159,6 @@ struct ShelfView: View {
             withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
                 dragScale = targeted ? 1.05 : 1.0
             }
-        }
-        .sheet(isPresented: $showPaywall) {
-            PaywallView().environmentObject(store)
         }
         .onAppear {
             resizeShelfWindow()
@@ -579,7 +575,7 @@ struct ShelfView: View {
     // MARK: - File picker (appears near shelf)
 
     private func openFilePicker() {
-        guard store.canConvert else { showPaywall = true; return }
+        guard store.canConvert else { PaywallWindowController.shared.show(); return }
         withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
             displayMode = hasQueueItems ? .queue : .peek
         }
@@ -591,7 +587,7 @@ struct ShelfView: View {
     // MARK: - Drop handler
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
-        guard store.canConvert else { showPaywall = true; return false }
+        guard store.canConvert else { PaywallWindowController.shared.show(); return false }
         withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
             displayMode = .peek
         }
@@ -655,7 +651,7 @@ struct ShelfView: View {
 
     private func consumeConversionOrShowPaywall() -> Bool {
         guard store.consumeConversion() else {
-            showPaywall = true
+            PaywallWindowController.shared.show()
             return false
         }
         return true

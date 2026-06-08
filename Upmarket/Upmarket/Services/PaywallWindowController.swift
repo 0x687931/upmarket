@@ -22,9 +22,9 @@ final class PaywallWindowController: NSWindowController {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
 
         let hosting = NSHostingView(
-            rootView: PaywallView { [weak panel] in
+            rootView: PaywallView(onDismiss: { [weak panel] in
                 panel?.close()
-            }
+            })
                 .environmentObject(StoreManager.shared)
         )
         panel.contentView = hosting

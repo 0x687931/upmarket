@@ -3,10 +3,9 @@ import StoreKit
 
 struct PaywallView: View {
 
-    var onPurchaseComplete: (() -> Void)? = nil
+    var onDismiss: (() -> Void)? = nil
 
     @EnvironmentObject private var store: StoreManager
-    @Environment(\.dismiss) private var dismiss
 
     private let device = DeviceCapability.shared
     private let flags = FeatureFlags.shared
@@ -44,22 +43,38 @@ struct PaywallView: View {
     // MARK: - Header
 
     private var header: some View {
-        VStack(spacing: 6) {
-            Image(systemName: "number")
-                .font(.system(size: 48, weight: .bold, design: .rounded))
-                .foregroundStyle(Color.accentColor)
-                .padding(.top, 28)
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 6) {
+                Image(systemName: "number")
+                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.accentColor)
+                    .padding(.top, 28)
 
-            Text("Unlock Upmarket")
-                .font(.title2)
-                .fontWeight(.bold)
+                Text("Unlock Upmarket")
+                    .font(.title2)
+                    .fontWeight(.bold)
 
-            Text("Convert unlimited documents, privately, on your Mac.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-                .padding(.bottom, 20)
+                Text("Convert unlimited documents, privately, on your Mac.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 20)
+            }
+            .frame(maxWidth: .infinity)
+
+            if onDismiss != nil {
+                Button {
+                    onDismiss?()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .padding(12)
+            }
         }
     }
 
@@ -324,8 +339,7 @@ struct PaywallView: View {
         errorMessage = nil
         do {
             try await store.purchase(product)
-            onPurchaseComplete?()
-            dismiss()
+            onDismiss?()
         } catch {
             errorMessage = "Purchase could not be completed. Please try again or use Restore Purchases."
         }
