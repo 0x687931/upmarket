@@ -407,6 +407,24 @@ def _convert_ai(path: Path, opts: dict) -> dict:
     stdout so the Swift helper's liveness monitor stays satisfied during long
     conversions instead of reporting stall.
     """
+    if os.environ.get("UPMARKET_ENABLE_TEST_DOUBLES") == "1":
+        converter_double = os.environ.get("UPMARKET_TEST_UPMARKET_AI_CONVERTER", "")
+        if converter_double == "stub":
+            runtime_error = _upmarket_ai_runtime_unavailable_reason()
+            if runtime_error:
+                return _error(runtime_error)
+            return {
+                "success": True,
+                "needsPassword": False,
+                "output": {
+                    "markdown": "test-double conversion succeeded",
+                    "pages": 1,
+                    "format": "PNG",
+                    "title": path.stem,
+                    "pipeline": "ai",
+                },
+            }
+
     manager = _model_manager()
     if not manager.supports_upmarket_ai_hardware():
         return _error("Upmarket AI requires Apple Silicon with Metal support.")
