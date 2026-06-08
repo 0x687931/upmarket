@@ -3,6 +3,7 @@ import Foundation
 nonisolated enum ConversionStage: String, Equatable, Sendable {
     case queued
     case copying
+    case analysing
     case extracting
     case python
     case postProcessing
@@ -11,7 +12,7 @@ nonisolated enum ConversionStage: String, Equatable, Sendable {
     case cancelled
 
     var isRunning: Bool {
-        self == .queued || self == .copying || self == .extracting || self == .python || self == .postProcessing
+        self == .queued || self == .copying || self == .analysing || self == .extracting || self == .python || self == .postProcessing
     }
 }
 
@@ -32,6 +33,7 @@ nonisolated struct ConversionProgress: Equatable, Sendable {
 
     static let queued = ConversionProgress(stage: .queued)
     static let copying = ConversionProgress(stage: .copying)
+    static let analysing = ConversionProgress(stage: .analysing)
     static let extracting = ConversionProgress(stage: .extracting)
     static let python = ConversionProgress(stage: .python)
     static let postProcessing = ConversionProgress(stage: .postProcessing)
@@ -91,7 +93,8 @@ struct ConversionJob: Identifiable, Equatable {
         }
         switch stage {
         case .queued:         return 0.0
-        case .copying:        return 0.08
+        case .copying:        return 0.06
+        case .analysing:      return 0.12
         case .extracting:     return 0.20
         case .python:         return 0.55
         case .postProcessing: return 0.88
@@ -104,8 +107,9 @@ struct ConversionJob: Identifiable, Equatable {
     private var progressBand: (lower: Double, upper: Double) {
         switch stage {
         case .queued:         return (0.0, 0.0)
-        case .copying:        return (0.01, 0.08)
-        case .extracting:     return (0.08, 0.20)
+        case .copying:        return (0.01, 0.06)
+        case .analysing:      return (0.06, 0.12)
+        case .extracting:     return (0.12, 0.20)
         case .python:         return (0.20, 0.88)
         case .postProcessing: return (0.88, 0.96)
         case .complete:       return (1.0, 1.0)

@@ -106,6 +106,8 @@ enum Diagnostics {
             return "Queued"
         case ConversionStage.copying.rawValue:
             return "Preparing document"
+        case ConversionStage.analysing.rawValue:
+            return "Analysing document"
         case ConversionStage.extracting.rawValue:
             return "Reading document"
         case ConversionStage.python.rawValue:
