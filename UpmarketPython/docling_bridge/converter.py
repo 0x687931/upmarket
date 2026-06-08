@@ -280,8 +280,20 @@ def _convert_enhanced(path: Path, opts: dict) -> dict:
     from docling.datamodel.pipeline_options import PdfPipelineOptions
 
     pipeline_options = PdfPipelineOptions()
-    pipeline_options.do_ocr = opts.get("ocr", False)
+    do_ocr = opts.get("ocr", False)
+    pipeline_options.do_ocr = do_ocr
     pipeline_options.do_table_structure = True
+
+    # Use macOS Vision OCR when OCR is enabled — it runs natively on Apple Silicon
+    # ANE/GPU with no third-party models, no network access, and no extra downloads.
+    # Only activate when OCR is actually needed (scanned documents); digital PDFs
+    # have do_ocr=False and this block is skipped.
+    if do_ocr:
+        try:
+            from docling.datamodel.pipeline_options import OcrMacOptions
+            pipeline_options.ocr_options = OcrMacOptions(recognition="accurate")
+        except (ImportError, Exception):
+            pass  # ocrmac not installed — fall through to Docling's auto OCR
 
     pdf_opts = PdfFormatOption(pipeline_options=pipeline_options)
 
