@@ -13,7 +13,6 @@ struct ContentView: View {
     @State private var primaryJobID: UUID?
     @State private var isAnalysingPrimary = false
     @State private var isTargeted = false
-    @State private var showPaywall = false
     @State private var showModelDownload = false
     @State private var showPasswordPrompt = false
     @State private var passwordInput = ""
@@ -55,9 +54,6 @@ struct ContentView: View {
             maxHeight: .infinity
         )
         .animation(.spring(duration: 0.4), value: isOutputPhase)
-        .sheet(isPresented: $showPaywall) {
-            PaywallView().environmentObject(store)
-        }
         .sheet(isPresented: $showModelDownload) {
             ModelDownloadView()
                 .environmentObject(modelManager)
@@ -73,7 +69,7 @@ struct ContentView: View {
                     proPrice: store.proProduct?.displayPrice ?? "$9.99",
                     onUseAI: {
                         showAISuggestion = false
-                        showPaywall = true
+                        PaywallWindowController.shared.show()
                     },
                     onBasic: {
                         showAISuggestion = false
@@ -436,11 +432,11 @@ struct ContentView: View {
             EmptyView()
         } else if let nudge = store.nudgeMessage {
             bannerRow(icon: "arrow.up.circle.fill", text: nudge,
-                      action: ("See Plans", { showPaywall = true }),
+                      action: ("See Plans", { PaywallWindowController.shared.show() }),
                       tint: Color.accentColor.opacity(0.07))
         } else {
             bannerRow(icon: "lock.fill", text: "Unlock Upmarket to convert",
-                      action: ("Unlock", { showPaywall = true }),
+                      action: ("Unlock", { PaywallWindowController.shared.show() }),
                       tint: Color.red.opacity(0.06))
         }
     }
@@ -554,14 +550,14 @@ struct ContentView: View {
     // MARK: - Actions
 
     private func openFilePicker() {
-        guard store.canConvert else { showPaywall = true; return }
+        guard store.canConvert else { PaywallWindowController.shared.show(); return }
         if let url = FileAccessService.shared.chooseDocuments(allowsMultipleSelection: false).first {
             handleFile(url)
         }
     }
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
-        guard store.canConvert else { showPaywall = true; return false }
+        guard store.canConvert else { PaywallWindowController.shared.show(); return false }
         guard !providers.isEmpty else { return false }
 
         if providers.count == 1, let provider = providers.first {

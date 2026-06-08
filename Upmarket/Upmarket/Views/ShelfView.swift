@@ -37,7 +37,6 @@ struct ShelfView: View {
 
     @State private var isTargeted = false
     @State private var isShelfHovered = false
-    @State private var showPaywall = false
     @State private var displayMode: ShelfDisplayMode = .mini
     @State private var dragScale: CGFloat = 1.0
     @State private var selectedJobID: UUID?
@@ -161,9 +160,6 @@ struct ShelfView: View {
                 dragScale = targeted ? 1.05 : 1.0
             }
         }
-        .sheet(isPresented: $showPaywall) {
-            PaywallView().environmentObject(store)
-        }
         .onAppear {
             resizeShelfWindow()
         }
@@ -246,6 +242,8 @@ struct ShelfView: View {
             }
         }
         .help(hasQueueItems ? "Show queue" : "Drop files")
+        .accessibilityLabel(hasQueueItems ? "Conversion shelf — \(conversion.jobs.count) items" : "Conversion shelf")
+        .accessibilityHint(hasQueueItems ? "Double-tap to show the queue" : "Drop files here or double-tap to expand")
     }
 
     @ViewBuilder private var miniSymbol: some View {
@@ -305,21 +303,28 @@ struct ShelfView: View {
                           hoverColor: .red,
                           isHovered: hoverClose,
                           isSpotlighted: tourSpotlight == .closeButton,
-                          help: "Hide shelf") { ShelfWindowController.shared.hide() }
-                .onHover { hoverClose = $0 }
+                          help: "Hide shelf",
+                          accessibilityHint: "Hides the conversion shelf from the screen") {
+                ShelfWindowController.shared.hide()
+            }
+            .onHover { hoverClose = $0 }
 
             controlButton(symbol: "plus",
                           hoverColor: Color(nsColor: .labelColor),
                           isHovered: hoverAdd,
                           isSpotlighted: tourSpotlight == .addButton,
-                          help: "Add files") { openFilePicker() }
-                .onHover { hoverAdd = $0 }
+                          help: "Add files",
+                          accessibilityHint: "Opens a file picker to add documents to the conversion queue") {
+                openFilePicker()
+            }
+            .onHover { hoverAdd = $0 }
 
             controlButton(symbol: queueControlSymbol,
                           hoverColor: Color(nsColor: .labelColor),
                           isHovered: hoverToggle,
                           isSpotlighted: tourSpotlight == .expandButton,
-                          help: queueControlHelp) {
+                          help: queueControlHelp,
+                          accessibilityHint: queueControlA11yHint) {
                 toggleQueueMode()
             }
             .onHover { hoverToggle = $0 }
@@ -341,6 +346,13 @@ struct ShelfView: View {
         return "Show queue"
     }
 
+    private var queueControlA11yHint: String {
+        if effectiveMode == .queue || !hasQueueItems {
+            return "Collapses the conversion queue panel"
+        }
+        return "Expands to show all queued documents"
+    }
+
     private func toggleQueueMode() {
         withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
             if effectiveMode == .queue || !hasQueueItems {
@@ -359,6 +371,7 @@ struct ShelfView: View {
         isSpotlighted: Bool,
         isEnabled: Bool = true,
         help: String,
+        accessibilityHint: String = "",
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -381,6 +394,8 @@ struct ShelfView: View {
         .buttonStyle(.plain)
         .disabled(!isEnabled)
         .help(help)
+        .accessibilityLabel(help)
+        .accessibilityHint(accessibilityHint)
         .animation(.easeInOut(duration: 0.12), value: isHovered)
         .animation(.easeInOut(duration: 0.18), value: isSpotlighted)
     }
@@ -573,13 +588,16 @@ struct ShelfView: View {
         }
         .frame(width: itemWidth)
         .help("\(extra) more queued")
+        .accessibilityLabel("\(extra) more items queued")
+        .accessibilityHint("Double-tap to show all queued items")
+        .accessibilityAddTraits(.isButton)
         .onTapGesture { withAnimation { displayMode = .queue } }
     }
 
     // MARK: - File picker (appears near shelf)
 
     private func openFilePicker() {
-        guard store.canConvert else { showPaywall = true; return }
+        guard store.canConvert else { PaywallWindowController.shared.show(); return }
         withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
             displayMode = hasQueueItems ? .queue : .peek
         }
@@ -591,7 +609,7 @@ struct ShelfView: View {
     // MARK: - Drop handler
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
-        guard store.canConvert else { showPaywall = true; return false }
+        guard store.canConvert else { PaywallWindowController.shared.show(); return false }
         withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
             displayMode = .peek
         }
@@ -655,7 +673,7 @@ struct ShelfView: View {
 
     private func consumeConversionOrShowPaywall() -> Bool {
         guard store.consumeConversion() else {
-            showPaywall = true
+            PaywallWindowController.shared.show()
             return false
         }
         return true

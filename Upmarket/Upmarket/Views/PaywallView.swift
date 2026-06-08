@@ -3,10 +3,9 @@ import StoreKit
 
 struct PaywallView: View {
 
-    var onPurchaseComplete: (() -> Void)? = nil
+    var onDismiss: (() -> Void)? = nil
 
     @EnvironmentObject private var store: StoreManager
-    @Environment(\.dismiss) private var dismiss
 
     private let device = DeviceCapability.shared
     private let flags = FeatureFlags.shared
@@ -44,23 +43,58 @@ struct PaywallView: View {
     // MARK: - Header
 
     private var header: some View {
-        VStack(spacing: 6) {
-            Image(systemName: "number")
-                .font(.system(size: 48, weight: .bold, design: .rounded))
-                .foregroundStyle(Color.accentColor)
-                .padding(.top, 28)
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 6) {
+                Image(systemName: "number")
+                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.accentColor)
+                    .padding(.top, 28)
 
-            Text("Unlock Upmarket")
-                .font(.title2)
-                .fontWeight(.bold)
+                Text("Unlock Upmarket")
+                    .font(.title2)
+                    .fontWeight(.bold)
 
-            Text("Convert unlimited documents, privately, on your Mac.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-                .padding(.bottom, 20)
+                Text("Convert unlimited documents, privately, on your Mac.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+
+                if let badge = trialContextBadge {
+                    Text(badge)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(.quaternary, in: Capsule())
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.bottom, 20)
+
+            if onDismiss != nil {
+                Button {
+                    onDismiss?()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Close")
+                .padding(12)
+            }
         }
+    }
+
+    private var trialContextBadge: String? {
+        guard !store.hasBasicOrAbove else { return nil }
+        if store.packCredits > 0 {
+            return "\(store.packCredits) conversion\(store.packCredits == 1 ? "" : "s") remaining"
+        }
+        return "Trial ended"
     }
 
     // MARK: - Pro Card (hero)
@@ -82,6 +116,7 @@ struct PaywallView: View {
                             .padding(.horizontal, 7)
                             .padding(.vertical, 3)
                             .background(Color.accentColor, in: Capsule())
+                            .accessibilityLabel("Best value")
                     }
                     Text("Everything, including Upmarket AI for complex documents")
                         .font(.caption)
@@ -239,9 +274,12 @@ struct PaywallView: View {
             Task { await store.restorePurchases() }
         }
         .buttonStyle(.plain)
-        .font(.caption)
+        .font(.subheadline)
         .foregroundStyle(.secondary)
+        .frame(minHeight: 44)
         .padding(.top, 4)
+        .accessibilityLabel("Restore previous purchases")
+        .accessibilityHint("Restores any previous Upmarket purchases from the App Store")
     }
 
     @ViewBuilder private var productStatus: some View {
@@ -324,8 +362,7 @@ struct PaywallView: View {
         errorMessage = nil
         do {
             try await store.purchase(product)
-            onPurchaseComplete?()
-            dismiss()
+            onDismiss?()
         } catch {
             errorMessage = "Purchase could not be completed. Please try again or use Restore Purchases."
         }
@@ -334,6 +371,6 @@ struct PaywallView: View {
 }
 
 #Preview {
-    PaywallView()
+    PaywallView(onDismiss: nil)
         .environmentObject(StoreManager.shared)
 }
