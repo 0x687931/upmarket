@@ -323,6 +323,29 @@ struct ConversionRunner {
         secondary: PDFSecondaryCandidate,
         progress: ProgressHandler?
     ) async -> ConversionResult {
+        // For the full multi-pathway case (Pro+AI), run all three candidates
+        // concurrently: PDFKit (CoreGraphics/CPU), Vision OCR (GPU/ANE), and
+        // Python/AI (helper process). Each uses independent hardware resources
+        // so parallel execution reduces total wall time to ~max(slowest path).
+        if case .all(let useAI) = secondary {
+            async let basicResult = runPDFKitConversion(
+                fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL
+            )
+            async let visionResult = runVisionExtraction(
+                fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL
+            )
+            async let pythonResult = runPythonConversion(
+                fileURL: fileURL, title: title, useAI: useAI,
+                password: password, workspaceURL: workspaceURL, progress: progress
+            )
+            let (basic, vision, python) = await (basicResult, visionResult, pythonResult)
+            let allResults: [(label: String, result: ConversionResult)] = [
+                ("basic", basic), ("image-text", vision),
+                (useAI ? "ai" : "advanced", python),
+            ]
+            return selectBest(from: allResults, evidence: classifierEvidence)
+        }
+
         var outputs: [(label: String, output: ConversionOutput)] = []
         var firstFailure: ConversionResult?
 
@@ -344,32 +367,12 @@ struct ConversionRunner {
             secondaryCandidates = [(
                 label: useAI ? "ai" : "advanced",
                 result: await runPythonConversion(
-                    fileURL: fileURL,
-                    title: title,
-                    useAI: useAI,
-                    password: password,
-                    workspaceURL: workspaceURL,
-                    progress: progress
+                    fileURL: fileURL, title: title, useAI: useAI,
+                    password: password, workspaceURL: workspaceURL, progress: progress
                 )
             )]
-        case .all(let useAI):
-            secondaryCandidates = [
-                (
-                    label: "image-text",
-                    result: await runVisionExtraction(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
-                ),
-                (
-                    label: useAI ? "ai" : "advanced",
-                    result: await runPythonConversion(
-                        fileURL: fileURL,
-                        title: title,
-                        useAI: useAI,
-                        password: password,
-                        workspaceURL: workspaceURL,
-                        progress: progress
-                    )
-                )
-            ]
+        case .all:
+            secondaryCandidates = []  // handled above
         }
 
         for candidate in secondaryCandidates {
@@ -380,19 +383,32 @@ struct ConversionRunner {
             }
         }
 
+        let serialResults = outputs.map { (label: $0.label, result: ConversionResult.success($0.output)) }
+            + (firstFailure.map { [("__failure__", $0)] } ?? [])
+        return selectBest(from: serialResults, evidence: classifierEvidence)
+    }
+
+    private func selectBest(
+        from results: [(label: String, result: ConversionResult)],
+        evidence: NativeDocumentClassifier.Evidence?
+    ) -> ConversionResult {
+        var outputs: [(label: String, output: ConversionOutput)] = []
+        var firstFailure: ConversionResult?
+        for (label, result) in results {
+            if case .success(let output) = result {
+                outputs.append((label: label, output: output))
+            } else if firstFailure == nil {
+                firstFailure = result
+            }
+        }
         let imageTextReference = outputs.first { $0.label == "image-text" }?.output.markdown
         let candidates = outputs.map {
-            scoredCandidate(
-                label: $0.label,
-                output: $0.output,
-                evidence: classifierEvidence,
-                imageTextReference: imageTextReference
-            )
+            scoredCandidate(label: $0.label, output: $0.output,
+                            evidence: evidence, imageTextReference: imageTextReference)
         }
         guard let best = MarkdownQualityScorer.best(candidates) else {
             return firstFailure ?? .failure("Upmarket couldn't convert this document.")
         }
-
         AppLog.conversion.info(
             "Selected conversion candidate=\(best.label, privacy: .public) quality=\(best.score.overall, privacy: .public)"
         )
