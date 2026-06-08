@@ -269,31 +269,31 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 This is a launch requirement, not post-launch polish.
 
 ### Conversion Liveness
-- [ ] Define stage enum: queued, copying, analysing, extracting, python, postProcessing, saving, complete, failed
-- [ ] Emit stage updates from Swift paths and Python bridge boundaries
-- [ ] Add Python progress callback or progress file for long Docling/model operations
+- [x] Define stage enum: queued, copying, analysing, extracting, python, postProcessing, saving, complete, failed
+- [x] Emit stage updates from Swift paths and Python bridge boundaries
+- [x] Add Python progress callback or progress file for long Docling/model operations
 - [x] Track last progress heartbeat and current stage in `ConversionQueue`
-- [ ] If no progress is observed, keep the job running but show a recoverable stalled-state UI with cancel/retry options
-- [ ] Log stage, file type, file size, pipeline, OS version, and failure class without logging file contents
+- [x] If no progress is observed, keep the job running but show a recoverable stalled-state UI with cancel/retry options
+- [x] Log stage, file type, file size, pipeline, OS version, and failure class without logging file contents
 
 ### Error Taxonomy
-- [ ] Unsupported format
-- [ ] Password required
-- [ ] File inaccessible / sandbox denied
+- [x] Unsupported format
+- [x] Password required
+- [x] File inaccessible / sandbox denied
 - [x] File too large or memory pressure
-- [ ] Model unavailable / download required
-- [ ] Model download failed
-- [ ] Python bridge import/runtime failure
-- [ ] Conversion made no progress
-- [ ] Conversion failed with partial output available
+- [x] Model unavailable / download required
+- [x] Model download failed
+- [x] Python bridge import/runtime failure
+- [x] Conversion made no progress
+- [x] Conversion failed with partial output available
 
 ### Native Test Coverage
 - [x] `ConversionRunner` routing and `ConversionQueue` state transitions
 - [x] x86_64 selected test run on Apple Silicon passes queue and programmatic authorization coverage; `ModelManagerTests.testDownloadProgressUpdatesBeforeCompletion` currently fails under x86_64 because Pro AI download is correctly blocked when Apple Silicon support is unavailable.
 - [ ] PDF password path
 - [x] Python bridge success/failure parsing
-- [ ] Liveness monitor state transitions
-- [ ] ModelManager check/download/delete error handling
+- [x] Liveness monitor state transitions
+- [x] ModelManager check/download/delete error handling
 - [ ] StoreManager product loading, entitlement refresh, pack credit consumption, restore
   - [x] Pack credits are derived from a verified transaction/debit ledger instead of a `UserDefaults` balance.
 - [ ] XCUITest for drop zone, conversion result, paywall, preferences, and model download prompt
@@ -302,9 +302,9 @@ This is a launch requirement, not post-launch polish.
 
 ### v1.0 Must-Haves
 - [ ] Friendly categorized errors using the error taxonomy above
-- [ ] Batch conversion queue UX through the shelf: multiple accepted inputs must enqueue visibly, run serially, show per-job progress/result/error/cancellation, and keep copy/save actions obvious for each finished job.
-- [ ] Preferences model setup: users can check and download Enhanced/AI models before converting a complex document, with capability, disk, and availability status shown before any download.
-- [ ] Apple-native-only extraction remains internal routing/fallback behavior for v1.0; do not expose an engine-selection mode in normal UI.
+- [x] Batch conversion queue UX through the shelf: multiple accepted inputs must enqueue visibly, run serially, show per-job progress/result/error/cancellation, and keep copy/save actions obvious for each finished job.
+- [x] Preferences model setup: users can check and download Enhanced/AI models before converting a complex document, with capability, disk, and availability status shown before any download.
+- [x] Apple-native-only extraction remains internal routing/fallback behavior for v1.0; do not expose an engine-selection mode in normal UI.
 - [ ] Preferences/About links to licenses, privacy policy, support, and version
 - [ ] Dark mode pass for drop zone, shelf, output, paywall, and preferences
 - [ ] macOS compatibility pass on 13.3, 14.x, 15.x, and current beta where available
@@ -321,7 +321,7 @@ This is a launch requirement, not post-launch polish.
 
 ### P2 - UX/HIG Audit Findings
 - [ ] Remove automatic paywall display at tour completion; let users experience a conversion before purchase prompts.
-- [ ] Make shelf control hit targets at least 44x44 pt, with 48x48 preferred for pointer and accessibility comfort.
+- [x] Make shelf control hit targets at least 44x44 pt, with 48x48 preferred for pointer and accessibility comfort.
 - [ ] Improve shelf discoverability with visible labels in expanded state and accessibility labels/hints for icon-only controls.
 - [ ] Surface trial state at decision points: shelf, menu bar, paywall, and conversion-complete moments.
 - [ ] Adapt paywall headline and actions to context: full trial, 1 conversion remaining, trial expired, AI upgrade, or pack upsell.
@@ -330,7 +330,7 @@ This is a launch requirement, not post-launch polish.
 - [ ] Expand menu bar dropdown actions to include Add Document, Upgrade/Manage License, and Open Last Result when available.
 - [ ] Rewrite onboarding copy to describe actions, not symbols; use "Choose Add Files" instead of "Tap +".
 - [ ] Add Preferences controls for shelf position, auto-hide behavior, and whether the shelf appears only during drag/drop workflows.
-- [ ] Ensure transient onboarding/paywall panels support expected dismissal behavior, including Escape where appropriate.
+- [x] Ensure transient onboarding/paywall panels support expected dismissal behavior, including Escape where appropriate.
 - [ ] Keep the idle menu bar icon template-like and reserve accent color/animation for meaningful status changes.
 
 ### Localisation
