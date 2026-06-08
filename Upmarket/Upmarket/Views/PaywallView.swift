@@ -28,6 +28,14 @@ struct PaywallView: View {
                     productStatus
                     purchaseStatus
                     restoreButton
+                    if onDismiss != nil {
+                        Button("Not Now") { onDismiss?() }
+                            .buttonStyle(.plain)
+                            .font(.subheadline)
+                            .foregroundStyle(.tertiary)
+                            .frame(minHeight: 44)
+                            .accessibilityLabel("Dismiss paywall")
+                    }
                 }
                 .padding(24)
             }
@@ -50,11 +58,11 @@ struct PaywallView: View {
                     .foregroundStyle(Color.accentColor)
                     .padding(.top, 28)
 
-                Text("Unlock Upmarket")
+                Text(headerTitle)
                     .font(.title2)
                     .fontWeight(.bold)
 
-                Text("Convert unlimited documents, privately, on your Mac.")
+                Text(headerSubtitle)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -90,11 +98,27 @@ struct PaywallView: View {
     }
 
     private var trialContextBadge: String? {
-        guard !store.hasBasicOrAbove else { return nil }
-        if store.packCredits > 0 {
-            return "\(store.packCredits) conversion\(store.packCredits == 1 ? "" : "s") remaining"
+        if store.hasProOrAbove { return nil }
+        if store.hasBasicOrAbove { return "Upgrade to add Upmarket AI" }
+        if store.freeDocsRemaining > 0 {
+            let n = store.freeDocsRemaining
+            return "\(n) free conversion\(n == 1 ? "" : "s") remaining"
         }
-        return "Trial ended"
+        if store.packCredits > 0 {
+            return "\(store.packCredits) doc pack credit\(store.packCredits == 1 ? "" : "s") remaining"
+        }
+        return "Free trial ended — unlock to keep converting"
+    }
+
+    private var headerTitle: String {
+        store.hasBasicOrAbove ? "Add Upmarket AI" : "Unlock Upmarket"
+    }
+
+    private var headerSubtitle: String {
+        if store.hasBasicOrAbove {
+            return "Add Upmarket AI for complex and scanned documents."
+        }
+        return "Convert unlimited documents, privately, on your Mac."
     }
 
     // MARK: - Pro Card (hero)
