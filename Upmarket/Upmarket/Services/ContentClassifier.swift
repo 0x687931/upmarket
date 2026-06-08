@@ -225,12 +225,16 @@ enum ContentClassifier {
         // If yes → scanned document (route to OCR/AI).
         // If no  → photo, artwork, or diagram with no text (route to metadata).
         // This handles the full taxonomy correctly without any manual label list.
-        let textDensity = await probeImageTextDensity(fileURL: fileURL)
-        let hasText = textDensity > 0.05  // >5% of image area covered by text blocks
+        let textSignal = await probeImageTextSignal(fileURL: fileURL)
+        // Require ≥20 recognised words to classify as a text document.
+        // Area-based thresholds fail on two edges:
+        //   - Diagrams with a few axis labels: high area ratio, low word count → not a doc
+        //   - Small-text images (webp): low area ratio, meaningful word count → is a doc
+        let hasText = textSignal.wordCount >= 10
 
         if hasText {
             AppLog.conversion.info(
-                "ContentClassifier image textDensity=\(textDensity, privacy: .public) → scanned document"
+                "ContentClassifier image wordCount=\(textSignal.wordCount, privacy: .public) → scanned document"
             )
             return Classification(
                 kind: .scannedDocument,
@@ -242,7 +246,7 @@ enum ContentClassifier {
             )
         } else {
             AppLog.conversion.info(
-                "ContentClassifier image textDensity=\(textDensity, privacy: .public) → no extractable text → metadata"
+                "ContentClassifier image wordCount=\(textSignal.wordCount, privacy: .public) → no extractable text → metadata"
             )
             return Classification(
                 kind: .photoOrArtwork,
@@ -255,24 +259,31 @@ enum ContentClassifier {
         }
     }
 
-    private static func probeImageTextDensity(fileURL: URL) async -> Double {
+    private struct TextSignal {
+        let wordCount: Int
+    }
+
+    private static func probeImageTextSignal(fileURL: URL) async -> TextSignal {
         #if canImport(Vision)
         if #available(macOS 10.15, *) {
             return await withCheckedContinuation { continuation in
                 let request = VNRecognizeTextRequest { request, error in
                     guard error == nil,
-                          let observations = request.results as? [VNRecognizedTextObservation],
-                          !observations.isEmpty
+                          let observations = request.results as? [VNRecognizedTextObservation]
                     else {
-                        continuation.resume(returning: 0)
+                        continuation.resume(returning: TextSignal(wordCount: 0))
                         return
                     }
-                    // Measure total bounding-box area of detected text blocks
-                    let totalArea = observations.reduce(0.0) { sum, obs in
-                        let bb = obs.boundingBox
-                        return sum + Double(bb.width * bb.height)
-                    }
-                    continuation.resume(returning: min(1.0, totalArea))
+                    // Count words across all recognised text blocks.
+                    // Word count is robust to image scale and bounding-box size variations:
+                    //   - Diagrams with axis labels: few words (e.g. 5) → not a document
+                    //   - Text documents at any resolution: many words (≥20) → document
+                    let words = observations
+                        .compactMap { $0.topCandidates(1).first?.string }
+                        .joined(separator: " ")
+                        .split(separator: " ")
+                        .count
+                    continuation.resume(returning: TextSignal(wordCount: words))
                 }
                 request.recognitionLevel = .fast  // ANE-accelerated, ~50ms
                 request.usesLanguageCorrection = false
@@ -281,7 +292,7 @@ enum ContentClassifier {
             }
         }
         #endif
-        return 0
+        return TextSignal(wordCount: 0)
     }
 
     // MARK: - ImageIO helpers
