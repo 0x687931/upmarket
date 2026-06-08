@@ -6,13 +6,25 @@ struct ConversionRunner {
 
     let pythonWorker: PythonWorker
     private let supportsAdvancedRuntime: Bool
+    private let supportsAI: Bool
+    private let hasProEntitlement: @Sendable () -> Bool
+    private let modelsReady: @Sendable () -> Bool
+    private let classifyOverride: (@Sendable (URL, String?, Bool, Bool) async -> ContentClassifier.Classification?)?
 
     nonisolated init(
         pythonWorker: PythonWorker = PythonWorker(),
-        supportsAdvancedRuntime: Bool = DeviceCapability.currentSupportsAdvancedRuntime
+        supportsAdvancedRuntime: Bool = DeviceCapability.currentSupportsAdvancedRuntime,
+        supportsAI: Bool = DeviceCapability.shared.supportsUpmarketAI,
+        hasProEntitlement: @escaping @Sendable () -> Bool = { StoreManager.shared.hasProOrAbove },
+        modelsReady: @escaping @Sendable () -> Bool = { ModelManager.shared.hasCheckedModels },
+        classifyOverride: (@Sendable (URL, String?, Bool, Bool) async -> ContentClassifier.Classification?)? = nil
     ) {
         self.pythonWorker = pythonWorker
         self.supportsAdvancedRuntime = supportsAdvancedRuntime
+        self.supportsAI = supportsAI
+        self.hasProEntitlement = hasProEntitlement
+        self.modelsReady = modelsReady
+        self.classifyOverride = classifyOverride
     }
 
     func analyse(fileURL: URL) async -> ComplexityAdvice? {
@@ -34,10 +46,8 @@ struct ConversionRunner {
         }
         defer { AppWorkspace.remove(workspace) }
 
-        guard let classification = await ContentClassifier.classify(
-            fileURL: tempURL,
-            supportsAdvancedRuntime: supportsAdvancedRuntime,
-            supportsAI: DeviceCapability.shared.supportsUpmarketAI
+        guard let classification = await (classifyOverride?(tempURL, nil, supportsAdvancedRuntime, supportsAI)
+            ?? ContentClassifier.classify(fileURL: tempURL, supportsAdvancedRuntime: supportsAdvancedRuntime, supportsAI: supportsAI)
         ) else { return nil }
 
         AppLog.conversion.info(
@@ -78,11 +88,8 @@ struct ConversionRunner {
 
         progress?(.analysing)
         let analyseSignpost = AppSignpost.conversion.beginInterval("analyse")
-        let classification = await ContentClassifier.classify(
-            fileURL: tempURL,
-            password: job.password,
-            supportsAdvancedRuntime: supportsAdvancedRuntime,
-            supportsAI: DeviceCapability.shared.supportsUpmarketAI
+        let classification = await (classifyOverride?(tempURL, job.password, supportsAdvancedRuntime, supportsAI)
+            ?? ContentClassifier.classify(fileURL: tempURL, password: job.password, supportsAdvancedRuntime: supportsAdvancedRuntime, supportsAI: supportsAI)
         )
         AppSignpost.conversion.endInterval("analyse", analyseSignpost)
         guard !Task.isCancelled else { return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.") }
@@ -119,7 +126,6 @@ struct ConversionRunner {
         for classification: ContentClassifier.Classification,
         job: ConversionJob
     ) -> ConversionResult? {
-        let store = StoreManager.shared
         switch classification.requiredTier {
         case .basic:
             return nil  // always available
@@ -133,12 +139,11 @@ struct ConversionRunner {
             guard supportsAdvancedRuntime else {
                 return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
             }
-            guard store.hasProOrAbove else {
+            guard hasProEntitlement() else {
                 AppLog.conversion.info("Content requires AI but user lacks Pro entitlement correlationID=\(job.correlationID, privacy: .public)")
                 return .failure(ConversionError.upgradeRequired.errorDescription ?? "Upgrade to Pro to convert this document.")
             }
-            guard DeviceCapability.shared.supportsUpmarketAI,
-                  ModelManager.shared.hasCheckedModels else {
+            guard supportsAI, modelsReady() else {
                 return .failure(ConversionError.modelUnavailable.errorDescription ?? "The AI model isn't installed.")
             }
             return nil
@@ -224,7 +229,7 @@ struct ConversionRunner {
         case .scannedDocument:
             // Image/TIFF/scanned PDF requiring OCR or AI
             // Entitlement gate already passed above; route to best available
-            let useAI = job.useAI && DeviceCapability.shared.supportsUpmarketAI
+            let useAI = job.useAI && supportsAI
                 && StoreManager.shared.hasProOrAbove
             if useAI {
                 // Pro+AI: PDFKit baseline + Vision OCR + AI (concurrent in runQualitySelectedPDFConversion)

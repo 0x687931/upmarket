@@ -702,9 +702,22 @@ final class ConversionQueueTests: XCTestCase {
             requestLog: requestLog,
             response: #"{"success":true,"needsPassword":false,"output":{"markdown":"AI PDF route output","pages":1,"format":"PDF","title":"AI PDF","pipeline":"ai"}}"#
         )
+        // Inject scanned classification so the test doesn't depend on live Vision/Metal.
+        let scannedClassification = ContentClassifier.Classification(
+            kind: .scannedDocument,
+            requiredTier: .ai,
+            hasExtractableText: false,
+            frameCount: 1,
+            pdfEvidence: nil,
+            recommendedPathway: .ai
+        )
         let runner = ConversionRunner(
             pythonWorker: PythonWorker(helperClient: RuntimeHelperClient(executableURL: helper, livenessInterval: 5)),
-            supportsAdvancedRuntime: true
+            supportsAdvancedRuntime: true,
+            supportsAI: true,
+            hasProEntitlement: { true },
+            modelsReady: { true },
+            classifyOverride: { _, _, _, _ in scannedClassification }
         )
 
         let result = await runner.run(ConversionJob(sourceURL: pdf, useAI: true))
