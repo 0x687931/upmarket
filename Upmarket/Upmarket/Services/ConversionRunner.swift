@@ -33,14 +33,17 @@ struct ConversionRunner {
             return nil
         }
         defer { AppWorkspace.remove(workspace) }
-        if tempURL.pathExtension.lowercased() == "pdf",
-           let classification = try? await NativeDocumentClassifier.classify(pdfURL: tempURL) {
-            AppLog.conversion.info(
-                "Document analysis bucket=\(classification.bucket.diagnosticLabel, privacy: .public) recommendation=\(classification.recommendedPathway.diagnosticLabel, privacy: .public) confidence=\(classification.confidence, privacy: .public)"
-            )
-            return classification.complexityAdvice
-        }
-        return nil
+
+        guard let classification = await ContentClassifier.classify(
+            fileURL: tempURL,
+            supportsAdvancedRuntime: supportsAdvancedRuntime,
+            supportsAI: DeviceCapability.shared.supportsUpmarketAI
+        ) else { return nil }
+
+        AppLog.conversion.info(
+            "Document analysis kind=\(classification.kind.diagnosticLabel, privacy: .public) tier=\(classification.requiredTier.diagnosticLabel, privacy: .public)"
+        )
+        return classification.complexityAdvice
     }
 
     func run(_ job: ConversionJob, progress: ProgressHandler? = nil) async -> ConversionResult {
@@ -75,14 +78,24 @@ struct ConversionRunner {
 
         progress?(.analysing)
         let analyseSignpost = AppSignpost.conversion.beginInterval("analyse")
-        let preClassification: NativeDocumentClassifier.Classification? = job.ext.lowercased() == "pdf"
-            ? try? await NativeDocumentClassifier.classify(pdfURL: tempURL, password: job.password)
-            : nil
+        let classification = await ContentClassifier.classify(
+            fileURL: tempURL,
+            password: job.password,
+            supportsAdvancedRuntime: supportsAdvancedRuntime,
+            supportsAI: DeviceCapability.shared.supportsUpmarketAI
+        )
         AppSignpost.conversion.endInterval("analyse", analyseSignpost)
         guard !Task.isCancelled else { return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.") }
 
+        // Entitlement gate: check if the user's tier can handle this content.
+        // Basic users cannot convert scanned documents or documents requiring AI/Enhanced.
+        if let classification {
+            let entitlementCheck = checkEntitlement(for: classification, job: job)
+            if let failure = entitlementCheck { return failure }
+        }
+
         progress?(.extracting)
-        let raw = await extract(job: job, tempURL: tempURL, workspaceURL: workspace, preClassification: preClassification, progress: progress)
+        let raw = await extract(job: job, tempURL: tempURL, workspaceURL: workspace, classification: classification, progress: progress)
         guard !Task.isCancelled else { return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.") }
         guard case .success(let output) = raw else {
             AppLog.conversion.error("Conversion failed correlationID=\(job.correlationID, privacy: .public) ext=\(job.ext, privacy: .public) bytes=\(fileSizeBytes, privacy: .public)")
@@ -98,95 +111,146 @@ struct ConversionRunner {
         return .success(refined)
     }
 
+    // MARK: - Entitlement gate
+
+    /// Returns a failure result if the user's entitlement cannot handle this content,
+    /// nil if conversion should proceed.
+    private func checkEntitlement(
+        for classification: ContentClassifier.Classification,
+        job: ConversionJob
+    ) -> ConversionResult? {
+        let store = StoreManager.shared
+        switch classification.requiredTier {
+        case .basic:
+            return nil  // always available
+        case .enhanced:
+            guard supportsAdvancedRuntime else {
+                // Apple Silicon required for Enhanced
+                return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
+            }
+            return nil  // Enhanced is available to all tiers on Apple Silicon
+        case .ai:
+            guard supportsAdvancedRuntime else {
+                return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
+            }
+            guard store.hasProOrAbove else {
+                AppLog.conversion.info("Content requires AI but user lacks Pro entitlement correlationID=\(job.correlationID, privacy: .public)")
+                return .failure(ConversionError.upgradeRequired.errorDescription ?? "Upgrade to Pro to convert this document.")
+            }
+            guard DeviceCapability.shared.supportsUpmarketAI,
+                  ModelManager.shared.hasCheckedModels else {
+                return .failure(ConversionError.modelUnavailable.errorDescription ?? "The AI model isn't installed.")
+            }
+            return nil
+        }
+    }
+
+    // MARK: - Content-driven routing
+
+    /// Routes conversion based on ContentClassifier result rather than file extension.
+    /// The classifier has already examined the actual content; we trust its recommendation.
     private func extract(
         job: ConversionJob,
         tempURL: URL,
         workspaceURL: URL,
-        preClassification: NativeDocumentClassifier.Classification?,
+        classification: ContentClassifier.Classification?,
         progress: ProgressHandler?
     ) async -> ConversionResult {
-        let ext = job.sourceURL.pathExtension.lowercased()
         let title = job.sourceURL.deletingPathExtension().lastPathComponent
 
-        let format = ConversionFormat(fileExtension: ext)
+        guard let classification else {
+            // Classifier returned nil — file unreadable
+            return .failure(ConversionError.inaccessible.errorDescription ?? "Upmarket couldn't access this file.")
+        }
 
-        switch ext {
-        case "pdf":
-            if job.useAI {
-                let classification = preClassification
-                if let classification {
-                    AppLog.conversion.info(
-                        "Document classifier bucket=\(classification.bucket.diagnosticLabel, privacy: .public) recommendation=\(classification.recommendedPathway.diagnosticLabel, privacy: .public) confidence=\(classification.confidence, privacy: .public)"
-                    )
-                }
-                return await runQualitySelectedPDFConversion(
-                    fileURL: tempURL,
-                    title: title,
-                    password: job.password,
-                    workspaceURL: workspaceURL,
-                    classifierEvidence: classification?.evidence,
-                    secondary: .all(useAI: true),
-                    progress: progress
-                )
-            }
-            if let classification = preClassification {
-                AppLog.conversion.info(
-                    "Document classifier bucket=\(classification.bucket.diagnosticLabel, privacy: .public) recommendation=\(classification.recommendedPathway.diagnosticLabel, privacy: .public) confidence=\(classification.confidence, privacy: .public)"
-                )
-                switch classification.recommendedPathway {
-                case .visionOCR:
-                    return await runQualitySelectedPDFConversion(
-                        fileURL: tempURL,
-                        title: title,
-                        password: job.password,
-                        workspaceURL: workspaceURL,
-                        classifierEvidence: classification.evidence,
-                        secondary: .imageText,
-                        progress: progress
-                    )
-                case .enhanced:
-                    guard supportsAdvancedRuntime else {
-                        return await runPDFKitConversion(fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL)
-                    }
-                    return await runQualitySelectedPDFConversion(
-                        fileURL: tempURL,
-                        title: title,
-                        password: job.password,
-                        workspaceURL: workspaceURL,
-                        classifierEvidence: classification.evidence,
-                        secondary: .advanced(useAI: false),
-                        progress: progress
-                    )
-                case .pdfKit:
-                    return await runPDFKitConversion(fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL)
-                }
-            }
-            return await runPDFKitConversion(fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL)
-        case _ where format.map({ ToolFormatCapabilityMatrix.supports(.speech, $0) }) == true:
+        switch classification.kind {
+
+        case .audioVideo:
             return await runAudioConversion(
-                fileURL: tempURL,
-                title: title,
-                useAI: job.useAI,
-                password: job.password,
-                workspaceURL: workspaceURL,
-                progress: progress
+                fileURL: tempURL, title: title, useAI: job.useAI,
+                password: job.password, workspaceURL: workspaceURL, progress: progress
             )
-        case _ where NativeMetadataExtractor.handlesImage(ext):
+
+        case .photoOrArtwork:
+            // No extractable text — return metadata only
+            let ext = job.sourceURL.pathExtension.lowercased()
+            if NativeMetadataExtractor.handlesMedia(ext) {
+                return await NativeMetadataExtractor.mediaMetadata(url: tempURL, title: title)
+            }
             return NativeMetadataExtractor.imageMetadata(url: tempURL, title: title)
-        case _ where NativeMetadataExtractor.handlesMedia(ext):
-            return await NativeMetadataExtractor.mediaMetadata(url: tempURL, title: title)
-        default:
+
+        case .structuredDocument:
+            // DOCX/PPTX/HTML etc. — Enhanced pathway, PDFKit fallback
             guard supportsAdvancedRuntime else {
                 return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
             }
             return await runPythonConversion(
-                fileURL: tempURL,
-                title: title,
-                useAI: job.useAI,
-                password: job.password,
-                workspaceURL: workspaceURL,
-                progress: progress
+                fileURL: tempURL, title: title, useAI: false,
+                password: job.password, workspaceURL: workspaceURL, progress: progress
             )
+
+        case .digitalDocument:
+            // Digital PDF or image with embedded/clean text
+            // Route through quality-selected conversion with evidence from classifier
+            let evidence = classification.pdfEvidence
+            switch classification.recommendedPathway {
+            case .pdfKit:
+                return await runPDFKitConversion(
+                    fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
+                )
+            case .visionOCR:
+                return await runQualitySelectedPDFConversion(
+                    fileURL: tempURL, title: title, password: job.password,
+                    workspaceURL: workspaceURL, classifierEvidence: evidence,
+                    secondary: .imageText, progress: progress
+                )
+            case .enhanced:
+                guard supportsAdvancedRuntime else {
+                    return await runPDFKitConversion(
+                        fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
+                    )
+                }
+                return await runQualitySelectedPDFConversion(
+                    fileURL: tempURL, title: title, password: job.password,
+                    workspaceURL: workspaceURL, classifierEvidence: evidence,
+                    secondary: .advanced(useAI: false), progress: progress
+                )
+            case .ai, .speech, .metadata:
+                return await runPDFKitConversion(
+                    fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
+                )
+            }
+
+        case .scannedDocument:
+            // Image/TIFF/scanned PDF requiring OCR or AI
+            // Entitlement gate already passed above; route to best available
+            let useAI = job.useAI && DeviceCapability.shared.supportsUpmarketAI
+                && StoreManager.shared.hasProOrAbove
+            if useAI {
+                // Pro+AI: PDFKit baseline + Vision OCR + AI (concurrent in runQualitySelectedPDFConversion)
+                let evidence = classification.pdfEvidence
+                let ext = job.sourceURL.pathExtension.lowercased()
+                if ext == "pdf" {
+                    return await runQualitySelectedPDFConversion(
+                        fileURL: tempURL, title: title, password: job.password,
+                        workspaceURL: workspaceURL, classifierEvidence: evidence,
+                        secondary: .all(useAI: true), progress: progress
+                    )
+                } else {
+                    // Image/TIFF — run AI directly (VLM handles images natively)
+                    return await runPythonConversion(
+                        fileURL: tempURL, title: title, useAI: true,
+                        password: job.password, workspaceURL: workspaceURL, progress: progress
+                    )
+                }
+            } else {
+                // Basic/Enhanced: Vision OCR is the best available for scanned content
+                return await runQualitySelectedPDFConversion(
+                    fileURL: tempURL, title: title, password: job.password,
+                    workspaceURL: workspaceURL, classifierEvidence: classification.pdfEvidence,
+                    secondary: .imageText, progress: progress
+                )
+            }
         }
     }
 

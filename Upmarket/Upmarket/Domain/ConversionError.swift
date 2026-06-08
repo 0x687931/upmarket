@@ -11,6 +11,7 @@ enum ConversionError: Error, Equatable, LocalizedError {
     case unsupportedOnThisMac
     case modelUnavailable
     case downloadFailed
+    case upgradeRequired
     case pythonRuntime(String)
     case failed(String)
 
@@ -36,6 +37,8 @@ enum ConversionError: Error, Equatable, LocalizedError {
             return "model.unavailable"
         case .downloadFailed:
             return "model.download-failed"
+        case .upgradeRequired:
+            return "entitlement.upgrade-required"
         case .pythonRuntime:
             return "runtime.bridge"
         case .failed:
@@ -65,6 +68,8 @@ enum ConversionError: Error, Equatable, LocalizedError {
             return "The AI model isn't installed. Download it in Settings to convert this document."
         case .downloadFailed:
             return "Model download failed. Check your connection and try again from Settings."
+        case .upgradeRequired:
+            return "This document needs AI or Enhanced conversion. Upgrade to Pro to convert it."
         case .pythonRuntime:
             return "The conversion engine couldn't start. Please try again."
         case .failed(let message):

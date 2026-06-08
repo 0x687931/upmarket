@@ -27,6 +27,7 @@ enum ConversionResult: Equatable {
             .unsupportedOnThisMac,
             .modelUnavailable,
             .downloadFailed,
+            .upgradeRequired,
             .pythonRuntime("")
         ]
         return knownErrors.first { $0.errorDescription == message }?.diagnosticCode
