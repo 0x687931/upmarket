@@ -39,7 +39,7 @@ Conversion history can be cleared or turned off in Settings.
 
 The App makes network requests for three purposes only.
 
-1. **AI model download.** When you choose to download AI models, the app fetches model files. No document data is included. Downloads can be skipped; the app works without them.
+1. **AI model download.** When you choose to download AI models, the app fetches model files from Upmarket's first-party Apple-hosted download location. No document data is included. Downloads can be skipped; the app works without them.
 
 2. **App Store purchases.** Purchase verification and restore use Apple's standard App Store APIs. Upmarket has no payment server.
 

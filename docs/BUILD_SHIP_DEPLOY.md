@@ -88,6 +88,30 @@ For signed release verification, require embedded signed entitlements:
 UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS=1 scripts/ci/verify_entitlements.sh /path/to/Upmarket.app
 ```
 
+## Model Asset Hosting
+
+Production and TestFlight model downloads must be first-party. Stage model assets from a manifest-validated local cache, upload the staged directory to the Apple-hosted model location, and build the app with that base URL:
+
+```sh
+scripts/build/stage_first_party_model_assets.py --output build/first-party-model-assets
+
+xcodebuild archive \
+  -project Upmarket/Upmarket.xcodeproj \
+  -scheme Upmarket \
+  -destination "generic/platform=macOS" \
+  -archivePath build/Upmarket.xcarchive \
+  -derivedDataPath build/DerivedData \
+  INFOPLIST_KEY_UpmarketModelManifestBaseURL="https://<apple-hosted-model-base>/" \
+  -allowProvisioningUpdates
+```
+
+Verify release archives with the model URL gate enabled. By default it accepts Apple/iCloud host suffixes; override `UPMARKET_MODEL_MANIFEST_ALLOWED_HOSTS` only for reviewed first-party Apple-backed hosting.
+
+```sh
+APP=build/Upmarket.xcarchive/Products/Applications/Upmarket.app
+UPMARKET_REQUIRE_MODEL_MANIFEST_BASE_URL=1 scripts/ci/verify_release_app.sh "$APP"
+```
+
 ## Archive
 
 Unsigned local archive rehearsal:
@@ -119,7 +143,7 @@ The signed archive may prompt for keychain access. Approve the prompt, then veri
 ```sh
 APP=build/Upmarket.xcarchive/Products/Applications/Upmarket.app
 UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS=1 scripts/ci/verify_entitlements.sh "$APP"
-scripts/ci/verify_release_app.sh "$APP"
+UPMARKET_REQUIRE_MODEL_MANIFEST_BASE_URL=1 scripts/ci/verify_release_app.sh "$APP"
 ```
 
 ## Upload To App Store Connect

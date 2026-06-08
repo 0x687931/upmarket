@@ -22,8 +22,9 @@ torch==2.12.0
 torchvision==0.27.0
 transformers==5.9.0
 huggingface_hub==1.17.0
-mlx==0.30.4
-mlx-metal==0.30.4
+mlx==0.31.2
+mlx-metal==0.31.2
+mlx-vlm==0.3.3
 
 # Native macOS OCR (wraps Apple Vision framework — no extra model downloads)
 ocrmac==1.0.1
@@ -31,4 +32,4 @@ ocrmac==1.0.1
 # Utilities
 pydantic==2.13.4
 Pillow==12.2.0
-numpy==2.4.6
+numpy==2.3.5

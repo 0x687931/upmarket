@@ -156,6 +156,7 @@ def main() -> int:
             "manifest_version": manager.MANIFEST_VERSION,
             "model_key": pro_key,
             "repo_id": pro_info["repo_id"],
+            "source_id": pro_info["source_id"],
             "revision": pro_info["revision"],
             "expected_files": pro_info["expected_files"],
             "expected_dirs": pro_info["expected_dirs"],

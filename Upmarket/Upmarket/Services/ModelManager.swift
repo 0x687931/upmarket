@@ -110,7 +110,7 @@ final class ModelManager: ObservableObject {
             try await PythonWorker().checkModels()
         },
         downloadModelHandler: @escaping DownloadModelHandler = { key, progressFile in
-            await PythonWorker().downloadModel(key: key, progressFile: progressFile)
+            await FirstPartyModelDownloadService().downloadModel(key: key, progressFile: progressFile)
         },
         offlineModeHandler: @escaping OfflineModeHandler = {
             await PythonWorker().setOfflineMode()

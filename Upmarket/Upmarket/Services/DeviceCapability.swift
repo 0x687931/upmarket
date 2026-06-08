@@ -37,6 +37,9 @@ final class DeviceCapability {
     }
 
     private nonisolated static func currentIsAppleSilicon() -> Bool {
+        if let override = testBoolOverride("UPMARKET_TEST_UPMARKET_AI_HARDWARE") {
+            return override
+        }
         var sysinfo = utsname()
         uname(&sysinfo)
         let machine = withUnsafeBytes(of: &sysinfo.machine) {
@@ -51,7 +54,25 @@ final class DeviceCapability {
     }
 
     nonisolated static func currentHasMetalDevice() -> Bool {
-        MTLCreateSystemDefaultDevice() != nil
+        if let override = testBoolOverride("UPMARKET_TEST_UPMARKET_AI_HARDWARE") {
+            return override
+        }
+        return MTLCreateSystemDefaultDevice() != nil
+    }
+
+    private nonisolated static func testBoolOverride(_ name: String) -> Bool? {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["UPMARKET_ENABLE_TEST_DOUBLES"] == "1",
+              let value = environment[name]?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() else {
+            return nil
+        }
+        if ["1", "true", "yes", "available", "supported"].contains(value) {
+            return true
+        }
+        if ["0", "false", "no", "unavailable", "unsupported"].contains(value) {
+            return false
+        }
+        return nil
     }
 
     /// Whether Upmarket AI (Pro tier) can run on this device.

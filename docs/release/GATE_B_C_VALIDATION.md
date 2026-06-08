@@ -1,6 +1,6 @@
 # Gate B/C Validation Evidence
 
-Last updated: 2026-06-06
+Last updated: 2026-06-08
 
 ## Gate B - Corpus Benchmark
 
@@ -39,7 +39,9 @@ python3 scripts/ci/validate_corpus_pathways.py \
 
 Per-document expected status is recorded in `docs/release/corpus_expected_status.json` and validates with `scripts/ci/validate_corpus_expected_status.py`. Current coverage is all 185 manifest documents: 161 success, 23 degraded output, 1 password required, and 0 unsupported.
 
-Gate B is not fully release-passing yet. The remaining release blocker is a targeted GUI/Metal Granite AI validation pass after the Upmarket AI model is installed in Application Support. Physical Intel validation is not a v1.0 blocker; Intel-facing copy must stay limited to build compatibility/native-only positioning until actual Intel hardware evidence exists. Every corpus document now has at least one current pathway-result row.
+Gate B is not fully release-passing yet. The remaining release blockers are a real GUI/Metal Granite AI conversion pass with the Upmarket AI model installed in Application Support, plus resolution of the current Granite MLX processor-template compatibility failure seen in native benchmark context. Physical Intel validation is not a v1.0 blocker; Intel-facing copy must stay limited to build compatibility/native-only positioning until actual Intel hardware evidence exists. Every corpus document now has at least one current pathway-result row.
+
+The 2026-06-08 sandbox coverage added explicit AI test doubles for Metal-capable, non-Metal, and Metal-session-unavailable behavior. These are guarded by `UPMARKET_ENABLE_TEST_DOUBLES=1` and covered by `scripts/ci/test_ai_runtime_doubles.py`, `DeviceCapabilityTests.testUpmarketAITestDoubleCanSimulateMetalAndNonMetalHosts`, and `PythonBridgeTests.testPackagedRuntimeHelperAITestDoublesCoverAvailableAndUnavailableRuntime`. This is CI/sandbox branch coverage only; it must not be used as Granite AI quality, performance, or release-pass evidence.
 
 `NativeMetadataExtractorTests.testCorpusMediaMetadataUsesNativeAVFoundation` exercises AVFoundation metadata extraction against representative corpus audio/video fixtures: FLAC, MP4, and QuickTime/MOV. `IntelligenceServicesTests` passed on 2026-06-06, covering native Vision OCR on corpus PDFs, Vision document extraction fallback behavior, NaturalLanguage post-processing, and SpeechTranscriber language-list/Markdown formatting coverage. This is not a microphone permission test.
 
@@ -98,7 +100,7 @@ After that package fix, the targeted Xcode Granite smoke can exercise the app-pa
 xcodebuild -project Upmarket/Upmarket.xcodeproj -scheme Upmarket -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test -only-testing:UpmarketTests/PythonBridgeTests/testGraniteAIPreviouslyBlockedCorpusFixturesRouteThroughHelperWhenModelInstalled
 ```
 
-The 2026-06-06 rerun recorded this as 1 skipped test with 0 failures because the Upmarket AI model is not installed in Application Support. `python3 scripts/ci/validate_models.py` passed immediately after, confirming the current local model directories are empty or manifest-validated rather than corrupt. That keeps Granite AI release validation open until a model-installed GUI/Metal pass succeeds.
+The 2026-06-08 native rerun recorded this as 1 skipped test with 0 failures after the Upmarket AI model was installed in Application Support because the Xcode session still could not access Metal. A native benchmark process with `UPMARKET_MODELS_DIR="$HOME/Library/Application Support/Upmarket/models"` reached the MLX VLM path, then failed every Granite row with `Cannot use apply_chat_template because this processor does not have a chat template.` The model catalog now requires the upstream Granite `chat_template.jinja`, tokenizer metadata, and model index files, and app downloads now use first-party Apple-hosted manifests. Legacy local AI caches missing those files must be repaired or re-downloaded before the benchmark is repeated. Granite AI release validation remains open until that complete model artifact and a model-installed GUI/Metal pass succeed.
 
 ## Gate C - Stability Diagnostics
 

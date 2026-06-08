@@ -164,6 +164,7 @@ corpus_and_model_gate() {
   run_step "Validate corpus conversion pathways" scripts/ci/validate_corpus_pathways.py
   run_step "Repair and validate local model manifests" scripts/ci/validate_models.py --repair
   run_step "Validate model fault states" scripts/ci/test_model_faults.py
+  run_step "Validate AI runtime test doubles" scripts/ci/test_ai_runtime_doubles.py
 }
 
 quick_gate() {

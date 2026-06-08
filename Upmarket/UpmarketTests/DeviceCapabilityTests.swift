@@ -19,6 +19,22 @@ final class DeviceCapabilityTests: XCTestCase {
         }
     }
 
+    func testUpmarketAITestDoubleCanSimulateMetalAndNonMetalHosts() {
+        setenv("UPMARKET_ENABLE_TEST_DOUBLES", "1", 1)
+        defer {
+            unsetenv("UPMARKET_ENABLE_TEST_DOUBLES")
+            unsetenv("UPMARKET_TEST_UPMARKET_AI_HARDWARE")
+        }
+
+        setenv("UPMARKET_TEST_UPMARKET_AI_HARDWARE", "available", 1)
+        XCTAssertTrue(DeviceCapability.currentSupportsUpmarketAI)
+        XCTAssertTrue(DeviceCapability.currentHasMetalDevice())
+
+        setenv("UPMARKET_TEST_UPMARKET_AI_HARDWARE", "unavailable", 1)
+        XCTAssertFalse(DeviceCapability.currentSupportsUpmarketAI)
+        XCTAssertFalse(DeviceCapability.currentHasMetalDevice())
+    }
+
     private func currentMachineIdentifier() -> String {
         var sysinfo = utsname()
         uname(&sysinfo)
