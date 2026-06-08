@@ -24,6 +24,9 @@ enum ConversionResult: Equatable {
             .memoryPressure,
             .fileTooLarge,
             .sourceUnavailable,
+            .unsupportedOnThisMac,
+            .modelUnavailable,
+            .downloadFailed,
             .pythonRuntime("")
         ]
         return knownErrors.first { $0.errorDescription == message }?.diagnosticCode

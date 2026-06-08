@@ -511,6 +511,7 @@ struct ShelfView: View {
         switch stage {
         case .queued:         return "Queued"
         case .copying:        return "Copying…"
+        case .analysing:      return "Analysing…"
         case .extracting:     return "Reading…"
         case .python:         return "Processing…"
         case .postProcessing: return "Refining…"
@@ -803,7 +804,7 @@ struct ShelfItemView: View {
         switch item.stage {
         case .queued:
             EmptyView()
-        case .copying, .extracting, .python, .postProcessing:
+        case .copying, .analysing, .extracting, .python, .postProcessing:
             if isStalled {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 11)).foregroundStyle(.yellow)
@@ -871,7 +872,7 @@ struct ShelfItemView: View {
         .frame(height: persistentActionsHeight)
     }
 
-    // Cancel-only overlay shown on hover while the job is running.
+    // Cancel (and Retry when stalled) overlay shown on hover while the job is running.
     private var runningHoverActions: some View {
         HStack(spacing: 3) {
             Button(action: onCancel) {
@@ -879,6 +880,17 @@ struct ShelfItemView: View {
             }
             .buttonStyle(ShelfActionButtonStyle())
             .help("Cancel")
+
+            if isStalled {
+                Button {
+                    onCancel()
+                    onRetry()
+                } label: {
+                    Image(systemName: "arrow.clockwise").font(.system(size: 8))
+                }
+                .buttonStyle(ShelfActionButtonStyle())
+                .help("Cancel and retry")
+            }
         }
     }
 
@@ -1031,6 +1043,7 @@ struct ShelfItemView: View {
         switch item.stage {
         case .queued:         return "Queued"
         case .copying:        return "Copying"
+        case .analysing:      return "Analysing"
         case .extracting:     return "Reading"
         case .python:         return "Processing"
         case .postProcessing: return "Refining"

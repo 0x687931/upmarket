@@ -636,6 +636,7 @@ struct ContentView: View {
         switch job.stage {
         case .queued: return "Queued"
         case .copying: return "Preparing document"
+        case .analysing: return "Analysing document"
         case .extracting: return "Reading document"
         case .python: return "Processing document"
         case .postProcessing: return "Cleaning Markdown"

@@ -9,6 +9,8 @@ enum ConversionError: Error, Equatable, LocalizedError {
     case fileTooLarge
     case sourceUnavailable
     case unsupportedOnThisMac
+    case modelUnavailable
+    case downloadFailed
     case pythonRuntime(String)
     case failed(String)
 
@@ -30,6 +32,10 @@ enum ConversionError: Error, Equatable, LocalizedError {
             return "file.unavailable"
         case .unsupportedOnThisMac:
             return "device.unsupported-conversion"
+        case .modelUnavailable:
+            return "model.unavailable"
+        case .downloadFailed:
+            return "model.download-failed"
         case .pythonRuntime:
             return "runtime.bridge"
         case .failed:
@@ -55,6 +61,10 @@ enum ConversionError: Error, Equatable, LocalizedError {
             return "This document is not available on this Mac. Download it and try again."
         case .unsupportedOnThisMac:
             return "This conversion is not supported on this Mac."
+        case .modelUnavailable:
+            return "The AI model isn't installed. Download it in Settings to convert this document."
+        case .downloadFailed:
+            return "Model download failed. Check your connection and try again from Settings."
         case .pythonRuntime:
             return "The conversion engine couldn't start. Please try again."
         case .failed(let message):

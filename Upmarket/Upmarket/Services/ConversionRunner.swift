@@ -44,7 +44,8 @@ struct ConversionRunner {
     }
 
     func run(_ job: ConversionJob, progress: ProgressHandler? = nil) async -> ConversionResult {
-        AppLog.conversion.info("Starting conversion correlationID=\(job.correlationID, privacy: .public) ext=\(job.ext, privacy: .public)")
+        let fileSizeBytes = (try? job.sourceURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        AppLog.conversion.info("Starting conversion correlationID=\(job.correlationID, privacy: .public) ext=\(job.ext, privacy: .public) bytes=\(fileSizeBytes, privacy: .public)")
         guard !Task.isCancelled else { return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.") }
 
         progress?(.copying)
@@ -61,7 +62,7 @@ struct ConversionRunner {
                 throw error
             }
         } catch ConversionError.fileTooLarge {
-            AppLog.conversion.error("Conversion rejected oversized file correlationID=\(job.correlationID, privacy: .public)")
+            AppLog.conversion.error("Conversion rejected oversized file correlationID=\(job.correlationID, privacy: .public) bytes=\(fileSizeBytes, privacy: .public)")
             return .failure(ConversionError.fileTooLarge.errorDescription ?? "This document is too large to convert safely.")
         } catch ConversionError.sourceUnavailable {
             AppLog.conversion.error("Conversion source unavailable correlationID=\(job.correlationID, privacy: .public)")
@@ -72,11 +73,19 @@ struct ConversionRunner {
         }
         defer { AppWorkspace.remove(workspace) }
 
+        progress?(.analysing)
+        let analyseSignpost = AppSignpost.conversion.beginInterval("analyse")
+        let preClassification: NativeDocumentClassifier.Classification? = job.ext.lowercased() == "pdf"
+            ? try? await NativeDocumentClassifier.classify(pdfURL: tempURL, password: job.password)
+            : nil
+        AppSignpost.conversion.endInterval("analyse", analyseSignpost)
+        guard !Task.isCancelled else { return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.") }
+
         progress?(.extracting)
-        let raw = await extract(job: job, tempURL: tempURL, workspaceURL: workspace, progress: progress)
+        let raw = await extract(job: job, tempURL: tempURL, workspaceURL: workspace, preClassification: preClassification, progress: progress)
         guard !Task.isCancelled else { return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.") }
         guard case .success(let output) = raw else {
-            AppLog.conversion.error("Conversion failed correlationID=\(job.correlationID, privacy: .public)")
+            AppLog.conversion.error("Conversion failed correlationID=\(job.correlationID, privacy: .public) ext=\(job.ext, privacy: .public) bytes=\(fileSizeBytes, privacy: .public)")
             return raw
         }
 
@@ -93,6 +102,7 @@ struct ConversionRunner {
         job: ConversionJob,
         tempURL: URL,
         workspaceURL: URL,
+        preClassification: NativeDocumentClassifier.Classification?,
         progress: ProgressHandler?
     ) async -> ConversionResult {
         let ext = job.sourceURL.pathExtension.lowercased()
@@ -103,7 +113,7 @@ struct ConversionRunner {
         switch ext {
         case "pdf":
             if job.useAI {
-                let classification = try? await NativeDocumentClassifier.classify(pdfURL: tempURL, password: job.password)
+                let classification = preClassification
                 if let classification {
                     AppLog.conversion.info(
                         "Document classifier bucket=\(classification.bucket.diagnosticLabel, privacy: .public) recommendation=\(classification.recommendedPathway.diagnosticLabel, privacy: .public) confidence=\(classification.confidence, privacy: .public)"
@@ -119,7 +129,7 @@ struct ConversionRunner {
                     progress: progress
                 )
             }
-            if let classification = try? await NativeDocumentClassifier.classify(pdfURL: tempURL, password: job.password) {
+            if let classification = preClassification {
                 AppLog.conversion.info(
                     "Document classifier bucket=\(classification.bucket.diagnosticLabel, privacy: .public) recommendation=\(classification.recommendedPathway.diagnosticLabel, privacy: .public) confidence=\(classification.confidence, privacy: .public)"
                 )
