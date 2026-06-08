@@ -46,9 +46,13 @@ struct ConversionRunner {
         }
         defer { AppWorkspace.remove(workspace) }
 
-        guard let classification = await (classifyOverride?(tempURL, nil, supportsAdvancedRuntime, supportsAI)
-            ?? ContentClassifier.classify(fileURL: tempURL, supportsAdvancedRuntime: supportsAdvancedRuntime, supportsAI: supportsAI)
-        ) else { return nil }
+        let classification: ContentClassifier.Classification?
+        if let override = classifyOverride {
+            classification = await override(tempURL, nil, supportsAdvancedRuntime, supportsAI)
+        } else {
+            classification = await ContentClassifier.classify(fileURL: tempURL, supportsAdvancedRuntime: supportsAdvancedRuntime, supportsAI: supportsAI)
+        }
+        guard let classification else { return nil }
 
         AppLog.conversion.info(
             "Document analysis kind=\(classification.kind.diagnosticLabel, privacy: .public) tier=\(classification.requiredTier.diagnosticLabel, privacy: .public)"
@@ -88,9 +92,12 @@ struct ConversionRunner {
 
         progress?(.analysing)
         let analyseSignpost = AppSignpost.conversion.beginInterval("analyse")
-        let classification = await (classifyOverride?(tempURL, job.password, supportsAdvancedRuntime, supportsAI)
-            ?? ContentClassifier.classify(fileURL: tempURL, password: job.password, supportsAdvancedRuntime: supportsAdvancedRuntime, supportsAI: supportsAI)
-        )
+        let classification: ContentClassifier.Classification?
+        if let override = classifyOverride {
+            classification = await override(tempURL, job.password, supportsAdvancedRuntime, supportsAI)
+        } else {
+            classification = await ContentClassifier.classify(fileURL: tempURL, password: job.password, supportsAdvancedRuntime: supportsAdvancedRuntime, supportsAI: supportsAI)
+        }
         AppSignpost.conversion.endInterval("analyse", analyseSignpost)
         guard !Task.isCancelled else { return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.") }
 
