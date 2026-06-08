@@ -415,17 +415,7 @@ def _convert_ai(path: Path, opts: dict) -> dict:
             runtime_error = _upmarket_ai_runtime_unavailable_reason()
             if runtime_error:
                 return _error(runtime_error)
-            return {
-                "success": True,
-                "needsPassword": False,
-                "output": {
-                    "markdown": "test-double conversion succeeded",
-                    "pages": 1,
-                    "format": "PNG",
-                    "title": path.stem,
-                    "pipeline": "ai",
-                },
-            }
+            return _success("test-double conversion succeeded", 1, path, pipeline="ai")
 
     manager = _model_manager()
     if not manager.supports_upmarket_ai_hardware():

@@ -520,6 +520,18 @@ final class PythonBridgeTests: XCTestCase {
     func testPackagedRuntimeHelperAITestDoublesCoverAvailableAndUnavailableRuntime() async throws {
         let helper = try packagedRuntimeHelperURL()
         let client = RuntimeHelperClient(executableURL: helper, livenessInterval: 30)
+
+        // Skip if the bundled Python site-packages aren't present — this happens when
+        // build_python_env.sh hasn't run (e.g. CI cache miss). Importing any module
+        // via PythonKit crashes (SIGTRAP) rather than throwing, so check the filesystem first.
+        let sitePackages = helper
+            .deletingLastPathComponent()          // MacOS/
+            .deletingLastPathComponent()          // Contents/
+            .appendingPathComponent("Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge")
+        guard FileManager.default.fileExists(atPath: sitePackages.path) else {
+            throw XCTSkip("Bundled Python site-packages not built (run build_python_env.sh)")
+        }
+
         let inputDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("UpmarketAITestDoubleInputs-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: inputDirectory, withIntermediateDirectories: true)
