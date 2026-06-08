@@ -119,6 +119,7 @@ def check_pipelines() -> dict:
         "fast": True,
         "enhanced": _enhanced_available(),
         "ai": _ai_available(),
+        "figure_classifier": _figure_classifier_available(),
     }
 
 
@@ -284,16 +285,21 @@ def _convert_enhanced(path: Path, opts: dict) -> dict:
     pipeline_options.do_ocr = do_ocr
     pipeline_options.do_table_structure = True
 
-    # Use macOS Vision OCR when OCR is enabled — it runs natively on Apple Silicon
-    # ANE/GPU with no third-party models, no network access, and no extra downloads.
-    # Only activate when OCR is actually needed (scanned documents); digital PDFs
-    # have do_ocr=False and this block is skipped.
+    # Use macOS Vision OCR when OCR is enabled — runs natively on Apple Silicon
+    # ANE/GPU with no third-party models. Only for scanned documents (do_ocr=True).
     if do_ocr:
         try:
             from docling.datamodel.pipeline_options import OcrMacOptions
             pipeline_options.ocr_options = OcrMacOptions(recognition="accurate")
         except (ImportError, Exception):
             pass  # ocrmac not installed — fall through to Docling's auto OCR
+
+    # Enable DocumentFigureClassifier (MIT, 16MB ViT, CPU/MPS) when the model
+    # is available in our model store. Classifies each extracted figure as
+    # bar_chart, photograph, flow_chart, table, etc. so Docling can handle
+    # each figure type appropriately in the Markdown export.
+    if _figure_classifier_available():
+        pipeline_options.do_picture_classification = True
 
     pdf_opts = PdfFormatOption(pipeline_options=pipeline_options)
 
@@ -306,7 +312,11 @@ def _convert_enhanced(path: Path, opts: dict) -> dict:
         except Exception:
             pass
 
-    cache_key = None if opts.get("password") else (pipeline_options.do_ocr, pipeline_options.do_table_structure)
+    cache_key = None if opts.get("password") else (
+        pipeline_options.do_ocr,
+        pipeline_options.do_table_structure,
+        pipeline_options.do_picture_classification,
+    )
     converter = _ENHANCED_CONVERTERS.get(cache_key) if cache_key is not None else None
     if converter is None:
         format_options = {InputFormat.PDF: pdf_opts}
@@ -666,6 +676,22 @@ def _enhanced_available() -> bool:
         return _model_manager().model_available("layout")
     except Exception:
         return False
+
+
+_FIGURE_CLASSIFIER_CACHE_DIR = "models--docling-project--DocumentFigureClassifier-v2.5"
+
+def _figure_classifier_available() -> bool:
+    """True when DocumentFigureClassifier-v2.5 weights are cached locally.
+
+    The classifier is 16MB, MIT-licensed, and ships alongside the Enhanced
+    layout models. We check the HuggingFace hub cache rather than requiring
+    an explicit Upmarket model-store entry — Docling downloads it automatically
+    on first Enhanced conversion when HF_HUB_OFFLINE is not set.
+    """
+    from pathlib import Path
+    import os
+    hf_cache = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface")) / "hub"
+    return (hf_cache / _FIGURE_CLASSIFIER_CACHE_DIR).exists()
 
 
 def _ai_available() -> bool:
