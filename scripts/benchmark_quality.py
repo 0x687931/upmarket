@@ -24,7 +24,6 @@ import os
 import re
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 
@@ -129,8 +128,18 @@ def _text_agreement(candidate: str, reference: str) -> float:
     return overlap / len(ref_tokens)
 
 
-def quality_score(markdown: str, pages: int = 1, image_text: str | None = None) -> QualityScore:
-    """Exact port of MarkdownQualityScorer.score() from Swift."""
+def quality_score(
+    markdown: str,
+    pages: int = 1,
+    ground_truth: str | None = None,
+    image_text: str | None = None,
+) -> QualityScore:
+    """Exact port of MarkdownQualityScorer.score() from Swift.
+
+    When ground_truth is provided, coverage is measured as word-count ratio
+    against the reference (same logic as score_against_ground_truth in
+    benchmark_scorer.py) rather than the words-per-page heuristic.
+    """
     normalized = markdown.strip()
     if not normalized:
         return QualityScore(
@@ -141,7 +150,13 @@ def quality_score(markdown: str, pages: int = 1, image_text: str | None = None) 
         )
 
     language   = _language_confidence(normalized)
-    coverage   = _coverage_score(normalized, pages)
+    if ground_truth:
+        gt_words  = len(ground_truth.split())
+        out_words = len(normalized.split())
+        ratio = out_words / max(gt_words, 1)
+        coverage = 1.0 if 0.75 <= ratio <= 1.3 else (0.7 if 0.5 <= ratio <= 1.5 else max(0.0, 1.0 - abs(ratio - 1.0)))
+    else:
+        coverage = _coverage_score(normalized, pages)
     structure  = _structure_score(normalized)
     artifact   = _artifact_penalty(normalized)
     duplication = _duplication_penalty(normalized)
@@ -203,15 +218,16 @@ def _venv_convert(doc_path: Path, opts: dict) -> tuple[str, float]:
 
 
 def _swift_pdfkit(doc_path: Path) -> tuple[str, float]:
-    """PDFKit via the bundled xcframework Python bridge (fast path)."""
-    site = ROOT / "Upmarket/Python/Python.xcframework/macos-arm64_x86_64/Python.framework/Versions/3.12/lib/python3.12/site-packages"
-    if str(site) not in sys.path:
-        sys.path.insert(0, str(site))
+    """Fast path — pdfium/markitdown (proxy for PDFKit in the Python benchmark).
+    The real PDFKit runs in-process in the Swift app; the venv fast path is
+    the closest equivalent available here without loading the xcframework
+    (which is not thread-safe to load concurrently from a thread pool)."""
     return _venv_convert(doc_path, {"use_enhanced": False, "use_ai": False})
 
 
 def _vision_ocr(doc_path: Path) -> tuple[str, float]:
-    """Vision OCR via the fast pdfium path (closest proxy in Python benchmark)."""
+    """Fast path with Vision-style scoring weight (same converter as PDFKit proxy,
+    scored separately so the image-text agreement dimension can cross-compare)."""
     return _venv_convert(doc_path, {"use_enhanced": False, "use_ai": False})
 
 
@@ -263,44 +279,25 @@ def run_document(doc_meta: dict, corpus_dir: Path, tier: str) -> dict:
     if not file_path.exists():
         return {"id": doc_id, "skipped": True, "reason": "file not found"}
 
+    # Load ground truth
+    ground_truth_md = None
+    gt_key = doc_meta.get("ground_truth")
+    if gt_key:
+        for gt_path in [corpus_dir / gt_key, corpus_dir / "docling" / "docling" / gt_key]:
+            if gt_path.exists():
+                ground_truth_md = gt_path.read_text(encoding="utf-8", errors="replace")
+                break
+
     pathways = PATHWAYS[tier]
 
-    # GPU scheduling — avoid concurrent Metal/MPS use:
-    #
-    #   pdfkit    — CPU + CoreGraphics          safe to parallelise freely
-    #   vision    — Apple Neural Engine (ANE)   safe alongside CPU and MLX
-    #   enhanced  — PyTorch MPS (GPU)           must finish before AI starts
-    #   ai        — MLX Metal (GPU)             main-thread only; after enhanced
-    #
-    # Phase 1: pdfkit + vision + enhanced run concurrently.
-    #          PDFKit and Vision use CPU/ANE; Enhanced uses MPS but MLX has
-    #          not yet initialised its Metal stream, so there is no conflict.
-    # Phase 2: pool joins (enhanced done); AI runs on main thread with sole
-    #          Metal access. Vision's ANE work continues safely in parallel.
-    #
-    # This mirrors the app: Swift runs PDFKit/Vision via async let on the
-    # cooperative pool while Python/AI runs in a separate helper process.
-
-    phase1 = [p for p in pathways if p != "ai"]
-    run_ai = "ai" in pathways
+    # Run pathways serially. In the app, PDFKit/Vision run as Swift async tasks
+    # and Python/AI runs in a separate helper process — true parallelism is safe
+    # there. In the benchmark everything shares one Python process, and concurrent
+    # import of Metal/PyTorch frameworks from threads causes segfaults. Serial
+    # execution is slower but stable, and still measures quality correctly.
     results = {}
-
-    # Phase 1 — CPU/ANE/MPS pathways concurrently
-    with ThreadPoolExecutor(max_workers=max(len(phase1), 1)) as pool:
-        futures = {pool.submit(run_pathway, p, file_path): p for p in phase1}
-        for future in as_completed(futures):
-            p = futures[future]
-            _, timeout = PATHWAY_FN[p]
-            try:
-                r = future.result(timeout=timeout)
-            except TimeoutError:
-                r = {"pathway": p, "ok": False, "markdown": "", "elapsed": timeout,
-                     "error": f"timed out after {timeout}s"}
-            results[p] = r
-
-    # Phase 2 — AI on main thread; Enhanced MPS work is now complete
-    if run_ai:
-        results["ai"] = run_pathway("ai", file_path)
+    for p in pathways:
+        results[p] = run_pathway(p, file_path)
 
     # Score each successful result
     vision_md = results.get("vision", {}).get("markdown") if results.get("vision", {}).get("ok") else None
@@ -309,7 +306,12 @@ def run_document(doc_meta: dict, corpus_dir: Path, tier: str) -> dict:
         r = results[pathway]
         if not r["ok"]:
             continue
-        score = quality_score(r["markdown"], pages=1, image_text=vision_md if pathway != "vision" else None)
+        score = quality_score(
+            r["markdown"],
+            pages=1,
+            ground_truth=ground_truth_md,
+            image_text=vision_md if pathway != "vision" else None,
+        )
         candidates.append({
             "pathway": pathway,
             "label": PATHWAY_LABEL[pathway],
@@ -439,12 +441,21 @@ def main() -> None:
     if args.bucket:
         docs = [d for d in docs if d.get("bucket") == args.bucket]
 
+    # Only score documents that have ground truth — without it the scorer
+    # falls back to heuristics and cross-pathway comparison is meaningless.
+    docs = [d for d in docs if d.get("ground_truth")]
+    if not docs:
+        print("No documents with ground truth found for the current filters.")
+        print("Ground truth files must be listed in the corpus manifest.")
+        return
+
     # Set up environment to match production
     corpus_abs = str(corpus_dir.resolve())
     os.environ["UPMARKET_ALLOWED_INPUT_ROOTS"] = corpus_abs
     os.environ.setdefault("UPMARKET_MODELS_DIR", str(Path.home() / "Library/Application Support/Upmarket/models"))
     os.environ["HF_HUB_OFFLINE"] = "1"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
+
 
     print(f"{'═'*65}")
     print(f"  Upmarket Quality Benchmark")
