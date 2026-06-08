@@ -237,7 +237,7 @@ struct ConversionRunner {
             // Image/TIFF/scanned PDF requiring OCR or AI
             // Entitlement gate already passed above; route to best available
             let useAI = job.useAI && supportsAI
-                && StoreManager.shared.hasProOrAbove
+                && hasProEntitlement()
             if useAI {
                 // Pro+AI: PDFKit baseline + Vision OCR + AI (concurrent in runQualitySelectedPDFConversion)
                 let evidence = classification.pdfEvidence
