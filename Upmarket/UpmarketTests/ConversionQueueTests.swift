@@ -529,6 +529,67 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.stage, .complete)
     }
 
+    // MARK: - Liveness monitor
+
+    func testLivenessMonitorClassifiesJobStalledAfterThreshold() async {
+        var blocker: CheckedContinuation<Void, Never>?
+        let queue = ConversionQueue { _, progress in
+            progress?(.python)
+            await withCheckedContinuation { continuation in
+                blocker = continuation
+            }
+            return .success(ConversionOutput(markdown: "ok", pages: 1, format: "PDF", title: "stalled", pipeline: .fast))
+        }
+
+        let id = queue.add(URL(fileURLWithPath: "/tmp/stalled.pdf"))
+        await waitUntil { queue.job(id: id)?.stage == .python }
+
+        // Simulate 65s elapsed since last progress — crosses the 60s threshold.
+        queue.classifyStalledJobsForTesting(referenceDate: Date(timeIntervalSinceNow: 65))
+
+        XCTAssertTrue(queue.job(id: id)?.isStalled ?? false)
+        blocker?.resume()
+        await waitForResult(id, in: queue)
+    }
+
+    func testLivenessMonitorClearsIsStalled_WhenProgressArrives() async {
+        let blocker = TaskBlocker()
+        let queue = ConversionQueue { _, progress in
+            progress?(.python)
+            await blocker.wait()
+            progress?(.postProcessing)
+            return .success(ConversionOutput(markdown: "ok", pages: 1, format: "PDF", title: "recover", pipeline: .fast))
+        }
+
+        let id = queue.add(URL(fileURLWithPath: "/tmp/recover.pdf"))
+        await waitUntil { queue.job(id: id)?.stage == .python }
+
+        // Force stalled via the test hook
+        queue.classifyStalledJobsForTesting(referenceDate: Date(timeIntervalSinceNow: 65))
+        XCTAssertTrue(queue.job(id: id)?.isStalled ?? false)
+
+        // Unblock the runner — postProcessing progress fires, which calls update(), which clears isStalled
+        await blocker.unblock()
+        await waitForResult(id, in: queue)
+        XCTAssertFalse(queue.job(id: id)?.isStalled ?? true)
+    }
+
+    func testLivenessMonitorStopsWhenNoRunningJobs() async {
+        let queue = ConversionQueue { _, _ in
+            try? await Task.sleep(nanoseconds: 10_000_000)
+            return .success(ConversionOutput(markdown: "ok", pages: 1, format: "PDF", title: "done", pipeline: .fast))
+        }
+
+        let id = queue.add(URL(fileURLWithPath: "/tmp/done.pdf"))
+        XCTAssertTrue(queue.hasActiveLivenessTaskForTesting)
+        await waitForResult(id, in: queue)
+
+        // Drive classifyStalledJobs directly — the real timer fires every 5s which is too slow for tests.
+        // When no jobs are running, classifyStalledJobs cancels and nils the liveness task.
+        queue.classifyStalledJobsForTesting()
+        XCTAssertFalse(queue.hasActiveLivenessTaskForTesting)
+    }
+
     func testRunnerCleansWorkspaceWhenInputCopyFails() async {
         AppWorkspace.removeStaleWorkspaces()
         let before = workspaceNames()
@@ -689,6 +750,8 @@ final class ConversionQueueTests: XCTestCase {
         return helper
     }
 
+    // MARK: - Helpers
+
     private func waitForResult(_ id: UUID, in queue: ConversionQueue) async {
         for _ in 0..<100 {
             if let job = queue.jobs.first(where: { $0.id == id }),
@@ -747,5 +810,18 @@ final class ConversionQueueTests: XCTestCase {
             userDefaults: defaults,
             loadImmediately: false
         )
+    }
+}
+
+private actor TaskBlocker {
+    private var continuation: CheckedContinuation<Void, Never>?
+
+    func wait() async {
+        await withCheckedContinuation { self.continuation = $0 }
+    }
+
+    func unblock() {
+        continuation?.resume()
+        continuation = nil
     }
 }

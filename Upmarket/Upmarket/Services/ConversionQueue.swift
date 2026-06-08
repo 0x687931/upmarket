@@ -319,6 +319,12 @@ final class ConversionQueue: ObservableObject {
         }
     }
 
+    func classifyStalledJobsForTesting(referenceDate: Date = Date()) {
+        classifyStalledJobs(referenceDate: referenceDate)
+    }
+
+    var hasActiveLivenessTaskForTesting: Bool { livenessTask != nil }
+
     private func classifyStalledJobs(referenceDate: Date = Date()) {
         var hasRunningJob = false
         for index in jobs.indices {
