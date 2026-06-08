@@ -282,9 +282,12 @@ enum ContentClassifier {
                         continuation.resume(returning: .unknown)
                         return
                     }
-                    // Document-like scene labels from VNClassifyImageRequest
+                    // Document-like identifiers verified from VNClassifyImageRequest
+                    // taxonomy (1,303 labels, Revision1/Revision2).
+                    // "text" and "printed_text" do NOT exist in the taxonomy.
                     let documentLabels: Set<String> = [
-                        "document", "text", "receipt", "book", "map", "printed_text"
+                        "document", "printed_page", "receipt", "book", "newspaper",
+                        "chart", "diagram", "flipchart", "checkbook"
                     ]
                     let topObservations = observations.filter { $0.confidence > 0.1 }
                     let isDocument = topObservations.contains { documentLabels.contains($0.identifier) }
