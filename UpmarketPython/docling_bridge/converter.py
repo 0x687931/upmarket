@@ -377,7 +377,14 @@ def _prepare_image_for_vlm(path: Path) -> Path:
 
 
 def _convert_ai(path: Path, opts: dict) -> dict:
-    """Upmarket AI — Pro tier, Granite Docling MLX path for image/scanned documents."""
+    """Upmarket AI — Pro tier, Granite Docling MLX path for image/scanned documents.
+
+    Uses bare mlx-vlm stream_generate for token-by-token progress reporting.
+    Each page's DocTags output is parsed via DocTagsDocument → DoclingDocument
+    and merged into a single Markdown result. Progress events are emitted to
+    stdout so the Swift helper's liveness monitor stays satisfied during long
+    conversions instead of reporting stall.
+    """
     manager = _model_manager()
     if not manager.supports_upmarket_ai_hardware():
         return _error("Upmarket AI requires Apple Silicon with Metal support.")
@@ -390,18 +397,138 @@ def _convert_ai(path: Path, opts: dict) -> dict:
         return _convert_enhanced(path, opts)
 
     model_path = _ai_model_path()
-    artifacts_path = model_path.parent
     _quiet_known_granite_warnings()
 
-    # Import the VLM pipeline only after model validation. In headless/test
-    # environments MLX may not see a Metal device, and that must not break
-    # non-AI conversion.
+    try:
+        return _convert_ai_streaming(path, suffix, model_path, opts)
+    except ImportError:
+        # mlx-vlm not available — fall back to Docling VlmPipeline
+        print("[Upmarket] mlx-vlm not available; falling back to Docling VlmPipeline", file=sys.stderr)
+        return _convert_ai_docling_pipeline(path, suffix, model_path, opts)
+
+
+# Progress reporting token interval — emit a progress event every N tokens.
+# At ~10 tokens/sec this gives an update roughly every 6 seconds, well within
+# the 60-second liveness threshold.
+_AI_PROGRESS_TOKEN_INTERVAL = 64
+_AI_MAX_TOKENS = 4096
+_AI_PROMPT = "Convert this page to docling."
+_AI_STOP_TOKEN = "</doctag>"
+
+
+def _emit_progress(fraction: float, message: str = "Processing") -> None:
+    """Emit a JSON progress event to stdout — same format as RuntimeHelperProgressEvent."""
+    import json
+    event = {"event": "progress", "stage": "python", "fraction": fraction, "message": message}
+    print(json.dumps(event), flush=True)
+
+
+def _convert_ai_streaming(path: Path, suffix: str, model_path: Path, opts: dict) -> dict:
+    """Bare mlx-vlm streaming path — emits token-by-token progress."""
+    from PIL import Image
+    from mlx_vlm import load, stream_generate
+    from mlx_vlm.prompt_utils import apply_chat_template
+    from mlx_vlm.utils import load_config
+    from docling_core.types.doc.document import DocTagsDocument, DoclingDocument
+
+    _emit_progress(0.10, "Loading AI model")
+    model, processor = load(str(model_path))
+    config = load_config(str(model_path))
+
+    # Build list of (PIL image, page_index) pairs to process
+    pages: list[Image.Image] = []
+    if suffix == ".pdf":
+        pages = _pdf_to_images(path)
+    else:
+        img_path = _prepare_image_for_vlm(path)
+        img = Image.open(img_path)
+        # Multi-page TIFF — process each frame
+        try:
+            while True:
+                pages.append(img.copy())
+                img.seek(img.tell() + 1)
+        except EOFError:
+            pass
+        if not pages:
+            pages = [img]
+
+    page_count = len(pages)
+    all_doctags: list[str] = []
+    all_images: list[Image.Image] = []
+
+    for page_idx, pil_image in enumerate(pages):
+        page_base = page_idx / page_count
+        page_span = 1.0 / page_count
+        _emit_progress(0.15 + page_base * 0.70, f"Page {page_idx + 1} of {page_count}")
+
+        formatted_prompt = apply_chat_template(processor, config, _AI_PROMPT, num_images=1)
+
+        output = ""
+        token_count = 0
+        for token in stream_generate(
+            model, processor, formatted_prompt, [pil_image],
+            max_tokens=_AI_MAX_TOKENS, verbose=False
+        ):
+            output += token.text
+            token_count += 1
+
+            # Emit progress every N tokens so liveness monitor stays satisfied
+            if token_count % _AI_PROGRESS_TOKEN_INTERVAL == 0:
+                # Fraction within this page based on token budget
+                page_fraction = min(token_count / _AI_MAX_TOKENS, 0.95)
+                overall = 0.15 + (page_base + page_fraction * page_span) * 0.70
+                _emit_progress(overall, f"Page {page_idx + 1} of {page_count}")
+
+            if _AI_STOP_TOKEN in token.text:
+                break
+
+        all_doctags.append(output)
+        all_images.append(pil_image)
+
+    _emit_progress(0.88, "Building document")
+
+    # Parse all pages together into a single DoclingDocument
+    doctags_doc = DocTagsDocument.from_doctags_and_image_pairs(all_doctags, all_images)
+    doc = DoclingDocument.load_from_doctags(doctags_doc, document_name=path.stem)
+    markdown = doc.export_to_markdown()
+
+    if not markdown.strip():
+        print(f"[Upmarket] VLM returned empty output for {path.name}; using image placeholder", file=sys.stderr)
+        markdown = "<!-- image -->"
+
+    _emit_progress(0.95, "Done")
+    return _success(markdown, page_count, path, pipeline="ai")
+
+
+def _pdf_to_images(path: Path) -> list:
+    """Render each PDF page to a PIL Image using pypdfium2."""
+    from PIL import Image
+    import pypdfium2 as pdfium
+
+    pdf = pdfium.PdfDocument(str(path))
+    images = []
+    for page_idx in range(len(pdf)):
+        page = pdf[page_idx]
+        # 150 DPI is sufficient for VLM input — higher resolution adds memory
+        # without improving model accuracy (SigLIP2 downsamples to 512×512 anyway)
+        bitmap = page.render(scale=150/72)
+        pil_img = bitmap.to_pil()
+        if pil_img.mode != "RGB":
+            pil_img = pil_img.convert("RGB")
+        images.append(pil_img)
+    pdf.close()
+    return images
+
+
+def _convert_ai_docling_pipeline(path: Path, suffix: str, model_path: Path, opts: dict) -> dict:
+    """Fallback: Docling VlmPipeline (no streaming progress)."""
     from docling.datamodel import vlm_model_specs
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import VlmPipelineOptions
     from docling.document_converter import DocumentConverter, ImageFormatOption, PdfFormatOption
     from docling.pipeline.vlm_pipeline import VlmPipeline
 
+    artifacts_path = model_path.parent
     pipeline_options = VlmPipelineOptions(
         artifacts_path=artifacts_path,
         vlm_options=vlm_model_specs.GRANITEDOCLING_MLX,
@@ -427,9 +554,6 @@ def _convert_ai(path: Path, opts: dict) -> dict:
     markdown = result.document.export_to_markdown()
     page_count = result.document.num_pages() if callable(result.document.num_pages) else 0
     if not markdown.strip():
-        # Diagram-only images (no extractable text) legitimately produce empty
-        # output from the VLM. Return a minimal placeholder rather than failing
-        # — the same convention used by the enhanced pipeline for non-text images.
         print(f"[Upmarket] VLM returned empty output for {path.name}; using image placeholder", file=sys.stderr)
         markdown = "<!-- image -->"
     return _success(markdown, page_count, path, pipeline="ai")
