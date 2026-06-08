@@ -311,37 +311,68 @@ def _convert_enhanced(path: Path, opts: dict) -> dict:
 
 _VLM_MAX_SIDE = 4096  # Granite MLX context limit; larger images return empty output
 
+
+def _normalise_frame(img, max_side: int):
+    """Convert a single PIL image frame to RGB and downsample if oversized."""
+    from PIL import Image
+    if img.mode in ("RGBA", "LA", "P"):
+        img = img.convert("RGB")
+    if max(img.size) > max_side:
+        scale = max_side / max(img.size)
+        img = img.resize((int(img.width * scale), int(img.height * scale)), Image.LANCZOS)
+    return img
+
+
 def _prepare_image_for_vlm(path: Path) -> Path:
     """Normalise an image for the VLM: flatten RGBA→RGB and downsample oversized images.
 
-    Returns the original path unchanged when no normalisation is needed, or a
-    temp path to a converted copy that the caller should treat as ephemeral.
+    Handles multi-page TIFFs by normalising every frame. Returns the original
+    path unchanged when no normalisation is needed, or a temp path to a
+    converted copy that the caller should treat as ephemeral.
+
     RGBA images cause the model to silently return empty Markdown; images wider
     or taller than _VLM_MAX_SIDE exhaust the VLM context window similarly.
+    Multi-page TIFFs with RGBA frames timeout during MLX inference.
     """
     from PIL import Image
     import tempfile
 
     img = Image.open(path)
-    needs_mode = img.mode in ("RGBA", "LA", "P")
-    w, h = img.size
-    needs_resize = max(w, h) > _VLM_MAX_SIDE
+    suffix = path.suffix.lower()
+    is_tiff = suffix in (".tif", ".tiff")
 
-    if not needs_mode and not needs_resize:
+    # Collect all frames for multi-page TIFFs, single frame otherwise.
+    frames = []
+    try:
+        while True:
+            frames.append(img.copy())
+            img.seek(img.tell() + 1)
+    except EOFError:
+        pass
+
+    needs_normalise = any(
+        f.mode in ("RGBA", "LA", "P") or max(f.size) > _VLM_MAX_SIDE
+        for f in frames
+    )
+
+    if not needs_normalise:
         return path
 
-    if needs_mode:
-        img = img.convert("RGB")
+    normalised = [_normalise_frame(f, _VLM_MAX_SIDE) for f in frames]
+    w0, h0 = frames[0].size
 
-    if needs_resize:
-        scale = _VLM_MAX_SIDE / max(img.size)
-        img = img.resize((int(img.width * scale), int(img.height * scale)), Image.LANCZOS)
+    fmt = "TIFF" if is_tiff else ("JPEG" if suffix in (".jpg", ".jpeg") else "PNG")
+    tmp = tempfile.NamedTemporaryFile(suffix=f".{suffix or '.png'}", delete=False)
+    if len(normalised) > 1:
+        normalised[0].save(tmp.name, format=fmt, save_all=True, append_images=normalised[1:])
+    else:
+        normalised[0].save(tmp.name, format=fmt)
 
-    suffix = path.suffix.lower()
-    fmt = "JPEG" if suffix in (".jpg", ".jpeg") else "PNG"
-    tmp = tempfile.NamedTemporaryFile(suffix=f".{fmt.lower()}", delete=False)
-    img.save(tmp.name, format=fmt)
-    print(f"[Upmarket] VLM image prepared: {path.name} {w}x{h} {img.mode} → {img.width}x{img.height} RGB saved to temp", file=sys.stderr)
+    print(
+        f"[Upmarket] VLM image prepared: {path.name} {len(frames)}p {w0}x{h0}"
+        f" → {normalised[0].width}x{normalised[0].height} RGB",
+        file=sys.stderr,
+    )
     return Path(tmp.name)
 
 
