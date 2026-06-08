@@ -71,6 +71,30 @@ if [ ! -x "$PYTHON" ]; then
     PYTHON="python3"
 fi
 
+# Validate AI model is present before running an AI pipeline benchmark.
+# The converter's input-workspace guard also requires UPMARKET_ALLOWED_INPUT_ROOTS;
+# set it to the resolved corpus directory so corpus files pass the security check.
+if [ -n "$PIPELINE" ] && [ "$PIPELINE" = "ai" ]; then
+    if ! "$PYTHON" -c "
+import sys; sys.path.insert(0, 'UpmarketPython')
+from models.model_manager import validate_model_dir
+ok, err = validate_model_dir('upmarket_ai')
+if not ok:
+    print(f'ERROR: Upmarket AI model is missing or invalid: {err}')
+    print('Download the model from Settings > Models before running the AI benchmark.')
+    sys.exit(1)
+" 2>&1; then
+        exit 1
+    fi
+    echo "  AI model: ready"
+    echo ""
+fi
+
+CORPUS_ABS="$(cd "$CORPUS_DIR" && pwd)"
+export UPMARKET_ALLOWED_INPUT_ROOTS="$CORPUS_ABS"
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+
 "$PYTHON" scripts/benchmark_scorer.py \
     --corpus "$CORPUS_DIR" \
     ${PIPELINE:+--pipeline "$PIPELINE"} \
