@@ -280,7 +280,7 @@ def _convert_enhanced(path: Path, opts: dict) -> dict:
     from docling.datamodel.pipeline_options import PdfPipelineOptions
 
     pipeline_options = PdfPipelineOptions()
-    pipeline_options.do_ocr = opts.get("ocr", True)
+    pipeline_options.do_ocr = opts.get("ocr", False)
     pipeline_options.do_table_structure = True
 
     pdf_opts = PdfFormatOption(pipeline_options=pipeline_options)
