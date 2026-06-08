@@ -292,14 +292,20 @@ struct RuntimeHelperClient: Sendable {
     }
 
     private nonisolated static func copyTestDoubleEnvironment(from source: [String: String], into destination: inout [String: String]) {
-        guard source["UPMARKET_ENABLE_TEST_DOUBLES"] == "1" else { return }
-        for key in [
+        // Use getenv() rather than the cached ProcessInfo.processInfo.environment snapshot so that
+        // setenv() calls made in tests after process start are visible when spawning the helper.
+        let keys = [
             "UPMARKET_ENABLE_TEST_DOUBLES",
             "UPMARKET_TEST_UPMARKET_AI_HARDWARE",
             "UPMARKET_TEST_UPMARKET_AI_RUNTIME",
             "UPMARKET_TEST_UPMARKET_AI_CONVERTER"
-        ] {
-            if let value = source[key] {
+        ]
+        let liveEnabled = getenv("UPMARKET_ENABLE_TEST_DOUBLES").map { String(cString: $0) } ?? ""
+        guard liveEnabled == "1" else { return }
+        for key in keys {
+            if let raw = getenv(key) {
+                destination[key] = String(cString: raw)
+            } else if let value = source[key] {
                 destination[key] = value
             }
         }
