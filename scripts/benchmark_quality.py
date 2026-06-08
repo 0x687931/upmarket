@@ -417,6 +417,23 @@ def main() -> None:
     manifest = json.loads((corpus_dir / "manifest.json").read_text())
     docs = manifest["documents"]
 
+    # Overlay bucket labels from the classifier report — same source as benchmark_scorer.py.
+    # The manifest stores bucket=null; the classification report has the per-doc assignments.
+    bucket_label_path = ROOT / "docs/release/corpus_bucket_classification.json"
+    if bucket_label_path.exists():
+        try:
+            bucket_data = json.loads(bucket_label_path.read_text())
+            bucket_labels = {
+                d["id"]: d["bucket"]
+                for d in bucket_data.get("documents", [])
+                if d.get("id") and d.get("bucket")
+            }
+            for d in docs:
+                if d["id"] in bucket_labels:
+                    d["bucket"] = bucket_labels[d["id"]]
+        except Exception:
+            pass
+
     if args.doc:
         docs = [d for d in docs if d["id"] == args.doc]
     if args.bucket:
