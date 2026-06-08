@@ -317,12 +317,62 @@ def download_model(model_key: str, progress_file: str | None = None) -> dict:
             shutil.rmtree(dest)
         staging.rename(dest)
 
+        write_progress(98.0, f"{info['name']} ready")
+
+        # Download the figure classifier alongside the layout model — it's
+        # 16MB MIT-licensed and enables DocumentFigureClassifier in the
+        # Enhanced pipeline for better chart/photo/diagram handling.
+        if model_key == "layout" and not figure_classifier_available():
+            try:
+                download_figure_classifier()
+            except Exception:
+                pass  # Non-fatal — Enhanced pipeline works without it
+
         write_progress(100.0, f"{info['name']} ready")
         return {"success": True, "error": None}
 
     except Exception as e:
         if staging.exists():
             shutil.rmtree(staging, ignore_errors=True)
+        return {"success": False, "error": str(e)}
+
+
+_FIGURE_CLASSIFIER_REPO = "docling-project/DocumentFigureClassifier-v2.5"
+_FIGURE_CLASSIFIER_REVISION = "main"
+_FIGURE_CLASSIFIER_FILES = ["config.json", "model.safetensors", "preprocessor_config.json"]
+
+
+def figure_classifier_available() -> bool:
+    """True when DocumentFigureClassifier weights are in the HuggingFace hub cache."""
+    cache_dir = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface")) / "hub"
+    repo_dir = cache_dir / _FIGURE_CLASSIFIER_REPO.replace("/", "--").replace("/", "--")
+    # HF stores as models--org--repo
+    hf_cache_name = "models--" + _FIGURE_CLASSIFIER_REPO.replace("/", "--")
+    return (cache_dir / hf_cache_name).exists()
+
+
+def download_figure_classifier(write_progress=None) -> dict:
+    """Download DocumentFigureClassifier-v2.5 (16MB, MIT) into the HF hub cache.
+
+    This is a companion to the Enhanced (layout) model. It enables figure type
+    classification (chart, photograph, diagram, etc.) inside the Enhanced pipeline
+    without any additional user-visible model setup.
+    """
+    def _progress(pct, msg):
+        if write_progress:
+            write_progress(pct, msg)
+
+    try:
+        from huggingface_hub import snapshot_download
+        _progress(10.0, "Downloading figure classifier…")
+        snapshot_download(
+            repo_id=_FIGURE_CLASSIFIER_REPO,
+            revision=_FIGURE_CLASSIFIER_REVISION,
+            allow_patterns=["*.json", "*.safetensors"],
+        )
+        _progress(100.0, "Figure classifier ready")
+        return {"success": True, "error": None}
+    except Exception as e:
         return {"success": False, "error": str(e)}
 
 
