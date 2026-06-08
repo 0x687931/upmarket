@@ -94,6 +94,9 @@ CORPUS_ABS="$(cd "$CORPUS_DIR" && pwd)"
 export UPMARKET_ALLOWED_INPUT_ROOTS="$CORPUS_ABS"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
+# Point scorer at the installed model directory so its setdefault() does not
+# redirect to the benchmark cache, which is empty for user-installed models.
+export UPMARKET_MODELS_DIR="${HOME}/Library/Application Support/Upmarket/models"
 
 "$PYTHON" scripts/benchmark_scorer.py \
     --corpus "$CORPUS_DIR" \
