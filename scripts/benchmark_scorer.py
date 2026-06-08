@@ -625,7 +625,7 @@ def run_benchmark(
 
             elapsed_runs = []
             markdown = ""
-            timeout_seconds = 120 if pipeline in ("enhanced", "ai") else 30
+            timeout_seconds = 300 if pipeline == "ai" else (120 if pipeline == "enhanced" else 30)
             if pathway in ISOLATED_REFERENCE_PATHWAYS:
                 for _ in range(repeat_count):
                     markdown, elapsed = convert_document_isolated(
