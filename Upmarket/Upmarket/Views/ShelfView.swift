@@ -944,7 +944,7 @@ struct ShelfItemView: View {
             if isStalled {
                 Text("No progress")
                     .foregroundStyle(.yellow)
-                    .help("No progress detected. Conversion is still running; you can cancel and retry.")
+                    .help("No progress detected — conversion may be stalled. Cancel and retry if this persists.")
             } else if let message = item.result?.errorMessage {
                 Text(message)
                     .foregroundStyle(.red)

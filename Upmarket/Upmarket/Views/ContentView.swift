@@ -231,17 +231,20 @@ struct ContentView: View {
     }
 
     private func convertingView(_ job: ConversionJob?) -> some View {
-        VStack(spacing: 24) {
+        let isStalled = job?.isStalled == true
+        let ringColor: Color = isStalled ? .orange : .accentColor
+
+        return VStack(spacing: 24) {
             ZStack {
                 // Progress ring
                 Circle()
-                    .stroke(Color.accentColor.opacity(0.1), lineWidth: 3)
+                    .stroke(ringColor.opacity(0.1), lineWidth: 3)
                     .frame(width: 80, height: 80)
 
                 Circle()
                     .trim(from: 0, to: ringProgress)
                     .stroke(
-                        Color.accentColor,
+                        ringColor,
                         style: StrokeStyle(lineWidth: 3, lineCap: .round)
                     )
                     .frame(width: 80, height: 80)
@@ -263,7 +266,7 @@ struct ContentView: View {
 
                 Text(job.map(stageText) ?? "Checking file access and document complexity")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(isStalled ? AnyShapeStyle(Color.orange) : AnyShapeStyle(.secondary))
             }
 
             if let job, job.isRunning {
@@ -397,8 +400,20 @@ struct ContentView: View {
 
     // MARK: - Error View
 
+    private func errorKind(for message: String) -> ConversionError? {
+        let known: [ConversionError] = [
+            .inaccessible, .passwordRequired, .cancelled, .noProgress,
+            .memoryPressure, .fileTooLarge, .sourceUnavailable,
+            .unsupportedOnThisMac, .modelUnavailable, .downloadFailed,
+            .upgradeRequired, .pythonRuntime(""), .failed(message)
+        ]
+        return known.first { $0.errorDescription == message }
+    }
+
     private func errorView(_ message: String, job: ConversionJob?) -> some View {
-        VStack(spacing: 20) {
+        let kind = errorKind(for: message)
+
+        return VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 36, weight: .light))
                 .foregroundStyle(.orange)
@@ -412,12 +427,49 @@ struct ContentView: View {
             HStack(spacing: 10) {
                 Button("Convert Another") { resetToIdle() }
                     .buttonStyle(.borderedProminent)
-                if job != nil, message == ConversionError.passwordRequired.errorDescription {
-                    Button("Enter Password") { showPasswordPrompt = true }
+
+                // Contextual secondary actions
+                switch kind {
+                case .upgradeRequired:
+                    Button("Upgrade to Pro") {
+                        NotificationCenter.default.post(name: .showPaywall, object: nil)
+                    }
+                    .buttonStyle(.bordered)
+
+                case .modelUnavailable, .downloadFailed:
+                    Button("Open Settings") {
+                        NSApp.sendAction(Selector(("orderFrontPreferencesPanel:")), to: nil, from: nil)
+                    }
+                    .buttonStyle(.bordered)
+
+                case .passwordRequired:
+                    if job != nil {
+                        Button("Enter Password") { showPasswordPrompt = true }
+                            .buttonStyle(.bordered)
+                    }
+
+                case .inaccessible, .sourceUnavailable:
+                    if let url = job?.sourceURL, FileManager.default.fileExists(atPath: url.path) {
+                        Button("Show in Finder") {
+                            FileAccessService.shared.revealInFinder(url)
+                        }
                         .buttonStyle(.bordered)
-                } else if let job, job.stage != .cancelled {
-                    Button("Retry") { retry(job) }
-                        .buttonStyle(.bordered)
+                    }
+
+                case .cancelled, .fileTooLarge:
+                    EmptyView()
+
+                case .memoryPressure:
+                    if let job {
+                        Button("Retry") { retry(job) }
+                            .buttonStyle(.bordered)
+                    }
+
+                default:
+                    if let job {
+                        Button("Retry") { retry(job) }
+                            .buttonStyle(.bordered)
+                    }
                 }
             }
         }
