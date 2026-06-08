@@ -265,12 +265,33 @@ def run_document(doc_meta: dict, corpus_dir: Path, tier: str) -> dict:
 
     pathways = PATHWAYS[tier]
 
-    # Run all pathways concurrently — mirrors async let in ConversionRunner.
-    # Timeout per pathway enforced via future.result(timeout=) since
-    # signal.alarm cannot be used from worker threads.
+    # MLX (used by the AI pathway) initialises its GPU stream on the thread
+    # that first calls into it and cannot be used from other threads. Running
+    # the AI pathway inside ThreadPoolExecutor causes "There is no Stream(gpu,
+    # 0) in current thread" after the first document.
+    #
+    # Strategy: split pathways into two groups —
+    #   thread-safe: pdfkit, vision, enhanced (CPU / OS-managed, no MLX)
+    #   main-thread: ai (MLX GPU stream must stay on the calling thread)
+    #
+    # The thread-safe group runs concurrently in the pool while the main
+    # thread kicks off (and then awaits) the AI call. This mirrors the app:
+    # Swift async let runs PDFKit/Vision on the cooperative thread pool while
+    # Python/AI runs in a separate process with its own GPU context.
+
+    thread_safe = [p for p in pathways if p != "ai"]
+    run_ai = "ai" in pathways
+
     results = {}
-    with ThreadPoolExecutor(max_workers=len(pathways)) as pool:
-        futures = {pool.submit(run_pathway, p, file_path): p for p in pathways}
+
+    # Submit thread-safe pathways to pool
+    with ThreadPoolExecutor(max_workers=max(len(thread_safe), 1)) as pool:
+        futures = {pool.submit(run_pathway, p, file_path): p for p in thread_safe}
+
+        # Run AI on the calling (main) thread while pool works concurrently
+        if run_ai:
+            results["ai"] = run_pathway("ai", file_path)
+
         for future in as_completed(futures):
             p = futures[future]
             _, timeout = PATHWAY_FN[p]
