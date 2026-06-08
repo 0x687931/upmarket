@@ -73,7 +73,9 @@ def convert(file_path: str, options: dict | None = None) -> dict:
     # Route to appropriate pipeline
     try:
         if use_ai and can_use_ai:
-            if not _ai_available():
+            stub_active = (os.environ.get("UPMARKET_ENABLE_TEST_DOUBLES") == "1"
+                           and os.environ.get("UPMARKET_TEST_UPMARKET_AI_CONVERTER") == "stub")
+            if not stub_active and not _ai_available():
                 return _error("Upmarket AI model is not downloaded or failed validation. Download it again from Settings > Models.")
             try:
                 return _convert_ai(path, opts)
