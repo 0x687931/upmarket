@@ -17,6 +17,7 @@ struct PreferencesView: View {
     @AppStorage(AppVisibilityPreference.showDockIconKey) private var showDockIcon = AppVisibilityPreference.defaultShowDockIcon
     @AppStorage(AppVisibilityPreference.showMenuBarIconKey) private var showMenuBarIcon = AppVisibilityPreference.defaultShowMenuBarIcon
     @AppStorage(AppVisibilityPreference.showShelfKey) private var showShelf = AppVisibilityPreference.defaultShowShelf
+    @AppStorage("upmarket.shelfAnchor") private var shelfAnchorRaw: Int = ShelfWindowController.ShelfAnchor.center.rawValue
 
     private static let watchDocumentOptions: [WatchPatternOption] = [
         WatchPatternOption(
@@ -177,6 +178,25 @@ struct PreferencesView: View {
 
                 Toggle("Show shelf", isOn: $showShelf)
                     .toggleStyle(.checkbox)
+                    .onChange(of: showShelf) { show in
+                        if show { ShelfWindowController.shared.show() }
+                        else { ShelfWindowController.shared.hide(animate: false) }
+                    }
+
+                if showShelf {
+                    LabeledContent("Shelf position:") {
+                        Picker("Shelf position", selection: shelfAnchorBinding) {
+                            Text("Bottom Left").tag(ShelfWindowController.ShelfAnchor.bottomLeft)
+                            Text("Bottom Right").tag(ShelfWindowController.ShelfAnchor.bottomRight)
+                            Text("Top Left").tag(ShelfWindowController.ShelfAnchor.topLeft)
+                            Text("Top Right").tag(ShelfWindowController.ShelfAnchor.topRight)
+                            Text("Center").tag(ShelfWindowController.ShelfAnchor.center)
+                        }
+                        .pickerStyle(.menu)
+                        .labelsHidden()
+                        .frame(maxWidth: 160)
+                    }
+                }
 
                 Text("The Dock icon stays visible so you can always reopen Upmarket, change settings, and quit.")
                     .font(.caption)
@@ -256,6 +276,17 @@ struct PreferencesView: View {
             get: { showMenuBarIcon },
             set: { value in
                 showMenuBarIcon = value
+            }
+        )
+    }
+
+    private var shelfAnchorBinding: Binding<ShelfWindowController.ShelfAnchor> {
+        Binding(
+            get: { ShelfWindowController.ShelfAnchor(rawValue: shelfAnchorRaw) ?? .center },
+            set: { anchor in
+                shelfAnchorRaw = anchor.rawValue
+                ShelfWindowController.shared.anchor = anchor
+                ShelfWindowController.shared.reposition()
             }
         )
     }
