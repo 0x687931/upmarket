@@ -218,12 +218,32 @@ enum ContentClassifier {
             )
         }
 
-        // Step 2: Vision scene classification — document vs photo/artwork
-        let sceneKind = await classifyImageScene(fileURL: fileURL)
+        // Step 2: VNRecognizeTextRequest (ANE, fast recognition level, ~50-100ms).
+        // This is the single source of truth for all 1,303 taxonomy categories —
+        // rather than maintaining a hardcoded subset of VNClassifyImageRequest
+        // identifiers, we ask Vision directly: "is there readable text here?"
+        // If yes → scanned document (route to OCR/AI).
+        // If no  → photo, artwork, or diagram with no text (route to metadata).
+        // This handles the full taxonomy correctly without any manual label list.
+        let textDensity = await probeImageTextDensity(fileURL: fileURL)
+        let hasText = textDensity > 0.05  // >5% of image area covered by text blocks
 
-        switch sceneKind {
-        case .photoOrArtwork:
-            AppLog.conversion.info("ContentClassifier image scene=photo/artwork → metadata only")
+        if hasText {
+            AppLog.conversion.info(
+                "ContentClassifier image textDensity=\(textDensity, privacy: .public) → scanned document"
+            )
+            return Classification(
+                kind: .scannedDocument,
+                requiredTier: supportsAI ? .ai : .basic,
+                hasExtractableText: true,
+                frameCount: 1,
+                pdfEvidence: nil,
+                recommendedPathway: supportsAI ? .ai : .visionOCR
+            )
+        } else {
+            AppLog.conversion.info(
+                "ContentClassifier image textDensity=\(textDensity, privacy: .public) → no extractable text → metadata"
+            )
             return Classification(
                 kind: .photoOrArtwork,
                 requiredTier: .basic,
@@ -232,73 +252,7 @@ enum ContentClassifier {
                 pdfEvidence: nil,
                 recommendedPathway: .metadata
             )
-
-        case .document, .unknown:
-            // Step 3: VNRecognizeTextRequest (fast) to measure text density
-            let textDensity = await probeImageTextDensity(fileURL: fileURL)
-            let hasText = textDensity > 0.05  // >5% of image area has detected text
-
-            if hasText {
-                AppLog.conversion.info(
-                    "ContentClassifier image scene=document textDensity=\(textDensity, privacy: .public) → scanned document"
-                )
-                return Classification(
-                    kind: .scannedDocument,
-                    requiredTier: supportsAI ? .ai : .basic,
-                    hasExtractableText: true,
-                    frameCount: 1,
-                    pdfEvidence: nil,
-                    recommendedPathway: supportsAI ? .ai : .visionOCR
-                )
-            } else {
-                // Scene looks like a document but no text found — diagram/infographic
-                AppLog.conversion.info(
-                    "ContentClassifier image scene=document textDensity=\(textDensity, privacy: .public) → diagram/no text → metadata"
-                )
-                return Classification(
-                    kind: .photoOrArtwork,
-                    requiredTier: .basic,
-                    hasExtractableText: false,
-                    frameCount: 1,
-                    pdfEvidence: nil,
-                    recommendedPathway: .metadata
-                )
-            }
         }
-    }
-
-    // MARK: - Vision helpers
-
-    private enum SceneKind { case document, photoOrArtwork, unknown }
-
-    private static func classifyImageScene(fileURL: URL) async -> SceneKind {
-        #if canImport(Vision)
-        if #available(macOS 11.0, *) {
-            return await withCheckedContinuation { continuation in
-                let request = VNClassifyImageRequest { request, error in
-                    guard error == nil,
-                          let observations = request.results as? [VNClassificationObservation]
-                    else {
-                        continuation.resume(returning: .unknown)
-                        return
-                    }
-                    // Document-like identifiers verified from VNClassifyImageRequest
-                    // taxonomy (1,303 labels, Revision1/Revision2).
-                    // "text" and "printed_text" do NOT exist in the taxonomy.
-                    let documentLabels: Set<String> = [
-                        "document", "printed_page", "receipt", "book", "newspaper",
-                        "chart", "diagram", "flipchart", "checkbook"
-                    ]
-                    let topObservations = observations.filter { $0.confidence > 0.1 }
-                    let isDocument = topObservations.contains { documentLabels.contains($0.identifier) }
-                    continuation.resume(returning: isDocument ? .document : .photoOrArtwork)
-                }
-                let handler = VNImageRequestHandler(url: fileURL, options: [:])
-                try? handler.perform([request])
-            }
-        }
-        #endif
-        return .unknown
     }
 
     private static func probeImageTextDensity(fileURL: URL) async -> Double {
