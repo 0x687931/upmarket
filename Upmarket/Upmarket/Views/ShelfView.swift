@@ -873,12 +873,8 @@ struct ShelfItemView: View {
                 .help("Open in editor")
             }
 
-            if item.result?.errorMessage != nil {
-                Button(action: onRetry) {
-                    Image(systemName: "arrow.clockwise").font(.system(size: 10))
-                }
-                .buttonStyle(ShelfActionButtonStyle())
-                .help("Retry")
+            if let errorMessage = item.result?.errorMessage {
+                errorActions(for: errorMessage)
             }
 
             Button(action: onRemove) {
@@ -888,6 +884,35 @@ struct ShelfItemView: View {
             .help("Remove")
         }
         .frame(height: persistentActionsHeight)
+    }
+
+    @ViewBuilder private func errorActions(for message: String) -> some View {
+        if message == ConversionError.upgradeRequired.errorDescription {
+            Button {
+                NotificationCenter.default.post(name: .showPaywall, object: nil)
+            } label: {
+                Image(systemName: "arrow.up.forward.circle").font(.system(size: 10))
+            }
+            .buttonStyle(ShelfActionButtonStyle())
+            .help("Upgrade to Pro")
+        } else if message == ConversionError.modelUnavailable.errorDescription
+                    || message == ConversionError.downloadFailed.errorDescription {
+            Button {
+                NSApp.sendAction(Selector(("orderFrontPreferencesPanel:")), to: nil, from: nil)
+            } label: {
+                Image(systemName: "arrow.down.circle").font(.system(size: 10))
+            }
+            .buttonStyle(ShelfActionButtonStyle())
+            .help(message == ConversionError.modelUnavailable.errorDescription
+                  ? "Download model in Settings"
+                  : "Retry download in Settings")
+        } else {
+            Button(action: onRetry) {
+                Image(systemName: "arrow.clockwise").font(.system(size: 10))
+            }
+            .buttonStyle(ShelfActionButtonStyle())
+            .help("Retry")
+        }
     }
 
     // Cancel (and Retry when stalled) overlay shown on hover while the job is running.

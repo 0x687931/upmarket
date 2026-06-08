@@ -183,6 +183,81 @@ final class ModelManagerTests: XCTestCase {
         XCTAssertEqual(manager.models[0].error, "not downloaded")
     }
 
+    func testCheckErrorClearsOnSuccessfulRetry() async throws {
+        var callCount = 0
+        let manager = ModelManager(
+            checkModelsHandler: {
+                callCount += 1
+                if callCount == 1 { throw NSError(domain: "test", code: 1) }
+                return [Self.proModel(isDownloaded: true)]
+            }
+        )
+
+        manager.checkModels()
+        try await waitUntil {
+            if case .failed = manager.installState { return true }
+            return false
+        }
+        XCTAssertNotNil(manager.checkError)
+
+        manager.checkModels()
+        try await waitUntil {
+            if case .ready = manager.installState { return true }
+            return false
+        }
+        XCTAssertNil(manager.checkError)
+        XCTAssertEqual(manager.models.count, 1)
+    }
+
+    func testOfflineModeHandlerCalledAfterSuccessfulDownload() async throws {
+        let offlineCalled = OfflineModeCallCounter()
+        let manager = ModelManager(
+            models: [Self.proModel(isDownloaded: false)],
+            checkModelsHandler: {
+                [Self.proModel(isDownloaded: true)]
+            },
+            downloadModelHandler: { _, _ in
+                ModelDownloadResult(success: true, error: nil)
+            },
+            offlineModeHandler: {
+                await offlineCalled.increment()
+            }
+        )
+
+        manager.downloadProModels(hasPro: true)
+
+        try await waitUntil(timeout: 5) {
+            !manager.isDownloading
+        }
+
+        let count = await offlineCalled.count
+        XCTAssertEqual(count, 1)
+        XCTAssertNil(manager.downloadError)
+    }
+
+    func testOfflineModeHandlerNotCalledAfterFailedDownload() async throws {
+        let offlineCalled = OfflineModeCallCounter()
+        let manager = ModelManager(
+            models: [Self.proModel(isDownloaded: false)],
+            downloadModelHandler: { _, _ in
+                ModelDownloadResult(success: false, error: "Network error")
+            },
+            offlineModeHandler: {
+                await offlineCalled.increment()
+            }
+        )
+
+        manager.downloadProModels(hasPro: true)
+
+        try await waitUntil(timeout: 5) {
+            !manager.isDownloading && manager.downloadError != nil
+        }
+
+        let count = await offlineCalled.count
+        XCTAssertEqual(count, 0)
+        XCTAssertEqual(manager.downloadError, "Network error")
+    }
+
     func testIndividualDownloadUsesSelectedOptionalModelKey() async throws {
         let recorder = DownloadKeyRecorder()
         let manager = ModelManager(
@@ -253,6 +328,11 @@ final class ModelManagerTests: XCTestCase {
         }
         XCTFail("Timed out waiting for condition")
     }
+}
+
+private actor OfflineModeCallCounter {
+    private(set) var count = 0
+    func increment() { count += 1 }
 }
 
 private actor DownloadKeyRecorder {
