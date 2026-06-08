@@ -150,8 +150,14 @@ struct MarkdownQualityScorer {
         artifacts += markdown.filter { $0 == "\u{00ad}" }.count
         artifacts += matches(in: markdown, pattern: #"\n\d{1,3}\n"#)
         artifacts += matches(in: markdown, pattern: #"[A-Za-z]-\s+[a-z]"#)
-        artifacts += matches(in: markdown, pattern: #"(.)\1{8,}"#)
-        return min(1.0, Double(artifacts) / 12.0)
+        // Exclude - | = and space which repeat legitimately in Markdown tables/rules
+        artifacts += matches(in: markdown, pattern: #"([^\-|= \t])\1{8,}"#)
+        // Rate-based threshold: normalise by word count so long documents with
+        // a few PDF line-wrap hyphens don't score the same as short documents
+        // with pervasive encoding errors. Cap at 1 artifact per 50 words = 1.0.
+        let words = max(1, markdown.split(whereSeparator: \.isWhitespace).count)
+        let rate = Double(artifacts) / Double(words)
+        return min(1.0, rate * 50.0)
     }
 
     private static func duplicationPenalty(_ markdown: String) -> Double {

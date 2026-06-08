@@ -131,10 +131,14 @@ struct UpmarketRuntimeHelper {
             }
             emitProgress(stage: "python", fraction: 0.15, message: "Processing")
             let converter = Python.import("docling_bridge.converter")
+            // Enable OCR only for AI-tier requests (scanned/image documents).
+            // Digital PDFs routed to Enhanced have embedded text; OCR on them
+            // triggers RapidOCR unnecessarily and introduces broken-hyphen artifacts.
+            let enableOCR = request.useAI == true
             var options: [String: PythonObject] = [
                 "use_ai": PythonObject(request.useAI ?? false),
                 "use_enhanced": PythonObject(true),
-                "ocr": PythonObject(true)
+                "ocr": PythonObject(enableOCR)
             ]
             if let password = request.password {
                 options["password"] = PythonObject(password)

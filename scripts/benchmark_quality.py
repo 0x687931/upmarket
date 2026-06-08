@@ -101,8 +101,13 @@ def _artifact_penalty(markdown: str) -> float:
     count += markdown.count("­")
     count += len(re.findall(r"\n\d{1,3}\n", markdown))
     count += len(re.findall(r"[A-Za-z]-\s+[a-z]", markdown))
-    count += len(re.findall(r"(.)\1{8,}", markdown))
-    return min(1.0, count / 12.0)
+    # Exclude - | = and space which repeat legitimately in Markdown tables/rules
+    count += len(re.findall(r"([^\-|= \t])\1{8,}", markdown))
+    # Rate-based: normalise by word count so long docs with a few PDF
+    # line-wrap hyphens don't score the same as short docs with pervasive
+    # encoding errors. Cap at 1 artifact per 50 words = 1.0 penalty.
+    words = max(1, len(markdown.split()))
+    return min(1.0, (count / words) * 50.0)
 
 
 def _duplication_penalty(markdown: str) -> float:
