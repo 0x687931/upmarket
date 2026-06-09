@@ -8,11 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		81E090C22FCB12E400FC901A /* Python.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 81E090C02FCB12E400FC901A /* Python.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		BB000004000000000000004B /* Python.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 81E090C02FCB12E400FC901A /* Python.xcframework */; };
 		AA00000F00000000000000FA /* UpmarketQuickAction.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = AA000003000000000000003A /* UpmarketQuickAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		BB000001000000000000001B /* UpmarketRuntimeHelper in Embed Runtime Helper */ = {isa = PBXBuildFile; fileRef = BB000002000000000000002B /* UpmarketRuntimeHelper */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		BB000003000000000000003B /* PythonKit in Frameworks */ = {isa = PBXBuildFile; productRef = 81A3B75C2FCB1073004A488D /* PythonKit */; };
-
+		BB000004000000000000004B /* Python.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 81E090C02FCB12E400FC901A /* Python.xcframework */; };
 		EE000015000000000000015E /* upmarket-cli in Embed Command Tools */ = {isa = PBXBuildFile; fileRef = DD000002000000000000002D /* upmarket-cli */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		EE000016000000000000016E /* upmarket-mcp in Embed Command Tools */ = {isa = PBXBuildFile; fileRef = EE000002000000000000002E /* upmarket-mcp */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -111,11 +110,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		81E090C02FCB12E400FC901A /* Python.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Python.xcframework; path = Python/Python.xcframework; sourceTree = "<group>"; };
 		81A3B72B2FCB0F91004A488D /* Upmarket.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Upmarket.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		81A3B7382FCB0F91004A488D /* UpmarketTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UpmarketTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		81A3B7422FCB0F91004A488D /* UpmarketUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UpmarketUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-
+		81E090C02FCB12E400FC901A /* Python.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Python.xcframework; path = Python/Python.xcframework; sourceTree = "<group>"; };
 		AA000003000000000000003A /* UpmarketQuickAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = UpmarketQuickAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB000002000000000000002B /* UpmarketRuntimeHelper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = UpmarketRuntimeHelper; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD000002000000000000002D /* upmarket-cli */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "upmarket-cli"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -206,7 +204,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-					BB000003000000000000003B /* PythonKit in Frameworks */,
+				BB000003000000000000003B /* PythonKit in Frameworks */,
 				BB000004000000000000004B /* Python.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
