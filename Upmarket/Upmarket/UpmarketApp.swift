@@ -100,6 +100,8 @@ struct UpmarketApp: App {
                 WelcomeWindowController.shared.show()
             } else if AppVisibilityPreference.showShelf {
                 ShelfWindowController.shared.show(animate: true)
+            } else {
+                MainWindowController.shared.show()
             }
         }
     }
