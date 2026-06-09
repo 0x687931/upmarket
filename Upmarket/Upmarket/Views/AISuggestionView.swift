@@ -8,8 +8,10 @@ struct AISuggestionView: View {
     let onBasic: () -> Void
     let onDismiss: () -> Void
 
+    private let windowSize: AppTheme.WindowSize = .thin
+
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: AppTheme.Spacing.xl) {
             ZStack {
                 Circle()
                     .fill(Color.accentColor.opacity(0.1))
@@ -18,11 +20,11 @@ struct AISuggestionView: View {
                     .font(.system(size: 32))
                     .foregroundStyle(Color.accentColor)
             }
-            .padding(.top, 8)
+            .padding(.top, AppTheme.Spacing.xs)
 
-            VStack(spacing: 8) {
+            VStack(spacing: AppTheme.Spacing.sm) {
                 Text(L("ai.suggestion.title"))
-                    .font(.title3)
+                    .font(AppTheme.Font.title3)
                     .fontWeight(.bold)
                 Text(L("ai.suggestion.subtitle"))
                     .font(.subheadline)
@@ -31,9 +33,9 @@ struct AISuggestionView: View {
             }
 
             if !advice.reasons.isEmpty {
-                VStack(alignment: .leading, spacing: 7) {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                     ForEach(advice.reasons, id: \.self) { reason in
-                        HStack(spacing: 8) {
+                        HStack(spacing: AppTheme.Spacing.sm) {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundStyle(Color.accentColor)
                                 .font(.caption)
@@ -42,11 +44,11 @@ struct AISuggestionView: View {
                         }
                     }
                 }
-                .padding(14)
-                .background(Color.accentColor.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+                .padding(AppTheme.Spacing.md)
+                .background(Color.accentColor.opacity(0.06), in: RoundedRectangle(cornerRadius: AppTheme.Radius.md))
             }
 
-            VStack(spacing: 10) {
+            VStack(spacing: AppTheme.Spacing.sm) {
                 Button(action: onUseAI) {
                     Label(L("ai.suggestion.use_ai", proPrice), systemImage: UpmarketSymbols.ai)
                         .fontWeight(.semibold)
@@ -67,9 +69,9 @@ struct AISuggestionView: View {
                 .buttonStyle(.plain)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .padding(.bottom, 4)
+                .padding(.bottom, AppTheme.Spacing.xs)
         }
-        .padding(28)
+        .padding(windowSize.contentPadding)
         .frame(width: 360)
     }
 }

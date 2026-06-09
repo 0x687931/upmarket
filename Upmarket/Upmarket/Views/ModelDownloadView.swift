@@ -6,9 +6,10 @@ struct ModelDownloadView: View {
     @EnvironmentObject private var store: StoreManager
 
     private let device = DeviceCapability.shared
+    private let windowSize: AppTheme.WindowSize = .thin
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: AppTheme.Spacing.xl) {
             header
 
             if !device.supportsAdvancedRuntime {
@@ -26,7 +27,7 @@ struct ModelDownloadView: View {
                 downloadButton
             }
         }
-        .padding(32)
+        .padding(windowSize.contentPadding)
         .frame(width: 480)
         .onAppear { modelManager.checkModels() }
     }
@@ -34,7 +35,7 @@ struct ModelDownloadView: View {
     // MARK: - Header
 
     private var header: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: AppTheme.Spacing.sm) {
             Text("#")
                 .font(.system(size: 48, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.accentColor)
@@ -51,7 +52,7 @@ struct ModelDownloadView: View {
     }
 
     private var machineUnavailableView: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: AppTheme.Spacing.md) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 32))
                 .foregroundStyle(Color.green)
@@ -62,21 +63,21 @@ struct ModelDownloadView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
-        .padding(16)
+        .padding(AppTheme.Spacing.lg)
         .frame(maxWidth: .infinity)
-        .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
+        .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: AppTheme.Radius.md))
     }
 
     // MARK: - Model List
 
     private var modelList: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: AppTheme.Spacing.sm) {
             if modelManager.models.isEmpty {
-                HStack(spacing: 12) {
+                HStack(spacing: AppTheme.Spacing.md) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(Color.green)
                         .font(.title3)
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                         Text("Fast conversion ready")
                             .fontWeight(.medium)
                         Text("No optional local models were reported for this build.")
@@ -85,8 +86,8 @@ struct ModelDownloadView: View {
                     }
                     Spacer()
                 }
-                .padding(12)
-                .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
+                .padding(AppTheme.Spacing.md)
+                .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: AppTheme.Radius.md))
             }
 
             // Basic tier: Python runtime (required for Enhanced + AI)
@@ -134,13 +135,13 @@ struct ModelDownloadView: View {
     }
 
     private func modelRow(icon: String, title: String, description: String, sizeMB: Int, isDownloaded: Bool, badge: String?, available: Bool) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: AppTheme.Spacing.md) {
             Image(systemName: isDownloaded ? "checkmark.circle.fill" : icon)
                 .foregroundStyle(isDownloaded ? Color.green : Color.accentColor)
                 .font(.title3)
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                HStack(spacing: AppTheme.Spacing.xs) {
                     Text(title)
                         .fontWeight(.medium)
                     if let badge {
@@ -148,7 +149,7 @@ struct ModelDownloadView: View {
                             .font(.caption2)
                             .fontWeight(.semibold)
                             .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
+                            .padding(.horizontal, AppTheme.Spacing.xs)
                             .padding(.vertical, 1)
                             .background(Color.accentColor, in: Capsule())
                     }
@@ -164,15 +165,15 @@ struct ModelDownloadView: View {
                 .font(.caption)
                 .foregroundStyle(isDownloaded ? Color.green : .secondary)
         }
-        .padding(12)
-        .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
+        .padding(AppTheme.Spacing.md)
+        .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: AppTheme.Radius.md))
         .opacity(available ? 1.0 : 0.5)
     }
 
     // MARK: - Download Button
 
     private var downloadButton: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: AppTheme.Spacing.sm) {
             // Basic tier: Python runtime — shown to Basic+ users on Apple Silicon
             if modelManager.basicDownloadUnavailableReason(hasBasic: store.hasBasicOrAbove) == nil {
                 let runtimeReady = modelManager.runtimeDownloaded
@@ -214,7 +215,7 @@ struct ModelDownloadView: View {
     // MARK: - Downloading
 
     private var checkingView: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: AppTheme.Spacing.md) {
             ProgressView()
                 .controlSize(.small)
             Text("Checking local model files...")
@@ -224,16 +225,16 @@ struct ModelDownloadView: View {
     }
 
     private var downloadingView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: AppTheme.Spacing.lg) {
             // Variable Colour symbol fills as download progresses (macOS 15+)
             // Falls back to standard progress bar on older OS
             if #available(macOS 15.0, *) {
-                HStack(spacing: 12) {
+                HStack(spacing: AppTheme.Spacing.md) {
                     Image(systemName: "arrow.down.circle", variableValue: modelManager.downloadProgress / 100)
                         .font(.system(size: 32))
                         .foregroundStyle(Color.accentColor)
                         .symbolEffect(.pulse, isActive: true)
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                         Text(modelManager.downloadMessage)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -258,13 +259,13 @@ struct ModelDownloadView: View {
                     .monospacedDigit()
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, AppTheme.Spacing.xs)
     }
 
     // MARK: - Error
 
     private func checkErrorView(_ error: String) -> some View {
-        VStack(spacing: 12) {
+        VStack(spacing: AppTheme.Spacing.md) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 32))
                 .foregroundStyle(.red)
@@ -282,7 +283,7 @@ struct ModelDownloadView: View {
     }
 
     private func errorView(_ error: String) -> some View {
-        VStack(spacing: 12) {
+        VStack(spacing: AppTheme.Spacing.md) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 32))
                 .foregroundStyle(.red)
