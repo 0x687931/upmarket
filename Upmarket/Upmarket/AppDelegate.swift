@@ -142,7 +142,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func dockShowPreferences(_ sender: Any?) {
         NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("orderFrontPreferencesPanel:")), to: nil, from: self)
+        PreferencesWindowController.shared.show()
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
@@ -492,7 +492,7 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
 
     @objc private func showPreferences(_ sender: Any?) {
         NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("orderFrontPreferencesPanel:")), to: nil, from: self)
+        PreferencesWindowController.shared.show()
     }
 
     @objc private func showReportProblem(_ sender: Any?) {
@@ -501,6 +501,42 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
 
     @objc private func quit(_ sender: Any?) {
         NSApp.terminate(nil)
+    }
+}
+
+@MainActor
+final class PreferencesWindowController: NSWindowController {
+    static let shared = PreferencesWindowController()
+
+    private init() {
+        let rootView = PreferencesView()
+            .environmentObject(ModelManager.shared)
+            .environmentObject(StoreManager.shared)
+            .environmentObject(ConversionHistoryStore.shared)
+            .environmentObject(WatchedFolderService.shared)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 600, height: 500),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Settings"
+        window.contentView = NSHostingView(rootView: rootView)
+        window.isReleasedWhenClosed = false
+        window.center()
+
+        super.init(window: window)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    func show() {
+        guard let window else { return }
+        if !window.isVisible {
+            window.center()
+        }
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 }
 

@@ -898,7 +898,7 @@ struct ShelfItemView: View {
         } else if message == ConversionError.modelUnavailable.errorDescription
                     || message == ConversionError.downloadFailed.errorDescription {
             Button {
-                NSApp.sendAction(Selector(("orderFrontPreferencesPanel:")), to: nil, from: nil)
+                PreferencesWindowController.shared.show()
             } label: {
                 Image(systemName: "arrow.down.circle").font(.system(size: 10))
             }
