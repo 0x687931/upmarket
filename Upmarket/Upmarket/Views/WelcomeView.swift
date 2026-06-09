@@ -107,7 +107,7 @@ struct WelcomeView: View {
                     symbol: "bolt.fill",
                     color: .orange,
                     title: "Instant results",
-                    detail: "Drop a file in the shelf or use the menu bar to convert in seconds."
+                    detail: "Drop a file onto the window or click Choose File to convert in seconds."
                 )
             }
             .padding(.horizontal, 48)

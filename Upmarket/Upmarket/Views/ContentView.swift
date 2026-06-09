@@ -482,12 +482,18 @@ struct ContentView: View {
     private var statusBanner: some View {
         if store.hasBasicOrAbove {
             EmptyView()
+        } else if store.freeDocsRemaining > 0 {
+            let n = store.freeDocsRemaining
+            let text = n == 1 ? "1 free conversion remaining" : "\(n) free conversions remaining"
+            bannerRow(icon: "gift.fill", text: text,
+                      action: ("See Plans", { PaywallWindowController.shared.show() }),
+                      tint: Color.accentColor.opacity(0.06))
         } else if let nudge = store.nudgeMessage {
             bannerRow(icon: "arrow.up.circle.fill", text: nudge,
                       action: ("See Plans", { PaywallWindowController.shared.show() }),
                       tint: Color.accentColor.opacity(0.07))
         } else {
-            bannerRow(icon: "lock.fill", text: "Unlock Upmarket to convert",
+            bannerRow(icon: "lock.fill", text: "Free trial ended — unlock to keep converting",
                       action: ("Unlock", { PaywallWindowController.shared.show() }),
                       tint: Color.red.opacity(0.06))
         }
