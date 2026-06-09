@@ -9,7 +9,7 @@ struct PaywallView: View {
 
     private let device = DeviceCapability.shared
     private let flags = FeatureFlags.shared
-    private let windowSize: AppTheme.WindowSize = .thin
+    private let windowSize: AppTheme.WindowSize = .thick
 
     @State private var isPurchasing: String? = nil  // product ID currently purchasing
     @State private var errorMessage: String?

@@ -139,17 +139,17 @@ enum AppTheme {
 
         var width: CGFloat {
             switch self {
-            case .shelf: return 217  // controlStripWidth + divider + peekPanelWidth
-            case .thin: return 480
-            case .thick: return 800
+            case .shelf: return 217   // floating widget (peek panel)
+            case .thin: return 420    // main compact workbench
+            case .thick: return 480   // modal dialogs
             }
         }
 
         var height: CGFloat {
             switch self {
-            case .shelf: return 132
-            case .thin: return 600
-            case .thick: return 700
+            case .shelf: return 132   // peek panel height
+            case .thin: return 560    // main workbench height
+            case .thick: return 600   // modal dialogs height
             }
         }
     }

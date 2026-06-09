@@ -6,7 +6,7 @@ struct ModelDownloadView: View {
     @EnvironmentObject private var store: StoreManager
 
     private let device = DeviceCapability.shared
-    private let windowSize: AppTheme.WindowSize = .thin
+    private let windowSize: AppTheme.WindowSize = .thick
 
     var body: some View {
         VStack(spacing: AppTheme.Spacing.xl) {

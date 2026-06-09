@@ -11,7 +11,7 @@ struct ReportProblemView: View {
     @State private var diagnosticSnapshot = DiagnosticsService.shared.makeSnapshot()
     @State private var logExport = DiagnosticsService.shared.recentLogExport()
 
-    private let windowSize: AppTheme.WindowSize = .thin
+    private let windowSize: AppTheme.WindowSize = .thick
 
     private var preview: SupportReportPreview {
         SupportReporter.makePreview(
