@@ -62,4 +62,79 @@ enum AppTheme {
         static let processing = Color.accentColor
         static let queued = Color.secondary.opacity(0.5)
     }
+
+    // MARK: - Window Size Variants
+
+    enum WindowSize {
+        // Compact floating widget (Shelf)
+        case shelf
+        // Small dialogs and panels
+        case thin
+        // Main content windows (Workbench, Welcome, Settings)
+        case thick
+
+        var contentPadding: CGFloat {
+            switch self {
+            case .shelf: return Spacing.sm
+            case .thin: return Spacing.md
+            case .thick: return Spacing.lg
+            }
+        }
+
+        var itemSpacing: CGFloat {
+            switch self {
+            case .shelf: return Spacing.xs
+            case .thin: return Spacing.sm
+            case .thick: return Spacing.md
+            }
+        }
+
+        var itemPadding: CGFloat {
+            switch self {
+            case .shelf: return Spacing.sm
+            case .thin: return Spacing.md
+            case .thick: return Spacing.lg
+            }
+        }
+
+        var cornerRadius: CGFloat {
+            switch self {
+            case .shelf: return Radius.md
+            case .thin: return Radius.md
+            case .thick: return Radius.lg
+            }
+        }
+
+        var fontBody: SwiftUI.Font {
+            switch self {
+            case .shelf: return SwiftUI.Font.caption.weight(.medium)
+            case .thin: return SwiftUI.Font.caption.weight(.medium)
+            case .thick: return Font.body
+            }
+        }
+
+        var fontCaption: SwiftUI.Font {
+            switch self {
+            case .shelf: return SwiftUI.Font.system(size: 9)
+            case .thin: return SwiftUI.Font.caption
+            case .thick: return Font.caption
+            }
+        }
+
+        var iconSize: CGFloat {
+            switch self {
+            case .shelf: return 18
+            case .thin: return 20
+            case .thick: return 24
+            }
+        }
+
+        var statusIconSize: CGFloat {
+            switch self {
+            case .shelf: return 12
+            case .thin: return 14
+            case .thick: return 16
+            }
+        }
+    }
 }

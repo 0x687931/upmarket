@@ -137,7 +137,7 @@ struct ShelfView: View {
         .animation(.spring(duration: 0.25), value: conversion.jobs.count)
         .background(
             ContextualLiquidGlassBackground(
-                cornerRadius: 12,
+                cornerRadius: AppTheme.Radius.lg,
                 opacity: shelfGlassOpacity,
                 solidFillOpacity: shelfSolidFillOpacity,
                 isTargeted: isTargeted,
@@ -146,7 +146,7 @@ struct ShelfView: View {
             )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: AppTheme.Radius.lg + 2)
                 .strokeBorder(Color.primary.opacity(isTargeted ? 0.28 : 0), lineWidth: 1.5)
                 .animation(.easeInOut(duration: 0.15), value: isTargeted)
         )
