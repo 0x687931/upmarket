@@ -66,14 +66,12 @@ enum AppTheme {
     // MARK: - Window Size Variants
 
     enum WindowSize {
-        // Primary Upmarket workbench window
+        // Primary Upmarket workbench window (conversions + history)
         case main
         // Modal dialogs and secondary windows
         case modal
         // Compact floating widget (Shelf)
         case compact
-        // History window
-        case history
         // Welcome/onboarding window
         case welcome
 
@@ -82,7 +80,6 @@ enum AppTheme {
             case .main: return Spacing.sm
             case .modal: return Spacing.md
             case .compact: return Spacing.sm
-            case .history: return Spacing.sm
             case .welcome: return Spacing.lg
             }
         }
@@ -92,7 +89,6 @@ enum AppTheme {
             case .main: return Spacing.xs
             case .modal: return Spacing.sm
             case .compact: return Spacing.xs
-            case .history: return Spacing.xs
             case .welcome: return Spacing.lg
             }
         }
@@ -102,7 +98,6 @@ enum AppTheme {
             case .main: return Spacing.sm
             case .modal: return Spacing.md
             case .compact: return Spacing.sm
-            case .history: return Spacing.sm
             case .welcome: return Spacing.lg
             }
         }
@@ -112,7 +107,6 @@ enum AppTheme {
             case .main: return Radius.md
             case .modal: return Radius.md
             case .compact: return Radius.md
-            case .history: return Radius.sm
             case .welcome: return Radius.lg
             }
         }
@@ -122,7 +116,6 @@ enum AppTheme {
             case .main: return SwiftUI.Font.caption.weight(.medium)
             case .modal: return SwiftUI.Font.caption.weight(.medium)
             case .compact: return SwiftUI.Font.caption.weight(.medium)
-            case .history: return SwiftUI.Font.caption
             case .welcome: return Font.body
             }
         }
@@ -132,7 +125,6 @@ enum AppTheme {
             case .main: return SwiftUI.Font.system(size: 9)
             case .modal: return SwiftUI.Font.caption
             case .compact: return SwiftUI.Font.system(size: 9)
-            case .history: return SwiftUI.Font.caption
             case .welcome: return Font.caption
             }
         }
@@ -142,7 +134,6 @@ enum AppTheme {
             case .main: return 18
             case .modal: return 20
             case .compact: return 18
-            case .history: return 16
             case .welcome: return 24
             }
         }
@@ -152,7 +143,6 @@ enum AppTheme {
             case .main: return 12
             case .modal: return 14
             case .compact: return 12
-            case .history: return 12
             case .welcome: return 16
             }
         }
@@ -162,7 +152,6 @@ enum AppTheme {
             case .main: return 420        // Primary Upmarket workbench
             case .modal: return 480       // Modal dialogs
             case .compact: return 217     // Shelf floating widget
-            case .history: return 320     // History window
             case .welcome: return 520     // Welcome/onboarding
             }
         }
@@ -172,7 +161,6 @@ enum AppTheme {
             case .main: return 560        // Upmarket workbench
             case .modal: return 600       // Modal dialogs
             case .compact: return 132     // Shelf widget
-            case .history: return 380     // History window
             case .welcome: return 460     // Welcome window
             }
         }
