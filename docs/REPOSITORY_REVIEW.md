@@ -72,9 +72,10 @@ Risks to keep visible:
   Runtime conversion should keep working offline after models are available.
 - The temporary absolute-path entitlement is broad. Prefer sandbox-provided temp
   locations and remove this exception if conversion continues to work without it.
-- `HF_HUB_OFFLINE` is set to `0` at Python startup to allow downloads. Ensure
-  conversion paths do not trigger unexpected network fetches when models are
-  already present.
+- Customer model downloads should go through the first-party Apple-hosted
+  manifest flow. Keep the Python/Hugging Face snapshot path as developer intake
+  tooling only, and ensure conversion paths do not trigger unexpected network
+  fetches when models are already present.
 - UserDefaults is fine for free-credit counters and UI state, but paid access
   must continue to come from verified StoreKit entitlements.
 
@@ -98,4 +99,3 @@ Potential improvements:
   tour stabilizes.
 - Split long-running corpus/quality tests from fast unit tests if they slow down
   normal edit-build-test cycles.
-

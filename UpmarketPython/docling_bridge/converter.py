@@ -73,7 +73,9 @@ def convert(file_path: str, options: dict | None = None) -> dict:
     # Route to appropriate pipeline
     try:
         if use_ai and can_use_ai:
-            if not _ai_available():
+            stub_active = (os.environ.get("UPMARKET_ENABLE_TEST_DOUBLES") == "1"
+                           and os.environ.get("UPMARKET_TEST_UPMARKET_AI_CONVERTER") == "stub")
+            if not stub_active and not _ai_available():
                 return _error("Upmarket AI model is not downloaded or failed validation. Download it again from Settings > Models.")
             try:
                 return _convert_ai(path, opts)
@@ -407,6 +409,14 @@ def _convert_ai(path: Path, opts: dict) -> dict:
     stdout so the Swift helper's liveness monitor stays satisfied during long
     conversions instead of reporting stall.
     """
+    if os.environ.get("UPMARKET_ENABLE_TEST_DOUBLES") == "1":
+        converter_double = os.environ.get("UPMARKET_TEST_UPMARKET_AI_CONVERTER", "")
+        if converter_double == "stub":
+            runtime_error = _upmarket_ai_runtime_unavailable_reason()
+            if runtime_error:
+                return _error(runtime_error)
+            return _success("test-double conversion succeeded", 1, path, pipeline="ai")
+
     manager = _model_manager()
     if not manager.supports_upmarket_ai_hardware():
         return _error("Upmarket AI requires Apple Silicon with Metal support.")
@@ -632,6 +642,15 @@ def _upmarket_ai_runtime_unavailable_reason() -> str | None:
     global _AI_RUNTIME_PRECHECK
     if _AI_RUNTIME_PRECHECK is not None:
         return None if _AI_RUNTIME_PRECHECK == "" else _AI_RUNTIME_PRECHECK
+
+    if os.environ.get("UPMARKET_ENABLE_TEST_DOUBLES") == "1":
+        runtime_double = os.environ.get("UPMARKET_TEST_UPMARKET_AI_RUNTIME", "")
+        if runtime_double == "available":
+            _AI_RUNTIME_PRECHECK = ""
+            return None
+        if runtime_double == "unavailable":
+            _AI_RUNTIME_PRECHECK = "Upmarket AI cannot access this Mac's graphics processor from the current session. Quit and reopen Upmarket, then try again."
+            return _AI_RUNTIME_PRECHECK
 
     message = "Upmarket AI cannot access this Mac's graphics processor from the current session. Quit and reopen Upmarket, then try again."
     env = os.environ.copy()

@@ -67,17 +67,18 @@ Checks:
 - Release-candidate CI uploads `corpus-pathway-comparison`, containing the Markdown comparison and JSON document-level results for owner review before shipping.
 - Forensic benchmark inventory records exact benchmark package versions, binary versions, corpus source commits, benchmark-only model cache artifacts, and cache roots.
 - Model missing/corrupt behavior.
+- First-party model asset staging from a manifest-validated local cache with `scripts/build/stage_first_party_model_assets.py`; TestFlight/App Store archives must point `UpmarketModelManifestBaseURL` at the Apple-hosted staged output.
 - Python bridge security preflight for unsafe archives, mismatched file signatures, pathological image/PDF inputs, subprocess launch, and conversion-time network blocking.
 - Diagnostic bundle generation.
 - Privacy-sensitive logs are redacted.
 
-`scripts/ci/verify_release_app.sh <Upmarket.app>` is the shared app-package gate for runtime and release-candidate CI. It verifies the effective plist, entitlement policy, Apple Foundation bundle preflight for the embedded runtime framework, embedded runtime imports, Python bridge security preflight, runtime helper boundary, offline smoke conversion, and model-missing behavior against the built app bundle. Unsigned local/CI builds validate source entitlement policy; signed release verification must run with `UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS=1` so missing embedded entitlements fail.
+`scripts/ci/verify_release_app.sh <Upmarket.app>` is the shared app-package gate for runtime and release-candidate CI. It verifies the effective plist, entitlement policy, Apple Foundation bundle preflight for the embedded runtime framework, embedded runtime imports, Python bridge security preflight, runtime helper boundary, offline smoke conversion, and model-missing behavior against the built app bundle. Unsigned local/CI builds validate source entitlement policy; signed release verification must run with `UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS=1` so missing embedded entitlements fail. TestFlight/App Store verification must also run with `UPMARKET_REQUIRE_MODEL_MANIFEST_BASE_URL=1` so packaged model downloads cannot silently fall back to unavailable or third-party model sources.
 
 Swift Testing is allowed for new pure Swift unit and integration tests in `UpmarketTests`, and XCTest remains required for UI automation and performance tests. Both frameworks may coexist in the test bundle, but do not mix their APIs inside one test file.
 
 Detailed UI automation policy lives in `docs/release/UI_AUTOMATION.md`.
 
-Python tests are required for Python bridge, runtime, dependency, model, and packaging changes, but they should stay boundary-focused. Use script gates that run against the bundled Python 3.12 `site-packages`, such as `scripts/ci/test_archive_security.py`, `scripts/ci/test_model_faults.py`, `scripts/ci/verify_python_bundle.sh`, and `scripts/ci/smoke_convert_offline.sh`. Do not make the vendored upstream Docling pytest suite part of normal Upmarket CI unless a scoped corpus/upstream task calls for it.
+Python tests are required for Python bridge, runtime, dependency, model, and packaging changes, but they should stay boundary-focused. Use script gates that run against the bundled Python 3.12 `site-packages`, such as `scripts/ci/test_archive_security.py`, `scripts/ci/test_model_faults.py`, `scripts/ci/test_ai_runtime_doubles.py`, `scripts/ci/validate_installed_pins.py`, `scripts/ci/verify_python_bundle.sh`, and `scripts/ci/smoke_convert_offline.sh`. Use `scripts/build/stage_first_party_model_assets.py` for release model asset manifests. Do not make the vendored upstream Docling pytest suite part of normal Upmarket CI unless a scoped corpus/upstream task calls for it.
 
 ### TestFlight Beta Lane
 

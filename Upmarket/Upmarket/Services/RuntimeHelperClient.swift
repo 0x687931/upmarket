@@ -94,6 +94,13 @@ struct RuntimeHelperClient: Sendable {
     }
 
     nonisolated func downloadModel(key: String, progressFile: String, workspaceURL: URL) async -> ModelDownloadResult {
+        guard Self.developerModelIntakeEnabled(in: ProcessInfo.processInfo.environment) else {
+            return ModelDownloadResult(
+                success: false,
+                error: "Developer model intake is disabled for this build."
+            )
+        }
+
         do {
             let response: RuntimeHelperResponse = try await perform(.downloadModel(
                 key: key,
@@ -118,13 +125,18 @@ struct RuntimeHelperClient: Sendable {
         process.arguments = ["--request-json-stdin"]
 
         let parentEnvironment = ProcessInfo.processInfo.environment
+        let developerModelIntakeEnabled = Self.developerModelIntakeEnabled(in: parentEnvironment)
+        let networkAllowed = request.operation == "downloadModel" && developerModelIntakeEnabled
         var environment: [String: String] = [
             "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
-            "HF_HUB_OFFLINE": request.operation == "downloadModel" ? "0" : "1",
-            "TRANSFORMERS_OFFLINE": request.operation == "downloadModel" ? "0" : "1",
+            "HF_HUB_OFFLINE": networkAllowed ? "0" : "1",
+            "TRANSFORMERS_OFFLINE": networkAllowed ? "0" : "1",
             "UPMARKET_RUNTIME_SANDBOX": "1",
-            "UPMARKET_ALLOW_NETWORK": request.operation == "downloadModel" ? "1" : "0"
+            "UPMARKET_ALLOW_NETWORK": networkAllowed ? "1" : "0"
         ]
+        if developerModelIntakeEnabled {
+            environment["UPMARKET_ENABLE_DEVELOPER_MODEL_INTAKE"] = "1"
+        }
         if let home = parentEnvironment["HOME"] {
             environment["HOME"] = home
         }
@@ -137,6 +149,7 @@ struct RuntimeHelperClient: Sendable {
         if let tmpdir = parentEnvironment["TMPDIR"] {
             environment["TMPDIR"] = tmpdir
         }
+        Self.copyTestDoubleEnvironment(from: parentEnvironment, into: &environment)
         process.environment = environment
 
         let stdin = Pipe()
@@ -276,6 +289,30 @@ struct RuntimeHelperClient: Sendable {
         default:
             return .callFailed(response.message ?? "failed")
         }
+    }
+
+    private nonisolated static func copyTestDoubleEnvironment(from source: [String: String], into destination: inout [String: String]) {
+        // Use getenv() rather than the cached ProcessInfo.processInfo.environment snapshot so that
+        // setenv() calls made in tests after process start are visible when spawning the helper.
+        let keys = [
+            "UPMARKET_ENABLE_TEST_DOUBLES",
+            "UPMARKET_TEST_UPMARKET_AI_HARDWARE",
+            "UPMARKET_TEST_UPMARKET_AI_RUNTIME",
+            "UPMARKET_TEST_UPMARKET_AI_CONVERTER"
+        ]
+        let liveEnabled = getenv("UPMARKET_ENABLE_TEST_DOUBLES").map { String(cString: $0) } ?? ""
+        guard liveEnabled == "1" else { return }
+        for key in keys {
+            if let raw = getenv(key) {
+                destination[key] = String(cString: raw)
+            } else if let value = source[key] {
+                destination[key] = value
+            }
+        }
+    }
+
+    private nonisolated static func developerModelIntakeEnabled(in environment: [String: String]) -> Bool {
+        environment["UPMARKET_ENABLE_DEVELOPER_MODEL_INTAKE"] == "1"
     }
 }
 

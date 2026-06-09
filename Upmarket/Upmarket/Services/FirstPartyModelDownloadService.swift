@@ -192,7 +192,7 @@ struct FirstPartyModelDownloadService: Sendable {
         if fileManager.fileExists(atPath: progressFile),
            let handle = FileHandle(forWritingAtPath: progressFile) {
             defer { try? handle.close() }
-            try? handle.seekToEnd()
+            _ = try? handle.seekToEnd()
             if let data = line.data(using: .utf8) {
                 try? handle.write(contentsOf: data)
             }
@@ -241,7 +241,7 @@ struct FirstPartyModelDownloadService: Sendable {
         return true
     }
 
-    private static func defaultManifestBaseURL() -> URL? {
+    nonisolated private static func defaultManifestBaseURL() -> URL? {
         let environment = ProcessInfo.processInfo.environment
         if let value = environment["UPMARKET_MODEL_MANIFEST_BASE_URL"],
            let url = URL(string: value),
@@ -256,18 +256,18 @@ struct FirstPartyModelDownloadService: Sendable {
         return nil
     }
 
-    private static func defaultModelsDirectoryURL() -> URL {
+    nonisolated private static func defaultModelsDirectoryURL() -> URL {
         FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Upmarket/models", isDirectory: true)
     }
 
-    private static func defaultDataLoader(_ url: URL) async throws -> Data {
+    nonisolated private static func defaultDataLoader(_ url: URL) async throws -> Data {
         let (data, _) = try await URLSession.shared.data(from: url)
         return data
     }
 
-    private static func defaultFileDownloader(_ url: URL) async throws -> URL {
+    nonisolated private static func defaultFileDownloader(_ url: URL) async throws -> URL {
         let (downloadedURL, _) = try await URLSession.shared.download(from: url)
         return downloadedURL
     }
@@ -303,11 +303,19 @@ private enum ModelDownloadCatalog {
             revision: "e9939db25d2f296c8678d0491c4609a8c596c50a",
             storageDirectory: "ibm-granite--granite-docling-258M-mlx",
             expectedFiles: [
+                "added_tokens.json",
+                "chat_template.jinja",
                 "config.json",
+                "generation_config.json",
+                "merges.txt",
                 "model.safetensors",
+                "model.safetensors.index.json",
                 "preprocessor_config.json",
                 "processor_config.json",
+                "special_tokens_map.json",
                 "tokenizer.json",
+                "tokenizer_config.json",
+                "vocab.json",
             ],
             expectedDirs: []
         ),

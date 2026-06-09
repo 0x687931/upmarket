@@ -38,12 +38,13 @@ scripts/ci/validate_dependency_lock.py --current "$CURRENT_LOCK" --candidate "$C
 echo ""
 
 echo "==> Current release pins"
-"$VENV/bin/pip" show docling markitdown pypdfium2 torch transformers huggingface-hub 2>/dev/null \
+"$VENV/bin/pip" show docling markitdown pypdfium2 torch transformers huggingface-hub mlx mlx-metal mlx-vlm 2>/dev/null \
   | grep -E "^Name:|^Version:" | paste - - | column -t || true
 echo ""
 
 echo "==> Checking installed environment consistency"
 "$VENV/bin/pip" check
+"$VENV/bin/python" scripts/ci/validate_installed_pins.py --requirements "$CURRENT_LOCK"
 echo ""
 
 echo "==> Reporting upstream drift without promotion"
@@ -66,6 +67,7 @@ echo ""
 
 echo "==> Checking installed environment consistency after install"
 "$VENV/bin/pip" check
+"$VENV/bin/python" scripts/ci/validate_installed_pins.py --requirements "$LOCK"
 echo ""
 
 echo "==> Re-applying MPS compatibility patch"

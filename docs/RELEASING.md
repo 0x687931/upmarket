@@ -27,7 +27,17 @@ Edit `requirements-candidate.txt` with exact pins only. Do not edit `requirement
 
 If accepted, promote by copying the exact candidate pins to `requirements.txt` in the same reviewed change.
 
-### 3. Test conversion quality
+### 3. Stage first-party model assets
+
+Before TestFlight or App Store packaging, stage model manifests and files from a manifest-validated local cache, then upload the output directory to the Apple-hosted model location:
+
+```bash
+scripts/build/stage_first_party_model_assets.py --output build/first-party-model-assets
+```
+
+The app's default download path uses `FirstPartyModelDownloadService`. The Python/Hugging Face snapshot downloader is developer intake tooling only, is disabled unless `UPMARKET_ENABLE_DEVELOPER_MODEL_INTAKE=1`, and must not be the packaged customer download path.
+
+### 4. Test conversion quality
 ```bash
 # Test fast path (no models)
 .venv/bin/python3 -c "
@@ -44,16 +54,16 @@ print(r['success'], r['pipeline'])
 "
 ```
 
-### 4. Build and test in Xcode
+### 5. Build and test in Xcode
 - Cmd+Shift+K (clean)
 - Cmd+B (build)
 - Cmd+R (run) — test with real documents
 
-### 5. Update version number
+### 6. Update version number
 In Xcode: Upmarket target → General → Version (MARKETING_VERSION)
 Bump: patch for bug fixes (1.0.1), minor for features (1.1.0), major for breaking (2.0.0)
 
-### 6. Archive and submit
+### 7. Archive and submit
 - Product → Archive
 - Distribute App → App Store Connect
 - Upload

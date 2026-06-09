@@ -77,8 +77,9 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 
 ### P0 - Offline and Model Integrity
 - [x] Default conversion runtime to offline mode: `HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`, and local-files-only model loading.
-- [x] Permit network only inside the explicit model download flow; AI conversion now fails locally with a clear model-missing or model-corrupt error.
-- [x] Pin immutable model revisions, download to staging directories, verify expected files/checksums, write a validation manifest, and atomically promote completed downloads.
+- [x] Permit network only inside the explicit model download flow; packaged release downloads use Upmarket's first-party Apple-hosted model manifests, while the Hugging Face snapshot path is retained for developer intake only behind `UPMARKET_ENABLE_DEVELOPER_MODEL_INTAKE=1`.
+- [x] Pin immutable model revisions, download to staging directories, verify expected files/checksums, write a validation manifest, and atomically promote completed downloads. The Granite MLX artifact must include `chat_template.jinja`, tokenizer metadata, and model index files, not just weights.
+- [x] Add first-party model asset staging with `scripts/build/stage_first_party_model_assets.py`; upload the staged directory to the Apple-hosted model base URL before App Store/TestFlight packaging.
 - [x] Treat partial, corrupt, stale, or unexpected model directories as unavailable.
 
 ### P0 - Native Apple Replacements and Sandbox Safety
@@ -222,7 +223,7 @@ P0-002 implementation note: `UpmarketRuntimeHelper` is a sandboxed command-line 
 - [x] Bootstrap `docs/release/corpus_pathway_baseline.json` with per-document scores for current report-backed pathways. `scripts/ci/validate_corpus_pathways.py` now passes across the eight current report JSON files, including the split packaged MarkItDown audio report and native ImageIO/AVFoundation metadata reports. Every corpus document now has at least one current report-backed pathway baseline row; native Vision OCR runtime evidence is covered by `IntelligenceServicesTests`.
 - [x] Run fast path with no downloaded models. Evidence exists in `reports/corpus-python-fast-pdfium.json`, `reports/corpus-python-fast-markitdown.json`, and `reports/corpus-swift-pdfkit.json`; the password-protected PDF is now recorded as expected-blocked in the per-document pathway baseline.
 - [x] Run enhanced path after model/runtime setup where supported. Evidence exists in `reports/corpus-python-enhanced-docling.json`; the password-protected PDF is now recorded as expected-blocked in the per-document pathway baseline.
-- [ ] Run AI path after model download where supported. Current valid Granite AI evidence is `reports/corpus-granite-docling-scanned-or-unknown.json`; it is baselined but not release-passing because 4 rows are environment-blocked by Metal/runtime availability in the benchmark context. The 2026-06-06 targeted Xcode smoke skipped because the Upmarket AI model is not installed in Application Support, so a model-installed GUI/Metal validation pass remains required.
+- [ ] Run AI path after model download where supported. Current valid Granite AI evidence is `reports/corpus-granite-docling-scanned-or-unknown.json`; it is baselined but not release-passing because 4 rows are environment-blocked by Metal/runtime availability in the benchmark context. The 2026-06-08 sandbox test doubles cover Metal-capable, non-Metal, and Metal-session-unavailable branches, but they are not release evidence. The model catalog now requires the missing Granite chat template/tokenizer metadata and first-party Apple-hosted manifests; any legacy local AI cache missing those files must be repaired or re-downloaded before the native benchmark can be repeated. A model-installed GUI/Metal pass remains required.
 - [x] Run batch conversion from the shelf queue across at least 5 mixed accepted inputs, including one failure, one cancellation, and one retry. Covered by `ConversionQueueTests.testBatchShelfQueueFiveMixedInputsWithFailureCancellationAndRetry`; the 2026-06-06 Xcode rerun passed all 24 selected `ConversionQueueTests`.
 - [x] Defer physical Intel corpus validation from v1.0 release blocking. Current release positioning must keep Intel claims limited to build compatibility/native-only behavior until physical Intel evidence exists.
 - [x] Verify temp files are cleaned after success, failure, cancellation, and app quit. Xcode covers app-owned workspace cleanup after native success, recoverable failure, input-copy failure, advanced-runtime cancellation, stale startup cleanup, app-termination cleanup, and process quit/relaunch cleanup; the 2026-06-06 focused Gate B run passed `ConversionQueueTests`, `DiagnosticsTests`, and the targeted Granite AI smoke with one model-missing skip.
@@ -315,7 +316,7 @@ This is a launch requirement, not post-launch polish.
 - [ ] Rendered Markdown preview toggle
 - [ ] Share button using macOS share sheet
 - [ ] Conversion history
-- [ ] Output format options: Markdown / plain text
+- [ ] Output format options: Markdown / plain text / HTML (HTML via Docling's `export_to_html()` on Enhanced/AI paths; native paths remain Markdown-only)
 - [ ] OCR toggle in drop zone
 - [ ] First-launch onboarding
 

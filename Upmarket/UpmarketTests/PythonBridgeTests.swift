@@ -452,6 +452,140 @@ final class PythonBridgeTests: XCTestCase {
         }
     }
 
+    func testRuntimeHelperForwardsOnlyExplicitAITestDoubleEnvironment() async throws {
+        setenv("UPMARKET_ENABLE_TEST_DOUBLES", "1", 1)
+        setenv("UPMARKET_TEST_UPMARKET_AI_RUNTIME", "unavailable", 1)
+        setenv("UPMARKET_SECRET_SHOULD_NOT_PASS", "secret", 1)
+        defer {
+            unsetenv("UPMARKET_ENABLE_TEST_DOUBLES")
+            unsetenv("UPMARKET_TEST_UPMARKET_AI_RUNTIME")
+            unsetenv("UPMARKET_SECRET_SHOULD_NOT_PASS")
+        }
+
+        let helper = try makeHelperScript("""
+        #!/bin/sh
+        cat >/dev/null
+        if [ "$UPMARKET_ENABLE_TEST_DOUBLES" = "1" ] \\
+          && [ "$UPMARKET_TEST_UPMARKET_AI_RUNTIME" = "unavailable" ] \\
+          && [ -z "$UPMARKET_SECRET_SHOULD_NOT_PASS" ]; then
+          printf '{"success":true,"needsPassword":false,"version":"test-env"}\\n'
+        else
+          printf '{"success":false,"code":"runtime.helper.invalid-response","message":"unexpected environment","needsPassword":false}\\n'
+        fi
+        """)
+
+        let client = RuntimeHelperClient(executableURL: helper)
+        let status = try await client.readiness()
+        XCTAssertTrue(status.isReady)
+        XCTAssertEqual(status.version, "test-env")
+    }
+
+    func testLegacyHelperModelDownloadIsDeveloperOnly() async throws {
+        let previous = getenv("UPMARKET_ENABLE_DEVELOPER_MODEL_INTAKE").map { String(cString: $0) }
+        unsetenv("UPMARKET_ENABLE_DEVELOPER_MODEL_INTAKE")
+        defer {
+            if let previous {
+                setenv("UPMARKET_ENABLE_DEVELOPER_MODEL_INTAKE", previous, 1)
+            } else {
+                unsetenv("UPMARKET_ENABLE_DEVELOPER_MODEL_INTAKE")
+            }
+        }
+
+        let marker = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketDeveloperModelIntakeMarker-\(UUID().uuidString)")
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: marker)
+        }
+        let helper = try makeHelperScript("""
+        #!/bin/sh
+        touch "\(marker.path)"
+        cat >/dev/null
+        printf '{"success":true,"needsPassword":false}\\n'
+        """)
+        let client = RuntimeHelperClient(executableURL: helper)
+        let progressFile = marker.deletingLastPathComponent()
+            .appendingPathComponent("upmarket_download_progress.jsonl")
+
+        let result = await client.downloadModel(
+            key: "upmarket_ai",
+            progressFile: progressFile.path,
+            workspaceURL: FileManager.default.temporaryDirectory
+        )
+
+        XCTAssertFalse(result.success)
+        XCTAssertEqual(result.error, "Developer model intake is disabled for this build.")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: marker.path))
+    }
+
+    func testPackagedRuntimeHelperAITestDoublesCoverAvailableAndUnavailableRuntime() async throws {
+        let helper = try packagedRuntimeHelperURL()
+        let client = RuntimeHelperClient(executableURL: helper, livenessInterval: 30)
+
+        // Skip if the bundled Python site-packages aren't present — this happens when
+        // build_python_env.sh hasn't run (e.g. CI cache miss). Importing any module
+        // via PythonKit crashes (SIGTRAP) rather than throwing, so check the filesystem first.
+        let sitePackages = helper
+            .deletingLastPathComponent()          // MacOS/
+            .deletingLastPathComponent()          // Contents/
+            .appendingPathComponent("Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge")
+        guard FileManager.default.fileExists(atPath: sitePackages.path) else {
+            throw XCTSkip("Bundled Python site-packages not built (run build_python_env.sh)")
+        }
+
+        let inputDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketAITestDoubleInputs-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: inputDirectory, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: inputDirectory)
+        }
+
+        let input = inputDirectory.appendingPathComponent("sample.png")
+        let png = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4//8/AAX+Av4N70a4AAAAAElFTkSuQmCC")!
+        try png.write(to: input)
+
+        setenv("UPMARKET_ENABLE_TEST_DOUBLES", "1", 1)
+        setenv("UPMARKET_TEST_UPMARKET_AI_HARDWARE", "available", 1)
+        setenv("UPMARKET_TEST_UPMARKET_AI_CONVERTER", "stub", 1)
+        defer {
+            unsetenv("UPMARKET_ENABLE_TEST_DOUBLES")
+            unsetenv("UPMARKET_TEST_UPMARKET_AI_HARDWARE")
+            unsetenv("UPMARKET_TEST_UPMARKET_AI_RUNTIME")
+            unsetenv("UPMARKET_TEST_UPMARKET_AI_CONVERTER")
+        }
+
+        setenv("UPMARKET_TEST_UPMARKET_AI_RUNTIME", "unavailable", 1)
+        let unavailableWorkspace = try AppWorkspace.create(prefix: "helper-ai-runtime-unavailable")
+        defer { AppWorkspace.remove(unavailableWorkspace) }
+        let unavailableCopy = try AppWorkspace.copy(input, into: unavailableWorkspace)
+        do {
+            _ = try await client.convert(
+                fileURL: unavailableCopy,
+                title: unavailableCopy.deletingPathExtension().lastPathComponent,
+                useAI: true,
+                password: nil,
+                workspaceURL: unavailableWorkspace
+            )
+            XCTFail("Expected runtime-unavailable error for forced non-Metal runtime")
+        } catch let error as PythonBridgeError {
+            XCTAssertEqual(error.diagnosticCode, "runtime.helper.runtime-unavailable")
+        }
+
+        setenv("UPMARKET_TEST_UPMARKET_AI_RUNTIME", "available", 1)
+        let availableWorkspace = try AppWorkspace.create(prefix: "helper-ai-runtime-available")
+        defer { AppWorkspace.remove(availableWorkspace) }
+        let availableCopy = try AppWorkspace.copy(input, into: availableWorkspace)
+        let result = try await client.convert(
+            fileURL: availableCopy,
+            title: availableCopy.deletingPathExtension().lastPathComponent,
+            useAI: true,
+            password: nil,
+            workspaceURL: availableWorkspace
+        )
+        let output = try XCTUnwrap(result.output)
+        XCTAssertEqual(output.pipeline, .ai)
+        XCTAssertTrue(output.markdown.contains("test-double conversion succeeded"))
+    }
+
     private func makeHelperScript(_ source: String) throws -> URL {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("UpmarketRuntimeHelperTests-\(UUID().uuidString)", isDirectory: true)
