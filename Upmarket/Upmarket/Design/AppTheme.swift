@@ -136,5 +136,21 @@ enum AppTheme {
             case .thick: return 16
             }
         }
+
+        var width: CGFloat {
+            switch self {
+            case .shelf: return 217  // controlStripWidth + divider + peekPanelWidth
+            case .thin: return 480
+            case .thick: return 800
+            }
+        }
+
+        var height: CGFloat {
+            switch self {
+            case .shelf: return 132
+            case .thin: return 600
+            case .thick: return 700
+            }
+        }
     }
 }

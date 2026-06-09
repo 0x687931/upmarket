@@ -72,6 +72,6 @@ struct AISuggestionView: View {
                 .padding(.bottom, AppTheme.Spacing.xs)
         }
         .padding(windowSize.contentPadding)
-        .frame(width: 360)
+        .frame(width: windowSize.width)
     }
 }

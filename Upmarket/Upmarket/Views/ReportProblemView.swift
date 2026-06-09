@@ -78,7 +78,7 @@ struct ReportProblemView: View {
             }
         }
         .padding(windowSize.contentPadding)
-        .frame(width: 620, height: 560)
+        .frame(width: 620, height: windowSize.height)
         .background(Color(nsColor: .windowBackgroundColor))
         .onChange(of: includeDiagnostics) { enabled in
             if enabled {

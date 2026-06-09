@@ -42,7 +42,7 @@ struct PaywallView: View {
             }
             legalFooter
         }
-        .frame(width: 460)
+        .frame(width: windowSize.width)
         .fixedSize(horizontal: false, vertical: true)
         .task {
             await store.loadProducts()

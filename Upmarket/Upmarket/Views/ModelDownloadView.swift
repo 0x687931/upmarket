@@ -28,7 +28,7 @@ struct ModelDownloadView: View {
             }
         }
         .padding(windowSize.contentPadding)
-        .frame(width: 480)
+        .frame(width: windowSize.width)
         .onAppear { modelManager.checkModels() }
     }
 

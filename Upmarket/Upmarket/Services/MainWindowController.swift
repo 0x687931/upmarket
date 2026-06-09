@@ -11,14 +11,15 @@ final class MainWindowController: NSWindowController {
             .environmentObject(StoreManager.shared)
             .environmentObject(ModelManager.shared)
 
+        let windowSize = AppTheme.WindowSize.thick
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 560),
+            contentRect: NSRect(x: 0, y: 0, width: windowSize.width, height: windowSize.height),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         window.title = "Upmarket"
-        window.minSize = NSSize(width: 400, height: 500)
+        window.minSize = NSSize(width: 500, height: 600)
         window.contentView = NSHostingView(rootView: rootView)
         window.isReleasedWhenClosed = false
         window.center()
