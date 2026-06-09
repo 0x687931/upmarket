@@ -302,9 +302,7 @@ final class ConversionQueue: ObservableObject {
         latestResult = result
         if stage == .complete, let output = result.output {
             historyStore?.record(job: jobs[index], output: output)
-            // After a successful conversion, show the paywall if the user has
-            // exhausted free conversions and hasn't purchased yet.
-            if !StoreManager.shared.canConvert {
+            if StoreManager.shared.shouldShowTrialPaywallAfterConversion() {
                 PaywallWindowController.shared.show()
             }
         }

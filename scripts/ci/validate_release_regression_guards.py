@@ -153,7 +153,7 @@ def main() -> int:
         "Upmarket/Upmarket/Services/ConversionQueue.swift",
         [
             "PaywallWindowController.shared.show()",
-            "StoreManager.shared.canConvert",
+            "shouldShowTrialPaywallAfterConversion()",
         ],
         "post-conversion paywall trigger regression guard",
         errors,
@@ -164,7 +164,8 @@ def main() -> int:
             "testInitialStateDiscardsLegacyLocalCredits",
             "testDoesNotConsumeEditableFreeTrialOrPackCreditState",
             "testVerifiedPackTransactionsDoNotGrantBetaConversionCredits",
-            "testTrialPaywallPromptIsDisabledWhenLocalTrialCreditsAreNotAuthoritative",
+            "testTrialPaywallPromptWhenUnpaidAndNoCreditsRemaining",
+            "testTrialPaywallPromptSuppressedWhenFreeDocsOrPackCreditsRemain",
         ],
         "local conversion-credit authority regression tests",
         errors,
