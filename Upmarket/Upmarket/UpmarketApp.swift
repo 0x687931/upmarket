@@ -83,8 +83,9 @@ struct UpmarketApp: App {
 
     init() {
         RuntimePrivilegeGuard.abortIfPrivilegedProcess()
-        // Prevent macOS from restoring the Settings window (or any window) across launches.
-        UserDefaults.standard.set(false, forKey: "NSQuitAlwaysKeepsWindows")
+        // SwiftUI persists the Settings window state independently of macOS window restoration.
+        // Removing this key prevents it from reopening on launch.
+        UserDefaults.standard.removeObject(forKey: "com_apple_SwiftUI_Settings_window")
         AppVisibilityPreference.normalizePersistentVisibility()
         AppRuntime.exitIfDuplicateInstance()
         AppRuntime.installTerminationSignalCleanup()
