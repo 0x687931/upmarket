@@ -22,9 +22,6 @@ struct ContentView: View {
     @State private var languageWarning: String?
 
     // Animation state
-    @State private var symbolScale: CGFloat = 1.0
-    @State private var symbolOpacity: Double = 1.0
-    @State private var glowRadius: CGFloat = 0
     @State private var ringProgress: Double = 0
     @State private var rippleScale: CGFloat = 0
     @State private var rippleOpacity: Double = 0
@@ -80,7 +77,6 @@ struct ContentView: View {
             }
         }
         .overlay(alignment: .bottom) { languageWarningBanner }
-        .onAppear { startIdleAnimation() }
         .onChange(of: isAnalysingPrimary) { analysing in
             if analysing { startProgressAnimation() }
         }
@@ -116,98 +112,53 @@ struct ContentView: View {
 
     private var dropZoneView: some View {
         ZStack {
-            // Drop target border
-            RoundedRectangle(cornerRadius: 20)
-                .strokeBorder(
-                    isTargeted ? Color.accentColor : Color.secondary.opacity(0.15),
-                    style: StrokeStyle(
-                        lineWidth: isTargeted ? 2 : 1.5,
-                        dash: isTargeted ? [] : [10, 6]
-                    )
-                )
-                .padding(24)
-                .animation(.easeInOut(duration: 0.2), value: isTargeted)
+            dropZoneBackground
 
-            VStack(spacing: 28) {
-                // Animated # symbol
-                ZStack {
-                    // Glow ring
-                    Circle()
-                        .fill(Color.accentColor.opacity(0.12))
-                        .frame(width: 100 + glowRadius, height: 100 + glowRadius)
-                        .blur(radius: 12)
-                        .opacity(isTargeted ? 1 : 0.6)
-                        .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true), value: glowRadius)
-
-                    // Ripple on drop target
-                    Circle()
-                        .strokeBorder(Color.accentColor.opacity(rippleOpacity), lineWidth: 2)
-                        .frame(width: 90 * rippleScale, height: 90 * rippleScale)
-
-                    // Main symbol
-                    Text("#")
-                        .font(.system(size: 64, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.accentColor)
-                        .opacity(isTargeted ? 1.0 : 0.85)
-                        .scaleEffect(symbolScale)
-                        .opacity(symbolOpacity)
-                        .animation(.easeInOut(duration: 0.2), value: isTargeted)
-                }
-
-                // Format chips — no text label needed
-                HStack(spacing: 6) {
-                    ForEach(["PDF", "DOCX", "PPTX", "XLSX", "HTML", "EPUB", "CSV", "Images", "Audio"], id: \.self) { fmt in
-                        Text(fmt)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Color.secondary.opacity(0.08), in: Capsule())
-                    }
-                }
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .opacity(isTargeted ? 0 : 1)
-                .animation(.easeInOut(duration: 0.15), value: isTargeted)
-
-                // Choose file button — minimal
-                Button {
-                    openFilePicker()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "folder")
-                            .font(.system(size: 13))
-                        Text(L("dropzone.button"))
-                            .font(.system(size: 13, weight: .medium))
-                    }
-                    .foregroundStyle(Color.accentColor)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 7)
-                    .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel(L("dropzone.button"))
-                    .accessibilityIdentifier("ChooseDocumentButton")
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("ChooseDocumentButton")
-                .opacity(isTargeted ? 0 : 1)
-                .animation(.easeInOut(duration: 0.15), value: isTargeted)
-            }
-
-            // Cmd+O hint
-            VStack {
+            VStack(spacing: 0) {
                 Spacer()
-                HStack {
-                    Spacer()
-                    HStack(spacing: 3) {
-                        Image(systemName: "command")
-                            .font(.system(size: 9))
-                        Text("O")
-                            .font(.system(size: 9, weight: .medium))
+
+                // App icon + headline
+                VStack(spacing: 16) {
+                    Image(nsImage: NSApp.applicationIconImage)
+                        .resizable()
+                        .frame(width: 72, height: 72)
+                        .scaleEffect(isTargeted ? 1.06 : 1.0)
+                        .animation(.spring(duration: 0.3), value: isTargeted)
+
+                    VStack(spacing: 6) {
+                        Text(isTargeted ? "Release to convert" : "Drop a file to convert it.")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .animation(.easeInOut(duration: 0.15), value: isTargeted)
+
+                        Text("Or click Choose File below.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .opacity(isTargeted ? 0 : 1)
+                            .animation(.easeInOut(duration: 0.15), value: isTargeted)
                     }
-                    .foregroundStyle(.quaternary)
-                    .padding(12)
                 }
+
+                Spacer()
+
+                // Format rows
+                VStack(alignment: .leading, spacing: 12) {
+                    formatRow(symbol: "doc.fill",       color: .blue,   label: "Documents",  detail: "PDF, Word, PowerPoint, Excel, EPUB")
+                    formatRow(symbol: "photo.fill",     color: .purple, label: "Images",      detail: "PNG, JPEG, TIFF and scanned PDFs")
+                    formatRow(symbol: "waveform",       color: .orange, label: "Audio",       detail: "MP3, M4A, WAV — transcribed to text")
+                }
+                .padding(.horizontal, 40)
+                .opacity(isTargeted ? 0 : 1)
+                .animation(.easeInOut(duration: 0.15), value: isTargeted)
+
+                Spacer()
+
+                // CTA button
+                chooseFileButton
+                    .opacity(isTargeted ? 0 : 1)
+                    .animation(.easeInOut(duration: 0.15), value: isTargeted)
+
+                Spacer().frame(height: 36)
             }
         }
         .contentShape(Rectangle())
@@ -215,6 +166,68 @@ struct ContentView: View {
         .onTapGesture { openFilePicker() }
         .onChange(of: isTargeted) { targeted in
             if targeted { triggerRipple() }
+        }
+    }
+
+    @ViewBuilder private var dropZoneBackground: some View {
+        RoundedRectangle(cornerRadius: 20)
+            .strokeBorder(
+                isTargeted ? Color.accentColor : Color.secondary.opacity(0.12),
+                style: StrokeStyle(lineWidth: isTargeted ? 2 : 1.5, dash: isTargeted ? [] : [10, 6])
+            )
+            .padding(24)
+            .animation(.easeInOut(duration: 0.2), value: isTargeted)
+
+        // Ripple on drop
+        Circle()
+            .strokeBorder(Color.accentColor.opacity(rippleOpacity), lineWidth: 2)
+            .frame(width: 90 * rippleScale, height: 90 * rippleScale)
+    }
+
+    private func formatRow(symbol: String, color: Color, label: String, detail: String) -> some View {
+        HStack(alignment: .center, spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(color.opacity(0.12))
+                    .frame(width: 36, height: 36)
+                Image(systemName: symbol)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(color)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder private var chooseFileButton: some View {
+        if #available(macOS 26, *) {
+            Button {
+                openFilePicker()
+            } label: {
+                Text("Choose File")
+                    .fontWeight(.semibold)
+                    .frame(width: 200)
+            }
+            .buttonStyle(.glassProminent)
+            .controlSize(.large)
+            .accessibilityIdentifier("ChooseDocumentButton")
+        } else {
+            Button {
+                openFilePicker()
+            } label: {
+                Text("Choose File")
+                    .fontWeight(.semibold)
+                    .frame(width: 200)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .accessibilityIdentifier("ChooseDocumentButton")
         }
     }
 
@@ -566,16 +579,6 @@ struct ContentView: View {
 
     // MARK: - Animations
 
-    private func startIdleAnimation() {
-        withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
-            glowRadius = 20
-        }
-        withAnimation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true).delay(0.5)) {
-            symbolScale = 1.04
-            symbolOpacity = 0.85
-        }
-    }
-
     private func triggerRipple() {
         rippleScale = 0.3
         rippleOpacity = 0.8
@@ -602,7 +605,6 @@ struct ContentView: View {
         withAnimation(.easeInOut(duration: 0.3)) {
             ringProgress = 0
         }
-        startIdleAnimation()
     }
 
     // MARK: - Actions
