@@ -31,8 +31,8 @@ final class MainWindowController: NSWindowController {
     func show(pickFile: Bool = false) {
         guard let window else { return }
         window.centerIfNeeded()
-        window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
 
         guard pickFile else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {

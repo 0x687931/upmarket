@@ -225,7 +225,7 @@ final class ShelfWindowController: NSWindowController {
             frame.origin.y += (oldSize.height - height) / 2
         }
 
-        panel.setFrame(frame, display: true)
+        panel.setFrame(frame, display: false)
     }
 
     func animateTourDragDemo() {
