@@ -11,19 +11,33 @@ struct ConversionRunner {
     private let modelsReady: @Sendable () -> Bool
     private let classifyOverride: (@Sendable (URL, String?, Bool, Bool) async -> ContentClassifier.Classification?)?
 
-    nonisolated init(
+    @MainActor
+    init(
         pythonWorker: PythonWorker = PythonWorker(),
         supportsAdvancedRuntime: Bool = DeviceCapability.currentSupportsAdvancedRuntime,
         supportsAI: Bool = DeviceCapability.shared.supportsUpmarketAI,
-        hasProEntitlement: @escaping @Sendable () -> Bool = { StoreManager.shared.hasProOrAbove },
-        modelsReady: @escaping @Sendable () -> Bool = { ModelManager.shared.hasCheckedModels },
+        hasProEntitlement: (@Sendable () -> Bool)? = nil,
+        modelsReady: (@Sendable () -> Bool)? = nil,
         classifyOverride: (@Sendable (URL, String?, Bool, Bool) async -> ContentClassifier.Classification?)? = nil
     ) {
         self.pythonWorker = pythonWorker
         self.supportsAdvancedRuntime = supportsAdvancedRuntime
         self.supportsAI = supportsAI
-        self.hasProEntitlement = hasProEntitlement
-        self.modelsReady = modelsReady
+
+        if let hasProEntitlement {
+            self.hasProEntitlement = hasProEntitlement
+        } else {
+            let hasProValue = StoreManager.shared.hasProOrAbove
+            self.hasProEntitlement = { hasProValue }
+        }
+
+        if let modelsReady {
+            self.modelsReady = modelsReady
+        } else {
+            let modelsReadyValue = ModelManager.shared.hasCheckedModels
+            self.modelsReady = { modelsReadyValue }
+        }
+
         self.classifyOverride = classifyOverride
     }
 

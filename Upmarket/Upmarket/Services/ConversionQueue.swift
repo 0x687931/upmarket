@@ -67,9 +67,10 @@ final class ConversionQueue: ObservableObject {
         )
     }
 
-    init(runner: ConversionRunner = ConversionRunner(), historyStore: ConversionHistoryStore? = nil) {
-        self.runHandler = runner.run
-        self.analyseHandler = runner.analyse
+    init(runner: ConversionRunner? = nil, historyStore: ConversionHistoryStore? = nil) {
+        let finalRunner = runner ?? ConversionRunner()
+        self.runHandler = finalRunner.run
+        self.analyseHandler = finalRunner.analyse
         self.historyStore = historyStore
     }
 
@@ -302,12 +303,28 @@ final class ConversionQueue: ObservableObject {
         latestResult = result
         if stage == .complete, let output = result.output {
             historyStore?.record(job: jobs[index], output: output)
+            autoSaveConverted(output, sourceURL: jobs[index].sourceURL)
             if StoreManager.shared.shouldShowTrialPaywallAfterConversion() {
                 PaywallWindowController.shared.show()
             }
         }
         AppLog.conversion.info("Finished conversion correlationID=\(id.uuidString, privacy: .public) stage=\(stage.rawValue, privacy: .public)")
         continuations.removeValue(forKey: id)?.resume(returning: result)
+    }
+
+    private func autoSaveConverted(_ output: ConversionOutput, sourceURL: URL) {
+        let sourceDirectory = sourceURL.deletingLastPathComponent()
+        let formatted = OutputFormatter.format(
+            output,
+            sourceDisplayName: sourceURL.lastPathComponent,
+            mode: OutputPreference.shared.mode
+        )
+        _ = FileAccessService.shared.autoSaveMarkdown(
+            formatted.text,
+            title: output.title,
+            to: sourceDirectory,
+            fileExtension: formatted.fileExtension
+        )
     }
 
     private func startLivenessMonitorIfNeeded() {
