@@ -47,12 +47,6 @@ struct UpmarketApp: App {
                     openPrimaryConversionWindow(pickFile: true)
                 }
                 .keyboardShortcut("o", modifiers: .command)
-
-                Button("Show Shelf") {
-                    AppVisibilityPreference.showShelf = true
-                    ShelfWindowController.shared.show(ignoringPreference: true)
-                }
-                .keyboardShortcut("s", modifiers: [.command, .shift])
             }
 
             CommandGroup(after: .help) {
@@ -81,15 +75,6 @@ struct UpmarketApp: App {
         }
         .windowResizability(.contentSize)
         .defaultSize(width: 620, height: 560)
-
-        // MARK: Onboarding window — shown on first launch
-        Window("Welcome to Upmarket", id: "onboarding") {
-            OnboardingView()
-                .environmentObject(storeManager)
-                .environmentObject(modelManager)
-        }
-        .windowResizability(.contentSize)
-        .defaultSize(width: 480, height: 400)
     }
 
     private func openPrimaryConversionWindow(pickFile: Bool = false) {
@@ -112,19 +97,12 @@ struct UpmarketApp: App {
 
         if AppRuntime.isRunningUITests { return }
 
-        // Show shelf then start tour on first launch
+        // On first launch the menu bar icon is the primary entry point.
+        // If the user has previously enabled the shelf, honour that preference.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             guard !AppRuntime.isRunningTests else { return }
-            guard AppVisibilityPreference.showShelf else {
-                if AppVisibilityPreference.showDockIcon {
-                    MainWindowController.shared.show()
-                }
-                return
-            }
-            ShelfWindowController.shared.centerForFirstLaunchTour()
-            ShelfWindowController.shared.show(animate: true)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                TourManager.shared.startIfNeeded()
+            if AppVisibilityPreference.showShelf {
+                ShelfWindowController.shared.show(animate: true)
             }
         }
     }

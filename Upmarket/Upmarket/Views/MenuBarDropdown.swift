@@ -35,14 +35,6 @@ struct MenuBarDropdown: View {
         }
 
         Button {
-            AppVisibilityPreference.showShelf = true
-            ShelfWindowController.shared.show(ignoringPreference: true)
-        } label: {
-            Label(shelfTitle, systemImage: "sidebar.right")
-        }
-        .keyboardShortcut("s", modifiers: [.command, .shift])
-
-        Button {
             HistoryWindowController.shared.show()
         } label: {
             Label(historyTitle, systemImage: "clock")
@@ -94,10 +86,6 @@ struct MenuBarDropdown: View {
     private var conversionStatusTitle: String {
         let percent = Int((conversion.overallProgress * 100).rounded())
         return percent > 0 ? "Converting \(percent)%" : "Converting"
-    }
-
-    private var shelfTitle: String {
-        conversion.jobs.isEmpty ? "Show Shelf" : "Show Shelf (\(conversion.jobs.count))"
     }
 
     private var historyTitle: String {
