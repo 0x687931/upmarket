@@ -97,7 +97,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(dockMenuItem(title: "Convert Document…", action: #selector(dockConvertDocument(_:))))
         menu.addItem(dockMenuItem(title: "Show Upmarket Window", action: #selector(dockShowMainWindow(_:))))
+        #if DEBUG
         menu.addItem(dockMenuItem(title: shelfDockTitle, action: #selector(dockShowShelf(_:))))
+        #endif
 
         menu.addItem(.separator())
 
