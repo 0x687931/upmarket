@@ -357,30 +357,88 @@ struct QueueItemRow: View {
             }
 
             // Actions
-            if hoverActions || job.isRunning {
-                HStack(spacing: 4) {
-                    if job.isRunning {
-                        Button(action: onCancel) {
-                            Image(systemName: "stop.fill")
-                                .font(.system(size: 11))
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                    } else if job.stage == .failed {
-                        Button { onRetry(job.id) } label: {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 11))
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                    }
-
-                    Button(action: onRemove) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 11))
+            HStack(spacing: 6) {
+                if job.isRunning {
+                    Button(action: onCancel) {
+                        Image(systemName: "stop.fill")
+                            .font(.system(size: 12))
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
+                } else if job.stage == .complete, let output = job.result?.output {
+                    // Completed: show copy + open + remove
+                    Button {
+                        let formatted = OutputFormatter.format(
+                            output,
+                            sourceDisplayName: job.sourceURL.lastPathComponent,
+                            mode: OutputPreference.shared.mode
+                        )
+                        FileAccessService.shared.copyMarkdown(formatted.text)
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 12))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help("Copy")
+
+                    Button {
+                        let formatted = OutputFormatter.format(
+                            output,
+                            sourceDisplayName: job.sourceURL.lastPathComponent,
+                            mode: OutputPreference.shared.mode
+                        )
+                        let savedURL = SavePreference.shared.save(
+                            markdown: formatted.text,
+                            title: output.title,
+                            sourceURL: job.sourceURL,
+                            fileExtension: formatted.fileExtension
+                        )
+                        if let url = savedURL {
+                            FileAccessService.shared.open(url)
+                        }
+                    } label: {
+                        Image(systemName: "arrow.up.right.square")
+                            .font(.system(size: 12))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help("Open")
+
+                    Button(action: onRemove) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help("Remove")
+                } else if job.stage == .failed {
+                    // Failed: show retry + remove
+                    Button { onRetry(job.id) } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 12))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help("Retry")
+
+                    Button(action: onRemove) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help("Remove")
+                } else {
+                    // Queued/processing: just remove on hover
+                    if hoverActions {
+                        Button(action: onRemove) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 12))
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
                 }
             }
         }
