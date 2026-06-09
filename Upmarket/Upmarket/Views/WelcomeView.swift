@@ -76,11 +76,11 @@ struct WelcomeView: View {
                     .frame(width: 96, height: 96)
 
                 VStack(spacing: 6) {
-                    Text("Welcome to Upmarket")
+                    Text("Convert most things to Markdown.")
                         .font(.largeTitle)
                         .fontWeight(.bold)
 
-                    Text("Convert documents to clean Markdown.\nPrivate, fast, and 100% on your Mac.")
+                    Text("Works on your Mac. No cloud, no account, no waiting.")
                         .font(.title3)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -94,8 +94,8 @@ struct WelcomeView: View {
                 featureRow(
                     symbol: "doc.fill",
                     color: .blue,
-                    title: "Any document",
-                    detail: "PDF, Word, PowerPoint, images — all converted to readable Markdown."
+                    title: "PDFs, Word, PowerPoint and more",
+                    detail: "Drop in a file and get clean, readable Markdown out."
                 )
                 featureRow(
                     symbol: "lock.fill",
@@ -106,8 +106,8 @@ struct WelcomeView: View {
                 featureRow(
                     symbol: "bolt.fill",
                     color: .orange,
-                    title: "Instant results",
-                    detail: "Drop a file onto the window or click Choose File to convert in seconds."
+                    title: "Fast, on-device AI",
+                    detail: "Conversion runs locally using Apple Silicon. No waiting on a server."
                 )
             }
             .padding(.horizontal, 48)
@@ -117,7 +117,7 @@ struct WelcomeView: View {
             // CTA
             getStartedButton
 
-            Text("3 free conversions included — no sign-up needed.")
+            Text("3 free conversions included. No sign-up needed.")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .padding(.top, 8)
