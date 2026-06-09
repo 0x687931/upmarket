@@ -58,7 +58,7 @@ struct WelcomeView: View {
                 .fill(.regularMaterial)
                 .ignoresSafeArea()
         } else {
-            Color(nsColor: .windowBackgroundColor)
+            AppTheme.Colour.background
                 .ignoresSafeArea()
         }
     }
@@ -70,18 +70,17 @@ struct WelcomeView: View {
             Spacer()
 
             // Icon + headline
-            VStack(spacing: 16) {
+            VStack(spacing: AppTheme.Spacing.lg) {
                 Image(nsImage: NSApp.applicationIconImage)
                     .resizable()
-                    .frame(width: 96, height: 96)
+                    .frame(width: AppTheme.Size.appIconSize, height: AppTheme.Size.appIconSize)
 
-                VStack(spacing: 6) {
+                VStack(spacing: AppTheme.Spacing.xs) {
                     Text("Convert most things to Markdown.")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
+                        .font(AppTheme.Font.largeTitle)
 
                     Text("Works on your Mac. No cloud, no account, no waiting.")
-                        .font(.title3)
+                        .font(AppTheme.Font.title3)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
@@ -90,7 +89,7 @@ struct WelcomeView: View {
             Spacer()
 
             // Feature rows
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
                 featureRow(
                     symbol: "doc.fill",
                     color: .blue,
@@ -110,7 +109,7 @@ struct WelcomeView: View {
                     detail: "Conversion runs locally using Apple Silicon. No waiting on a server."
                 )
             }
-            .padding(.horizontal, 48)
+            .padding(.horizontal, AppTheme.Spacing.xxxl)
 
             Spacer()
 
@@ -118,35 +117,35 @@ struct WelcomeView: View {
             getStartedButton
 
             Text("3 free conversions included. No sign-up needed.")
-                .font(.caption)
+                .font(AppTheme.Font.caption)
                 .foregroundStyle(.tertiary)
-                .padding(.top, 8)
+                .padding(.top, AppTheme.Spacing.md)
 
-            Spacer().frame(height: 32)
+            Spacer().frame(height: AppTheme.Spacing.xxl)
         }
     }
 
     // MARK: - Feature row
 
     private func featureRow(symbol: String, color: Color, title: String, detail: String) -> some View {
-        HStack(alignment: .top, spacing: 16) {
+        HStack(alignment: .top, spacing: AppTheme.Spacing.lg) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.Radius.sm)
                     .fill(color.opacity(0.12))
-                    .frame(width: 44, height: 44)
+                    .frame(width: AppTheme.Size.featureIconBox, height: AppTheme.Size.featureIconBox)
                 Image(systemName: symbol)
-                    .font(.system(size: 20, weight: .medium))
+                    .font(.system(size: AppTheme.Size.featureIcon, weight: .medium))
                     .foregroundStyle(color)
             }
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                 Text(title)
-                    .fontWeight(.semibold)
+                    .font(AppTheme.Font.body)
                 Text(detail)
-                    .font(.subheadline)
+                    .font(AppTheme.Font.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(.top, 3)
+            .padding(.top, AppTheme.Spacing.xs)
         }
     }
 
@@ -156,7 +155,7 @@ struct WelcomeView: View {
         if #available(macOS 26, *) {
             Button(action: onDismiss) {
                 Text("Get Started")
-                    .fontWeight(.semibold)
+                    .font(AppTheme.Font.body)
                     .frame(width: 200)
             }
             .buttonStyle(.glassProminent)
@@ -164,7 +163,7 @@ struct WelcomeView: View {
         } else {
             Button(action: onDismiss) {
                 Text("Get Started")
-                    .fontWeight(.semibold)
+                    .font(AppTheme.Font.body)
                     .frame(width: 200)
             }
             .buttonStyle(.borderedProminent)
