@@ -102,10 +102,12 @@ final class ModelManager: ObservableObject {
     private let downloadModelHandler: DownloadModelHandler
     private let offlineModeHandler: OfflineModeHandler
     private let modelsDirectoryURL: URL
+    let runtimeDirectoryURL: URL
 
     init(
         models: [ModelStatus] = [],
         modelsDirectoryURL: URL? = nil,
+        runtimeDirectoryURL: URL? = nil,
         checkModelsHandler: @escaping CheckModelsHandler = {
             try await PythonWorker().checkModels()
         },
@@ -118,6 +120,7 @@ final class ModelManager: ObservableObject {
     ) {
         self.models = models
         self.modelsDirectoryURL = modelsDirectoryURL ?? Self.defaultModelsDirectoryURL()
+        self.runtimeDirectoryURL = runtimeDirectoryURL ?? Self.defaultRuntimeDirectoryURL()
         self.checkModelsHandler = checkModelsHandler
         self.downloadModelHandler = downloadModelHandler
         self.offlineModeHandler = offlineModeHandler
@@ -126,6 +129,10 @@ final class ModelManager: ObservableObject {
     // Fast local conversion works without downloaded models.
     var allRequiredDownloaded: Bool { true }
 
+    var runtimeDownloaded: Bool {
+        models.first { $0.tier == "basic" }?.isDownloaded ?? false
+    }
+
     var enhancedDownloaded: Bool {
         models.first { $0.tier == "enhanced" }?.isDownloaded ?? false
     }
@@ -133,6 +140,10 @@ final class ModelManager: ObservableObject {
     var proDownloaded: Bool {
         let proModels = models.filter { $0.tier == "pro" }
         return !proModels.isEmpty && proModels.allSatisfy(\.isDownloaded)
+    }
+
+    var runtimeSizeMB: Int {
+        models.filter { $0.tier == "basic" }.reduce(0) { $0 + $1.sizeMB }
     }
 
     var requiredSizeMB: Int {
@@ -199,6 +210,21 @@ final class ModelManager: ObservableObject {
             .appendingPathComponent("Upmarket/models", isDirectory: true)
     }
 
+    static func defaultRuntimeDirectoryURL() -> URL {
+        FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Upmarket/runtime", isDirectory: true)
+    }
+
+    /// True when the Python runtime is present on disk and passes the sentinel check.
+    static func isRuntimeInstalled(runtimeDirectoryURL: URL? = nil) -> Bool {
+        let dir = runtimeDirectoryURL ?? defaultRuntimeDirectoryURL()
+        let sentinel = dir.appendingPathComponent("python_runtime/upmarket_runtime_ready")
+        let framework = dir.appendingPathComponent("python_runtime/Python.framework")
+        return FileManager.default.fileExists(atPath: sentinel.path)
+            && FileManager.default.fileExists(atPath: framework.path)
+    }
+
     private func directorySize(_ url: URL) -> Int64 {
         guard let enumerator = FileManager.default.enumerator(
             at: url, includingPropertiesForKeys: [.fileSizeKey],
@@ -241,6 +267,30 @@ final class ModelManager: ObservableObject {
             return
         }
         downloadModels(keys: [key])
+    }
+
+    func basicDownloadUnavailableReason(
+        hasBasic: Bool,
+        deviceSupportsRuntime: Bool = DeviceCapability.shared.supportsAdvancedRuntime
+    ) -> String? {
+        if !hasBasic {
+            return "Enhanced conversion requires an Upmarket license."
+        }
+        if !deviceSupportsRuntime {
+            return "Enhanced conversion requires Apple Silicon."
+        }
+        if models.filter({ $0.tier == "basic" }).isEmpty {
+            return "Check local status before downloading."
+        }
+        return nil
+    }
+
+    func downloadBasicRuntime(hasBasic: Bool) {
+        if let reason = basicDownloadUnavailableReason(hasBasic: hasBasic) {
+            downloadError = reason
+            return
+        }
+        downloadModels(keys: models.filter { $0.tier == "basic" && !$0.isDownloaded }.map(\.key))
     }
 
     func proDownloadUnavailableReason(

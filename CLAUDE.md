@@ -11,7 +11,9 @@ Upmarket is a macOS App Store app that converts documents (PDF, DOCX, PPTX, etc.
 - **PythonKit** for Swift ↔ Python interop
 - **Docling** as the conversion engine (MIT licensed)
 - **PyTorch/MPS** for layout/table models; **MLX** for SmolDocling VLM
-- **In-app download** for models (v1); Background Assets framework (v2)
+- **App ships lean (~20 MB)** — Swift only; Python runtime and model weights are gated post-purchase downloads via Apple CDN manifest
+- **Python runtime (~1.3 GB)** downloads after Basic purchase (required for Enhanced + AI); Background Assets framework (v2)
+- **Model weights (~3-5 GB)** download after Pro purchase
 - **No cloud inference** — models always run locally
 - **No Ollama, no Hugging Face at runtime** — `HF_HUB_OFFLINE=1` after model cache
 

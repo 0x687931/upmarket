@@ -20,7 +20,24 @@ MODELS_DIR = Path(
 MANIFEST_NAME = "upmarket_manifest.json"
 MANIFEST_VERSION = 1
 
+RUNTIME_DIR = Path(
+    os.environ.get("UPMARKET_RUNTIME_DIR")
+    or Path.home() / "Library" / "Application Support" / "Upmarket" / "runtime"
+)
+
 MODELS = {
+    "python_runtime": {
+        "name": "Upmarket Runtime",
+        "description": "Required for Enhanced and AI conversion on Apple Silicon",
+        "repo_id": None,   # not a HF Hub model — downloaded via Apple CDN manifest
+        "revision": "1",
+        "storage_dir": "python_runtime",
+        "expected_files": ["upmarket_runtime_ready"],
+        "expected_dirs": ["Python.framework"],
+        "size_mb": 1300,
+        "required": False,
+        "tier": "basic",
+    },
     "layout": {
         "name": "Upmarket Enhanced",
         "description": "Better results for complex PDFs, tables, and multi-column documents",
@@ -60,6 +77,8 @@ def _manifest_path(model_path: Path) -> Path:
 def model_directory(model_key: str) -> Path:
     if model_key not in MODELS:
         raise KeyError(f"unknown model: {model_key}")
+    if model_key == "python_runtime":
+        return RUNTIME_DIR / "python_runtime"
     return MODELS_DIR / MODELS[model_key].get("storage_dir", model_key)
 
 
@@ -153,9 +172,10 @@ def validate_model_dir(model_key: str, model_path: Path | None = None) -> tuple[
     expected = {
         "manifest_version": MANIFEST_VERSION,
         "model_key": model_key,
-        "repo_id": info["repo_id"],
         "revision": info["revision"],
     }
+    if info.get("repo_id"):
+        expected["repo_id"] = info["repo_id"]
     for field, value in expected.items():
         if manifest.get(field) != value:
             return False, f"manifest {field} mismatch"
@@ -214,13 +234,14 @@ def _write_manifest(model_key: str, model_path: Path) -> None:
     manifest = {
         "manifest_version": MANIFEST_VERSION,
         "model_key": model_key,
-        "repo_id": info["repo_id"],
         "revision": info["revision"],
         "expected_files": info["expected_files"],
         "expected_dirs": info.get("expected_dirs", []),
         "files": files,
         "validated_at": datetime.now(timezone.utc).isoformat(),
     }
+    if info.get("repo_id"):
+        manifest["repo_id"] = info["repo_id"]
     manifest_path = _manifest_path(model_path)
     temp_path = manifest_path.with_name(f".{manifest_path.name}.tmp")
     temp_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
@@ -244,6 +265,8 @@ def check_models() -> dict:
         model_path = model_directory(key)
         downloaded, error = validate_model_dir(key, model_path)
         unavailable = None
+        if key == "python_runtime" and not supports_upmarket_ai_hardware():
+            unavailable = "Enhanced conversion requires Apple Silicon."
         if key == "upmarket_ai" and not supports_upmarket_ai_hardware():
             unavailable = "Upmarket AI requires Apple Silicon with Metal support."
         status[key] = {
@@ -273,6 +296,9 @@ def download_model(model_key: str, progress_file: str | None = None) -> dict:
     """
     if model_key not in MODELS:
         return {"success": False, "error": f"Unknown model: {model_key}"}
+    if model_key == "python_runtime":
+        # Runtime is downloaded by the Swift layer via Apple CDN manifest, not HF Hub.
+        return {"success": False, "error": "python_runtime cannot be downloaded via this path."}
     if model_key == "upmarket_ai" and not supports_upmarket_ai_hardware():
         return {"success": False, "error": "Upmarket AI requires Apple Silicon with Metal support."}
 

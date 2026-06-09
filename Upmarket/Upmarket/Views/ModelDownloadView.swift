@@ -57,7 +57,7 @@ struct ModelDownloadView: View {
                 .foregroundStyle(Color.green)
             Text("Fast conversion is ready")
                 .fontWeight(.medium)
-            Text("This Mac uses the native Basic conversion path. Upmarket AI and advanced local models require Apple Silicon.")
+            Text("Enhanced conversion and Upmarket AI require Apple Silicon. This Mac uses native fast conversion.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -89,14 +89,29 @@ struct ModelDownloadView: View {
                 .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
             }
 
-            ForEach(modelManager.models.filter { $0.tier != "pro" }, id: \.key) { model in
+            // Basic tier: Python runtime (required for Enhanced + AI)
+            ForEach(modelManager.models.filter { $0.tier == "basic" }, id: \.key) { model in
+                let gateReason = modelManager.basicDownloadUnavailableReason(hasBasic: store.hasBasicOrAbove)
+                modelRow(
+                    icon: "cpu",
+                    title: model.name,
+                    description: gateReason ?? model.error ?? model.description,
+                    sizeMB: model.sizeMB,
+                    isDownloaded: model.isDownloaded,
+                    badge: nil,
+                    available: model.isAvailable && gateReason == nil
+                )
+            }
+
+            // Enhanced tier: layout/table models
+            ForEach(modelManager.models.filter { $0.tier == "enhanced" }, id: \.key) { model in
                 modelRow(
                     icon: "doc.text.magnifyingglass",
                     title: model.name,
                     description: model.error ?? model.description,
                     sizeMB: model.sizeMB,
                     isDownloaded: model.isDownloaded,
-                    isAI: false,
+                    badge: nil,
                     available: model.isAvailable
                 )
             }
@@ -110,7 +125,7 @@ struct ModelDownloadView: View {
                         description: gateReason ?? model.error ?? model.description,
                         sizeMB: model.sizeMB,
                         isDownloaded: model.isDownloaded,
-                        isAI: true,
+                        badge: "PRO",
                         available: model.isAvailable && gateReason == nil
                     )
                 }
@@ -118,7 +133,7 @@ struct ModelDownloadView: View {
         }
     }
 
-    private func modelRow(icon: String, title: String, description: String, sizeMB: Int, isDownloaded: Bool, isAI: Bool, available: Bool) -> some View {
+    private func modelRow(icon: String, title: String, description: String, sizeMB: Int, isDownloaded: Bool, badge: String?, available: Bool) -> some View {
         HStack(spacing: 12) {
             Image(systemName: isDownloaded ? "checkmark.circle.fill" : icon)
                 .foregroundStyle(isDownloaded ? Color.green : Color.accentColor)
@@ -128,8 +143,8 @@ struct ModelDownloadView: View {
                 HStack(spacing: 6) {
                     Text(title)
                         .fontWeight(.medium)
-                    if isAI {
-                        Text("PRO")
+                    if let badge {
+                        Text(badge)
                             .font(.caption2)
                             .fontWeight(.semibold)
                             .foregroundStyle(.white)
@@ -158,20 +173,23 @@ struct ModelDownloadView: View {
 
     private var downloadButton: some View {
         VStack(spacing: 10) {
-            let requiredReady = modelManager.models.filter(\.isRequired).allSatisfy(\.isDownloaded)
-
-            if !requiredReady && modelManager.requiredSizeMB > 0 {
-                Button {
-                    modelManager.downloadRequiredModels()
-                } label: {
-                    Label("Download Upmarket — \(modelManager.requiredSizeMB) MB", systemImage: "arrow.down.circle.fill")
-                        .frame(maxWidth: .infinity)
-                        .fontWeight(.semibold)
+            // Basic tier: Python runtime — shown to Basic+ users on Apple Silicon
+            if modelManager.basicDownloadUnavailableReason(hasBasic: store.hasBasicOrAbove) == nil {
+                let runtimeReady = modelManager.runtimeDownloaded
+                if !runtimeReady {
+                    Button {
+                        modelManager.downloadBasicRuntime(hasBasic: store.hasBasicOrAbove)
+                    } label: {
+                        Label("Download Upmarket Runtime — \(modelManager.runtimeSizeMB) MB", systemImage: "arrow.down.circle.fill")
+                            .frame(maxWidth: .infinity)
+                            .fontWeight(.semibold)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
             }
 
+            // Pro tier: AI model weights — shown to Pro users once runtime is ready
             if modelManager.proDownloadUnavailableReason(hasPro: store.hasProOrAbove) == nil {
                 let proReady = modelManager.models.filter { $0.tier == "pro" }.allSatisfy(\.isDownloaded)
                 if !proReady {
