@@ -12,12 +12,13 @@ final class MainWindowController: NSWindowController {
             .environmentObject(ModelManager.shared)
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 500),
-            styleMask: [.titled, .closable, .miniaturizable],
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 560),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         window.title = "Upmarket"
+        window.minSize = NSSize(width: 400, height: 500)
         window.contentView = NSHostingView(rootView: rootView)
         window.isReleasedWhenClosed = false
         window.center()
