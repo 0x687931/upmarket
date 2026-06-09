@@ -79,30 +79,52 @@ struct ContentView: View {
     // MARK: - Drop Zone
 
     private var dropZoneView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "arrow.down.doc")
-                .font(.system(size: 28))
-                .foregroundStyle(.secondary)
+        VStack(spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.accentColor.opacity(isTargeted ? 0.08 : 0.04))
 
-            VStack(spacing: 4) {
-                Text(isTargeted ? "Release to convert" : "Drop files here")
-                    .font(.headline)
-                    .animation(.easeInOut(duration: 0.15), value: isTargeted)
+                RoundedRectangle(cornerRadius: 16)
+                    .strokeBorder(
+                        isTargeted ? Color.accentColor : Color.secondary.opacity(0.2),
+                        style: StrokeStyle(lineWidth: isTargeted ? 2 : 1.5, dash: isTargeted ? [] : [8, 4])
+                    )
 
-                Button("or choose file…") {
-                    openFilePicker()
+                VStack(spacing: 12) {
+                    Image(systemName: "arrow.down.doc.fill")
+                        .font(.system(size: 32))
+                        .foregroundStyle(isTargeted ? Color.accentColor : Color.secondary)
+                        .animation(.easeInOut(duration: 0.15), value: isTargeted)
+
+                    VStack(spacing: 4) {
+                        Text(isTargeted ? "Release to convert" : "Drop documents here")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .animation(.easeInOut(duration: 0.15), value: isTargeted)
+
+                        if !isTargeted {
+                            Text("or click below to choose")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
-                .buttonStyle(.link)
-                .font(.caption)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 32)
             }
+            .contentShape(Rectangle())
+            .onTapGesture { openFilePicker() }
+
+            Button(action: openFilePicker) {
+                Text("Choose File")
+                    .fontWeight(.semibold)
+                    .frame(width: 140)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 20)
-        .contentShape(Rectangle())
-        .background(Color.secondary.opacity(isTargeted ? 0.06 : 0.02))
-        .cornerRadius(8)
-        .padding(12)
-        .onTapGesture { openFilePicker() }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 16)
     }
 
     // MARK: - Queue List
@@ -112,17 +134,21 @@ struct ContentView: View {
             if conversion.jobs.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "tray")
-                        .font(.system(size: 32))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 40))
+                        .foregroundStyle(.secondary.opacity(0.5))
                     Text("No conversions yet")
                         .font(.subheadline)
+                        .fontWeight(.medium)
                         .foregroundStyle(.secondary)
+                    Text("Drop files above or use Choose File to start")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(nsColor: .controlBackgroundColor))
+                .background(Color(nsColor: .windowBackgroundColor))
             } else {
                 ScrollView {
-                    VStack(spacing: 1) {
+                    VStack(spacing: 8) {
                         ForEach(conversion.jobs) { job in
                             QueueItemRow(
                                 job: job,
@@ -132,11 +158,13 @@ struct ContentView: View {
                                 onCancel: { conversion.cancel(job.id) },
                                 onRetry: { _ in _ = conversion.retry(job.id) }
                             )
-                            .background(selectedJobID == job.id ? Color.accentColor.opacity(0.08) : .clear)
+                            .background(selectedJobID == job.id ? Color.accentColor.opacity(0.06) : Color.secondary.opacity(0.04))
+                            .cornerRadius(8)
                         }
                     }
+                    .padding(12)
                 }
-                .background(Color(nsColor: .controlBackgroundColor))
+                .background(Color(nsColor: .windowBackgroundColor))
             }
         }
     }
@@ -315,24 +343,30 @@ struct QueueItemRow: View {
     @State private var hoverActions = false
 
     var body: some View {
-        HStack(spacing: 12) {
-            // File icon
-            if FileManager.default.fileExists(atPath: job.sourceURL.path),
-               let icon = NSWorkspace.shared.icon(forFile: job.sourceURL.path) as NSImage? {
-                Image(nsImage: icon)
-                    .resizable()
-                    .frame(width: 32, height: 32)
-            } else {
-                Image(systemName: "doc")
-                    .font(.system(size: 16))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 32, height: 32)
+        HStack(spacing: 14) {
+            // File icon in colored box
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.blue.opacity(0.12))
+                    .frame(width: 40, height: 40)
+
+                if FileManager.default.fileExists(atPath: job.sourceURL.path),
+                   let icon = NSWorkspace.shared.icon(forFile: job.sourceURL.path) as NSImage? {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .frame(width: 24, height: 24)
+                } else {
+                    Image(systemName: "doc.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.blue)
+                }
             }
 
             // File info
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(job.name)
                     .font(.subheadline)
+                    .fontWeight(.medium)
                     .lineLimit(1)
 
                 Text(statusLabel)
@@ -342,31 +376,30 @@ struct QueueItemRow: View {
 
             Spacer()
 
-            // Progress or status
+            // Progress or status icon
             if job.isRunning {
                 ProgressView(value: job.progress)
-                    .frame(width: 80)
+                    .frame(width: 70)
             } else if job.stage == .complete {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
-                    .font(.system(size: 14))
+                    .font(.system(size: 16, weight: .semibold))
             } else if job.stage == .failed {
                 Image(systemName: "xmark.circle.fill")
                     .foregroundStyle(.red)
-                    .font(.system(size: 14))
+                    .font(.system(size: 16, weight: .semibold))
             }
 
             // Actions
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 if job.isRunning {
                     Button(action: onCancel) {
                         Image(systemName: "stop.fill")
-                            .font(.system(size: 12))
+                            .font(.system(size: 11))
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                 } else if job.stage == .complete, let output = job.result?.output {
-                    // Completed: show copy + open + remove
                     Button {
                         let formatted = OutputFormatter.format(
                             output,
@@ -376,7 +409,7 @@ struct QueueItemRow: View {
                         FileAccessService.shared.copyMarkdown(formatted.text)
                     } label: {
                         Image(systemName: "doc.on.doc")
-                            .font(.system(size: 12))
+                            .font(.system(size: 11))
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
@@ -399,7 +432,7 @@ struct QueueItemRow: View {
                         }
                     } label: {
                         Image(systemName: "arrow.up.right.square")
-                            .font(.system(size: 12))
+                            .font(.system(size: 11))
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
@@ -407,16 +440,15 @@ struct QueueItemRow: View {
 
                     Button(action: onRemove) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 12))
+                            .font(.system(size: 11))
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                     .help("Remove")
                 } else if job.stage == .failed {
-                    // Failed: show retry + remove
                     Button { onRetry(job.id) } label: {
                         Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 12))
+                            .font(.system(size: 11))
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
@@ -424,17 +456,16 @@ struct QueueItemRow: View {
 
                     Button(action: onRemove) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 12))
+                            .font(.system(size: 11))
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                     .help("Remove")
                 } else {
-                    // Queued/processing: just remove on hover
                     if hoverActions {
                         Button(action: onRemove) {
                             Image(systemName: "xmark")
-                                .font(.system(size: 12))
+                                .font(.system(size: 11))
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
@@ -442,8 +473,8 @@ struct QueueItemRow: View {
                 }
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .contentShape(Rectangle())
         .onHover { hovering in
             hoverActions = hovering
