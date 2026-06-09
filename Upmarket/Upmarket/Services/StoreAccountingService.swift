@@ -40,7 +40,7 @@ final class StoreAccountingService {
         freeDocsRemaining: Int,
         packCredits: Int
     ) -> Bool {
-        return false
+        !hasPaidEntitlement && freeDocsRemaining == 0 && packCredits == 0
     }
 
     func recordPackTransaction(transactionID: UInt64, isRevoked: Bool, freeDocsRemaining: Int) throws -> StoreAccountingSnapshot {

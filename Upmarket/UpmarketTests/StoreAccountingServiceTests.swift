@@ -44,13 +44,28 @@ final class StoreAccountingServiceTests: XCTestCase {
         XCTAssertEqual(result.snapshot.packCredits, 0)
     }
 
-    func testTrialPaywallPromptIsDisabledWhenLocalTrialCreditsAreNotAuthoritative() {
+    func testTrialPaywallPromptWhenUnpaidAndNoCreditsRemaining() {
+        let service = makeService()
+
+        XCTAssertTrue(service.shouldShowTrialPaywallAfterConversion(
+            hasPaidEntitlement: false,
+            freeDocsRemaining: 0,
+            packCredits: 0
+        ))
+    }
+
+    func testTrialPaywallPromptSuppressedWhenFreeDocsOrPackCreditsRemain() {
         let service = makeService()
 
         XCTAssertFalse(service.shouldShowTrialPaywallAfterConversion(
             hasPaidEntitlement: false,
             freeDocsRemaining: 3,
             packCredits: 0
+        ))
+        XCTAssertFalse(service.shouldShowTrialPaywallAfterConversion(
+            hasPaidEntitlement: false,
+            freeDocsRemaining: 0,
+            packCredits: 2
         ))
         XCTAssertFalse(service.shouldShowTrialPaywallAfterConversion(
             hasPaidEntitlement: false,
