@@ -11,6 +11,8 @@ struct ReportProblemView: View {
     @State private var diagnosticSnapshot = DiagnosticsService.shared.makeSnapshot()
     @State private var logExport = DiagnosticsService.shared.recentLogExport()
 
+    private let windowSize: AppTheme.WindowSize = .thin
+
     private var preview: SupportReportPreview {
         SupportReporter.makePreview(
             category: category,
@@ -22,7 +24,7 @@ struct ReportProblemView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
             Picker("Problem type:", selection: $category) {
                 ForEach(SupportReportCategory.allCases) { item in
                     Text(item.rawValue).tag(item)
@@ -30,28 +32,28 @@ struct ReportProblemView: View {
             }
             .frame(maxWidth: 360, alignment: .leading)
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                 Text("What happened?")
                     .font(.headline)
                 TextEditor(text: $summary)
                     .font(.body)
                     .frame(minHeight: 86)
                     .overlay {
-                        RoundedRectangle(cornerRadius: 6)
+                        RoundedRectangle(cornerRadius: AppTheme.Radius.sm)
                             .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
                     }
             }
 
             Toggle("Include redacted diagnostics and recent Upmarket logs", isOn: $includeDiagnostics)
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                 Text("Preview")
                     .font(.headline)
                 TextEditor(text: .constant(preview.body))
                     .font(.system(.caption, design: .monospaced))
                     .frame(minHeight: 220)
                     .overlay {
-                        RoundedRectangle(cornerRadius: 6)
+                        RoundedRectangle(cornerRadius: AppTheme.Radius.sm)
                             .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
                     }
             }
@@ -75,7 +77,7 @@ struct ReportProblemView: View {
                 .buttonStyle(.borderedProminent)
             }
         }
-        .padding(20)
+        .padding(windowSize.contentPadding)
         .frame(width: 620, height: 560)
         .background(Color(nsColor: .windowBackgroundColor))
         .onChange(of: includeDiagnostics) { enabled in
