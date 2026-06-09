@@ -97,11 +97,14 @@ struct UpmarketApp: App {
 
         if AppRuntime.isRunningUITests { return }
 
-        // On first launch the menu bar icon is the primary entry point.
-        // If the user has previously enabled the shelf, honour that preference.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             guard !AppRuntime.isRunningTests else { return }
-            if AppVisibilityPreference.showShelf {
+            if !UserDefaults.standard.bool(forKey: "upmarket.tourComplete") {
+                // First launch — show the welcome window.
+                // The welcome window's dismiss action opens the main window.
+                NSApp.activate(ignoringOtherApps: true)
+                WelcomeWindowController.shared.show()
+            } else if AppVisibilityPreference.showShelf {
                 ShelfWindowController.shared.show(animate: true)
             }
         }
