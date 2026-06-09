@@ -49,7 +49,7 @@ struct ShelfView: View {
 
     // UI-5: asymmetric closed state
     // Left: narrow control strip  |  Right: peek panel showing live job state
-    private let windowSize: AppTheme.WindowSize = .shelf
+    private let windowSize: AppTheme.WindowSize = .compact
     private let controlStripWidth = ShelfLayout.controlStripWidth
     private let peekPanelWidth = ShelfLayout.peekPanelWidth
     private let closedHeight = ShelfLayout.closedHeight
@@ -709,7 +709,7 @@ struct ShelfItemView: View {
     @State private var now = Date()
     @State private var showCopied = false
     private let device = DeviceCapability.shared
-    private let windowSize: AppTheme.WindowSize = .shelf
+    private let windowSize: AppTheme.WindowSize = .compact
 
     private var isStalled: Bool {
         item.isStalled || item.hasNoRecentProgress(referenceDate: now, threshold: 60)

@@ -338,7 +338,7 @@ struct QueueItemRow: View {
     let onCancel: () -> Void
     let onRetry: (_ id: UUID) -> Void
 
-    private let windowSize: AppTheme.WindowSize = .thick
+    private let windowSize: AppTheme.WindowSize = .main
     @State private var hoverActions = false
 
     var body: some View {

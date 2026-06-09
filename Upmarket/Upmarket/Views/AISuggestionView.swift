@@ -8,7 +8,7 @@ struct AISuggestionView: View {
     let onBasic: () -> Void
     let onDismiss: () -> Void
 
-    private let windowSize: AppTheme.WindowSize = .thick
+    private let windowSize: AppTheme.WindowSize = .modal
 
     var body: some View {
         VStack(spacing: AppTheme.Spacing.xl) {

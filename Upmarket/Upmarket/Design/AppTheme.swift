@@ -66,90 +66,114 @@ enum AppTheme {
     // MARK: - Window Size Variants
 
     enum WindowSize {
+        // Primary Upmarket workbench window
+        case main
+        // Modal dialogs and secondary windows
+        case modal
         // Compact floating widget (Shelf)
-        case shelf
-        // Small dialogs and panels
-        case thin
-        // Main content windows (Workbench, Welcome, Settings)
-        case thick
+        case compact
+        // History window
+        case history
+        // Welcome/onboarding window
+        case welcome
 
         var contentPadding: CGFloat {
             switch self {
-            case .shelf: return Spacing.sm
-            case .thin: return Spacing.md
-            case .thick: return Spacing.lg
+            case .main: return Spacing.sm
+            case .modal: return Spacing.md
+            case .compact: return Spacing.sm
+            case .history: return Spacing.sm
+            case .welcome: return Spacing.lg
             }
         }
 
         var itemSpacing: CGFloat {
             switch self {
-            case .shelf: return Spacing.xs
-            case .thin: return Spacing.sm
-            case .thick: return Spacing.md
+            case .main: return Spacing.xs
+            case .modal: return Spacing.sm
+            case .compact: return Spacing.xs
+            case .history: return Spacing.xs
+            case .welcome: return Spacing.lg
             }
         }
 
         var itemPadding: CGFloat {
             switch self {
-            case .shelf: return Spacing.sm
-            case .thin: return Spacing.md
-            case .thick: return Spacing.lg
+            case .main: return Spacing.sm
+            case .modal: return Spacing.md
+            case .compact: return Spacing.sm
+            case .history: return Spacing.sm
+            case .welcome: return Spacing.lg
             }
         }
 
         var cornerRadius: CGFloat {
             switch self {
-            case .shelf: return Radius.md
-            case .thin: return Radius.md
-            case .thick: return Radius.lg
+            case .main: return Radius.md
+            case .modal: return Radius.md
+            case .compact: return Radius.md
+            case .history: return Radius.sm
+            case .welcome: return Radius.lg
             }
         }
 
         var fontBody: SwiftUI.Font {
             switch self {
-            case .shelf: return SwiftUI.Font.caption.weight(.medium)
-            case .thin: return SwiftUI.Font.caption.weight(.medium)
-            case .thick: return Font.body
+            case .main: return SwiftUI.Font.caption.weight(.medium)
+            case .modal: return SwiftUI.Font.caption.weight(.medium)
+            case .compact: return SwiftUI.Font.caption.weight(.medium)
+            case .history: return SwiftUI.Font.caption
+            case .welcome: return Font.body
             }
         }
 
         var fontCaption: SwiftUI.Font {
             switch self {
-            case .shelf: return SwiftUI.Font.system(size: 9)
-            case .thin: return SwiftUI.Font.caption
-            case .thick: return Font.caption
+            case .main: return SwiftUI.Font.system(size: 9)
+            case .modal: return SwiftUI.Font.caption
+            case .compact: return SwiftUI.Font.system(size: 9)
+            case .history: return SwiftUI.Font.caption
+            case .welcome: return Font.caption
             }
         }
 
         var iconSize: CGFloat {
             switch self {
-            case .shelf: return 18
-            case .thin: return 20
-            case .thick: return 24
+            case .main: return 18
+            case .modal: return 20
+            case .compact: return 18
+            case .history: return 16
+            case .welcome: return 24
             }
         }
 
         var statusIconSize: CGFloat {
             switch self {
-            case .shelf: return 12
-            case .thin: return 14
-            case .thick: return 16
+            case .main: return 12
+            case .modal: return 14
+            case .compact: return 12
+            case .history: return 12
+            case .welcome: return 16
             }
         }
 
         var width: CGFloat {
             switch self {
-            case .shelf: return 217   // floating widget (peek panel)
-            case .thin: return 420    // main compact workbench
-            case .thick: return 480   // modal dialogs
+            case .main: return 420        // Primary Upmarket workbench
+            case .modal: return 480       // Modal dialogs
+            case .compact: return 217     // Shelf floating widget
+            case .history: return 320     // History window
+            case .welcome: return 520     // Welcome/onboarding
             }
         }
 
         var height: CGFloat {
             switch self {
-            case .shelf: return 132   // peek panel height
-            case .thin: return 560    // main workbench height
-            case .thick: return 600   // modal dialogs height
+            case .main: return 560        // Upmarket workbench
+            case .modal: return 600       // Modal dialogs
+            case .compact: return 132     // Shelf widget
+            case .history: return 380     // History window
+            case .welcome: return 460     // Welcome window
             }
         }
     }
