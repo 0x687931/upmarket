@@ -42,10 +42,12 @@ struct MenuBarIconView: View {
                     .symbolEffect(.pulse, isActive: isConverting)
                     .symbolEffect(.bounce, value: completionToken)
                     .contentTransition(.symbolEffect(.replace.byLayer.downUp))
+                    .baselineOffset(0.5)
             } else {
                 Image(systemName: UpmarketSymbols.menuBarIcon(isConverting: isConverting))
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.white)
+                    .baselineOffset(0.5)
             }
         }
         .frame(width: 19, height: 19)
