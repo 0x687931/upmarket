@@ -57,12 +57,12 @@ struct MenuBarIconView: View {
                 ? [
                     Color(red: 1.00, green: 0.77, blue: 0.24),
                     Color(red: 0.97, green: 0.42, blue: 0.00),
-                    Color(red: 0.73, green: 0.17, blue: 0.00)
+                    Color(red: 0.91, green: 0.43, blue: 0.00)
                 ]
                 : [
                     Color(red: 1.00, green: 0.75, blue: 0.25),
                     Color(red: 0.91, green: 0.47, blue: 0.00),
-                    Color(red: 0.66, green: 0.22, blue: 0.00)
+                    Color(red: 0.91, green: 0.43, blue: 0.00)
                 ],
             startPoint: .top,
             endPoint: .bottom
