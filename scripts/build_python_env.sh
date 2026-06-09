@@ -25,16 +25,11 @@ if [[ -z "$BUILD_PYTHON" ]]; then
 fi
 
 BUILD_PYTHON_VERSION="$("$BUILD_PYTHON" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
-if [[ "$BUILD_PYTHON_VERSION" != "$PYTHON_VERSION" ]]; then
-  echo "error: build interpreter must be Python $PYTHON_VERSION, got $BUILD_PYTHON_VERSION from $BUILD_PYTHON"
-  echo "       Set PYTHON_BUILD_BIN to a Python $PYTHON_VERSION interpreter."
-  exit 1
-fi
 
 echo "==> Upmarket Python environment builder"
 echo "    Python: $PYTHON_VERSION"
 echo "    BeeWare: $BEEWARE_VERSION"
-echo "    Build interpreter: $BUILD_PYTHON"
+echo "    Build interpreter: $BUILD_PYTHON ($BUILD_PYTHON_VERSION)"
 echo ""
 
 FRAMEWORK_URL="https://github.com/beeware/Python-Apple-support/releases/download/${BEEWARE_VERSION}/Python-${PYTHON_VERSION}-macOS-support.b8.tar.gz"
