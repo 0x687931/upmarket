@@ -49,6 +49,7 @@ struct ShelfView: View {
 
     // UI-5: asymmetric closed state
     // Left: narrow control strip  |  Right: peek panel showing live job state
+    private let windowSize: AppTheme.WindowSize = .shelf
     private let controlStripWidth = ShelfLayout.controlStripWidth
     private let peekPanelWidth = ShelfLayout.peekPanelWidth
     private let closedHeight = ShelfLayout.closedHeight
@@ -222,9 +223,9 @@ struct ShelfView: View {
 
             if hasQueueItems {
                 Text("\(min(conversion.jobs.count, 99))")
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(windowSize.fontCaption.weight(.semibold))
                     .foregroundStyle(.primary.opacity(0.78))
-                    .padding(.horizontal, 4)
+                    .padding(.horizontal, AppTheme.Spacing.xs)
                     .padding(.vertical, 1)
                     .background(.ultraThinMaterial, in: Capsule())
                     .overlay(
@@ -235,7 +236,7 @@ struct ShelfView: View {
             }
         }
         .frame(width: ShelfLayout.miniSize.width, height: ShelfLayout.miniSize.height)
-        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: windowSize.cornerRadius, style: .continuous))
         .onTapGesture {
             withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
                 displayMode = hasQueueItems ? .queue : .peek
@@ -264,7 +265,7 @@ struct ShelfView: View {
             }
         } else if hasQueueItems {
             Image(systemName: "tray.full")
-                .font(.system(size: 20, weight: .medium))
+                .font(.system(size: windowSize.iconSize, weight: .medium))
                 .foregroundStyle(.primary.opacity(0.62))
                 .symbolRenderingMode(.hierarchical)
         } else {
@@ -274,7 +275,7 @@ struct ShelfView: View {
 
     private var idleMiniSymbol: some View {
         Image(systemName: "number")
-            .font(.system(size: 20, weight: .semibold))
+            .font(.system(size: windowSize.iconSize, weight: .semibold))
             .foregroundStyle(.primary.opacity(0.62))
             .symbolRenderingMode(.hierarchical)
     }
@@ -376,10 +377,10 @@ struct ShelfView: View {
     ) -> some View {
         Button(action: action) {
             ZStack {
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: windowSize.cornerRadius)
                     .fill(Color.primary.opacity(isSpotlighted ? 0.08 : (isHovered ? 0.045 : 0)))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8)
+                        RoundedRectangle(cornerRadius: windowSize.cornerRadius)
                             .strokeBorder(Color.primary.opacity(isSpotlighted ? 0.24 : 0), lineWidth: 1)
                     )
                     .frame(width: controlStripWidth - 10, height: buttonHeight - 8)
@@ -430,34 +431,34 @@ struct ShelfView: View {
         TimelineView(.animation) { context in
             let t = context.date.timeIntervalSinceReferenceDate
             let float = sin(t * .pi / 1.5) * 2   // ±2pt, 3s period
-            VStack(spacing: 6) {
+            VStack(spacing: AppTheme.Spacing.sm) {
                 Group {
                     if #available(macOS 14.0, *) {
                         Image(systemName: "arrow.down")
-                            .font(.system(size: 20))
+                            .font(.system(size: windowSize.iconSize))
                             .foregroundStyle(.primary.opacity(isTargeted ? 0.65 : 0.45))
                             .symbolEffect(.bounce, value: isTargeted)
                     } else {
                         Image(systemName: "arrow.down")
-                            .font(.system(size: 20))
+                            .font(.system(size: windowSize.iconSize))
                             .foregroundStyle(.primary.opacity(isTargeted ? 0.65 : 0.45))
                     }
                 }
                 .offset(y: float)
 
                 Text(isTargeted ? "Release to convert" : "Drop files here")
-                    .font(.system(size: 11))
+                    .font(windowSize.fontCaption)
                     .foregroundStyle(.primary.opacity(isTargeted ? 0.65 : 0.4))
                     .multilineTextAlignment(.center)
             }
             .animation(.easeInOut(duration: 0.15), value: isTargeted)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.horizontal, 12)
+            .padding(.horizontal, AppTheme.Spacing.md)
         }
     }
 
     private func peekJobView(_ job: ConversionJob) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: AppTheme.Spacing.md) {
             ZStack {
                 if job.isRunning {
                     Circle()
@@ -476,16 +477,16 @@ struct ShelfView: View {
             }
             .frame(width: 42, height: 42)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
                 Text(job.name)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(windowSize.fontBody)
                     .lineLimit(1)
                     .truncationMode(.middle)
 
                 peekStageLabel(job)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, AppTheme.Spacing.md)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
@@ -517,7 +518,7 @@ struct ShelfView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .font(.system(size: 10))
+        .font(windowSize.fontCaption)
         .contentTransition(.opacity)
         .animation(.easeInOut(duration: 0.2), value: job.stage)
     }
@@ -568,7 +569,7 @@ struct ShelfView: View {
                     overflowBadge
                 }
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, AppTheme.Spacing.sm)
         }
     }
 
@@ -576,14 +577,14 @@ struct ShelfView: View {
         let extra = conversion.jobs.count - maxVisible
         return ZStack {
             ForEach(0..<min(3, extra), id: \.self) { i in
-                RoundedRectangle(cornerRadius: 6)
+                RoundedRectangle(cornerRadius: windowSize.cornerRadius)
                     .fill(.ultraThinMaterial)
-                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.white.opacity(0.3), lineWidth: 0.5))
+                    .overlay(RoundedRectangle(cornerRadius: windowSize.cornerRadius).strokeBorder(.white.opacity(0.3), lineWidth: 0.5))
                     .frame(width: 38, height: 44)
                     .offset(x: CGFloat(i) * 3, y: CGFloat(-i) * 2)
             }
             Text("+\(extra)")
-                .font(.system(size: 10, weight: .semibold))
+                .font(windowSize.fontCaption.weight(.semibold))
                 .foregroundStyle(.primary.opacity(0.7))
         }
         .frame(width: itemWidth)
@@ -708,16 +709,17 @@ struct ShelfItemView: View {
     @State private var now = Date()
     @State private var showCopied = false
     private let device = DeviceCapability.shared
+    private let windowSize: AppTheme.WindowSize = .shelf
 
     private var isStalled: Bool {
         item.isStalled || item.hasNoRecentProgress(referenceDate: now, threshold: 60)
     }
 
     var body: some View {
-        VStack(spacing: 3) {
+        VStack(spacing: AppTheme.Spacing.xs) {
             iconWithArc
             Text(showCopied ? "Copied!" : item.name)
-                .font(.system(size: 9, weight: showCopied ? .semibold : .regular))
+                .font(showCopied ? windowSize.fontBody.weight(.semibold) : windowSize.fontCaption)
                 .foregroundStyle(showCopied ? Color.primary : Color.primary.opacity(0.7))
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -730,17 +732,17 @@ struct ShelfItemView: View {
                 persistentActions
             }
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, AppTheme.Spacing.sm)
         .background(selectionBackground)
         .overlay(alignment: .bottom) {
             if item.isRunning && shouldShowRunningActions {
                 runningHoverActions
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                    .padding(.bottom, 6)
+                    .padding(.bottom, AppTheme.Spacing.sm)
             }
         }
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: windowSize.cornerRadius)
                 .strokeBorder(
                     isSelected ? Color.primary.opacity(0.45) : .clear,
                     lineWidth: 1
@@ -772,7 +774,7 @@ struct ShelfItemView: View {
     }
 
     private var selectionBackground: some View {
-        RoundedRectangle(cornerRadius: 8)
+        RoundedRectangle(cornerRadius: windowSize.cornerRadius)
             .fill(isSelected ? Color.primary.opacity(0.06) : .clear)
             .animation(.easeInOut(duration: 0.12), value: isSelected)
     }
@@ -855,19 +857,19 @@ struct ShelfItemView: View {
 
     // Always-visible buttons for terminal (non-running) jobs.
     private var persistentActions: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: AppTheme.Spacing.xs) {
             if let output = item.result?.output {
                 Button {
                     copyOutput(output)
                     showCopied = true   // task(id: showCopied) resets after 1.5s
                 } label: {
-                    Image(systemName: "doc.on.doc").font(.system(size: 10))
+                    Image(systemName: "doc.on.doc").font(.system(size: 9))
                 }
                 .buttonStyle(ShelfActionButtonStyle())
                 .help("Copy Output")
 
                 Button { handleDoubleClick() } label: {
-                    Image(systemName: "arrow.up.right.square").font(.system(size: 10))
+                    Image(systemName: "arrow.up.right.square").font(.system(size: 9))
                 }
                 .buttonStyle(ShelfActionButtonStyle())
                 .help("Open in editor")
@@ -878,7 +880,7 @@ struct ShelfItemView: View {
             }
 
             Button(action: onRemove) {
-                Image(systemName: "xmark").font(.system(size: 10))
+                Image(systemName: "xmark").font(.system(size: 9))
             }
             .buttonStyle(ShelfActionButtonStyle())
             .help("Remove")
@@ -891,7 +893,7 @@ struct ShelfItemView: View {
             Button {
                 NotificationCenter.default.post(name: .showPaywall, object: nil)
             } label: {
-                Image(systemName: "arrow.up.forward.circle").font(.system(size: 10))
+                Image(systemName: "arrow.up.forward.circle").font(.system(size: 9))
             }
             .buttonStyle(ShelfActionButtonStyle())
             .help("Upgrade to Pro")
@@ -900,7 +902,7 @@ struct ShelfItemView: View {
             Button {
                 PreferencesWindowController.shared.show()
             } label: {
-                Image(systemName: "arrow.down.circle").font(.system(size: 10))
+                Image(systemName: "arrow.down.circle").font(.system(size: 9))
             }
             .buttonStyle(ShelfActionButtonStyle())
             .help(message == ConversionError.modelUnavailable.errorDescription
@@ -908,7 +910,7 @@ struct ShelfItemView: View {
                   : "Retry download in Settings")
         } else {
             Button(action: onRetry) {
-                Image(systemName: "arrow.clockwise").font(.system(size: 10))
+                Image(systemName: "arrow.clockwise").font(.system(size: 9))
             }
             .buttonStyle(ShelfActionButtonStyle())
             .help("Retry")
@@ -917,9 +919,9 @@ struct ShelfItemView: View {
 
     // Cancel (and Retry when stalled) overlay shown on hover while the job is running.
     private var runningHoverActions: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: AppTheme.Spacing.xs) {
             Button(action: onCancel) {
-                Image(systemName: "stop.fill").font(.system(size: 8))
+                Image(systemName: "stop.fill").font(.system(size: 7))
             }
             .buttonStyle(ShelfActionButtonStyle())
             .help("Cancel")
@@ -929,7 +931,7 @@ struct ShelfItemView: View {
                     onCancel()
                     onRetry()
                 } label: {
-                    Image(systemName: "arrow.clockwise").font(.system(size: 8))
+                    Image(systemName: "arrow.clockwise").font(.system(size: 7))
                 }
                 .buttonStyle(ShelfActionButtonStyle())
                 .help("Cancel and retry")
@@ -959,7 +961,7 @@ struct ShelfItemView: View {
                     .foregroundStyle(.primary.opacity(0.65))
             }
         }
-        .font(.system(size: 9))
+        .font(windowSize.fontCaption)
         .lineLimit(1)
         .frame(width: 56, height: 10)
         // Stage label crossfades on every stage change
@@ -1103,10 +1105,10 @@ struct ShelfActionButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .foregroundStyle(.primary.opacity(configuration.isPressed ? 0.95 : 0.78))
-            .padding(4)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 5))
+            .padding(AppTheme.Spacing.xs)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm))
             .overlay(
-                RoundedRectangle(cornerRadius: 5)
+                RoundedRectangle(cornerRadius: AppTheme.Radius.sm)
                     .strokeBorder(Color.primary.opacity(configuration.isPressed ? 0.22 : 0.12), lineWidth: 0.5)
             )
     }
