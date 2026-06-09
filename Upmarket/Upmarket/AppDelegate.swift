@@ -535,8 +535,8 @@ final class PreferencesWindowController: NSWindowController {
         if !window.isVisible {
             window.center()
         }
-        window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
     }
 }
 
@@ -568,8 +568,8 @@ final class HistoryWindowController: NSWindowController {
         if !window.isVisible {
             window.center()
         }
-        window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
     }
 }
 
@@ -601,7 +601,7 @@ final class ReportProblemWindowController: NSWindowController {
         if !window.isVisible {
             window.center()
         }
-        window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
     }
 }
