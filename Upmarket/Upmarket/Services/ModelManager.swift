@@ -62,7 +62,7 @@ enum ModelInstallState: Equatable, Sendable {
 
 final class ModelManager: ObservableObject {
 
-    static let shared = ModelManager()
+    nonisolated static let shared = ModelManager()
 
     typealias CheckModelsHandler = @Sendable () async throws -> [ModelStatus]
     typealias DownloadModelHandler = @Sendable (_ key: String, _ progressFile: String) async -> ModelDownloadResult

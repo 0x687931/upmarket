@@ -1,6 +1,6 @@
 import Foundation
 
-enum ConversionResult: Equatable {
+enum ConversionResult: Equatable, Sendable {
     case success(ConversionOutput)
     case failure(String)
 
@@ -35,7 +35,7 @@ enum ConversionResult: Equatable {
     }
 }
 
-enum Pipeline: String, Codable {
+enum Pipeline: String, Codable, Sendable {
     case fast = "fast"
     case enhanced = "enhanced"
     case ai = "ai"
@@ -51,7 +51,7 @@ enum Pipeline: String, Codable {
     }
 }
 
-enum ConversionPathway: String, Codable, Equatable {
+enum ConversionPathway: String, Codable, Equatable, Sendable {
     case pdfKit = "pdfKit"
     case visionOCR = "visionOCR"
     case speech = "speech"
@@ -101,7 +101,7 @@ nonisolated enum OutputMode: String, Codable, CaseIterable, Identifiable, Sendab
     }
 }
 
-struct ConversionOutput: Equatable {
+nonisolated struct ConversionOutput: Equatable, Sendable {
     let markdown: String
     let pages: Int
     let format: String
