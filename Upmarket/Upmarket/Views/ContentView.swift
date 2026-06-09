@@ -438,7 +438,7 @@ struct ContentView: View {
 
                 case .modelUnavailable, .downloadFailed:
                     Button("Open Settings") {
-                        NSApp.sendAction(Selector(("orderFrontPreferencesPanel:")), to: nil, from: nil)
+                        PreferencesWindowController.shared.show()
                     }
                     .buttonStyle(.bordered)
 

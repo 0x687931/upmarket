@@ -4,7 +4,6 @@ struct MenuBarDropdown: View {
     @EnvironmentObject private var store: StoreManager
     @EnvironmentObject private var conversion: ConversionQueue
     @EnvironmentObject private var historyStore: ConversionHistoryStore
-    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         if conversion.isConverting {
@@ -43,14 +42,14 @@ struct MenuBarDropdown: View {
         Divider()
 
         Button {
-            NSApp.sendAction(Selector(("orderFrontPreferencesPanel:")), to: nil, from: nil)
+            PreferencesWindowController.shared.show()
         } label: {
             Label("Preferences...", systemImage: "gearshape")
         }
         .keyboardShortcut(",", modifiers: .command)
 
         Button {
-            openWindow(id: "reportProblem")
+            ReportProblemWindowController.shared.show()
         } label: {
             Label("Report a Problem...", systemImage: "exclamationmark.bubble")
         }

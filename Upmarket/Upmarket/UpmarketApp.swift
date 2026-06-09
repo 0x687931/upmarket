@@ -30,28 +30,32 @@ struct UpmarketApp: App {
     @StateObject private var modelManager    = ModelManager.shared
     @StateObject private var featureFlags    = FeatureFlags.shared
 
-    @Environment(\.openWindow) private var openWindow
-
     var body: some Scene {
-        // MARK: Settings window — OS manages title, ⌘, shortcut, and singleton behaviour
+        // All windows are NSWindowController singletons — no SwiftUI scene restoration surprises.
+        // Commands and keyboard shortcuts are wired here; windows open via their controllers.
         Settings {
-            PreferencesView()
-                .environmentObject(modelManager)
-                .environmentObject(storeManager)
-                .environmentObject(historyStore)
-                .environmentObject(watchedFolders)
+            // Placeholder keeps SwiftUI's Settings menu item wired up;
+            // the real window is PreferencesWindowController.
+            EmptyView()
         }
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("Convert Document…") {
-                    openPrimaryConversionWindow(pickFile: true)
+                    MainWindowController.shared.show(pickFile: true)
                 }
                 .keyboardShortcut("o", modifiers: .command)
             }
 
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") {
+                    PreferencesWindowController.shared.show()
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+
             CommandGroup(after: .help) {
                 Button("Report a Problem…") {
-                    openWindow(id: "reportProblem")
+                    ReportProblemWindowController.shared.show()
                 }
                 Divider()
                 Button("Join Discord Community…") {
@@ -68,13 +72,6 @@ struct UpmarketApp: App {
                 .keyboardShortcut("q", modifiers: .command)
             }
         }
-
-        Window("Report a Problem", id: "reportProblem") {
-            ReportProblemView()
-                .environmentObject(conversionQueue)
-        }
-        .windowResizability(.contentSize)
-        .defaultSize(width: 620, height: 560)
     }
 
     private func openPrimaryConversionWindow(pickFile: Bool = false) {
@@ -83,9 +80,6 @@ struct UpmarketApp: App {
 
     init() {
         RuntimePrivilegeGuard.abortIfPrivilegedProcess()
-        // SwiftUI persists the Settings window state independently of macOS window restoration.
-        // Removing this key prevents it from reopening on launch.
-        UserDefaults.standard.removeObject(forKey: "com_apple_SwiftUI_Settings_window")
         AppVisibilityPreference.normalizePersistentVisibility()
         AppRuntime.exitIfDuplicateInstance()
         AppRuntime.installTerminationSignalCleanup()
