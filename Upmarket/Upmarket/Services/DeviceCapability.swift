@@ -33,7 +33,7 @@ final class DeviceCapability {
     }
 
     nonisolated static var currentSupportsAdvancedRuntime: Bool {
-        currentIsAppleSilicon()
+        currentIsAppleSilicon() && ModelManager.isRuntimeInstalled()
     }
 
     private nonisolated static func currentIsAppleSilicon() -> Bool {
@@ -79,10 +79,11 @@ final class DeviceCapability {
     /// MLX is an Apple Silicon/Metal path, not a generic GPU path.
     nonisolated var supportsUpmarketAI: Bool { isAppleSilicon && hasMetalDevice }
 
-    /// Whether bundled advanced conversion should run on this device.
-    /// v1.0 keeps Intel Macs on native-only Basic conversion until physical
-    /// Intel validation proves the packaged runtime is reliable there.
-    nonisolated var supportsAdvancedRuntime: Bool { isAppleSilicon }
+    /// Whether advanced conversion can run on this device.
+    /// Requires Apple Silicon AND the Python runtime downloaded to Application Support.
+    nonisolated var supportsAdvancedRuntime: Bool {
+        isAppleSilicon && ModelManager.isRuntimeInstalled()
+    }
 
     /// Why Upmarket AI is unavailable, for display in UI.
     nonisolated var upmarketAIUnavailableReason: String {

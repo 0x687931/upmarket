@@ -288,6 +288,15 @@ private enum ModelDownloadCatalog {
 
     private static let specs = [
         ModelDownloadSpec(
+            key: "python_runtime",
+            displayName: "Upmarket Runtime",
+            sourceID: "com.upmarket.runtime.python",
+            revision: "1",
+            storageDirectory: "python_runtime",
+            expectedFiles: ["upmarket_runtime_ready"],
+            expectedDirs: ["Python.framework"]
+        ),
+        ModelDownloadSpec(
             key: "layout",
             displayName: "Upmarket Enhanced",
             sourceID: "com.upmarket.models.layout",

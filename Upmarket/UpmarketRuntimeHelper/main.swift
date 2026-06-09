@@ -302,12 +302,25 @@ struct UpmarketRuntimeHelper {
         process.waitUntilExit()
     }
 
-    private static func configureRuntime(workspacePath: String?) {
+    private static func resolveFrameworkRoot() -> URL {
+        // Primary: user-installed runtime in Application Support (post-purchase download)
+        let appSupport = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let downloadedRoot = appSupport
+            .appendingPathComponent("Upmarket/runtime/python_runtime/Python.framework/Versions/3.12", isDirectory: true)
+        if FileManager.default.fileExists(atPath: downloadedRoot.path) {
+            return downloadedRoot
+        }
+        // Fallback: bundled framework (development builds / CI only)
         let executableURL = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
-        let frameworkRoot = executableURL
+        return executableURL
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .appendingPathComponent("Frameworks/Python.framework/Versions/3.12", isDirectory: true)
+    }
+
+    private static func configureRuntime(workspacePath: String?) {
+        let frameworkRoot = resolveFrameworkRoot()
         let stdlibPath = frameworkRoot.appendingPathComponent("lib/python3.12", isDirectory: true)
         let sitePackagesPath = stdlibPath.appendingPathComponent("site-packages", isDirectory: true)
 
@@ -323,6 +336,12 @@ struct UpmarketRuntimeHelper {
             .path
         setenv("UPMARKET_MODELS_DIR", appSupport, 1)
         setenv("HF_HUB_CACHE", appSupport, 1)
+
+        let runtimeDir = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Upmarket/runtime", isDirectory: true)
+            .path
+        setenv("UPMARKET_RUNTIME_DIR", runtimeDir, 1)
 
         if let workspacePath {
             setenv("TMPDIR", workspacePath, 1)
