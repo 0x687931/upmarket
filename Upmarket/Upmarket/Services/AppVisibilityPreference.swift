@@ -7,7 +7,7 @@ enum AppVisibilityPreference {
     static let showShelfKey = "upmarket.showShelf"
     static let defaultShowDockIcon = true
     static let defaultShowMenuBarIcon = true
-    static let defaultShowShelf = true
+    static let defaultShowShelf = false
     static let requiresDockIcon = true
 
     static var showDockIcon: Bool {

@@ -302,6 +302,11 @@ final class ConversionQueue: ObservableObject {
         latestResult = result
         if stage == .complete, let output = result.output {
             historyStore?.record(job: jobs[index], output: output)
+            // After a successful conversion, show the paywall if the user has
+            // exhausted free conversions and hasn't purchased yet.
+            if !StoreManager.shared.canConvert {
+                PaywallWindowController.shared.show()
+            }
         }
         AppLog.conversion.info("Finished conversion correlationID=\(id.uuidString, privacy: .public) stage=\(stage.rawValue, privacy: .public)")
         continuations.removeValue(forKey: id)?.resume(returning: result)

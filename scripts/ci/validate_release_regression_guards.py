@@ -150,13 +150,12 @@ def main() -> int:
         errors,
     )
     require_text(
-        "Upmarket/UpmarketTests/TourManagerTests.swift",
+        "Upmarket/Upmarket/Services/ConversionQueue.swift",
         [
-            "testTourCompletionDoesNotShowPaywallBeforeConversionValue",
-            "paywallShown.isInverted = true",
-            "TourManager.shared.skip()",
+            "PaywallWindowController.shared.show()",
+            "StoreManager.shared.canConvert",
         ],
-        "tour paywall timing regression tests",
+        "post-conversion paywall trigger regression guard",
         errors,
     )
     require_text(
