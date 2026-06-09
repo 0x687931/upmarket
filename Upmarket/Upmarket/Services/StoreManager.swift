@@ -5,7 +5,7 @@ import OSLog
 
 final class StoreManager: ObservableObject {
 
-    static let shared = StoreManager()
+    nonisolated static let shared = StoreManager()
 
     // Product IDs — nonisolated so they're accessible from any actor context
     nonisolated static let basicID    = "com.upmarket.app.basic"

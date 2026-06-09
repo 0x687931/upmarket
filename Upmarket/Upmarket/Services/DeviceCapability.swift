@@ -5,7 +5,7 @@ import Metal
 /// All UI and service decisions about what to offer should read from here.
 final class DeviceCapability {
 
-    static let shared = DeviceCapability()
+    nonisolated static let shared = DeviceCapability()
 
     /// True if running on Apple Silicon (M1 or later).
     /// Upmarket AI (Pro) requires Apple Silicon for on-device MLX inference.
