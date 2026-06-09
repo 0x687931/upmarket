@@ -83,6 +83,8 @@ struct UpmarketApp: App {
 
     init() {
         RuntimePrivilegeGuard.abortIfPrivilegedProcess()
+        // Prevent macOS from restoring the Settings window (or any window) across launches.
+        UserDefaults.standard.set(false, forKey: "NSQuitAlwaysKeepsWindows")
         AppVisibilityPreference.normalizePersistentVisibility()
         AppRuntime.exitIfDuplicateInstance()
         AppRuntime.installTerminationSignalCleanup()
@@ -100,9 +102,6 @@ struct UpmarketApp: App {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             guard !AppRuntime.isRunningTests else { return }
             if !UserDefaults.standard.bool(forKey: "upmarket.tourComplete") {
-                // First launch — show the welcome window.
-                // The welcome window's dismiss action opens the main window.
-                NSApp.activate(ignoringOtherApps: true)
                 WelcomeWindowController.shared.show()
             } else if AppVisibilityPreference.showShelf {
                 ShelfWindowController.shared.show(animate: true)
