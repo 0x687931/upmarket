@@ -176,6 +176,7 @@ struct PreferencesView: View {
                 Toggle("Show menu bar icon", isOn: menuBarIconBinding)
                     .toggleStyle(.checkbox)
 
+                #if DEBUG
                 Toggle("Show shelf", isOn: $showShelf)
                     .toggleStyle(.checkbox)
                     .onChange(of: showShelf) { show in
@@ -197,6 +198,7 @@ struct PreferencesView: View {
                         .frame(maxWidth: 160)
                     }
                 }
+                #endif
 
                 Text("The Dock icon stays visible so you can always reopen Upmarket, change settings, and quit.")
                     .font(.caption)

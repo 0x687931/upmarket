@@ -56,6 +56,9 @@ final class StoreManager: ObservableObject {
         Task { await loadProducts() }
         Task { await refreshEntitlement() }
         applyAccountingSnapshot(accounting.loadInitialState())
+        #if DEBUG
+        freeDocsRemaining = 99
+        #endif
     }
 
     deinit { transactionListener?.cancel() }
@@ -75,7 +78,11 @@ final class StoreManager: ObservableObject {
 
     /// Can convert right now — requires a verified non-consumable unlock.
     var canConvert: Bool {
-        hasBasicOrAbove
+        #if DEBUG
+        return true
+        #else
+        return hasBasicOrAbove
+        #endif
     }
 
     /// Nudge level based on pack purchase history
