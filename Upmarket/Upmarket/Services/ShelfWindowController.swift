@@ -156,7 +156,7 @@ final class ShelfWindowController: NSWindowController {
         reposition()
         if animate {
             panel.alphaValue = 0
-            panel.makeKeyAndOrderFront(nil)
+            panel.orderFront(nil)
             NSAnimationContext.runAnimationGroup { ctx in
                 ctx.duration = 0.2
                 ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -164,7 +164,7 @@ final class ShelfWindowController: NSWindowController {
             }
         } else {
             panel.alphaValue = 1
-            panel.makeKeyAndOrderFront(nil)
+            panel.orderFront(nil)
         }
     }
 
