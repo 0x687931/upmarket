@@ -22,8 +22,6 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            statusBanner
-            Divider()
             VStack(spacing: 0) {
                 dropZoneView
                     .frame(height: 160)
@@ -34,6 +32,10 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .onDrop(of: [.fileURL], isTargeted: $isTargeted, perform: handleDrop)
+            if !store.hasBasicOrAbove {
+                Divider()
+                statusBanner
+            }
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .accessibilityIdentifier("PrimaryConversionView")
@@ -124,7 +126,8 @@ struct ContentView: View {
             .tint(.accentColor)
         }
         .padding(.horizontal, AppTheme.Spacing.xl)
-        .padding(.vertical, AppTheme.Spacing.lg)
+        .padding(.top, AppTheme.Spacing.lg)
+        .padding(.bottom, AppTheme.Spacing.xl)
     }
 
     // MARK: - Queue List
@@ -172,9 +175,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private var statusBanner: some View {
-        if store.hasBasicOrAbove {
-            EmptyView()
-        } else if store.freeDocsRemaining > 0 {
+        if store.freeDocsRemaining > 0 {
             let n = store.freeDocsRemaining
             let text = n == 1 ? "1 free conversion remaining" : "\(n) free conversions remaining"
             bannerRow(icon: "gift.fill", text: text,
