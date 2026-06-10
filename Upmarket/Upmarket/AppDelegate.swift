@@ -103,7 +103,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
-        menu.addItem(dockMenuItem(title: historyDockTitle, action: #selector(dockShowHistory(_:))))
         menu.addItem(dockMenuItem(title: "Preferences…", action: #selector(dockShowPreferences(_:))))
 
         return menu
@@ -112,11 +111,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var shelfDockTitle: String {
         let count = ConversionQueue.shared.jobs.count
         return count > 0 ? "Show Shelf (\(count))" : "Show Shelf"
-    }
-
-    private var historyDockTitle: String {
-        let count = ConversionHistoryStore.shared.records.count
-        return count > 0 ? "History (\(count))" : "History"
     }
 
     private func dockMenuItem(title: String, action: Selector) -> NSMenuItem {
@@ -136,10 +130,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func dockShowShelf(_ sender: Any?) {
         AppVisibilityPreference.showShelf = true
         ShelfWindowController.shared.show(ignoringPreference: true)
-    }
-
-    @objc private func dockShowHistory(_ sender: Any?) {
-        HistoryWindowController.shared.show()
     }
 
     @objc private func dockShowPreferences(_ sender: Any?) {
@@ -400,11 +390,6 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
             keyEquivalent: "s",
             modifiers: [.command, .shift]
         ))
-        menu.addItem(actionItem(
-            title: historyTitle,
-            systemImage: "clock",
-            action: #selector(showHistory(_:))
-        ))
 
         menu.addItem(.separator())
 
@@ -421,9 +406,15 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
             action: #selector(showReportProblem(_:))
         ))
 
-        menu.addItem(.separator())
-        menu.addItem(disabledItem(entitlementTitle))
-        menu.addItem(.separator())
+        if StoreManager.shared.entitlement == .none {
+            menu.addItem(.separator())
+            menu.addItem(actionItem(
+                title: "Unlock Upmarket...",
+                systemImage: "lock.open",
+                action: #selector(showPaywall(_:))
+            ))
+            menu.addItem(.separator())
+        }
 
         menu.addItem(actionItem(
             title: "Quit Upmarket",
@@ -437,11 +428,6 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
     private var shelfTitle: String {
         let count = ConversionQueue.shared.jobs.count
         return count > 0 ? "Show Shelf (\(count))" : "Show Shelf"
-    }
-
-    private var historyTitle: String {
-        let count = ConversionHistoryStore.shared.records.count
-        return count > 0 ? "History (\(count))" : "History"
     }
 
     private var entitlementTitle: String {
@@ -488,10 +474,6 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
         ShelfWindowController.shared.show(ignoringPreference: true)
     }
 
-    @objc private func showHistory(_ sender: Any?) {
-        HistoryWindowController.shared.show()
-    }
-
     @objc private func showPreferences(_ sender: Any?) {
         NSApp.activate(ignoringOtherApps: true)
         PreferencesWindowController.shared.show()
@@ -499,6 +481,11 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
 
     @objc private func showReportProblem(_ sender: Any?) {
         ReportProblemWindowController.shared.show()
+    }
+
+    @objc private func showPaywall(_ sender: Any?) {
+        NSApp.activate(ignoringOtherApps: true)
+        PaywallWindowController.shared.show()
     }
 
     @objc private func quit(_ sender: Any?) {
@@ -517,7 +504,7 @@ final class PreferencesWindowController: NSWindowController {
             .environmentObject(ConversionHistoryStore.shared)
             .environmentObject(WatchedFolderService.shared)
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 600, height: 500),
+            contentRect: NSRect(x: 0, y: 0, width: 600, height: 680),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
@@ -543,47 +530,15 @@ final class PreferencesWindowController: NSWindowController {
 }
 
 @MainActor
-final class HistoryWindowController: NSWindowController {
-    static let shared = HistoryWindowController()
-
-    private init() {
-        let rootView = HistoryPopover(historyStore: ConversionHistoryStore.shared)
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 320, height: 380),
-            styleMask: [.titled, .closable, .miniaturizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "History"
-        window.contentView = NSHostingView(rootView: rootView)
-        window.isReleasedWhenClosed = false
-        window.center()
-
-        super.init(window: window)
-    }
-
-    required init?(coder: NSCoder) { fatalError() }
-
-    func show() {
-        ConversionHistoryStore.shared.load()
-        guard let window else { return }
-        if !window.isVisible {
-            window.center()
-        }
-        NSApp.activate(ignoringOtherApps: true)
-        window.makeKeyAndOrderFront(nil)
-    }
-}
-
-@MainActor
 final class ReportProblemWindowController: NSWindowController {
     static let shared = ReportProblemWindowController()
 
     private init() {
+        let modalSize = AppTheme.WindowSize.modal
         let rootView = ReportProblemView()
             .environmentObject(ConversionQueue.shared)
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 620, height: 560),
+            contentRect: NSRect(x: 0, y: 0, width: modalSize.width, height: modalSize.height),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false

@@ -15,6 +15,8 @@ enum AppTheme {
         static let sm: CGFloat = 8
         static let md: CGFloat = 12
         static let lg: CGFloat = 16
+        static let menuBar: CGFloat = 5
+        static let pill: CGFloat = 999
     }
 
     enum Size {
@@ -27,6 +29,10 @@ enum AppTheme {
         static let appIconSize: CGFloat = 96
         static let featureIconBox: CGFloat = 44
         static let featureIcon: CGFloat = 20
+        static let menuBarIcon: CGFloat = 22
+        static let arcRing: CGFloat = 46
+        static let strokeRing: CGFloat = 3
+        static let strokeRingThin: CGFloat = 2.5
     }
 
     enum Font {
@@ -36,6 +42,13 @@ enum AppTheme {
         static let captionStrong = SwiftUI.Font.caption.weight(.medium)
         static let largeTitle = SwiftUI.Font.largeTitle.weight(.bold)
         static let title3 = SwiftUI.Font.title3
+        static let title2 = SwiftUI.Font.title2
+        static let sectionLabel = SwiftUI.Font.caption2.weight(.semibold)
+
+        // Hero numerals / "#" mark — SF Pro Rounded
+        static let heroRounded = SwiftUI.Font.system(.largeTitle, design: .rounded).weight(.bold)
+        // Markdown output / shortcuts — SF Mono
+        static let mono = SwiftUI.Font.system(.caption, design: .monospaced)
     }
 
     enum Colour {
@@ -48,32 +61,55 @@ enum AppTheme {
         static let border = Color.secondary.opacity(0.2)
         static let borderActive = Color.accentColor
 
-        static let success = Color.green
-        static let warning = Color.orange
-        static let error = Color.red
+        static let success = Color(red: 0.204, green: 0.780, blue: 0.349) // systemGreen #34C759
+        static let warning = Color(red: 1.0, green: 0.584, blue: 0.0) // systemOrange #FF9500
+        static let error = Color(red: 1.0, green: 0.231, blue: 0.188) // systemRed #FF3B30
         static let info = Color.accentColor
 
         static let iconBoxFill = Color.blue.opacity(0.12)
+
+        // --- Accent tints (rgb of #E86E00 = 232,110,0) -----------
+        static let accentTint04 = Color.accentColor.opacity(0.04) // drop-zone idle
+        static let accentTint06 = Color.accentColor.opacity(0.06) // selected row
+        static let accentTint08 = Color.accentColor.opacity(0.08) // drop-zone active
+        static let accentTint10 = Color.accentColor.opacity(0.10) // primary-row hover
+        static let accentTint15 = Color.accentColor.opacity(0.15) // pressed / ghost
+        static let accentTint25 = Color.accentColor.opacity(0.25) // converting glow bloom
+
+        // --- Brand gradient (5-stop amber -> orange ramp) --------
+        static let brandStop1 = Color(red: 1.000, green: 0.749, blue: 0.251) // #FFBF40
+        static let brandStop2 = Color(red: 1.000, green: 0.761, blue: 0.165) // #FFC22A
+        static let brandStop3 = Color(red: 1.000, green: 0.702, blue: 0.082) // #FFB315
+        static let brandStop4 = Color(red: 0.996, green: 0.639, blue: 0.0)   // #FEA300
+        static let brandStop5 = Color(red: 0.910, green: 0.431, blue: 0.0)   // #E86E00 (accent)
+
+        static let brandGradient = LinearGradient(
+            colors: [brandStop1, brandStop2, brandStop3, brandStop4, brandStop5],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+
+        // --- Warm shadow / shelf bloom ---------------------------
+        static let amberShadow = Color(red: 0.478, green: 0.227, blue: 0.0) // #7A3A00
+        static let shelfBloomShadow = Color(red: 0.478, green: 0.227, blue: 0.0).opacity(0.30)
     }
 
     enum Status {
-        static let complete = Color.green
-        static let failed = Color.red
+        static let complete = Colour.success
+        static let failed = Colour.error
         static let processing = Color.accentColor
-        static let queued = Color.secondary.opacity(0.5)
+        static let queued = Color.secondary.opacity(0.30)
     }
 
     // MARK: - Window Size Variants
 
     enum WindowSize {
-        // Primary Upmarket workbench window
+        // Primary Upmarket workbench window (conversions + history)
         case main
         // Modal dialogs and secondary windows
         case modal
         // Compact floating widget (Shelf)
         case compact
-        // History window
-        case history
         // Welcome/onboarding window
         case welcome
 
@@ -82,7 +118,6 @@ enum AppTheme {
             case .main: return Spacing.sm
             case .modal: return Spacing.md
             case .compact: return Spacing.sm
-            case .history: return Spacing.sm
             case .welcome: return Spacing.lg
             }
         }
@@ -92,7 +127,6 @@ enum AppTheme {
             case .main: return Spacing.xs
             case .modal: return Spacing.sm
             case .compact: return Spacing.xs
-            case .history: return Spacing.xs
             case .welcome: return Spacing.lg
             }
         }
@@ -102,7 +136,6 @@ enum AppTheme {
             case .main: return Spacing.sm
             case .modal: return Spacing.md
             case .compact: return Spacing.sm
-            case .history: return Spacing.sm
             case .welcome: return Spacing.lg
             }
         }
@@ -112,7 +145,6 @@ enum AppTheme {
             case .main: return Radius.md
             case .modal: return Radius.md
             case .compact: return Radius.md
-            case .history: return Radius.sm
             case .welcome: return Radius.lg
             }
         }
@@ -122,7 +154,6 @@ enum AppTheme {
             case .main: return SwiftUI.Font.caption.weight(.medium)
             case .modal: return SwiftUI.Font.caption.weight(.medium)
             case .compact: return SwiftUI.Font.caption.weight(.medium)
-            case .history: return SwiftUI.Font.caption
             case .welcome: return Font.body
             }
         }
@@ -132,7 +163,6 @@ enum AppTheme {
             case .main: return SwiftUI.Font.system(size: 9)
             case .modal: return SwiftUI.Font.caption
             case .compact: return SwiftUI.Font.system(size: 9)
-            case .history: return SwiftUI.Font.caption
             case .welcome: return Font.caption
             }
         }
@@ -142,7 +172,6 @@ enum AppTheme {
             case .main: return 18
             case .modal: return 20
             case .compact: return 18
-            case .history: return 16
             case .welcome: return 24
             }
         }
@@ -152,7 +181,6 @@ enum AppTheme {
             case .main: return 12
             case .modal: return 14
             case .compact: return 12
-            case .history: return 12
             case .welcome: return 16
             }
         }
@@ -162,7 +190,6 @@ enum AppTheme {
             case .main: return 420        // Primary Upmarket workbench
             case .modal: return 480       // Modal dialogs
             case .compact: return 217     // Shelf floating widget
-            case .history: return 320     // History window
             case .welcome: return 520     // Welcome/onboarding
             }
         }
@@ -172,8 +199,7 @@ enum AppTheme {
             case .main: return 560        // Upmarket workbench
             case .modal: return 600       // Modal dialogs
             case .compact: return 132     // Shelf widget
-            case .history: return 380     // History window
-            case .welcome: return 460     // Welcome window
+            case .welcome: return 540     // Welcome window
             }
         }
     }

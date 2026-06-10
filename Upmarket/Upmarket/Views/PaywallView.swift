@@ -1,6 +1,10 @@
 import SwiftUI
 import StoreKit
 
+private enum PaywallTier {
+    case pro, basic
+}
+
 struct PaywallView: View {
 
     var onDismiss: (() -> Void)? = nil
@@ -13,6 +17,12 @@ struct PaywallView: View {
 
     @State private var isPurchasing: String? = nil  // product ID currently purchasing
     @State private var errorMessage: String?
+    @State private var selectedTier: PaywallTier
+
+    init(onDismiss: (() -> Void)? = nil) {
+        self.onDismiss = onDismiss
+        _selectedTier = State(initialValue: FeatureFlags.shared.aiAvailable ? .pro : .basic)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -20,26 +30,27 @@ struct PaywallView: View {
             Divider()
             ScrollView {
                 VStack(spacing: AppTheme.Spacing.md) {
-                    if canPurchasePro {
-                        proCard
-                    } else {
-                        proUnavailableCard
-                    }
-                    basicCard
+                    tierCard(.pro)
+                    tierCard(.basic)
                     productStatus
                     purchaseStatus
-                    restoreButton
-                    if onDismiss != nil {
-                        Button("Not Now") { onDismiss?() }
-                            .buttonStyle(.plain)
-                            .font(.subheadline)
-                            .foregroundStyle(.tertiary)
-                            .frame(minHeight: 44)
-                            .accessibilityLabel("Dismiss paywall")
-                    }
                 }
                 .padding(windowSize.contentPadding)
             }
+            VStack(spacing: AppTheme.Spacing.md) {
+                ctaButton
+                restoreButton
+                if onDismiss != nil {
+                    Button("Not Now") { onDismiss?() }
+                        .buttonStyle(.plain)
+                        .font(.subheadline)
+                        .foregroundStyle(.tertiary)
+                        .frame(minHeight: 44)
+                        .accessibilityLabel("Dismiss paywall")
+                }
+            }
+            .padding(.horizontal, windowSize.contentPadding)
+            .padding(.bottom, AppTheme.Spacing.sm)
             legalFooter
         }
         .frame(width: windowSize.width)
@@ -54,9 +65,12 @@ struct PaywallView: View {
     private var header: some View {
         ZStack(alignment: .topTrailing) {
             VStack(spacing: AppTheme.Spacing.sm) {
-                Image(systemName: "number")
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.accentColor)
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .frame(width: 64, height: 64)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)
+                    .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 4)
                     .padding(.top, AppTheme.Spacing.xxl)
 
                 Text(headerTitle)
@@ -122,174 +136,158 @@ struct PaywallView: View {
         return "Convert unlimited documents, privately, on your Mac."
     }
 
-    // MARK: - Pro Card (hero)
+    // MARK: - Tier Card
 
-    private var proCard: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+    private func tierCard(_ tier: PaywallTier) -> some View {
+        let isSelected = selectedTier == tier
+        let isDisabled = tier == .pro && !canPurchasePro
 
-            // Top: price + badge
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                    HStack(spacing: AppTheme.Spacing.sm) {
-                        Text("Upmarket + AI")
-                            .font(.title3)
-                            .fontWeight(.bold)
-                        Text("BEST")
-                            .font(.caption2)
-                            .fontWeight(.heavy)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, AppTheme.Spacing.sm)
-                            .padding(.vertical, AppTheme.Spacing.xs)
-                            .background(Color.accentColor, in: Capsule())
-                            .accessibilityLabel("Best value")
+        return Button {
+            selectedTier = tier
+        } label: {
+            HStack(alignment: .top, spacing: AppTheme.Spacing.md) {
+                Circle()
+                    .strokeBorder(isSelected ? Color.accentColor : Color.secondary.opacity(0.35), lineWidth: isSelected ? 5 : 1.5)
+                    .frame(width: 18, height: 18)
+                    .padding(.top, 2)
+
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                            HStack(spacing: AppTheme.Spacing.sm) {
+                                Text(tierName(tier))
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                                if tier == .pro {
+                                    Text("BEST")
+                                        .font(.caption2)
+                                        .fontWeight(.heavy)
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, AppTheme.Spacing.sm)
+                                        .padding(.vertical, AppTheme.Spacing.xs)
+                                        .background(Color.accentColor, in: Capsule())
+                                        .accessibilityLabel("Best value")
+                                }
+                            }
+                            Text(tierTagline(tier))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: AppTheme.Spacing.xs) {
+                            Text(tierPrice(tier))
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            Text("one-time")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                    Text("Everything, including Upmarket AI for complex documents")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: AppTheme.Spacing.xs) {
-                    Text(store.proProduct?.displayPrice ?? "$9.99")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    Text("one-time")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+                        ForEach(tierFeatures(tier), id: \.text) { feature in
+                            featureRow(feature.text, isHighlight: feature.isHighlight)
+                        }
+                        if isDisabled, let reason = flags.aiUnavailableReason {
+                            HStack(spacing: AppTheme.Spacing.sm) {
+                                Image(systemName: "xmark.circle")
+                                    .foregroundStyle(.secondary)
+                                    .font(.caption)
+                                Text(reason)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                 }
             }
-
-            // Features
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                featureRow("Unlimited conversions — every format", isHighlight: false)
-                featureRow("Upmarket AI for scanned, complex and research documents", isHighlight: true)
-                featureRow("Tables, figures, dense layouts", isHighlight: false)
-                featureRow("100% on-device — nothing sent to the cloud", isHighlight: false)
-                if let reason = flags.aiUnavailableReason {
-                    HStack(spacing: AppTheme.Spacing.sm) {
-                        Image(systemName: "xmark.circle")
-                            .foregroundStyle(.secondary)
-                            .font(.caption)
-                        Text(reason)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-
-            // CTA
-            Button {
-                guard let product = store.proProduct else { return }
-                Task { await buy(product) }
-            } label: {
-                HStack(spacing: AppTheme.Spacing.sm) {
-                    if isPurchasing == StoreManager.proID {
-                        ProgressView().controlSize(.small).tint(.white)
-                    }
-                    Text("Get Upmarket + AI — \(store.proProduct?.displayPrice ?? "$9.99")")
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .disabled(isPurchasing != nil || store.proProduct == nil || !canPurchasePro)
         }
+        .buttonStyle(.plain)
         .padding(AppTheme.Spacing.lg)
         .background(
             RoundedRectangle(cornerRadius: AppTheme.Radius.md)
-                .fill(Color.accentColor.opacity(0.06))
+                .fill(isSelected ? AppTheme.Colour.accentTint06 : Color.clear)
                 .overlay(
                     RoundedRectangle(cornerRadius: AppTheme.Radius.md)
-                        .strokeBorder(Color.accentColor, lineWidth: 2)
+                        .strokeBorder(isSelected ? Color.accentColor : AppTheme.Colour.border, lineWidth: isSelected ? 2 : 1)
                 )
         )
+        .opacity(isDisabled ? 0.6 : 1)
+        .disabled(isDisabled)
     }
 
-    private var proUnavailableCard: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+    private func tierName(_ tier: PaywallTier) -> String {
+        switch tier {
+        case .pro: return "Upmarket + AI"
+        case .basic: return "Upmarket"
+        }
+    }
+
+    private func tierPrice(_ tier: PaywallTier) -> String {
+        switch tier {
+        case .pro: return store.proProduct?.displayPrice ?? "$9.99"
+        case .basic: return store.basicProduct?.displayPrice ?? "$4.99"
+        }
+    }
+
+    private func tierTagline(_ tier: PaywallTier) -> String {
+        switch tier {
+        case .pro:
+            return "Everything, including Upmarket AI for complex documents"
+        case .basic:
+            return device.supportsAdvancedRuntime ? "For everyday documents without AI" : "For native Basic conversion on this Mac"
+        }
+    }
+
+    private func tierFeatures(_ tier: PaywallTier) -> [(text: String, isHighlight: Bool)] {
+        switch tier {
+        case .pro:
+            return [
+                ("Unlimited conversions — every format", false),
+                ("Upmarket AI for scanned, complex and research documents", true),
+                ("Tables, figures, dense layouts", false),
+                ("100% on-device — nothing sent to the cloud", false)
+            ]
+        case .basic:
+            if device.supportsAdvancedRuntime {
+                return [
+                    ("PDF, Word, PowerPoint, HTML → Markdown", false),
+                    ("Tables and layout detection", false),
+                    ("Unlimited conversions", false)
+                ]
+            } else {
+                return [
+                    ("Native PDF and media metadata conversion", false),
+                    ("Advanced document formats require Apple Silicon", false),
+                    ("Unlimited conversions", false)
+                ]
+            }
+        }
+    }
+
+    // MARK: - CTA
+
+    private var ctaButton: some View {
+        let product = selectedTier == .pro ? store.proProduct : store.basicProduct
+        let purchasingID = selectedTier == .pro ? StoreManager.proID : StoreManager.basicID
+
+        return Button {
+            guard let product else { return }
+            Task { await buy(product) }
+        } label: {
             HStack(spacing: AppTheme.Spacing.sm) {
-                Image(systemName: "sparkles")
-                    .foregroundStyle(.secondary)
-                Text("Upmarket + AI")
-                    .font(.headline)
+                if isPurchasing == purchasingID {
+                    ProgressView().controlSize(.small).tint(.white)
+                }
+                Text("Get \(tierName(selectedTier)) — \(tierPrice(selectedTier))")
                     .fontWeight(.semibold)
-                Spacer()
-                Text("Unavailable")
-                    .font(.caption2)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
             }
-            Text(flags.aiUnavailableReason ?? device.upmarketAIUnavailableReason)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text("Use Upmarket for unlimited private conversion on this Mac.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
-        .padding(AppTheme.Spacing.lg)
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.Radius.md)
-                .strokeBorder(Color.secondary.opacity(0.25), lineWidth: 1)
-        )
-    }
-
-    // MARK: - Basic Card (secondary)
-
-    private var basicCard: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                    Text(verbatim: "Upmarket")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    Text(device.supportsAdvancedRuntime ? "For everyday documents without AI" : "For native Basic conversion on this Mac")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: AppTheme.Spacing.xs) {
-                    Text(store.basicProduct?.displayPrice ?? "$4.99")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                    Text("one-time")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                if device.supportsAdvancedRuntime {
-                    featureRow("PDF, Word, PowerPoint, HTML → Markdown", isHighlight: false)
-                    featureRow("Tables and layout detection", isHighlight: false)
-                } else {
-                    featureRow("Native PDF and media metadata conversion", isHighlight: false)
-                    featureRow("Advanced document formats require Apple Silicon", isHighlight: false)
-                }
-                featureRow("Unlimited conversions", isHighlight: false)
-            }
-
-            Button {
-                guard let product = store.basicProduct else { return }
-                Task { await buy(product) }
-            } label: {
-                HStack(spacing: AppTheme.Spacing.sm) {
-                    if isPurchasing == StoreManager.basicID {
-                        ProgressView().controlSize(.small)
-                    }
-                    Text("Get Upmarket — \(store.basicProduct?.displayPrice ?? "$4.99")")
-                        .fontWeight(.medium)
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.regular)
-            .disabled(isPurchasing != nil || store.basicProduct == nil)
-        }
-        .padding(AppTheme.Spacing.lg)
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.Radius.md)
-                .strokeBorder(Color.secondary.opacity(0.25), lineWidth: 1)
-        )
+        .buttonStyle(.borderedProminent)
+        .tint(.accentColor)
+        .controlSize(.large)
+        .disabled(isPurchasing != nil || product == nil || (selectedTier == .pro && !canPurchasePro))
     }
 
     // MARK: - Footer
@@ -366,7 +364,7 @@ struct PaywallView: View {
     private func featureRow(_ text: String, isHighlight: Bool) -> some View {
         HStack(spacing: AppTheme.Spacing.sm) {
             Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(isHighlight ? Color.accentColor : Color.green)
+                .foregroundStyle(isHighlight ? Color.accentColor : AppTheme.Colour.success)
                 .font(.caption)
             Text(text)
                 .font(.caption)

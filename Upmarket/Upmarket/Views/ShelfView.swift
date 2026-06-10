@@ -255,7 +255,7 @@ struct ShelfView: View {
                     .frame(width: 34, height: 34)
                 ArcProgressRing(progress: activeJob.progress)
                     .stroke(
-                        Color.primary.opacity(0.58),
+                        Color.accentColor,
                         style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
                     )
                     .frame(width: 34, height: 34)
@@ -466,7 +466,7 @@ struct ShelfView: View {
                         .frame(width: 42, height: 42)
                     ArcProgressRing(progress: job.progress)
                         .stroke(
-                            Color.primary.opacity(0.55),
+                            Color.accentColor,
                             style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
                         )
                         .frame(width: 42, height: 42)
@@ -794,7 +794,7 @@ struct ShelfItemView: View {
                 // Progress arc
                 ArcProgressRing(progress: item.progress)
                     .stroke(
-                        Color.primary.opacity(0.55),
+                        Color.accentColor,
                         style: StrokeStyle(lineWidth: 3, lineCap: .round)
                     )
                     .frame(width: 46, height: 46)
@@ -841,11 +841,11 @@ struct ShelfItemView: View {
         case .complete:
             if case .success = item.result {
                 Image(systemName: "checkmark")
-                    .font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+                    .font(.system(size: 11, weight: .semibold)).foregroundStyle(AppTheme.Status.complete)
             }
         case .failed, .cancelled:
             Image(systemName: "xmark")
-                .font(.system(size: 11)).foregroundStyle(.red)
+                .font(.system(size: 11)).foregroundStyle(AppTheme.Status.failed)
         }
     }
 

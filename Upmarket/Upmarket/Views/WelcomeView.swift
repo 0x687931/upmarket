@@ -8,7 +8,7 @@ final class WelcomeWindowController: NSWindowController {
 
     private init() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 460),
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 540),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -47,7 +47,7 @@ struct WelcomeView: View {
             background
             content
         }
-        .frame(width: 520, height: 460)
+        .frame(width: 520, height: 540)
     }
 
     // MARK: - Background
@@ -67,29 +67,31 @@ struct WelcomeView: View {
 
     private var content: some View {
         VStack(spacing: 0) {
-            Spacer()
-
             // Icon + headline
-            VStack(spacing: AppTheme.Spacing.lg) {
+            VStack(spacing: 0) {
                 Image(nsImage: NSApp.applicationIconImage)
                     .resizable()
-                    .frame(width: AppTheme.Size.appIconSize, height: AppTheme.Size.appIconSize)
+                    .frame(width: 84, height: 84)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)
+                    .shadow(color: .black.opacity(0.08), radius: 18, x: 0, y: 6)
 
-                VStack(spacing: AppTheme.Spacing.xs) {
-                    Text("Convert most things to Markdown.")
-                        .font(AppTheme.Font.largeTitle)
+                Text("Convert most things to Markdown.")
+                    .font(AppTheme.Font.heroRounded)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, AppTheme.Spacing.lg)
 
-                    Text("Works on your Mac. No cloud, no account, no waiting.")
-                        .font(AppTheme.Font.title3)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
+                Text("Works on your Mac. No cloud, no account, no waiting.")
+                    .font(AppTheme.Font.title3)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 7)
             }
 
             Spacer()
 
             // Feature rows
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
+            VStack(alignment: .leading, spacing: 14) {
                 featureRow(
                     symbol: "doc.fill",
                     color: .blue,
@@ -98,54 +100,54 @@ struct WelcomeView: View {
                 )
                 featureRow(
                     symbol: "lock.fill",
-                    color: .green,
+                    color: AppTheme.Colour.success,
                     title: "Completely private",
-                    detail: "Nothing leaves your Mac. No account, no cloud, no network required."
+                    detail: "Nothing leaves your Mac. No account, no network."
                 )
                 featureRow(
                     symbol: "bolt.fill",
-                    color: .orange,
+                    color: .accentColor,
                     title: "Fast, on-device AI",
-                    detail: "Conversion runs locally using Apple Silicon. No waiting on a server."
+                    detail: "Conversion runs locally on Apple Silicon."
                 )
             }
-            .padding(.horizontal, AppTheme.Spacing.xxxl)
 
             Spacer()
 
             // CTA
-            getStartedButton
+            VStack(spacing: AppTheme.Spacing.md) {
+                getStartedButton
 
-            Text("3 free conversions included. No sign-up needed.")
-                .font(AppTheme.Font.caption)
-                .foregroundStyle(.tertiary)
-                .padding(.top, AppTheme.Spacing.md)
-
-            Spacer().frame(height: AppTheme.Spacing.xxl)
+                Text("3 free conversions included. No sign-up needed.")
+                    .font(AppTheme.Font.caption)
+                    .foregroundStyle(.tertiary)
+            }
         }
+        .padding(.top, 42)
+        .padding(.horizontal, 44)
+        .padding(.bottom, 34)
     }
 
     // MARK: - Feature row
 
     private func featureRow(symbol: String, color: Color, title: String, detail: String) -> some View {
-        HStack(alignment: .top, spacing: AppTheme.Spacing.lg) {
+        HStack(alignment: .center, spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: AppTheme.Radius.sm)
+                RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
                     .fill(color.opacity(0.12))
                     .frame(width: AppTheme.Size.featureIconBox, height: AppTheme.Size.featureIconBox)
                 Image(systemName: symbol)
                     .font(.system(size: AppTheme.Size.featureIcon, weight: .medium))
                     .foregroundStyle(color)
             }
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(AppTheme.Font.body)
+                    .font(.subheadline.weight(.semibold))
                 Text(detail)
                     .font(AppTheme.Font.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(.top, AppTheme.Spacing.xs)
         }
     }
 
@@ -156,18 +158,20 @@ struct WelcomeView: View {
             Button(action: onDismiss) {
                 Text("Get Started")
                     .font(AppTheme.Font.body)
-                    .frame(width: 200)
+                    .frame(width: 220)
             }
             .buttonStyle(.glassProminent)
             .controlSize(.large)
+            .tint(.accentColor)
         } else {
             Button(action: onDismiss) {
                 Text("Get Started")
                     .font(AppTheme.Font.body)
-                    .frame(width: 200)
+                    .frame(width: 220)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
+            .tint(.accentColor)
         }
     }
 }

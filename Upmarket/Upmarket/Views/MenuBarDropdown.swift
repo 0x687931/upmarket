@@ -34,9 +34,10 @@ struct MenuBarDropdown: View {
         }
 
         Button {
-            HistoryWindowController.shared.show()
+            let showing = AppVisibilityPreference.showShelf
+            AppVisibilityPreference.applyShelfVisibility(showShelf: !showing)
         } label: {
-            Label(historyTitle, systemImage: "clock")
+            Label(AppVisibilityPreference.showShelf ? "Hide Shelf" : "Show Shelf", systemImage: "square.grid.2x2")
         }
 
         Divider()
@@ -74,6 +75,8 @@ struct MenuBarDropdown: View {
 
         Divider()
 
+        Text(versionLine)
+
         Button {
             NSApp.terminate(nil)
         } label: {
@@ -82,13 +85,14 @@ struct MenuBarDropdown: View {
         .keyboardShortcut("q", modifiers: .command)
     }
 
+    private var versionLine: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        return "v\(version)"
+    }
+
     private var conversionStatusTitle: String {
         let percent = Int((conversion.overallProgress * 100).rounded())
         return percent > 0 ? "Converting \(percent)%" : "Converting"
-    }
-
-    private var historyTitle: String {
-        historyStore.records.isEmpty ? "History" : "History (\(historyStore.records.count))"
     }
 
     private var entitlementTitle: String {
@@ -168,7 +172,7 @@ struct HistoryPopover: View {
     }
 }
 
-private struct HistoryRow: View {
+struct HistoryRow: View {
     let record: ConversionHistoryRecord
 
     var body: some View {

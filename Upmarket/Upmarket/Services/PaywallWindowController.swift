@@ -7,8 +7,9 @@ final class PaywallWindowController: NSWindowController {
     static let shared = PaywallWindowController()
 
     private init() {
+        let modalSize = AppTheme.WindowSize.modal
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 460, height: 640),
+            contentRect: NSRect(x: 0, y: 0, width: modalSize.width, height: modalSize.height),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false

@@ -45,7 +45,7 @@ struct ContextualLiquidGlassBackground: View {
                 .allowsHitTesting(false)
             }
             .shadow(
-                color: isConverting ? Color.accentColor.opacity(0.25) : .clear,
+                color: isConverting ? AppTheme.Colour.accentTint25 : .clear,
                 radius: isConverting ? 20 : 0
             )
             .animation(.easeInOut(duration: 0.2), value: isTargeted)
@@ -56,10 +56,10 @@ struct ContextualLiquidGlassBackground: View {
 
     private var tint: Color {
         if hasError {
-            return Color.red.opacity(0.03)
+            return AppTheme.Colour.error.opacity(0.03)
         }
         if isTargeted {
-            return Color.accentColor.opacity(0.04)
+            return AppTheme.Colour.accentTint04
         }
         return .clear
     }
