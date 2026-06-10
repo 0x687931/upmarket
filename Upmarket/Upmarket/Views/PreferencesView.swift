@@ -13,7 +13,6 @@ struct PreferencesView: View {
     @StateObject private var mcpIntegration = MCPIntegrationService.shared
     private let device = DeviceCapability.shared
     @State private var watchedFolderError: String?
-    @State private var showWatchedInputSheet = false
     @AppStorage(AppVisibilityPreference.showDockIconKey) private var showDockIcon = AppVisibilityPreference.defaultShowDockIcon
     @AppStorage(AppVisibilityPreference.showMenuBarIconKey) private var showMenuBarIcon = AppVisibilityPreference.defaultShowMenuBarIcon
     @AppStorage(AppVisibilityPreference.showShelfKey) private var showShelf = AppVisibilityPreference.defaultShowShelf
@@ -136,6 +135,9 @@ struct PreferencesView: View {
 
             conversionTab
                 .tabItem { Label("Conversion", systemImage: "doc.text") }
+
+            automationTab
+                .tabItem { Label("Automation", systemImage: "folder.badge.gearshape") }
 
             aboutTab
                 .tabItem { Label("About", systemImage: "info.circle") }
@@ -312,6 +314,22 @@ struct PreferencesView: View {
 
             MCPIntegrationSection(integration: mcpIntegration)
 
+            Section("AI Models") {
+                Text("Advanced models for layout detection and table structure. Required for \"Upmarket + AI\" features.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                modelRows
+                aiModelStatusRows
+            }
+        }
+        .formStyle(.grouped)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Automation
+
+    private var automationTab: some View {
+        Form {
             Section("Watch Folders") {
                 if watchedFolderService.folders.isEmpty {
                     watchFolderEmptyRow
@@ -330,43 +348,18 @@ struct PreferencesView: View {
                 }
             }
 
-            Section("Watched Input") {
-                LabeledContent("Accepted files:") {
-                    Picker("Accepted files", selection: watchedInputPresetBinding) {
-                        ForEach(WatchedInputPreset.allCases) { preset in
-                            Text(preset.displayName).tag(preset)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                    .frame(maxWidth: 190)
+            Section("File Types") {
+                Picker("Convert:", selection: watchedInputPresetBinding) {
+                    Text("All supported").tag(WatchedInputPreset.all)
+                    Text("Documents only").tag(WatchedInputPreset.documents)
+                    Text("Documents + images").tag(WatchedInputPreset.documentsAndImages)
                 }
+                .pickerStyle(.segmented)
+                .labelsHidden()
 
-                if watchedInputPreset == .custom {
-                    LabeledContent("Custom types:") {
-                        HStack(spacing: 8) {
-                            Text(watchedInputSummary)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                            Button("Edit…") {
-                                showWatchedInputSheet = true
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                        }
-                    }
-                }
-
-                Toggle("Skip generated and temporary files", isOn: defaultWatchedExclusionsBinding)
+                Toggle("Skip temporary files", isOn: defaultWatchedExclusionsBinding)
                     .toggleStyle(.checkbox)
-
-                if !usesDefaultWatchedExclusions {
-                    ForEach(Self.watchExcludeOptions) { option in
-                        watchPatternListRow(option, isOn: watchedExcludeBinding(for: option))
-                    }
-                }
+                    .font(.subheadline)
 
                 if let watchedFolderError {
                     Label(watchedFolderError, systemImage: "exclamationmark.triangle.fill")
@@ -374,17 +367,9 @@ struct PreferencesView: View {
                         .foregroundStyle(.red)
                 }
             }
-
-            Section("AI") {
-                modelRows
-                aiModelStatusRows
-            }
         }
         .formStyle(.grouped)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .sheet(isPresented: $showWatchedInputSheet) {
-            watchedInputEditor
-        }
     }
 
     private var outputModeBinding: Binding<OutputMode> {
@@ -404,7 +389,7 @@ struct PreferencesView: View {
         if patternsEqual(Self.watchDocumentAndImagePatterns, watchedFolderService.includePatterns) {
             return .documentsAndImages
         }
-        return .custom
+        return .all
     }
 
     private var watchedInputPresetBinding: Binding<WatchedInputPreset> {
@@ -422,12 +407,7 @@ struct PreferencesView: View {
                     watchedFolderService.includePatterns = Self.watchDocumentAndImagePatterns
                         .joined(separator: ", ")
                 case .custom:
-                    if usesAllWatchedFileTypes {
-                        watchedFolderService.includePatterns = Self.watchIncludeOptions
-                            .flatMap(\.patterns)
-                            .joined(separator: ", ")
-                    }
-                    showWatchedInputSheet = true
+                    break
                 }
             }
         )
@@ -442,50 +422,6 @@ struct PreferencesView: View {
             .filter { containsAll($0.patterns, in: watchedFolderService.includePatterns) }
             .map(\.title)
         return selected.isEmpty ? "No file types selected" : selected.joined(separator: ", ")
-    }
-
-    private var watchedInputEditor: some View {
-        VStack(spacing: 0) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Watched File Types")
-                        .font(.headline)
-                    Text("Choose which supported inputs the watched folders should convert.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button("Done") {
-                    showWatchedInputSheet = false
-                }
-                .keyboardShortcut(.defaultAction)
-            }
-            .padding(20)
-
-            Divider()
-
-            Form {
-                Section("Documents") {
-                    ForEach(Self.watchDocumentOptions) { option in
-                        watchPatternListRow(option, isOn: watchedIncludeBinding(for: option))
-                    }
-                }
-
-                Section("Images") {
-                    ForEach(Self.watchImageOptions) { option in
-                        watchPatternListRow(option, isOn: watchedIncludeBinding(for: option))
-                    }
-                }
-
-                Section("Audio") {
-                    ForEach(Self.watchAudioOptions) { option in
-                        watchPatternListRow(option, isOn: watchedIncludeBinding(for: option))
-                    }
-                }
-            }
-            .formStyle(.grouped)
-        }
-        .frame(width: 460, height: 520)
     }
 
     private var usesAllWatchedFileTypes: Bool {

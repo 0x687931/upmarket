@@ -6,19 +6,22 @@ final class MainWindowController: NSWindowController {
     static let shared = MainWindowController()
 
     private init() {
+        let mainSize = AppTheme.WindowSize.main
         let rootView = ContentView()
             .environmentObject(ConversionQueue.shared)
             .environmentObject(StoreManager.shared)
             .environmentObject(ModelManager.shared)
+            .environmentObject(ConversionHistoryStore.shared)
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 560),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            contentRect: NSRect(x: 0, y: 0, width: mainSize.width, height: mainSize.height),
+            styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
         window.title = "Upmarket"
-        window.minSize = NSSize(width: 400, height: 500)
+        window.minSize = NSSize(width: mainSize.width, height: mainSize.height)
+        window.maxSize = NSSize(width: mainSize.width, height: mainSize.height)
         window.contentView = NSHostingView(rootView: rootView)
         window.isReleasedWhenClosed = false
         window.center()

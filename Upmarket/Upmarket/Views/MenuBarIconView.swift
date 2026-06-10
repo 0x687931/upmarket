@@ -82,7 +82,7 @@ struct MenuBarIconView: View {
                 .offset(x: 3, y: 3)
         } else if showCompletionDot {
             Circle()
-                .fill(Color.green)
+                .fill(AppTheme.Colour.success)
                 .frame(width: 6, height: 6)
                 .overlay(Circle().strokeBorder(.white, lineWidth: 1))
                 .offset(x: 3, y: 3)

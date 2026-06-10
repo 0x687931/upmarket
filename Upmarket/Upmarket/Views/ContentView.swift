@@ -109,7 +109,7 @@ struct ContentView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, AppTheme.Spacing.xxl)
+                .padding(.vertical, AppTheme.Spacing.lg)
             }
             .contentShape(Rectangle())
             .onTapGesture { openFilePicker() }
@@ -117,10 +117,11 @@ struct ContentView: View {
             Button(action: openFilePicker) {
                 Text("Choose File")
                     .font(AppTheme.Font.body)
-                    .frame(width: AppTheme.Size.chooseButtonWidth)
+                    .frame(minWidth: AppTheme.Size.chooseButtonWidth)
             }
             .buttonStyle(.borderedProminent)
-            .controlSize(.small)
+            .controlSize(.large)
+            .tint(.accentColor)
         }
         .padding(.horizontal, AppTheme.Spacing.xl)
         .padding(.vertical, AppTheme.Spacing.lg)
@@ -156,7 +157,6 @@ struct ContentView: View {
                                 onCancel: { conversion.cancel(job.id) },
                                 onRetry: { _ in _ = conversion.retry(job.id) }
                             )
-                            .background(selectedJobID == job.id ? AppTheme.Colour.selectedFill : AppTheme.Colour.subtleFill)
                             .cornerRadius(AppTheme.Radius.sm)
                         }
                     }
@@ -369,15 +369,21 @@ struct QueueItemRow: View {
 
                 Text(statusLabel)
                     .font(AppTheme.Font.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(job.stage == .failed ? AppTheme.Status.failed : Color.secondary)
             }
 
             Spacer()
 
             // Progress or status icon
             if job.isRunning {
-                ProgressView(value: job.progress)
-                    .frame(width: 70)
+                ZStack {
+                    Circle()
+                        .stroke(Color.primary.opacity(0.1), lineWidth: AppTheme.Size.strokeRingThin)
+                    ArcProgressRing(progress: job.progress)
+                        .stroke(Color.accentColor, style: StrokeStyle(lineWidth: AppTheme.Size.strokeRingThin, lineCap: .round))
+                        .animation(.linear(duration: 0.4), value: job.progress)
+                }
+                .frame(width: AppTheme.Size.statusIcon + 4, height: AppTheme.Size.statusIcon + 4)
             } else if job.stage == .complete {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(AppTheme.Status.complete)
@@ -459,6 +465,7 @@ struct QueueItemRow: View {
         }
         .padding(.horizontal, AppTheme.Spacing.lg)
         .padding(.vertical, AppTheme.Spacing.md)
+        .background(rowBackground)
         .contentShape(Rectangle())
         .onHover { hovering in
             hoverActions = hovering
@@ -466,6 +473,12 @@ struct QueueItemRow: View {
         .onTapGesture {
             onSelect()
         }
+    }
+
+    private var rowBackground: Color {
+        if isSelected { return AppTheme.Colour.selectedFill }
+        if hoverActions { return AppTheme.Colour.accentTint10 }
+        return AppTheme.Colour.subtleFill
     }
 
     private var statusLabel: String {
