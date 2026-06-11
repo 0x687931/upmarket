@@ -111,6 +111,9 @@ final class StoreManager: ObservableObject {
     /// Call before each conversion. Returns false if user has no access.
     @discardableResult
     func consumeConversion() -> Bool {
+        #if DEBUG
+        return true
+        #else
         if hasBasicOrAbove { return true }  // unlimited — nothing to consume
 
         do {
@@ -125,14 +128,19 @@ final class StoreManager: ObservableObject {
             AppLog.storeKit.error("Failed to consume conversion accounting: \(error.localizedDescription, privacy: .private)")
             return false
         }
+        #endif
     }
 
     func shouldShowTrialPaywallAfterConversion() -> Bool {
-        accounting.shouldShowTrialPaywallAfterConversion(
+        #if DEBUG
+        return false
+        #else
+        return accounting.shouldShowTrialPaywallAfterConversion(
             hasPaidEntitlement: hasBasicOrAbove,
             freeDocsRemaining: freeDocsRemaining,
             packCredits: packCredits
         )
+        #endif
     }
 
     // MARK: - Purchasing
