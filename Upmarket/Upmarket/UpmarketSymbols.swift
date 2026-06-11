@@ -25,11 +25,12 @@ enum UpmarketSymbols {
 
     // MARK: - App identity
 
-    /// Storefront mark used by the Dock icon, menu bar, and shelf identity surfaces.
-    /// Keep this as an SF Symbol so state-specific color and animation can be layered on top.
-    static let appMark = "storefront"
-    static let appMarkFill = "storefront.fill"
-    static let appMarkSquare = "storefront"
+    /// Hash mark used by the menu bar and shelf identity surfaces, matching the
+    /// `#` glyph in the Dock icon (AppIcon asset). Keep this as an SF Symbol so
+    /// state-specific color and animation can be layered on top of the squircle.
+    static let appMark = "number"
+    static let appMarkFill = "number.square.fill"
+    static let appMarkSquare = "number.square"
 
     // MARK: - Conversion actions
 
