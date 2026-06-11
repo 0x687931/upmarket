@@ -199,7 +199,7 @@ enum AppTheme {
             case .main: return 560        // Upmarket workbench
             case .modal: return 600       // Modal dialogs
             case .compact: return 132     // Shelf widget
-            case .welcome: return 540     // Welcome window
+            case .welcome: return 680     // Welcome/onboarding window
             }
         }
     }

@@ -8,7 +8,12 @@ final class WelcomeWindowController: NSWindowController {
 
     private init() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 540),
+            contentRect: NSRect(
+                x: 0,
+                y: 0,
+                width: AppTheme.WindowSize.welcome.width,
+                height: AppTheme.WindowSize.welcome.height
+            ),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -19,7 +24,8 @@ final class WelcomeWindowController: NSWindowController {
         window.isReleasedWhenClosed = false
         window.center()
 
-        let rootView = WelcomeView {
+        let rootView = WelcomeView { destination, chosenFolderURL in
+            SavePreference.shared.configure(destination: destination, chosenFolderURL: chosenFolderURL)
             UserDefaults.standard.set(true, forKey: "upmarket.tourComplete")
             window.close()
             MainWindowController.shared.show()
@@ -40,14 +46,17 @@ final class WelcomeWindowController: NSWindowController {
 
 struct WelcomeView: View {
 
-    var onDismiss: () -> Void
+    var onDismiss: (_ destination: SavePreference.Destination, _ chosenFolderURL: URL?) -> Void
+
+    @State private var saveDestination: SavePreference.Destination = SavePreference.shared.destination
+    @State private var chosenFolderURL: URL? = SavePreference.shared.chosenFolderURL
 
     var body: some View {
         ZStack {
             background
             content
         }
-        .frame(width: 520, height: 540)
+        .frame(width: AppTheme.WindowSize.welcome.width, height: AppTheme.WindowSize.welcome.height)
     }
 
     // MARK: - Background
@@ -114,6 +123,15 @@ struct WelcomeView: View {
 
             Spacer()
 
+            SaveLocationSettingsView(
+                destination: $saveDestination,
+                chosenFolderURL: $chosenFolderURL,
+                title: "Save files",
+                description: "Choose where converted Markdown is saved. You can change this later in Preferences.",
+                onChooseFolder: chooseSaveFolder,
+                showsCardChrome: true
+            )
+
             // CTA
             VStack(spacing: AppTheme.Spacing.md) {
                 getStartedButton
@@ -155,7 +173,7 @@ struct WelcomeView: View {
 
     @ViewBuilder private var getStartedButton: some View {
         if #available(macOS 26, *) {
-            Button(action: onDismiss) {
+            Button(action: finishOnboarding) {
                 Text("Get Started")
                     .font(AppTheme.Font.body)
                     .frame(width: 220)
@@ -164,7 +182,7 @@ struct WelcomeView: View {
             .controlSize(.large)
             .tint(.accentColor)
         } else {
-            Button(action: onDismiss) {
+            Button(action: finishOnboarding) {
                 Text("Get Started")
                     .font(AppTheme.Font.body)
                     .frame(width: 220)
@@ -173,5 +191,18 @@ struct WelcomeView: View {
             .controlSize(.large)
             .tint(.accentColor)
         }
+    }
+
+    private func chooseSaveFolder() {
+        if let url = FileAccessService.shared.chooseSaveDirectory(
+            message: "Upmarket will save converted files here."
+        ) {
+            chosenFolderURL = url
+            saveDestination = .chosenFolder
+        }
+    }
+
+    private func finishOnboarding() {
+        onDismiss(saveDestination, chosenFolderURL)
     }
 }

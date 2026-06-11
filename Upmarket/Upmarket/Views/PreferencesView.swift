@@ -208,32 +208,14 @@ struct PreferencesView: View {
             }
 
             Section("Save Location") {
-                LabeledContent("Save files:") {
-                    Picker("", selection: Binding(
-                        get: { SavePreference.shared.destination },
-                        set: { SavePreference.shared.destination = $0 }
-                    )) {
-                        Text("Same folder as original").tag(SavePreference.Destination.sameFolder)
-                        Text("Ask each time").tag(SavePreference.Destination.askEachTime)
-                        Text("Choose folder…").tag(SavePreference.Destination.chosenFolder)
-                    }
-                    .pickerStyle(.radioGroup)
-                    .labelsHidden()
-                }
-
-                if SavePreference.shared.destination == .chosenFolder {
-                    LabeledContent("Folder:") {
-                        HStack(spacing: 8) {
-                            Text(SavePreference.shared.chosenFolderURL?.lastPathComponent ?? "None chosen")
-                                .foregroundStyle(
-                                    SavePreference.shared.chosenFolderURL == nil ? .secondary : .primary
-                                )
-                            Button("Choose…") { chooseSaveFolder() }
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
-                        }
-                    }
-                }
+                SaveLocationSettingsView(
+                    destination: saveDestinationBinding,
+                    chosenFolderURL: chosenFolderBinding,
+                    title: nil,
+                    description: nil,
+                    onChooseFolder: chooseSaveFolder,
+                    showsCardChrome: false
+                )
             }
 
             Section("History") {
@@ -376,6 +358,20 @@ struct PreferencesView: View {
         Binding(
             get: { OutputPreference.shared.mode },
             set: { OutputPreference.shared.mode = $0 }
+        )
+    }
+
+    private var saveDestinationBinding: Binding<SavePreference.Destination> {
+        Binding(
+            get: { SavePreference.shared.destination },
+            set: { SavePreference.shared.destination = $0 }
+        )
+    }
+
+    private var chosenFolderBinding: Binding<URL?> {
+        Binding(
+            get: { SavePreference.shared.chosenFolderURL },
+            set: { SavePreference.shared.chosenFolderURL = $0 }
         )
     }
 

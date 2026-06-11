@@ -37,6 +37,14 @@ final class SavePreference {
         }
     }
 
+    func configure(destination: Destination, chosenFolderURL: URL? = nil) {
+        self.destination = destination
+        if destination == .chosenFolder {
+            self.chosenFolderURL = chosenFolderURL
+        }
+        hasPrompted = true
+    }
+
     private var hasPrompted: Bool {
         get { UserDefaults.standard.bool(forKey: "upmarket.savePreferenceSet") }
         set { UserDefaults.standard.set(newValue, forKey: "upmarket.savePreferenceSet") }
@@ -163,12 +171,10 @@ final class SavePreference {
         let response = alert.runModal()
         switch response {
         case .alertFirstButtonReturn:
-            destination = .sameFolder
-            hasPrompted = true
+            configure(destination: .sameFolder)
             return true
         case .alertSecondButtonReturn:
-            destination = .askEachTime
-            hasPrompted = true
+            configure(destination: .askEachTime)
             return true
         case .alertThirdButtonReturn:
             // Let user pick a folder
@@ -180,9 +186,7 @@ final class SavePreference {
             panel.message = "Upmarket will save all converted files here."
             panel.orderFrontRegardless()
             if panel.runModal() == .OK, let url = panel.url {
-                chosenFolderURL = url
-                destination = .chosenFolder
-                hasPrompted = true
+                configure(destination: .chosenFolder, chosenFolderURL: url)
                 return true
             }
             return false
