@@ -234,36 +234,31 @@ extension Notification.Name {
 
 @MainActor
 private enum MenuBarStatusIcon {
-    private static let size = NSSize(width: 22, height: 22)
+    // Amber matches the Dock icon gradient; used only to signal active conversion.
+    private static let convertingTint = NSColor(srgbRed: 0.91, green: 0.47, blue: 0.0, alpha: 1)
 
     static func image(isConverting: Bool) -> NSImage {
-        let image = NSImage(size: size)
-        image.lockFocus()
-        defer { image.unlockFocus() }
-
-        // Reuse the exact AppIcon artwork the Dock renders, so the menu bar icon
-        // is pixel-identical to the Dock icon at a given size. Inset 1.5pt so the
-        // squircle keeps a small margin from the menu bar edges.
-        if let appIcon = NSImage(named: "AppIcon") {
-            appIcon.draw(
-                in: NSRect(x: 1.5, y: 1.5, width: 19, height: 19),
-                from: NSRect(origin: .zero, size: appIcon.size),
-                operation: .sourceOver,
-                fraction: 1
-            )
+        guard let hash = NSImage(named: "MenuBarHash") else {
+            return NSImage(size: NSSize(width: 18, height: 18))
         }
 
-        if isConverting {
-            NSColor.controlAccentColor.setFill()
-            let activityDot = NSBezierPath(ovalIn: NSRect(x: 15.5, y: 1.5, width: 5, height: 5))
-            activityDot.fill()
-            NSColor.white.withAlphaComponent(0.92).setStroke()
-            activityDot.lineWidth = 0.8
-            activityDot.stroke()
+        guard isConverting else {
+            // Monochrome template — macOS tints it for light/dark menu bars and
+            // dims/highlights it when the menu is open, like other menu bar apps.
+            hash.isTemplate = true
+            return hash
         }
 
-        image.isTemplate = false
-        return image
+        // While converting, tint the same glyph amber so activity is obvious.
+        let tinted = NSImage(size: hash.size)
+        tinted.lockFocus()
+        let rect = NSRect(origin: .zero, size: hash.size)
+        hash.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1)
+        convertingTint.setFill()
+        rect.fill(using: .sourceAtop)
+        tinted.unlockFocus()
+        tinted.isTemplate = false
+        return tinted
     }
 }
 
@@ -379,7 +374,7 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
 
         menu.addItem(actionItem(
             title: "Quit Upmarket",
-            systemImage: "power",
+            systemImage: "xmark.square.fill",
             action: #selector(quit(_:)),
             keyEquivalent: "q",
             modifiers: [.command]

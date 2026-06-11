@@ -26,13 +26,16 @@ struct MenuBarIconView: View {
         }
     }
 
-    // Same AppIcon artwork the Dock uses, so the two stay pixel-identical.
+    // Monochrome template hash (the Y-rotated `#`): amber while converting,
+    // otherwise the menu bar foreground colour, matching the status item.
     @ViewBuilder private var appIcon: some View {
-        if let icon = NSImage(named: "AppIcon") {
+        if let icon = NSImage(named: "MenuBarHash") {
             Image(nsImage: icon)
+                .renderingMode(.template)
                 .resizable()
                 .interpolation(.high)
-                .frame(width: 19, height: 19)
+                .frame(width: 18, height: 18)
+                .foregroundStyle(isConverting ? AppTheme.Colour.brandStop5 : Color.primary)
         }
     }
 
