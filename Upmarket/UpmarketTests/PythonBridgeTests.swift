@@ -1,5 +1,6 @@
 import XCTest
 import Darwin
+import CoreGraphics
 @testable import Upmarket
 
 @MainActor
@@ -539,9 +540,21 @@ final class PythonBridgeTests: XCTestCase {
             try? FileManager.default.removeItem(at: inputDirectory)
         }
 
-        let input = inputDirectory.appendingPathComponent("sample.png")
-        let png = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4//8/AAX+Av4N70a4AAAAAElFTkSuQmCC")!
-        try png.write(to: input)
+        let input = inputDirectory.appendingPathComponent("sample.pdf")
+        var mediaBox = CGRect(x: 0, y: 0, width: 144, height: 144)
+        guard let consumer = CGDataConsumer(url: input as CFURL) else {
+            return XCTFail("Expected to create PDF data consumer")
+        }
+        guard let context = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else {
+            return XCTFail("Expected to create PDF context")
+        }
+        context.beginPDFPage([:] as CFDictionary)
+        context.setFillColor(CGColor(gray: 1, alpha: 1))
+        context.fill(mediaBox)
+        context.setFillColor(CGColor(gray: 0, alpha: 1))
+        context.fillEllipse(in: CGRect(x: 36, y: 36, width: 72, height: 72))
+        context.endPDFPage()
+        context.closePDF()
 
         setenv("UPMARKET_ENABLE_TEST_DOUBLES", "1", 1)
         setenv("UPMARKET_TEST_UPMARKET_AI_HARDWARE", "available", 1)

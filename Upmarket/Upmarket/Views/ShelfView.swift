@@ -274,10 +274,13 @@ struct ShelfView: View {
     }
 
     private var idleMiniSymbol: some View {
-        Image(systemName: "number")
-            .font(.system(size: windowSize.iconSize, weight: .semibold))
+        // Brand mark from the generated MenuBarHash template (the rotated `#`).
+        Image(nsImage: NSImage(named: "MenuBarHash") ?? NSImage())
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: windowSize.iconSize, height: windowSize.iconSize)
             .foregroundStyle(.primary.opacity(0.62))
-            .symbolRenderingMode(.hierarchical)
     }
 
     // MARK: - Closed panel: [control strip] | [peek panel]
