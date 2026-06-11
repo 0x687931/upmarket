@@ -80,7 +80,7 @@ struct MenuBarDropdown: View {
         Button {
             NSApp.terminate(nil)
         } label: {
-            Label("Quit Upmarket", systemImage: "power")
+            Label("Quit Upmarket", systemImage: "xmark.square.fill")
         }
         .keyboardShortcut("q", modifiers: .command)
     }
