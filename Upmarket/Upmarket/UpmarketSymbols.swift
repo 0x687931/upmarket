@@ -106,7 +106,6 @@ enum UpmarketSymbols {
 
     // MARK: - Onboarding
 
-    static let welcome          = "number"                      // use Text("#") for this
     static let onboardDrop      = "arrow.down.doc"
     static let onboardAI        = "cpu.fill"
     static let onboardReady     = "checkmark.seal.fill"

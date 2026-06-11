@@ -65,7 +65,7 @@ struct PaywallView: View {
     private var header: some View {
         ZStack(alignment: .topTrailing) {
             VStack(spacing: AppTheme.Spacing.sm) {
-                Image(nsImage: NSApp.applicationIconImage)
+                Image(nsImage: NSImage(named: "AppIcon") ?? NSApp.applicationIconImage)
                     .resizable()
                     .frame(width: 64, height: 64)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))

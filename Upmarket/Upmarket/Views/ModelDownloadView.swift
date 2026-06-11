@@ -36,9 +36,10 @@ struct ModelDownloadView: View {
 
     private var header: some View {
         VStack(spacing: AppTheme.Spacing.sm) {
-            Text("#")
-                .font(.system(size: 48, weight: .bold, design: .rounded))
-                .foregroundStyle(Color.accentColor)
+            Image(nsImage: NSImage(named: "AppIcon") ?? NSImage())
+                .resizable()
+                .frame(width: 56, height: 56)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             Text(L("models.setup.title"))
                 .font(.title2)
