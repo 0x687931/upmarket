@@ -5,7 +5,7 @@ import XCTest
 
 final class AppVisibilityPreferenceTests: XCTestCase {
     func testMenuBarIconUsesDockIconSymbolBase() {
-        XCTAssertEqual(UpmarketSymbols.appMark, "storefront")
+        XCTAssertEqual(UpmarketSymbols.appMark, "number")
         XCTAssertEqual(UpmarketSymbols.menuBarIcon(isConverting: false), UpmarketSymbols.appMark)
         XCTAssertEqual(UpmarketSymbols.menuBarIcon(isConverting: true), UpmarketSymbols.appMark)
     }
