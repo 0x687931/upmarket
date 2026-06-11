@@ -9,7 +9,7 @@ struct MenuBarIconView: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            iconSymbol
+            appIcon
             badgeDot
         }
         .frame(width: 22, height: 22)
@@ -26,53 +26,18 @@ struct MenuBarIconView: View {
         }
     }
 
-    @ViewBuilder private var iconSymbol: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .fill(iconGradient)
-            Ellipse()
-                .fill(.white.opacity(0.12))
-                .frame(width: 12, height: 3)
-                .offset(y: -6)
-
-            if #available(macOS 14.0, *) {
-                Image(systemName: UpmarketSymbols.menuBarIcon(isConverting: isConverting))
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .symbolEffect(.pulse, isActive: isConverting)
-                    .symbolEffect(.bounce, value: completionToken)
-                    .contentTransition(.symbolEffect(.replace.byLayer.downUp))
-                    .baselineOffset(0.5)
-            } else {
-                Image(systemName: UpmarketSymbols.menuBarIcon(isConverting: isConverting))
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .baselineOffset(0.5)
-            }
+    // Same AppIcon artwork the Dock uses, so the two stay pixel-identical.
+    @ViewBuilder private var appIcon: some View {
+        if let icon = NSImage(named: "AppIcon") {
+            Image(nsImage: icon)
+                .resizable()
+                .interpolation(.high)
+                .frame(width: 19, height: 19)
         }
-        .frame(width: 19, height: 19)
-    }
-
-    private var iconGradient: LinearGradient {
-        LinearGradient(
-            colors: isConverting
-                ? [
-                    Color(red: 1.00, green: 0.77, blue: 0.24),
-                    Color(red: 0.97, green: 0.42, blue: 0.00),
-                    Color(red: 0.91, green: 0.43, blue: 0.00)
-                ]
-                : [
-                    Color(red: 1.00, green: 0.75, blue: 0.25),
-                    Color(red: 0.91, green: 0.47, blue: 0.00),
-                    Color(red: 0.91, green: 0.43, blue: 0.00)
-                ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
     }
 
     // 6pt dot with a 1pt white stroke — readable on both light and dark menu bars
-    // and against the symbol itself. Offset pushes it to the corner of the 22pt frame.
+    // and against the icon itself. Offset pushes it to the corner of the 22pt frame.
     @ViewBuilder private var badgeDot: some View {
         if isConverting {
             Circle()

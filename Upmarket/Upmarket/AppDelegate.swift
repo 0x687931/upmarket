@@ -241,18 +241,13 @@ private enum MenuBarStatusIcon {
         image.lockFocus()
         defer { image.unlockFocus() }
 
-        let iconRect = NSRect(x: 1.5, y: 1.5, width: 19, height: 19)
-        let iconPath = NSBezierPath(roundedRect: iconRect, xRadius: 4.75, yRadius: 4.75)
-        let gradient = NSGradient(colors: gradientColors(isConverting: isConverting))
-        gradient?.draw(in: iconPath, angle: -90)
-
-        NSColor.white.withAlphaComponent(0.12).setFill()
-        NSBezierPath(ovalIn: NSRect(x: 5, y: 15.5, width: 12, height: 3)).fill()
-
-        if let symbol = symbolImage(name: UpmarketSymbols.menuBarIcon(isConverting: isConverting)) {
-            symbol.draw(
-                in: NSRect(x: 4.25, y: 3.25, width: 13.5, height: 13.5),
-                from: NSRect(origin: .zero, size: symbol.size),
+        // Reuse the exact AppIcon artwork the Dock renders, so the menu bar icon
+        // is pixel-identical to the Dock icon at a given size. Inset 1.5pt so the
+        // squircle keeps a small margin from the menu bar edges.
+        if let appIcon = NSImage(named: "AppIcon") {
+            appIcon.draw(
+                in: NSRect(x: 1.5, y: 1.5, width: 19, height: 19),
+                from: NSRect(origin: .zero, size: appIcon.size),
                 operation: .sourceOver,
                 fraction: 1
             )
@@ -269,40 +264,6 @@ private enum MenuBarStatusIcon {
 
         image.isTemplate = false
         return image
-    }
-
-    private static func gradientColors(isConverting: Bool) -> [NSColor] {
-        if isConverting {
-            return [
-                NSColor(calibratedRed: 1.00, green: 0.77, blue: 0.24, alpha: 1),
-                NSColor(calibratedRed: 0.97, green: 0.42, blue: 0.00, alpha: 1),
-                NSColor(calibratedRed: 0.73, green: 0.17, blue: 0.00, alpha: 1)
-            ]
-        }
-        return [
-            NSColor(calibratedRed: 1.00, green: 0.75, blue: 0.25, alpha: 1),
-            NSColor(calibratedRed: 0.91, green: 0.47, blue: 0.00, alpha: 1),
-            NSColor(calibratedRed: 0.66, green: 0.22, blue: 0.00, alpha: 1)
-        ]
-    }
-
-    private static func symbolImage(name: String) -> NSImage? {
-        let configuration = NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
-        guard let symbol = NSImage(systemSymbolName: name, accessibilityDescription: "Upmarket")?
-            .withSymbolConfiguration(configuration)
-        else {
-            return nil
-        }
-
-        let tinted = NSImage(size: symbol.size)
-        tinted.lockFocus()
-        let rect = NSRect(origin: .zero, size: symbol.size)
-        symbol.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1)
-        NSColor.white.setFill()
-        rect.fill(using: .sourceAtop)
-        tinted.unlockFocus()
-        tinted.isTemplate = false
-        return tinted
     }
 }
 

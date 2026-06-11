@@ -4,10 +4,10 @@ import XCTest
 @testable import Upmarket
 
 final class AppVisibilityPreferenceTests: XCTestCase {
-    func testMenuBarIconUsesDockIconSymbolBase() {
-        XCTAssertEqual(UpmarketSymbols.appMark, "number")
-        XCTAssertEqual(UpmarketSymbols.menuBarIcon(isConverting: false), UpmarketSymbols.appMark)
-        XCTAssertEqual(UpmarketSymbols.menuBarIcon(isConverting: true), UpmarketSymbols.appMark)
+    func testMenuBarReusesDockAppIconAsset() {
+        // The menu bar draws the same AppIcon artwork the Dock uses, so the two are
+        // pixel-identical. This asserts the shared source asset is loadable.
+        XCTAssertNotNil(NSImage(named: "AppIcon"))
     }
 
     func testSingleInstanceLockURLUsesApplicationSupport() {

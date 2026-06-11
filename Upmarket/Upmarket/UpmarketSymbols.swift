@@ -23,14 +23,9 @@ import SwiftUI
 
 enum UpmarketSymbols {
 
-    // MARK: - App identity
-
-    /// Hash mark used by the menu bar and shelf identity surfaces, matching the
-    /// `#` glyph in the Dock icon (AppIcon asset). Keep this as an SF Symbol so
-    /// state-specific color and animation can be layered on top of the squircle.
-    static let appMark = "number"
-    static let appMarkFill = "number.square.fill"
-    static let appMarkSquare = "number.square"
+    // The app identity mark (Dock + menu bar) is the AppIcon asset itself, not an
+    // SF Symbol — the menu bar draws that asset directly so it stays pixel-identical
+    // to the Dock icon. See MenuBarStatusIcon in AppDelegate.
 
     // MARK: - Conversion actions
 
@@ -97,13 +92,6 @@ enum UpmarketSymbols {
     static let prefAccount   = "person.circle"
     static let prefAbout     = "info.circle"
     static let prefGeneral   = "gearshape"
-
-    // MARK: - Menu bar
-
-    /// The menu bar uses the Dock icon glyph for every state; color/animation is applied by callers.
-    static func menuBarIcon(isConverting: Bool) -> String {
-        appMark
-    }
 
     // MARK: - Shelf
 
