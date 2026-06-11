@@ -57,6 +57,8 @@ final class StoreManager: ObservableObject {
         Task { await refreshEntitlement() }
         applyAccountingSnapshot(accounting.loadInitialState())
         #if DEBUG
+        // Developer builds should behave like an unlocked local test surface.
+        entitlement = .basic
         freeDocsRemaining = 99
         #endif
     }
@@ -211,6 +213,12 @@ final class StoreManager: ObservableObject {
     }
 
     private func refreshEntitlement() async {
+        #if DEBUG
+        await MainActor.run {
+            self.entitlement = .basic
+        }
+        return
+        #else
         for await result in Transaction.currentEntitlements {
             guard let transaction = try? checkVerified(result) else { continue }
             if transaction.productID == Self.proID {
@@ -224,6 +232,7 @@ final class StoreManager: ObservableObject {
         }
         // No paid plan — free tier
         await MainActor.run { self.entitlement = .none }
+        #endif
     }
 
     private func remainingToUnlimited(spent: Double) -> String {
