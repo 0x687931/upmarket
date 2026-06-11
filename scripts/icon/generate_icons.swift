@@ -18,7 +18,7 @@ import CoreImage.CIFilterBuiltins
 
 // MARK: - Design constants
 
-let yAxisDegrees: CGFloat = 35          // door-swing angle
+let yAxisDegrees: CGFloat = 10          // door-swing angle
 let perspectiveDistance: CGFloat = 2.4  // smaller = stronger foreshortening
 let leftEdgeForward = true              // left edge nearer the viewer
 
