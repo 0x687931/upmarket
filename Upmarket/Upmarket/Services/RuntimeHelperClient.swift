@@ -223,7 +223,8 @@ struct RuntimeHelperClient: Sendable {
                 }
                 monitor.start()
 
-                process.terminationHandler = { terminated in
+                let finishProcess: () -> Void = {
+                    let terminated = process
                     let remainingOutput = stdout.fileHandleForReading.readDataToEndOfFile()
                     stdout.fileHandleForReading.readabilityHandler = nil
                     stderr.fileHandleForReading.readabilityHandler = nil
@@ -261,6 +262,14 @@ struct RuntimeHelperClient: Sendable {
                     } catch {
                         continuation.resume(throwing: PythonBridgeError.invalidResponse(error.localizedDescription))
                     }
+                }
+
+                process.terminationHandler = { _ in
+                    finishProcess()
+                }
+
+                if !process.isRunning {
+                    finishProcess()
                 }
             }
         } onCancel: {

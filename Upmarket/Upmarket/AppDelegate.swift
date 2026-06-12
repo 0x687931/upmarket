@@ -239,12 +239,14 @@ extension Notification.Name {
 
 @MainActor
 private enum MenuBarStatusIcon {
-    // Amber matches the Dock icon gradient; used only to signal active conversion.
     private static let convertingTint = NSColor(srgbRed: 0.91, green: 0.47, blue: 0.0, alpha: 1)
+    private static let iconSize = NSSize(width: 22, height: 22)
+    private static let glyphSize = NSSize(width: 18, height: 18)
+    private static let badgeSize = NSSize(width: 6, height: 6)
 
     static func image(isConverting: Bool) -> NSImage {
         guard let hash = NSImage(named: "MenuBarHash") else {
-            return NSImage(size: NSSize(width: 18, height: 18))
+            return NSImage(size: iconSize)
         }
 
         guard isConverting else {
@@ -254,16 +256,42 @@ private enum MenuBarStatusIcon {
             return hash
         }
 
-        // While converting, tint the same glyph amber so activity is obvious.
-        let tinted = NSImage(size: hash.size)
-        tinted.lockFocus()
-        let rect = NSRect(origin: .zero, size: hash.size)
-        hash.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1)
-        convertingTint.setFill()
-        rect.fill(using: .sourceAtop)
-        tinted.unlockFocus()
-        tinted.isTemplate = false
-        return tinted
+        let composed = NSImage(size: iconSize)
+        composed.lockFocus()
+
+        let glowRect = NSRect(
+            x: 8,
+            y: 4,
+            width: 10,
+            height: 10
+        )
+        convertingTint.withAlphaComponent(0.12).setFill()
+        NSBezierPath(ovalIn: glowRect).fill()
+
+        let glyphRect = NSRect(
+            x: (iconSize.width - glyphSize.width) / 2,
+            y: (iconSize.height - glyphSize.height) / 2,
+            width: glyphSize.width,
+            height: glyphSize.height
+        )
+        hash.draw(in: glyphRect, from: .zero, operation: .sourceOver, fraction: 1)
+
+        let badgeRect = NSRect(
+            x: iconSize.width - badgeSize.width - 2,
+            y: 2,
+            width: badgeSize.width,
+            height: badgeSize.height
+        )
+        NSColor.controlAccentColor.setFill()
+        NSBezierPath(ovalIn: badgeRect).fill()
+        NSColor.white.setStroke()
+        let badgePath = NSBezierPath(ovalIn: badgeRect)
+        badgePath.lineWidth = 1
+        badgePath.stroke()
+
+        composed.unlockFocus()
+        composed.isTemplate = false
+        return composed
     }
 }
 
@@ -327,13 +355,13 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
 
         if ConversionQueue.shared.isConverting {
             let percent = Int((ConversionQueue.shared.overallProgress * 100).rounded())
-            let title = percent > 0 ? "Converting \(percent)%" : "Converting..."
+            let title = percent > 0 ? "Converting \(percent)%" : "Converting…"
             menu.addItem(disabledItem(title))
             menu.addItem(.separator())
         }
 
         menu.addItem(actionItem(
-            title: "Convert Document...",
+            title: "Convert Document…",
             systemImage: "doc.badge.plus",
             action: #selector(convertDocument(_:)),
             keyEquivalent: "o",
@@ -345,8 +373,8 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
             action: #selector(showMainWindow(_:))
         ))
         menu.addItem(actionItem(
-            title: shelfTitle,
-            systemImage: "sidebar.right",
+            title: shelfToggleTitle,
+            systemImage: "square.grid.2x2",
             action: #selector(showShelf(_:)),
             keyEquivalent: "s",
             modifiers: [.command, .shift]
@@ -355,40 +383,51 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
 
         menu.addItem(actionItem(
-            title: "Preferences...",
+            title: "Preferences…",
             systemImage: "gearshape",
             action: #selector(showPreferences(_:)),
             keyEquivalent: ",",
             modifiers: [.command]
         ))
         menu.addItem(actionItem(
-            title: "Report a Problem...",
+            title: "Report a Problem…",
             systemImage: "exclamationmark.bubble",
             action: #selector(showReportProblem(_:))
         ))
 
-        if StoreManager.shared.entitlement == .none {
-            menu.addItem(.separator())
+        menu.addItem(.separator())
+
+        switch StoreManager.shared.entitlement {
+        case .pro:
+            menu.addItem(statusItem(title: entitlementTitle, systemImage: "checkmark.circle"))
+        case .basic:
             menu.addItem(actionItem(
-                title: "Unlock Upmarket...",
+                title: "Upgrade to Upmarket + AI…",
+                systemImage: "arrow.up.circle",
+                action: #selector(showPaywall(_:))
+            ))
+        case .none:
+            menu.addItem(actionItem(
+                title: "Unlock Upmarket…",
                 systemImage: "lock.open",
                 action: #selector(showPaywall(_:))
             ))
-            menu.addItem(.separator())
         }
+
+        menu.addItem(.separator())
+        menu.addItem(disabledItem(versionLine))
 
         menu.addItem(actionItem(
             title: "Quit Upmarket",
-            systemImage: "xmark.square.fill",
+            systemImage: "power",
             action: #selector(quit(_:)),
             keyEquivalent: "q",
             modifiers: [.command]
         ))
     }
 
-    private var shelfTitle: String {
-        let count = ConversionQueue.shared.jobs.count
-        return count > 0 ? "Show Shelf (\(count))" : "Show Shelf"
+    private var shelfToggleTitle: String {
+        AppVisibilityPreference.showShelf ? "Hide Shelf" : "Show Shelf"
     }
 
     private var entitlementTitle: String {
@@ -402,9 +441,20 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
         }
     }
 
+    private var versionLine: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        return "v\(version) · support@upmarket.app"
+    }
+
     private func disabledItem(_ title: String) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         item.isEnabled = false
+        return item
+    }
+
+    private func statusItem(title: String, systemImage: String) -> NSMenuItem {
+        let item = disabledItem(title)
+        item.image = NSImage(systemSymbolName: systemImage, accessibilityDescription: title)
         return item
     }
 
@@ -431,8 +481,13 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
     }
 
     @objc private func showShelf(_ sender: Any?) {
-        AppVisibilityPreference.showShelf = true
-        ShelfWindowController.shared.show(ignoringPreference: true)
+        if AppVisibilityPreference.showShelf {
+            AppVisibilityPreference.showShelf = false
+            ShelfWindowController.shared.hide()
+        } else {
+            AppVisibilityPreference.showShelf = true
+            ShelfWindowController.shared.show(ignoringPreference: true)
+        }
     }
 
     @objc private func showPreferences(_ sender: Any?) {

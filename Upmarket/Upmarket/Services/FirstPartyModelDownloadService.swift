@@ -34,7 +34,7 @@ struct FirstPartyModelDownloadService: Sendable {
             }
 
             let manifestURL = baseURL.appendingPathComponent("\(key).json")
-            writeProgress(0, "Checking model manifest...", progressFile: progressFile)
+            writeProgress(0, "Checking model manifest…", progressFile: progressFile)
             let manifest = try await loadManifest(at: manifestURL, spec: spec)
 
             let stagingURL = modelsDirectoryURL.appendingPathComponent(".\(key).download", isDirectory: true)
@@ -115,7 +115,7 @@ struct FirstPartyModelDownloadService: Sendable {
             }
 
             let percent = 5 + (Double(index) / Double(max(total, 1))) * 85
-            writeProgress(percent, "Downloading \(index + 1) of \(total)...", progressFile: progressFile)
+            writeProgress(percent, "Downloading \(index + 1) of \(total)…", progressFile: progressFile)
 
             let temporaryURL = try await fileDownloader(sourceURL)
             defer { try? fileManager.removeItem(at: temporaryURL) }

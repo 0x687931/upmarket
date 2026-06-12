@@ -9,22 +9,24 @@ struct ModelDownloadView: View {
     private let windowSize: AppTheme.WindowSize = .modal
 
     var body: some View {
-        VStack(spacing: AppTheme.Spacing.xl) {
-            header
+        ScrollView {
+            VStack(spacing: AppTheme.Spacing.lg) {
+                header
 
-            if !device.supportsAdvancedRuntime {
-                machineUnavailableView
-            } else if modelManager.isDownloading {
-                downloadingView
-            } else if let checkError = modelManager.checkError {
-                checkErrorView(checkError)
-            } else if let error = modelManager.downloadError {
-                errorView(error)
-            } else if case .checking = modelManager.installState {
-                checkingView
-            } else {
-                modelList
-                downloadButton
+                if !device.supportsAdvancedRuntime {
+                    machineUnavailableView
+                } else if modelManager.isDownloading {
+                    downloadingView
+                } else if let checkError = modelManager.checkError {
+                    checkErrorView(checkError)
+                } else if let error = modelManager.downloadError {
+                    errorView(error)
+                } else if case .checking = modelManager.installState {
+                    checkingView
+                } else {
+                    modelList
+                    downloadButton
+                }
             }
         }
         .padding(windowSize.contentPadding)
@@ -35,164 +37,170 @@ struct ModelDownloadView: View {
     // MARK: - Header
 
     private var header: some View {
-        VStack(spacing: AppTheme.Spacing.sm) {
-            Image(nsImage: NSImage(named: "AppIcon") ?? NSImage())
-                .resizable()
-                .frame(width: 56, height: 56)
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.appIcon, style: .continuous))
+        AppSectionCard {
+            VStack(spacing: AppTheme.Spacing.sm) {
+                Image(nsImage: NSImage(named: "AppIcon") ?? NSImage())
+                    .resizable()
+                    .frame(width: 56, height: 56)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-            Text(L("models.setup.title"))
-                .font(.title2)
-                .fontWeight(.bold)
+                Text(L("models.setup.title"))
+                    .font(.title2)
+                    .fontWeight(.bold)
 
-            Text("Upmarket runs entirely on your Mac. Fast conversion works without downloads; optional local models can improve complex documents after a one-time install.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+                Text("Upmarket runs entirely on your Mac. Fast conversion works without downloads; optional local models can improve complex documents after a one-time install.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
         }
     }
 
     private var machineUnavailableView: some View {
-        HStack(spacing: AppTheme.Spacing.md) {
-            AppStatusToken(color: AppTheme.Status.complete, kind: .check, size: 24)
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+        AppSectionCard {
+            VStack(spacing: AppTheme.Spacing.md) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 32))
+                    .foregroundStyle(Color.green)
                 Text("Fast conversion is ready")
                     .fontWeight(.medium)
                 Text("Enhanced conversion and Upmarket AI require Apple Silicon. This Mac uses native fast conversion.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
-            Spacer()
+            .frame(maxWidth: .infinity)
         }
-        .padding(AppTheme.Spacing.lg)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-                .fill(AppTheme.Colour.controlBackground.opacity(0.55))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-                        .strokeBorder(AppTheme.Colour.border, lineWidth: 1)
-                )
-        )
     }
 
     // MARK: - Model List
 
     private var modelList: some View {
-        VStack(spacing: AppTheme.Spacing.sm) {
-            if modelManager.models.isEmpty {
-                HStack(spacing: AppTheme.Spacing.md) {
-                    AppStatusToken(color: AppTheme.Status.complete, kind: .check, size: 22)
-                    VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                        Text("Fast conversion ready")
-                            .fontWeight(.medium)
-                        Text("No optional local models were reported for this build.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+        AppSectionCard(title: "Available Models") {
+            VStack(spacing: AppTheme.Spacing.sm) {
+                if modelManager.models.isEmpty {
+                    AppSectionCard {
+                        HStack(spacing: AppTheme.Spacing.md) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Color.green)
+                                .font(.title3)
+                            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                                Text("Fast conversion ready")
+                                    .fontWeight(.medium)
+                                Text("No optional local models were reported for this build.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }
                     }
-                    Spacer()
                 }
-                .padding(AppTheme.Spacing.md)
-                .background(
-                    RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-                        .fill(AppTheme.Colour.controlBackground.opacity(0.55))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-                                .strokeBorder(AppTheme.Colour.border, lineWidth: 1)
-                        )
-                )
-            }
 
-            // Basic tier: Python runtime (required for Enhanced + AI)
-            ForEach(modelManager.models.filter { $0.tier == "basic" }, id: \.key) { model in
-                let gateReason = modelManager.basicDownloadUnavailableReason(hasBasic: store.hasBasicOrAbove)
-                modelRow(
-                    icon: "cpu",
-                    title: model.name,
-                    description: gateReason ?? model.error ?? model.description,
-                    sizeMB: model.sizeMB,
-                    isDownloaded: model.isDownloaded,
-                    badge: nil,
-                    available: model.isAvailable && gateReason == nil
-                )
-            }
-
-            // Enhanced tier: layout/table models
-            ForEach(modelManager.models.filter { $0.tier == "enhanced" }, id: \.key) { model in
-                modelRow(
-                    icon: "doc.text.magnifyingglass",
-                    title: model.name,
-                    description: model.error ?? model.description,
-                    sizeMB: model.sizeMB,
-                    isDownloaded: model.isDownloaded,
-                    badge: nil,
-                    available: model.isAvailable
-                )
-            }
-
-            if store.hasProOrAbove {
-                ForEach(modelManager.models.filter { $0.tier == "pro" }, id: \.key) { model in
-                    let gateReason = modelManager.proDownloadUnavailableReason(hasPro: store.hasProOrAbove)
+                // Basic tier: Python runtime (required for Enhanced + AI)
+                ForEach(modelManager.models.filter { $0.tier == "basic" }, id: \.key) { model in
+                    let gateReason = modelManager.basicDownloadUnavailableReason(hasBasic: store.hasBasicOrAbove)
                     modelRow(
-                        icon: "sparkles",
+                        key: model.key,
+                        icon: "cpu",
                         title: model.name,
                         description: gateReason ?? model.error ?? model.description,
                         sizeMB: model.sizeMB,
                         isDownloaded: model.isDownloaded,
-                        badge: "PRO",
+                        badge: nil,
                         available: model.isAvailable && gateReason == nil
                     )
+                }
+
+                // Enhanced tier: layout/table models
+                ForEach(modelManager.models.filter { $0.tier == "enhanced" }, id: \.key) { model in
+                    modelRow(
+                        key: model.key,
+                        icon: "doc.text.magnifyingglass",
+                        title: model.name,
+                        description: model.error ?? model.description,
+                        sizeMB: model.sizeMB,
+                        isDownloaded: model.isDownloaded,
+                        badge: nil,
+                        available: model.isAvailable
+                    )
+                }
+
+                if store.hasProOrAbove {
+                    ForEach(modelManager.models.filter { $0.tier == "pro" }, id: \.key) { model in
+                        let gateReason = modelManager.proDownloadUnavailableReason(hasPro: store.hasProOrAbove)
+                        modelRow(
+                            key: model.key,
+                            icon: "sparkles",
+                            title: model.name,
+                            description: gateReason ?? model.error ?? model.description,
+                            sizeMB: model.sizeMB,
+                            isDownloaded: model.isDownloaded,
+                            badge: "PRO",
+                            available: model.isAvailable && gateReason == nil
+                        )
+                    }
                 }
             }
         }
     }
 
-    private func modelRow(icon: String, title: String, description: String, sizeMB: Int, isDownloaded: Bool, badge: String?, available: Bool) -> some View {
-        HStack(spacing: AppTheme.Spacing.md) {
-            // Use AppStatusToken for downloaded state; SF symbol for type icon otherwise
-            if isDownloaded {
-                AppStatusToken(color: AppTheme.Status.complete, kind: .check, size: 22)
-            } else {
-                Image(systemName: icon)
-                    .foregroundStyle(available ? Color.accentColor : AppTheme.Status.queued)
-                    .font(.title3)
-            }
+    private func modelRow(key: String, icon: String, title: String, description: String, sizeMB: Int, isDownloaded: Bool, badge: String?, available: Bool) -> some View {
+        AppSectionCard {
+            HStack(spacing: AppTheme.Spacing.md) {
+                ZStack {
+                    Circle()
+                        .fill((isDownloaded ? Color.green : Color.accentColor).opacity(0.10))
+                        .frame(width: 28, height: 28)
+                    Image(systemName: isDownloaded ? "checkmark" : icon)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(isDownloaded ? Color.green : Color.accentColor)
+                }
 
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                HStack(spacing: AppTheme.Spacing.xs) {
-                    Text(title)
-                        .fontWeight(.medium)
-                    if let badge {
-                        AppBadge(badge, variant: .accent)
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                    HStack(spacing: AppTheme.Spacing.xs) {
+                        Text(title)
+                            .font(.subheadline.weight(.semibold))
+                        if let badge {
+                            AppBadge(badge, variant: .accent)
+                        }
+                    }
+                    Text(description)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+
+                Spacer(minLength: 12)
+
+                VStack(alignment: .trailing, spacing: 6) {
+                    Text(isDownloaded ? "Ready" : available ? "\(sizeMB) MB" : "Unavailable")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(isDownloaded ? Color.green : .secondary)
+
+                    if isDownloaded {
+                        Button("Delete") {
+                            modelManager.deleteModel(key: key)
+                        }
+                        .buttonStyle(AppActionButtonStyle())
+                        .controlSize(.small)
+                    } else if available {
+                        Button("Download") {
+                            modelManager.downloadModel(key: key, hasPro: store.hasProOrAbove)
+                        }
+                        .buttonStyle(AppActionButtonStyle())
+                        .controlSize(.small)
                     }
                 }
-                Text(description)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
-
-            Spacer()
-
-            Text(isDownloaded ? "Ready" : available ? "\(sizeMB) MB" : "—")
-                .font(.caption)
-                .foregroundStyle(isDownloaded ? AppTheme.Status.complete : .secondary)
         }
-        .padding(AppTheme.Spacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-                .fill(AppTheme.Colour.controlBackground.opacity(0.55))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
-                        .strokeBorder(AppTheme.Colour.border, lineWidth: 1)
-                )
-        )
-        .opacity(available ? 1.0 : 0.5)
+        .opacity(available ? 1.0 : 0.75)
     }
 
     // MARK: - Download Button
 
     private var downloadButton: some View {
-        VStack(spacing: AppTheme.Spacing.sm) {
+        AppSectionCard(title: "Downloads") {
+            VStack(spacing: AppTheme.Spacing.sm) {
             // Basic tier: Python runtime — shown to Basic+ users on Apple Silicon
             if modelManager.basicDownloadUnavailableReason(hasBasic: store.hasBasicOrAbove) == nil {
                 let runtimeReady = modelManager.runtimeDownloaded
@@ -202,8 +210,9 @@ struct ModelDownloadView: View {
                     } label: {
                         Label("Download Upmarket Runtime — \(modelManager.runtimeSizeMB) MB", systemImage: "arrow.down.circle.fill")
                             .frame(maxWidth: .infinity)
+                            .fontWeight(.semibold)
                     }
-                    .buttonStyle(AppProminentButtonStyle())
+                    .buttonStyle(AppActionButtonStyle())
                     .controlSize(.large)
                 }
             }
@@ -218,110 +227,119 @@ struct ModelDownloadView: View {
                         Label("Download Upmarket AI — \(modelManager.proSizeMB) MB", systemImage: "sparkles")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(AppBorderedButtonStyle())
+                    .buttonStyle(AppActionButtonStyle())
                     .controlSize(.large)
                 }
             }
 
-            // Note: linear ProgressView intentional for multi-GB download — more informative than ArcRingView
             Text("Requires internet for initial download only. All processing is offline.")
-                .font(.caption)
-                .foregroundStyle(AppTheme.Colour.textTertiary)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+        }
         }
     }
 
     // MARK: - Downloading
 
     private var checkingView: some View {
-        VStack(spacing: AppTheme.Spacing.md) {
-            ProgressView()
-                .controlSize(.small)
-            Text("Checking local model files...")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+        AppSectionCard {
+            VStack(spacing: AppTheme.Spacing.md) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Checking local model files…")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
-    // Linear progress bar is kept here intentionally — a multi-GB download
-    // benefits from a wide horizontal bar showing exact percentage rather than
-    // the compact ArcRingView designed for per-file conversion tracking.
     private var downloadingView: some View {
-        VStack(spacing: AppTheme.Spacing.lg) {
-            // Variable Color symbol fills as download progresses (macOS 15+)
-            if #available(macOS 15.0, *) {
-                HStack(spacing: AppTheme.Spacing.md) {
-                    Image(systemName: "arrow.down.circle", variableValue: modelManager.downloadProgress / 100)
-                        .font(.system(size: 32))
-                        .foregroundStyle(Color.accentColor)
-                        .symbolEffect(.pulse, isActive: true)
-                    VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                        Text(modelManager.downloadMessage)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Text("\(Int(modelManager.downloadProgress))%")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .monospacedDigit()
+        AppSectionCard {
+            VStack(spacing: AppTheme.Spacing.lg) {
+                // Variable Colour symbol fills as download progresses (macOS 15+)
+                // Falls back to standard progress bar on older OS
+                if #available(macOS 15.0, *) {
+                    HStack(spacing: AppTheme.Spacing.md) {
+                        Image(systemName: "arrow.down.circle", variableValue: modelManager.downloadProgress / 100)
+                            .font(.system(size: 32))
+                            .foregroundStyle(Color.accentColor)
+                            .symbolEffect(.pulse, isActive: true)
+                        VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                            Text(modelManager.downloadMessage)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Text("\(Int(modelManager.downloadProgress))%")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .monospacedDigit()
+                        }
                     }
                 }
-            }
-            ProgressView(value: modelManager.downloadProgress, total: 100)
-                .progressViewStyle(.linear)
+                ProgressView(value: modelManager.downloadProgress, total: 100)
+                    .progressViewStyle(.linear)
 
-            HStack {
-                Text(modelManager.downloadMessage)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text("\(Int(modelManager.downloadProgress))%")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .monospacedDigit()
+                HStack {
+                    Text(modelManager.downloadMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("\(Int(modelManager.downloadProgress))%")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .monospacedDigit()
+                }
             }
+            .padding(.vertical, AppTheme.Spacing.xs)
         }
-        .padding(.vertical, AppTheme.Spacing.xs)
     }
 
     // MARK: - Error
 
     private func checkErrorView(_ error: String) -> some View {
-        VStack(spacing: AppTheme.Spacing.md) {
-            AppStatusToken(color: AppTheme.Status.failed, kind: .cross, size: 32)
-            Text("Model check failed")
-                .fontWeight(.medium)
-            Text(error)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            Button("Check Again") {
-                modelManager.checkModels()
+        AppSectionCard {
+            VStack(spacing: AppTheme.Spacing.md) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 32))
+                    .foregroundStyle(.red)
+                Text("Model check failed")
+                    .fontWeight(.medium)
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Button("Check Again") {
+                    modelManager.checkModels()
+                }
+                .buttonStyle(AppActionButtonStyle())
             }
-            .buttonStyle(AppProminentButtonStyle())
-            .controlSize(.regular)
         }
     }
 
     private func errorView(_ error: String) -> some View {
-        VStack(spacing: AppTheme.Spacing.md) {
-            AppStatusToken(color: AppTheme.Status.failed, kind: .cross, size: 32)
-            Text(L("models.status.failed"))
-                .fontWeight(.medium)
-            Text(error)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            Button("Try Again") {
-                if modelManager.proDownloadUnavailableReason(hasPro: store.hasProOrAbove) == nil {
-                    modelManager.downloadProModels(hasPro: store.hasProOrAbove)
-                } else {
-                    modelManager.checkModels()
+        AppSectionCard {
+            VStack(spacing: AppTheme.Spacing.md) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 32))
+                    .foregroundStyle(.red)
+                Text(L("models.status.failed"))
+                    .fontWeight(.medium)
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Button("Try Again") {
+                    if modelManager.proDownloadUnavailableReason(hasPro: store.hasProOrAbove) == nil {
+                        modelManager.downloadProModels(hasPro: store.hasProOrAbove)
+                    } else {
+                        modelManager.checkModels()
+                    }
                 }
+                .buttonStyle(AppActionButtonStyle())
             }
-            .buttonStyle(AppProminentButtonStyle())
-            .controlSize(.regular)
         }
     }
+
 }
 
 #Preview {

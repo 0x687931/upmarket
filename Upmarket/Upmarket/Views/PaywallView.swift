@@ -16,7 +16,6 @@ struct PaywallView: View {
     private let windowSize: AppTheme.WindowSize = .modal
 
     @State private var isPurchasing: String? = nil  // product ID currently purchasing
-    @State private var errorMessage: String?
     @State private var selectedTier: PaywallTier
 
     init(onDismiss: (() -> Void)? = nil) {
@@ -26,33 +25,58 @@ struct PaywallView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
-            // No Divider — spec shows seamless header-to-tier transition
-            tierSection
-            ctaSection
-            legalFooter
+            VStack(spacing: 0) {
+                header
+                VStack(spacing: 12) {
+                    if flags.aiAvailable {
+                        tierCard(.pro)
+                    }
+                    tierCard(.basic)
+                }
+                .padding(.horizontal, 20)
+
+                VStack(spacing: 12) {
+                    ctaButton
+                    restoreButton
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+
+                legalFooter
+            }
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
+                    .fill(AppTheme.Colour.controlBackground)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
+                    .strokeBorder(AppTheme.Colour.separator, lineWidth: 0.5)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
         }
         .frame(width: windowSize.width)
         .fixedSize(horizontal: false, vertical: true)
         .task {
             await store.loadProducts()
         }
+        .onAppear(perform: normalizeSelectedTier)
+        .onChange(of: flags.aiAvailable) { _ in
+            normalizeSelectedTier()
+        }
     }
 
     // MARK: - Header
 
     private var header: some View {
-        // Close button is positioned absolutely top-right per spec (top: 14, right: 14)
         ZStack(alignment: .topTrailing) {
-            VStack(spacing: AppTheme.Spacing.sm) {
+            VStack(spacing: 12) {
                 Image(nsImage: NSImage(named: "AppIcon") ?? NSApp.applicationIconImage)
                     .resizable()
                     .frame(width: 64, height: 64)
-                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.appIcon, style: .continuous))
-                    // --shadow-card: 0 1px 3px rgba(0,0,0,0.08), 0 6px 18px rgba(0,0,0,0.08)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)
-                    .shadow(color: .black.opacity(0.08), radius: 18, x: 0, y: 6)
-                    .padding(.top, AppTheme.Spacing.xxl)
+                    .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 4)
+                    .padding(.top, 32)
 
                 Text(headerTitle)
                     .font(.title2)
@@ -62,20 +86,10 @@ struct PaywallView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, AppTheme.Spacing.xxl)
-
-                if let badge = trialContextBadge {
-                    Text(badge)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, AppTheme.Spacing.md)
-                        .padding(.vertical, AppTheme.Spacing.xs)
-                        .background(.quaternary, in: Capsule())
-                }
+                    .padding(.horizontal, 32)
             }
             .frame(maxWidth: .infinity)
-            .padding(.bottom, AppTheme.Spacing.lg)
+            .padding(.bottom, 20)
 
             if onDismiss != nil {
                 Button {
@@ -84,29 +98,13 @@ struct PaywallView: View {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 20))
                         .symbolRenderingMode(.hierarchical)
-                        // --text-tertiary: rgba(0,0,0,0.26)
-                        .foregroundStyle(AppTheme.Colour.textTertiary)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(AppPlainButtonStyle())
+                .foregroundStyle(.secondary)
                 .accessibilityLabel("Close")
-                // top: 14, right: 14 per spec
-                .padding(.top, 14)
-                .padding(.trailing, 14)
+                .padding(14)
             }
         }
-    }
-
-    private var trialContextBadge: String? {
-        if store.hasProOrAbove { return nil }
-        if store.hasBasicOrAbove { return "Upgrade to add Upmarket AI" }
-        if store.freeDocsRemaining > 0 {
-            let n = store.freeDocsRemaining
-            return "\(n) free conversion\(n == 1 ? "" : "s") remaining"
-        }
-        if store.packCredits > 0 {
-            return "\(store.packCredits) doc pack credit\(store.packCredits == 1 ? "" : "s") remaining"
-        }
-        return "Free trial ended — unlock to keep converting"
     }
 
     private var headerTitle: String {
@@ -120,23 +118,6 @@ struct PaywallView: View {
         return "Convert unlimited documents, privately, on your Mac."
     }
 
-    // MARK: - Tier Section
-
-    // Spec: padding "0 20px", gap 12 between cards
-    // 20px ≈ between lg(16) and xl(24). Using lg for horizontal since spec says 20 and we don't have a 20 token.
-    // Judgment call: use Spacing.lg (16) — slightly tighter than spec's 20px — to stay on the token grid.
-    // The 4px difference is imperceptible and keeps us on the 4pt rhythm.
-    private var tierSection: some View {
-        VStack(spacing: AppTheme.Spacing.md) {
-            tierCard(.pro)
-            tierCard(.basic)
-            productStatus
-            purchaseStatus
-        }
-        .padding(.horizontal, AppTheme.Spacing.lg)
-        .padding(.vertical, AppTheme.Spacing.lg)
-    }
-
     // MARK: - Tier Card
 
     private func tierCard(_ tier: PaywallTier) -> some View {
@@ -144,83 +125,54 @@ struct PaywallView: View {
         let isDisabled = tier == .pro && !canPurchasePro
 
         return Button {
+            guard !isDisabled else { return }
             selectedTier = tier
         } label: {
-            // spec: padding "14px 16px"
-            HStack(alignment: .top, spacing: 10) {
-                // Radio indicator: 18×18; selected = 5px solid accent ring; unselected = 1.5px solid border
+            HStack(alignment: .top, spacing: AppTheme.Spacing.md) {
                 Circle()
-                    .strokeBorder(isSelected ? Color.accentColor : AppTheme.Colour.border,
-                                  lineWidth: isSelected ? 5 : 1.5)
-                    .background(Circle().fill(AppTheme.Colour.background))
+                    .strokeBorder(isSelected ? Color.accentColor : Color.secondary.opacity(0.35), lineWidth: isSelected ? 5 : 1.5)
                     .frame(width: 18, height: 18)
                     .padding(.top, 2)
 
-                VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
                     HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            HStack(spacing: AppTheme.Spacing.sm) {
-                                Text(tierName(tier))
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                    .foregroundStyle(.primary)
-                                if tier == .pro {
-                                    AppBadge("Best", variant: .accent)
-                                        .accessibilityLabel("Best value")
-                                }
-                            }
-                            // Tagline: text-caption/1.3, text-secondary, 3px top margin
+                                VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                                    HStack(spacing: AppTheme.Spacing.sm) {
+                                        Text(tierName(tier))
+                                            .font(.title3)
+                                            .fontWeight(.bold)
+                                        if tier == .pro {
+                                            AppBadge("Best", variant: .accent)
+                                        }
+                                    }
                             Text(tierTagline(tier))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
-                        VStack(alignment: .trailing, spacing: 2) {
+                        VStack(alignment: .trailing, spacing: AppTheme.Spacing.xs) {
                             Text(tierPrice(tier))
-                                .font(.title3)
+                                .font(.title2)
                                 .fontWeight(.bold)
-                                .foregroundStyle(.primary)
                             Text("one-time")
-                                .font(.caption)
+                                .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
                     }
 
-                    // Feature list: paddingLeft 28 (radio 18 + gap 10 = 28), gap 7
-                    VStack(alignment: .leading, spacing: 7) {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                         ForEach(tierFeatures(tier), id: \.text) { feature in
                             featureRow(feature.text, isHighlight: feature.isHighlight)
                         }
-                        if isDisabled, let reason = flags.aiUnavailableReason {
-                            HStack(spacing: AppTheme.Spacing.sm) {
-                                Image(systemName: "xmark.circle")
-                                    .foregroundStyle(.secondary)
-                                    .font(.caption)
-                                Text(reason)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
                     }
-                    .padding(.top, AppTheme.Spacing.md)
                 }
             }
-            .padding(.vertical, 14)
-            .padding(.horizontal, AppTheme.Spacing.lg)
         }
-        .buttonStyle(.plain)
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.Radius.md)
-                // Selected: var(--accent-06); unselected: var(--surface) = controlBackground
-                .fill(isSelected ? AppTheme.Colour.accentTint06 : AppTheme.Colour.controlBackground.opacity(0.01))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppTheme.Radius.md)
-                        // Selected: 2px accent border; unselected: 1px border
-                        .strokeBorder(isSelected ? Color.accentColor : AppTheme.Colour.border,
-                                      lineWidth: isSelected ? 2 : 1)
-                )
-        )
-        .opacity(isDisabled ? 0.6 : 1)
+        .buttonStyle(AppCardStyle(
+            variant: tier == .pro ? .hero : .outlined,
+            isSelected: isSelected,
+            isDisabled: isDisabled
+        ))
         .disabled(isDisabled)
     }
 
@@ -251,46 +203,26 @@ struct PaywallView: View {
         switch tier {
         case .pro:
             return [
-                ("Unlimited conversions — every format", false),
                 ("Upmarket AI for scanned, complex and research documents", true),
-                ("Tables, figures, dense layouts", false),
+                ("Unlimited conversions — every format", false),
                 ("100% on-device — nothing sent to the cloud", false)
             ]
         case .basic:
             if device.supportsAdvancedRuntime {
                 return [
                     ("PDF, Word, PowerPoint, HTML → Markdown", false),
-                    ("Tables and layout detection", false),
                     ("Unlimited conversions", false)
                 ]
             } else {
                 return [
                     ("Native PDF and media metadata conversion", false),
-                    ("Advanced document formats require Apple Silicon", false),
                     ("Unlimited conversions", false)
                 ]
             }
         }
     }
 
-    // MARK: - CTA Area
-
-    // Spec: padding "20px", gap 12 between CTA and Restore
-    private var ctaSection: some View {
-        VStack(spacing: AppTheme.Spacing.md) {
-            ctaButton
-            restoreButton
-            if onDismiss != nil {
-                Button("Not Now") { onDismiss?() }
-                    .buttonStyle(.plain)
-                    .font(.subheadline)
-                    .foregroundStyle(.tertiary)
-                    .frame(minHeight: 44)
-                    .accessibilityLabel("Dismiss paywall")
-            }
-        }
-        .padding(AppTheme.Spacing.lg)
-    }
+    // MARK: - CTA
 
     private var ctaButton: some View {
         let product = selectedTier == .pro ? store.proProduct : store.basicProduct
@@ -319,82 +251,32 @@ struct PaywallView: View {
         Button("Restore Purchases") {
             Task { await store.restorePurchases() }
         }
-        .buttonStyle(.plain)
-        // spec: weight-medium text-subheadline/1, var(--text-secondary)
-        .font(.subheadline.weight(.medium))
+        .buttonStyle(AppPlainButtonStyle())
         .foregroundStyle(.secondary)
         .frame(minHeight: 44)
         .accessibilityLabel("Restore previous purchases")
         .accessibilityHint("Restores any previous Upmarket purchases from the App Store")
     }
 
-    @ViewBuilder private var productStatus: some View {
-        if let error = store.productLoadError {
-            HStack(spacing: AppTheme.Spacing.sm) {
-                Image(systemName: "exclamationmark.triangle")
-                    .foregroundStyle(.orange)
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(AppTheme.Spacing.md)
-            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm))
-        } else if !store.productsLoaded {
-            HStack(spacing: AppTheme.Spacing.sm) {
-                ProgressView().controlSize(.small)
-                Text("Loading purchase options...")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, AppTheme.Spacing.xs)
-        }
-    }
-
-    @ViewBuilder private var purchaseStatus: some View {
-        if let errorMessage {
-            HStack(spacing: AppTheme.Spacing.sm) {
-                Image(systemName: "exclamationmark.triangle")
-                    .foregroundStyle(.orange)
-                Text(errorMessage)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Button("Dismiss") {
-                    self.errorMessage = nil
-                }
-                .buttonStyle(.plain)
-                .font(.caption)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(AppTheme.Spacing.md)
-            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: AppTheme.Radius.sm))
-        }
-    }
-
-    // Spec: text-caption/1.4, var(--text-tertiary), centered, padding "0 24px 18px"
     private var legalFooter: some View {
         Text(L("paywall.footer"))
-            .font(.caption)
-            .foregroundStyle(AppTheme.Colour.textTertiary)
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
             .multilineTextAlignment(.center)
-            .padding(.horizontal, AppTheme.Spacing.xl)   // 24px = xl
-            .padding(.bottom, 18)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 18)
     }
 
     // MARK: - Helpers
 
-    // Feature row: checkmark icon (14px, accent if highlight else success) + label
     private func featureRow(_ text: String, isHighlight: Bool) -> some View {
         HStack(spacing: AppTheme.Spacing.sm) {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(isHighlight ? Color.accentColor : AppTheme.Colour.success)
-                .font(.system(size: 14))
+                .font(.caption)
             Text(text)
                 .font(.caption)
                 .fontWeight(isHighlight ? .medium : .regular)
-                .foregroundStyle(isHighlight ? Color.primary : Color.secondary)
         }
     }
 
@@ -402,18 +284,19 @@ struct PaywallView: View {
         flags.aiAvailable
     }
 
-    private func buy(_ product: Product) async {
-        if product.id == StoreManager.proID && !canPurchasePro {
-            errorMessage = flags.aiUnavailableReason ?? device.upmarketAIUnavailableReason
-            return
+    private func normalizeSelectedTier() {
+        if selectedTier == .pro && !canPurchasePro {
+            selectedTier = .basic
         }
+    }
+
+    private func buy(_ product: Product) async {
         isPurchasing = product.id
-        errorMessage = nil
         do {
             try await store.purchase(product)
             onDismiss?()
         } catch {
-            errorMessage = "Purchase could not be completed. Please try again or use Restore Purchases."
+            // Keep the flow silent here; the sheet already exposes restore/purchase actions.
         }
         isPurchasing = nil
     }

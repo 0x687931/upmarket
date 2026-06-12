@@ -3,216 +3,131 @@ import SwiftUI
 struct MenuBarDropdown: View {
     @EnvironmentObject private var store: StoreManager
     @EnvironmentObject private var conversion: ConversionQueue
-    @EnvironmentObject private var historyStore: ConversionHistoryStore
 
     var body: some View {
         if conversion.isConverting {
-            Text(conversionStatusTitle)
+            StatusRow(conversionStatusTitle)
             Divider()
         }
 
-        Button {
+        MenuRow(icon: "doc.badge.plus", label: "Convert Document…", shortcut: "⌘O") {
             MainWindowController.shared.show(pickFile: true)
-        } label: {
-            Label("Convert Document...", systemImage: "doc.badge.plus")
-        }
-        .keyboardShortcut("o", modifiers: .command)
-
-        if let lastRecord = historyStore.records.first {
-            Button {
-                let formatted = OutputFormatter.format(record: lastRecord, mode: OutputPreference.shared.mode)
-                FileAccessService.shared.copyMarkdown(formatted.text)
-            } label: {
-                Label("Copy Last Result", systemImage: "doc.on.doc")
-            }
         }
 
-        Button {
+        MenuRow(icon: "macwindow", label: "Show Upmarket Window") {
             MainWindowController.shared.show()
-        } label: {
-            Label("Show Upmarket Window", systemImage: "macwindow")
         }
 
-        Button {
+        MenuRow(icon: "square.grid.2x2", label: AppVisibilityPreference.showShelf ? "Hide Shelf" : "Show Shelf") {
             let showing = AppVisibilityPreference.showShelf
             AppVisibilityPreference.applyShelfVisibility(showShelf: !showing)
-        } label: {
-            Label(AppVisibilityPreference.showShelf ? "Hide Shelf" : "Show Shelf", systemImage: "square.grid.2x2")
         }
 
         Divider()
 
-        Button {
+        MenuRow(icon: "gearshape", label: "Preferences…", shortcut: "⌘,") {
             PreferencesWindowController.shared.show()
-        } label: {
-            Label("Preferences...", systemImage: "gearshape")
         }
-        .keyboardShortcut(",", modifiers: .command)
 
-        Button {
+        MenuRow(icon: "exclamationmark.bubble", label: "Report a Problem…") {
             ReportProblemWindowController.shared.show()
-        } label: {
-            Label("Report a Problem...", systemImage: "exclamationmark.bubble")
         }
 
         Divider()
 
         if store.hasProOrAbove {
-            Text("Upmarket + AI")
+            MenuRow(icon: "checkmark.circle", label: "Upmarket + AI", status: true) {
+                // No-op: status row only.
+            }
         } else if store.hasBasicOrAbove {
-            Button {
+            MenuRow(icon: "arrow.up.circle", label: "Upgrade to Upmarket + AI…") {
                 NotificationCenter.default.post(name: .showPaywall, object: nil)
-            } label: {
-                Label("Upgrade to Upmarket + AI...", systemImage: "arrow.up.circle")
             }
         } else {
-            Button {
+            MenuRow(icon: "lock.open", label: "Unlock Upmarket…") {
                 NotificationCenter.default.post(name: .showPaywall, object: nil)
-            } label: {
-                Label("Unlock Upmarket...", systemImage: "lock.open")
             }
         }
 
         Divider()
 
-        Text(versionLine)
+        StatusRow(versionLine)
 
-        Button {
+        MenuRow(icon: "power", label: "Quit Upmarket", shortcut: "⌘Q") {
             NSApp.terminate(nil)
-        } label: {
-            Label("Quit Upmarket", systemImage: "xmark.square.fill")
         }
-        .keyboardShortcut("q", modifiers: .command)
     }
 
     private var versionLine: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        return "v\(version)"
+        return "v\(version) · support@upmarket.app"
     }
 
     private var conversionStatusTitle: String {
         let percent = Int((conversion.overallProgress * 100).rounded())
         return percent > 0 ? "Converting \(percent)%" : "Converting"
     }
-
-    private var entitlementTitle: String {
-        switch store.entitlement {
-        case .none:
-            return "Locked"
-        case .basic:
-            return "Upmarket"
-        case .pro:
-            return "Upmarket + AI"
-        }
-    }
 }
 
-struct HistoryPopover: View {
-    @ObservedObject var historyStore: ConversionHistoryStore
-    @State private var query = ""
+private struct StatusRow: View {
+    let text: String
 
-    private var records: [ConversionHistoryRecord] {
-        historyStore.filteredRecords(query: query)
+    init(_ text: String) {
+        self.text = text
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("History")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-
-                HStack(spacing: 6) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
-                    TextField("Search", text: $query)
-                        .textFieldStyle(.plain)
-                }
-                .padding(.horizontal, 8)
-                .frame(height: 26)
-                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
-            }
-            .padding(.horizontal, 14)
-            .padding(.top, 12)
-            .padding(.bottom, 8)
-
-            Divider()
-
-            if !historyStore.isEnabled {
-                emptyState("History is turned off.")
-            } else if historyStore.records.isEmpty {
-                emptyState("Completed conversions will appear here.")
-            } else if records.isEmpty {
-                emptyState("No matching conversions.")
-            } else {
-                ScrollView {
-                    VStack(spacing: 0) {
-                        ForEach(records) { record in
-                            HistoryRow(record: record)
-                            if record.id != records.last?.id {
-                                Divider().padding(.leading, 14)
-                            }
-                        }
-                    }
-                }
-                .frame(maxHeight: 260)
-            }
-        }
-        .frame(width: 300)
-        .padding(.bottom, 8)
-    }
-
-    private func emptyState(_ message: String) -> some View {
-        Text(message)
-            .font(.subheadline)
+        Text(text)
+            .padding(.horizontal, 12)
+            .font(.caption)
             .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, minHeight: 96)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-struct HistoryRow: View {
-    let record: ConversionHistoryRecord
+private struct MenuRow: View {
+    let icon: String
+    let label: String
+    var shortcut: String? = nil
+    var status: Bool = false
+    let action: () -> Void
+
+    @State private var isHovering = false
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "doc.text")
-                .font(.system(size: 12))
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 16)
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(record.sourceDisplayName)
-                    .font(.subheadline)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Text(historyDetail)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+        Button {
+            if !status {
+                action()
             }
+        } label: {
+            HStack(spacing: 9) {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .frame(width: 16, alignment: .center)
+                    .foregroundStyle(status ? Color.secondary : (isHovering ? Color.white : Color.secondary))
 
-            Spacer()
+                Text(label)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-            Button {
-                FileAccessService.shared.copyMarkdown(
-                    OutputFormatter.format(record: record, mode: OutputPreference.shared.mode).text
-                )
-            } label: {
-                Image(systemName: "doc.on.doc")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.accentColor)
+                if let shortcut {
+                    Text(shortcut)
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .foregroundStyle(
+                            status ? Color.secondary.opacity(0.7)
+                            : (isHovering ? Color.white.opacity(0.85) : Color.secondary.opacity(0.7))
+                        )
+                }
             }
-            .buttonStyle(.plain)
-            .help("Copy Output")
+            .padding(.horizontal, 8)
+            .frame(height: 24)
+            .frame(maxWidth: .infinity)
+            .background(!status && isHovering ? Color.accentColor : Color.clear)
+            .foregroundStyle(status ? Color.secondary : (isHovering ? Color.white : Color.primary))
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 7)
-    }
-
-    private var historyDetail: String {
-        let title = record.title == record.sourceDisplayName ? record.format : record.title
-        return "\(title) · \(record.provenanceLabel) · \(record.wordCount) words"
+        .disabled(status)
+        .buttonStyle(.plain)
+        .padding(.horizontal, 4)
+        .onHover { if !status { isHovering = $0 } }
     }
 }

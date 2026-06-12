@@ -23,6 +23,10 @@ final class ShelfWindowController: NSWindowController {
         case center = 4
     }
 
+    enum ShelfExpansionAxis {
+        case up, down, left, right
+    }
+
     var anchor: ShelfAnchor {
         get {
             guard UserDefaults.standard.object(forKey: "upmarket.shelfAnchor") != nil else { return .center }
@@ -205,26 +209,11 @@ final class ShelfWindowController: NSWindowController {
 
     func resizeToContent(width: CGFloat, height: CGFloat) {
         guard let panel = window else { return }
-        var frame = panel.frame
-        let oldSize = frame.size
-        frame.size.width = width
-        frame.size.height = height
-
-        switch anchor {
-        case .bottomLeft:
-            break
-        case .bottomRight:
-            frame.origin.x += oldSize.width - width
-        case .topLeft:
-            frame.origin.y += oldSize.height - height
-        case .topRight:
-            frame.origin.x += oldSize.width - width
-            frame.origin.y += oldSize.height - height
-        case .center:
-            frame.origin.x += (oldSize.width - width) / 2
-            frame.origin.y += (oldSize.height - height) / 2
-        }
-
+        let frame = Self.resizedFrame(
+            panel.frame,
+            to: CGSize(width: width, height: height),
+            anchor: anchor
+        )
         panel.setFrame(frame, display: false)
     }
 
@@ -269,6 +258,61 @@ final class ShelfWindowController: NSWindowController {
 
     @objc private func screenChanged() {
         reposition()
+    }
+}
+
+extension ShelfWindowController.ShelfAnchor {
+    var verticalExpansion: ShelfWindowController.ShelfExpansionAxis {
+        switch self {
+        case .bottomLeft, .bottomRight, .center:
+            return .up
+        case .topLeft, .topRight:
+            return .down
+        }
+    }
+
+    var horizontalExpansion: ShelfWindowController.ShelfExpansionAxis {
+        switch self {
+        case .bottomLeft, .topLeft, .center:
+            return .right
+        case .bottomRight, .topRight:
+            return .left
+        }
+    }
+}
+
+extension ShelfWindowController {
+    static func resizedFrame(_ frame: NSRect, to newSize: CGSize, anchor: ShelfAnchor) -> NSRect {
+        var result = frame
+        let oldSize = frame.size
+        let widthDelta = oldSize.width - newSize.width
+        let heightDelta = oldSize.height - newSize.height
+
+        switch anchor.horizontalExpansion {
+        case .left:
+            result.origin.x += widthDelta
+        case .right:
+            break
+        case .up, .down:
+            break
+        }
+
+        switch anchor.verticalExpansion {
+        case .down:
+            result.origin.y += heightDelta
+        case .up:
+            break
+        case .left, .right:
+            break
+        }
+
+        if anchor == .center {
+            result.origin.x += widthDelta / 2
+            result.origin.y += heightDelta / 2
+        }
+
+        result.size = newSize
+        return result
     }
 }
 

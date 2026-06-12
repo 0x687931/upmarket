@@ -1,13 +1,11 @@
 import SwiftUI
 import AppKit
 
-// Three tabs: General (app + storage) · Conversion (output + automation + models) · About
 // Every control is backed by a real service. No dead controls.
 
 struct PreferencesView: View {
     @EnvironmentObject private var modelManager: ModelManager
     @EnvironmentObject private var store: StoreManager
-    @EnvironmentObject private var historyStore: ConversionHistoryStore
     @EnvironmentObject private var watchedFolderService: WatchedFolderService
 
     @StateObject private var mcpIntegration = MCPIntegrationService.shared
@@ -129,18 +127,39 @@ struct PreferencesView: View {
     ]
 
     var body: some View {
-        TabView {
-            generalTab
-                .tabItem { Label("General", systemImage: "gearshape") }
+        ScrollView {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xl) {
+                AppSectionCard(title: "General", subtitle: "App visibility and save location") {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                        generalControlsCard
+                        saveLocationCard
+                    }
+                }
 
-            conversionTab
-                .tabItem { Label("Conversion", systemImage: "doc.text") }
+                AppSectionCard(title: "Conversion", subtitle: "Output and model options") {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                        outputCard
+                        MCPIntegrationSection(integration: mcpIntegration)
+                        aiModelsCard
+                    }
+                }
 
-            automationTab
-                .tabItem { Label("Automation", systemImage: "folder.badge.gearshape") }
+                AppSectionCard(title: "Automation", subtitle: "Watched folders and file types") {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                        watchedFoldersCard
+                        fileTypesCard
+                    }
+                }
 
-            aboutTab
-                .tabItem { Label("About", systemImage: "info.circle") }
+                AppSectionCard(title: "About", subtitle: "Plan, links, and licenses") {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                        aboutCard
+                        linksCard
+                        attributionsCard
+                    }
+                }
+            }
+            .padding(24)
         }
         .frame(width: 600, height: 680)
         .onChange(of: showDockIcon) { value in
@@ -168,9 +187,9 @@ struct PreferencesView: View {
 
     // MARK: - General
 
-    private var generalTab: some View {
-        Form {
-            Section("App") {
+    private var generalControlsCard: some View {
+        sectionCard(title: "App") {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                 Toggle("Show Dock icon", isOn: dockIconBinding)
                     .toggleStyle(.checkbox)
                     .disabled(AppVisibilityPreference.requiresDockIcon)
@@ -206,45 +225,18 @@ struct PreferencesView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-
-            Section("Save Location") {
-                SaveLocationSettingsView(
-                    destination: saveDestinationBinding,
-                    chosenFolderURL: chosenFolderBinding,
-                    title: nil,
-                    description: nil,
-                    onChooseFolder: chooseSaveFolder,
-                    showsCardChrome: false
-                )
-            }
-
-            Section("History") {
-                Toggle("Keep conversion history", isOn: Binding(
-                    get: { historyStore.isEnabled },
-                    set: { historyStore.isEnabled = $0 }
-                ))
-
-                Text("Completed Markdown stays on this Mac for search and copy.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                LabeledContent("Saved conversions:") {
-                    HStack(spacing: 8) {
-                        Text("\(historyStore.records.count)")
-                            .foregroundStyle(.secondary)
-                        Button("Clear History") {
-                            historyStore.clear()
-                        }
-                        .foregroundStyle(.red)
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                        .disabled(historyStore.records.isEmpty)
-                    }
-                }
-            }
         }
-        .formStyle(.grouped)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var saveLocationCard: some View {
+        SaveLocationSettingsView(
+            destination: saveDestinationBinding,
+            chosenFolderURL: chosenFolderBinding,
+            title: "Save Location",
+            description: "Choose where converted files are saved.",
+            onChooseFolder: chooseSaveFolder,
+            showsCardChrome: true
+        )
     }
 
     private var dockIconBinding: Binding<Bool> {
@@ -279,24 +271,24 @@ struct PreferencesView: View {
 
     // MARK: - Conversion
 
-    private var conversionTab: some View {
-        Form {
-            Section("Output") {
-                LabeledContent("Format:") {
-                    Picker("Output format", selection: outputModeBinding) {
-                        ForEach(OutputMode.allCases) { mode in
-                            Text(mode.displayName).tag(mode)
-                        }
+    private var outputCard: some View {
+        sectionCard(title: "Output") {
+            LabeledContent("Format:") {
+                Picker("Output format", selection: outputModeBinding) {
+                    ForEach(OutputMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode)
                     }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .frame(maxWidth: 320)
                 }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(maxWidth: 320)
             }
+        }
+    }
 
-            MCPIntegrationSection(integration: mcpIntegration)
-
-            Section("AI Models") {
+    private var aiModelsCard: some View {
+        sectionCard(title: "AI Models") {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                 Text("Advanced models for layout detection and table structure. Required for \"Upmarket + AI\" features.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -304,15 +296,13 @@ struct PreferencesView: View {
                 aiModelStatusRows
             }
         }
-        .formStyle(.grouped)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Automation
 
-    private var automationTab: some View {
-        Form {
-            Section("Watch Folders") {
+    private var watchedFoldersCard: some View {
+        sectionCard(title: "Watch Folders") {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                 if watchedFolderService.folders.isEmpty {
                     watchFolderEmptyRow
                 } else {
@@ -325,12 +315,16 @@ struct PreferencesView: View {
                     } label: {
                         Label("Add Folder…", systemImage: "folder.badge.plus")
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(AppActionButtonStyle())
                     .controlSize(.small)
                 }
             }
+        }
+    }
 
-            Section("File Types") {
+    private var fileTypesCard: some View {
+        sectionCard(title: "File Types") {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                 Picker("Convert:", selection: watchedInputPresetBinding) {
                     Text("All supported").tag(WatchedInputPreset.all)
                     Text("Documents only").tag(WatchedInputPreset.documents)
@@ -350,8 +344,6 @@ struct PreferencesView: View {
                 }
             }
         }
-        .formStyle(.grouped)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var outputModeBinding: Binding<OutputMode> {
@@ -562,7 +554,7 @@ struct PreferencesView: View {
             Button("Add Folder…") {
                 chooseWatchedFolder()
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(AppActionButtonStyle())
             .controlSize(.small)
         }
         .padding(.vertical, 2)
@@ -604,7 +596,7 @@ struct PreferencesView: View {
                 } label: {
                     Image(systemName: "folder")
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(AppActionButtonStyle())
                 .controlSize(.small)
                 .help(folder.outputDisplayName ?? "Choose output folder")
             }
@@ -625,7 +617,8 @@ struct PreferencesView: View {
             } label: {
                 Image(systemName: "trash")
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(AppActionButtonStyle())
+            .foregroundStyle(.red)
             .controlSize(.small)
             .help("Remove watched folder")
         }
@@ -681,7 +674,7 @@ struct PreferencesView: View {
                     .foregroundStyle(.red)
                 Spacer()
                 Button("Retry") { modelManager.checkModels() }
-                    .buttonStyle(.bordered).controlSize(.mini)
+                    .buttonStyle(AppActionButtonStyle()).controlSize(.mini)
             }
         } else if modelManager.models.isEmpty {
             HStack {
@@ -691,7 +684,7 @@ struct PreferencesView: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button("Check Again") { modelManager.checkModels() }
-                    .buttonStyle(.bordered).controlSize(.mini)
+                    .buttonStyle(AppActionButtonStyle()).controlSize(.mini)
             }
         } else {
             ForEach(modelManager.models, id: \.key) { model in
@@ -703,7 +696,7 @@ struct PreferencesView: View {
                         if model.isDownloaded {
                             Button("Delete") { modelManager.deleteModel(key: model.key) }
                                 .foregroundStyle(.red)
-                                .buttonStyle(.bordered).controlSize(.mini)
+                                .buttonStyle(AppActionButtonStyle()).controlSize(.mini)
                         } else if modelManager.downloadingModelKey == model.key {
                             ProgressView()
                                 .controlSize(.mini)
@@ -715,7 +708,7 @@ struct PreferencesView: View {
                             Button("Download") {
                                 modelManager.downloadModel(key: model.key, hasPro: store.hasProOrAbove)
                             }
-                            .buttonStyle(.bordered).controlSize(.mini)
+                            .buttonStyle(AppActionButtonStyle()).controlSize(.mini)
                             .disabled(unavailable != nil || modelManager.isDownloading)
                             .help(unavailable ?? (modelManager.isDownloading ? "Another model is downloading." : ""))
                         }
@@ -783,7 +776,7 @@ struct PreferencesView: View {
                         }
                         Button("Delete All") { modelManager.deleteAllModels() }
                             .foregroundStyle(.red)
-                            .buttonStyle(.bordered)
+                            .buttonStyle(AppActionButtonStyle())
                             .controlSize(.mini)
                     }
                 }
@@ -820,21 +813,23 @@ struct PreferencesView: View {
 
     @State private var showAttributions = false
 
-    private var aboutTab: some View {
-        Form {
-            Section {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Upmarket").font(.headline)
-                        Text(appVersionLabel)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
+    private var aboutCard: some View {
+        sectionCard(title: "Upmarket") {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Upmarket").font(.headline)
+                    Text(appVersionLabel)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
+                Spacer()
             }
+        }
+    }
 
-            Section("License") {
+    private var linksCard: some View {
+        sectionCard(title: "License") {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(planName).font(.subheadline).fontWeight(.medium)
@@ -845,7 +840,7 @@ struct PreferencesView: View {
                         Button("Upgrade") {
                             NotificationCenter.default.post(name: .showPaywall, object: nil)
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(AppActionButtonStyle())
                         .controlSize(.small)
                     }
                 }
@@ -860,9 +855,8 @@ struct PreferencesView: View {
                 Button("Restore Purchases") {
                     Task { await store.restorePurchases() }
                 }
-            }
+                .buttonStyle(AppActionButtonStyle())
 
-            Section {
                 HStack(spacing: 0) {
                     linkButton(icon: "lock.shield", label: "Privacy Policy",
                                url: "https://0x687931.github.io/upmarket/privacy")
@@ -874,22 +868,29 @@ struct PreferencesView: View {
                                url: "macappstore://")
                 }
             }
+        }
+    }
 
-            if !openSourcePackages.isEmpty {
-                Section {
+    private var attributionsCard: some View {
+        sectionCard(title: "Open Source") {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+                if !openSourcePackages.isEmpty {
                     Button {
                         showAttributions = true
                     } label: {
                         Label("Attributions", systemImage: "doc.text")
                     }
+                    .buttonStyle(AppActionButtonStyle())
                     .sheet(isPresented: $showAttributions) {
                         AttributionsSheet(groups: licenseGroups)
                     }
+                } else {
+                    Text("No third-party license bundle was detected in this build.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
-        .formStyle(.grouped)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // Equal-width tappable button: icon above label, fills 1/3 of the row
@@ -909,7 +910,16 @@ struct PreferencesView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(AppSubtleRowButtonStyle())
+    }
+
+    private func sectionCard<Content: View>(
+        title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        AppSectionCard(title: title) {
+            content()
+        }
     }
 
     private var licenseGroups: [LicenseGroup] {
@@ -989,45 +999,58 @@ struct AttributionsSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Title bar
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
             HStack {
-                Text("Attributions")
-                    .font(.headline)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Attributions")
+                        .font(.headline)
+                    Text("Open-source packages used by Upmarket.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.defaultAction)
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
-            .padding(.bottom, 12)
 
-            Divider()
+            ScrollView {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+                    ForEach(groups) { group in
+                        AppSectionCard(title: group.family) {
+                            VStack(spacing: 0) {
+                                ForEach(Array(group.packages.enumerated()), id: \.element.id) { index, pkg in
+                                    Button {
+                                        if let url = URL(string: pkg.url) {
+                                            NSWorkspace.shared.open(url)
+                                        }
+                                    } label: {
+                                        HStack(spacing: AppTheme.Spacing.md) {
+                                            Text(pkg.name)
+                                                .foregroundStyle(.primary)
+                                            Spacer()
+                                            Text(pkg.version)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        .contentShape(Rectangle())
+                                        .padding(.horizontal, AppTheme.Spacing.md)
+                                        .padding(.vertical, 10)
+                                    }
+                                    .buttonStyle(AppSubtleRowButtonStyle())
 
-            // Package list grouped by license family
-            List {
-                ForEach(groups) { group in
-                    Section(group.family) {
-                        ForEach(group.packages) { pkg in
-                            Button {
-                                if let url = URL(string: pkg.url) {
-                                    NSWorkspace.shared.open(url)
-                                }
-                            } label: {
-                                HStack {
-                                    Text(pkg.name)
-                                        .foregroundStyle(.primary)
-                                    Spacer()
-                                    Text(pkg.version)
-                                        .foregroundStyle(.secondary)
+                                    if index < group.packages.count - 1 {
+                                        Divider()
+                                            .padding(.leading, AppTheme.Spacing.md)
+                                    }
                                 }
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
             }
-            .listStyle(.inset)
         }
         .frame(width: 380, height: 420)
     }
@@ -1078,6 +1101,5 @@ private enum WatchedInputPreset: String, CaseIterable, Identifiable {
     PreferencesView()
         .environmentObject(ModelManager.shared)
         .environmentObject(StoreManager.shared)
-        .environmentObject(ConversionHistoryStore.shared)
         .environmentObject(WatchedFolderService.shared)
 }

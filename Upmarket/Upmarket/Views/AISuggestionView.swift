@@ -11,18 +11,18 @@ struct AISuggestionView: View {
     private let windowSize: AppTheme.WindowSize = .modal
 
     var body: some View {
-        VStack(spacing: AppTheme.Spacing.xl) {
-            ZStack {
-                Circle()
-                    .fill(AppTheme.Colour.accentTint10)
-                    .frame(width: 72, height: 72)
-                Image(symbol: UpmarketSymbols.ai)
-                    .font(.system(size: 32))
-                    .foregroundStyle(Color.accentColor)
-            }
-            .padding(.top, AppTheme.Spacing.xs)
-
+        VStack(spacing: AppTheme.Spacing.lg) {
             VStack(spacing: AppTheme.Spacing.sm) {
+                ZStack {
+                    Circle()
+                        .fill(Color.accentColor.opacity(0.1))
+                        .frame(width: 72, height: 72)
+                    Image(symbol: UpmarketSymbols.ai)
+                        .font(.system(size: 32))
+                        .foregroundStyle(Color.accentColor)
+                }
+                .padding(.top, AppTheme.Spacing.xs)
+
                 Text(L("ai.suggestion.title"))
                     .font(AppTheme.Font.title3)
                     .fontWeight(.bold)
@@ -33,19 +33,19 @@ struct AISuggestionView: View {
             }
 
             if !advice.reasons.isEmpty {
-                VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-                    ForEach(advice.reasons, id: \.self) { reason in
-                        HStack(spacing: AppTheme.Spacing.sm) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(Color.accentColor)
-                                .font(.caption)
-                            Text(reason)
-                                .font(.caption)
+                AppSectionCard(title: "Why AI helps") {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                        ForEach(advice.reasons, id: \.self) { reason in
+                            HStack(spacing: AppTheme.Spacing.sm) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(Color.accentColor)
+                                    .font(.caption)
+                                Text(reason)
+                                    .font(.caption)
+                            }
                         }
                     }
                 }
-                .padding(AppTheme.Spacing.md)
-                .background(AppTheme.Colour.accentTint06, in: RoundedRectangle(cornerRadius: AppTheme.Radius.md))
             }
 
             VStack(spacing: AppTheme.Spacing.sm) {
@@ -65,9 +65,7 @@ struct AISuggestionView: View {
             }
 
             Button(L("ai.suggestion.cancel"), action: onDismiss)
-                .buttonStyle(.plain)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .buttonStyle(AppPlainButtonStyle())
                 .padding(.bottom, AppTheme.Spacing.xs)
         }
         .padding(windowSize.contentPadding)

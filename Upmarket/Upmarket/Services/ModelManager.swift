@@ -378,7 +378,7 @@ final class ModelManager: ObservableObject {
         isDownloading = true
         downloadError = nil
         downloadProgress = 0
-        downloadMessage = "Starting download..."
+        downloadMessage = "Starting download…"
         downloadingModelKey = keys.first
 
         Task.detached(priority: .userInitiated) {

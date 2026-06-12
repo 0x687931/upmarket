@@ -22,13 +22,6 @@ final class WelcomeWindowController: NSWindowController {
         window.titleVisibility = .hidden
         window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
-        // Window content is a rounded card (see WelcomeView.body) — make the
-        // window itself transparent so the card's corners/shadow read correctly
-        // against the desktop, and drop AppKit's own rectangular window shadow
-        // in favor of the card's shadow.
-        window.isOpaque = false
-        window.backgroundColor = .clear
-        window.hasShadow = false
         window.center()
 
         let rootView = WelcomeView { destination, chosenFolderURL in
@@ -55,12 +48,9 @@ struct WelcomeView: View {
 
     var onDismiss: (_ destination: SavePreference.Destination, _ chosenFolderURL: URL?) -> Void
 
-    @State private var saveDestination: SavePreference.Destination = SavePreference.shared.destination
-    @State private var chosenFolderURL: URL? = SavePreference.shared.chosenFolderURL
-
     var body: some View {
         ZStack {
-            background
+            AppTheme.Colour.background
             content
         }
         .frame(width: AppTheme.WindowSize.welcome.width, height: AppTheme.WindowSize.welcome.height)
@@ -69,20 +59,6 @@ struct WelcomeView: View {
             RoundedRectangle(cornerRadius: AppTheme.WindowSize.welcome.cornerRadius, style: .continuous)
                 .strokeBorder(AppTheme.Colour.separator, lineWidth: 0.5)
         )
-        .shadow(color: .black.opacity(0.28), radius: 32, x: 0, y: 24) // --shadow-window
-    }
-
-    // MARK: - Background
-
-    @ViewBuilder private var background: some View {
-        if #available(macOS 26, *) {
-            Rectangle()
-                .fill(.regularMaterial)
-                .ignoresSafeArea()
-        } else {
-            AppTheme.Colour.background
-                .ignoresSafeArea()
-        }
     }
 
     // MARK: - Content
@@ -137,15 +113,6 @@ struct WelcomeView: View {
 
             Spacer()
 
-            SaveLocationSettingsView(
-                destination: $saveDestination,
-                chosenFolderURL: $chosenFolderURL,
-                title: "Save files",
-                description: "Choose where converted Markdown is saved. You can change this later in Preferences.",
-                onChooseFolder: chooseSaveFolder,
-                showsCardChrome: true
-            )
-
             // CTA
             VStack(spacing: AppTheme.Spacing.md) {
                 getStartedButton
@@ -186,37 +153,15 @@ struct WelcomeView: View {
     // MARK: - Button
 
     @ViewBuilder private var getStartedButton: some View {
-        if #available(macOS 26, *) {
-            Button(action: finishOnboarding) {
-                Text("Get Started")
-                    .font(AppTheme.Font.body)
-                    .frame(width: 220)
-            }
-            .buttonStyle(.glassProminent)
-            .controlSize(.large)
-            .tint(.accentColor)
-        } else {
-            Button(action: finishOnboarding) {
-                Text("Get Started")
-                    .font(AppTheme.Font.body)
-                    .frame(width: 220)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .tint(.accentColor)
+        Button(action: finishOnboarding) {
+            Text("Get Started")
+                .frame(width: 220)
         }
-    }
-
-    private func chooseSaveFolder() {
-        if let url = FileAccessService.shared.chooseSaveDirectory(
-            message: "Upmarket will save converted files here."
-        ) {
-            chosenFolderURL = url
-            saveDestination = .chosenFolder
-        }
+        .buttonStyle(AppProminentButtonStyle())
+        .controlSize(.large)
     }
 
     private func finishOnboarding() {
-        onDismiss(saveDestination, chosenFolderURL)
+        onDismiss(SavePreference.shared.destination, SavePreference.shared.chosenFolderURL)
     }
 }

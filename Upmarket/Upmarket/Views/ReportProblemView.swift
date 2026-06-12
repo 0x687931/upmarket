@@ -25,56 +25,15 @@ struct ReportProblemView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-            Picker("Problem type:", selection: $category) {
-                ForEach(SupportReportCategory.allCases) { item in
-                    Text(item.rawValue).tag(item)
-                }
-            }
-            .frame(maxWidth: 360, alignment: .leading)
-
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                Text("What happened?")
-                    .font(AppTheme.Font.title)
-                TextEditor(text: $summary)
-                    .font(.body)
-                    .frame(minHeight: 86)
-                    .appTextEditorChrome()
-            }
-
-            Toggle("Include redacted diagnostics and recent Upmarket logs", isOn: $includeDiagnostics)
-
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                Text("Preview")
-                    .font(AppTheme.Font.title)
-                TextEditor(text: .constant(preview.body))
-                    .font(AppTheme.Font.mono)
-                    .frame(minHeight: 220)
-                    .appTextEditorChrome()
-            }
-
-            HStack {
-                if copied {
-                    Text("Copied")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button("Copy Report") {
-                    FileAccessService.shared.copySupportReport(preview.body)
-                    copied = true
-                }
-                .buttonStyle(AppBorderedButtonStyle())
-                Button("Email Support") {
-                    if let url = SupportReporter.mailURL(for: preview) {
-                        FileAccessService.shared.open(url)
-                    }
-                }
-                .buttonStyle(AppProminentButtonStyle())
-            }
+            problemTypeCard
+            summaryCard
+            diagnosticsCard
+            previewCard
+            actionsRow
         }
         .padding(windowSize.contentPadding)
         .frame(width: windowSize.width, height: windowSize.height)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(AppTheme.Colour.background)
         .onChange(of: includeDiagnostics) { enabled in
             if enabled {
                 refreshDiagnostics()
@@ -88,6 +47,63 @@ struct ReportProblemView: View {
     private func refreshDiagnostics() {
         diagnosticSnapshot = conversion.diagnosticSnapshotForLastFailedJob()
         logExport = DiagnosticsService.shared.recentLogExport()
+    }
+
+    private var problemTypeCard: some View {
+        AppSectionCard(title: "Problem Type") {
+            Picker("Problem type:", selection: $category) {
+                ForEach(SupportReportCategory.allCases) { item in
+                    Text(item.rawValue).tag(item)
+                }
+            }
+            .frame(maxWidth: 360, alignment: .leading)
+        }
+    }
+
+    private var summaryCard: some View {
+        AppSectionCard(title: "What happened?") {
+            TextEditor(text: $summary)
+                .font(.body)
+                .frame(minHeight: 86)
+                .appTextEditorChrome()
+        }
+    }
+
+    private var diagnosticsCard: some View {
+        AppSectionCard {
+            Toggle("Include redacted diagnostics and recent Upmarket logs", isOn: $includeDiagnostics)
+        }
+    }
+
+    private var previewCard: some View {
+        AppSectionCard(title: "Preview") {
+            TextEditor(text: .constant(preview.body))
+                .font(.system(.caption, design: .monospaced))
+                .frame(minHeight: 220)
+                .appTextEditorChrome()
+        }
+    }
+
+    private var actionsRow: some View {
+        HStack {
+            if copied {
+                Text("Copied")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button("Copy Report") {
+                FileAccessService.shared.copySupportReport(preview.body)
+                copied = true
+            }
+            .buttonStyle(AppBorderedButtonStyle())
+            Button("Email Support") {
+                if let url = SupportReporter.mailURL(for: preview) {
+                    FileAccessService.shared.open(url)
+                }
+            }
+            .buttonStyle(AppProminentButtonStyle())
+        }
     }
 }
 

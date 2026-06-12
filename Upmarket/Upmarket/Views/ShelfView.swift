@@ -124,6 +124,7 @@ struct ShelfView: View {
                 hasError: hasError
             )
         )
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.Radius.lg + 2)
                 .strokeBorder(Color.primary.opacity(isTargeted ? 0.28 : 0), lineWidth: 1.5)

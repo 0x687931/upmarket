@@ -18,32 +18,34 @@ struct ContentView: View {
     @State private var showAISuggestion = false
     @State private var pendingAdvice: ComplexityAdvice?
     @State private var languageWarning: String?
-    @State private var selectedJobID: UUID?
 
     var body: some View {
-        VStack(spacing: 0) {
-            statusBanner
-            Divider()
+        ZStack {
+            RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
+                .fill(AppTheme.Colour.background)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
+                        .strokeBorder(AppTheme.Colour.separator, lineWidth: 0.5)
+                )
+
             VStack(spacing: 0) {
-                dropZoneView
-                    .frame(height: 160)
+                workbenchTitlebar
+                statusBanner
+                VStack(spacing: 0) {
+                    dropZoneView
 
-                Divider()
+                    Rectangle()
+                        .fill(AppTheme.Colour.separator)
+                        .frame(height: 0.5)
 
-                queueListView
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    queueListView
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .onDrop(of: [.fileURL], isTargeted: $isTargeted, perform: handleDrop)
             }
-            .onDrop(of: [.fileURL], isTargeted: $isTargeted, perform: handleDrop)
         }
-        .background(Color(nsColor: .windowBackgroundColor))
         .accessibilityIdentifier("PrimaryConversionView")
-        .frame(
-            minWidth: 500,
-            idealWidth: 680,
-            maxWidth: .infinity,
-            minHeight: 500,
-            maxHeight: .infinity
-        )
+        .frame(width: AppTheme.WindowSize.main.width, height: AppTheme.WindowSize.main.height)
         .sheet(isPresented: $showModelDownload) {
             ModelDownloadView()
                 .environmentObject(modelManager)
@@ -75,6 +77,40 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Titlebar
+
+    private var workbenchTitlebar: some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(Color(red: 1.0, green: 0.372, blue: 0.341))
+                    .frame(width: 12, height: 12)
+                Circle()
+                    .fill(Color(red: 0.996, green: 0.737, blue: 0.180))
+                    .frame(width: 12, height: 12)
+                Circle()
+                    .fill(Color(red: 0.157, green: 0.784, blue: 0.251))
+                    .frame(width: 12, height: 12)
+            }
+            .frame(width: 88, alignment: .leading)
+
+            Text("Upmarket")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+
+            Color.clear.frame(width: 88, height: 1)
+        }
+        .frame(height: 38)
+        .padding(.horizontal, 14)
+        .background(AppTheme.Colour.background)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(AppTheme.Colour.separator)
+                .frame(height: 0.5)
+        }
+    }
+
 
     // MARK: - Drop Zone
 
@@ -91,10 +127,19 @@ struct ContentView: View {
                     )
 
                 VStack(spacing: AppTheme.Spacing.md) {
-                    Image(systemName: "arrow.down.doc.fill")
-                        .font(.system(size: 32))
-                        .foregroundStyle(isTargeted ? Color.accentColor : Color.secondary)
-                        .animation(.easeInOut(duration: 0.15), value: isTargeted)
+                    ZStack {
+                        if isTargeted {
+                            PulseRingView(color: .accentColor, lineWidth: 2, isActive: true)
+                                .frame(width: 32, height: 32)
+                            PulseRingView(color: .accentColor, lineWidth: 2, isActive: true, phaseOffset: 0.22)
+                                .frame(width: 32, height: 32)
+                        }
+
+                        Image(systemName: isTargeted ? "arrow.down" : "arrow.down.doc.fill")
+                            .font(.system(size: 32))
+                            .foregroundStyle(isTargeted ? Color.accentColor : Color.secondary)
+                            .animation(.easeInOut(duration: 0.15), value: isTargeted)
+                    }
 
                     VStack(spacing: AppTheme.Spacing.xs) {
                         Text(isTargeted ? "Release to convert" : "Drop documents here")
@@ -109,8 +154,8 @@ struct ContentView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, AppTheme.Spacing.lg)
             }
+            .frame(height: AppTheme.Size.dropZoneHeight)
             .contentShape(Rectangle())
             .onTapGesture { openFilePicker() }
 
@@ -119,9 +164,8 @@ struct ContentView: View {
                     .font(AppTheme.Font.body)
                     .frame(minWidth: AppTheme.Size.chooseButtonWidth)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(AppProminentButtonStyle())
             .controlSize(.large)
-            .tint(.accentColor)
         }
         .padding(.horizontal, AppTheme.Spacing.xl)
         .padding(.vertical, AppTheme.Spacing.lg)
@@ -149,15 +193,15 @@ struct ContentView: View {
                 ScrollView {
                     VStack(spacing: AppTheme.Spacing.sm) {
                         ForEach(conversion.jobs) { job in
-                            QueueItemRow(
+                            FileRowView(
                                 job: job,
-                                isSelected: selectedJobID == job.id,
-                                onSelect: { selectedJobID = job.id },
-                                onRemove: { conversion.remove(job.id) },
+                                isDefaultOpen: false,
+                                onRemove: {
+                                    conversion.remove(job.id)
+                                },
                                 onCancel: { conversion.cancel(job.id) },
-                                onRetry: { _ in _ = conversion.retry(job.id) }
+                                onRetry: { _ = conversion.retry(job.id) }
                             )
-                            .cornerRadius(AppTheme.Radius.sm)
                         }
                     }
                     .padding(AppTheme.Spacing.md)
@@ -187,17 +231,18 @@ struct ContentView: View {
         } else {
             bannerRow(icon: "lock.fill", text: "Free trial ended — unlock to keep converting",
                       action: ("Unlock", { PaywallWindowController.shared.show() }),
-                      tint: Color.red.opacity(0.06))
+                      tint: AppTheme.Colour.tintError,
+                      iconColor: AppTheme.Colour.error)
         }
     }
 
-    private func bannerRow(icon: String, text: String, action: (String, () -> Void), tint: Color) -> some View {
+    private func bannerRow(icon: String, text: String, action: (String, () -> Void), tint: Color, iconColor: Color = .accentColor) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: icon).foregroundStyle(Color.accentColor).font(.caption)
+            Image(systemName: icon).foregroundStyle(iconColor).font(.caption)
             Text(text).font(.caption).fontWeight(.medium)
             Spacer()
             Button(action.0, action: action.1)
-                .buttonStyle(.borderedProminent).controlSize(.mini)
+                .buttonStyle(AppProminentButtonStyle()).controlSize(.mini)
         }
         .padding(.horizontal, 16).padding(.vertical, 7)
         .background(tint)
@@ -215,10 +260,16 @@ struct ContentView: View {
                 Button { languageWarning = nil } label: {
                     Image(systemName: "xmark").font(.caption2)
                 }
-                .buttonStyle(.plain).foregroundStyle(.secondary)
+                .buttonStyle(AppActionButtonStyle())
+                .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 16).padding(.vertical, 8)
-            .background(.regularMaterial)
+            .background(AppTheme.Colour.warning.opacity(0.08))
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(AppTheme.Colour.border)
+                    .frame(height: 1)
+            }
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
@@ -243,7 +294,7 @@ struct ContentView: View {
                         conversion.addRejected(url, message: "Password required")
                     }
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(AppBorderedButtonStyle())
                 Button("Convert") {
                     guard let url = pendingFileURL else { return }
                     showPasswordPrompt = false
@@ -251,7 +302,7 @@ struct ContentView: View {
                     passwordInput = ""
                     pendingFileURL = nil
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(AppProminentButtonStyle())
                 .disabled(passwordInput.isEmpty)
             }
         }
@@ -331,157 +382,179 @@ struct ContentView: View {
 
 }
 
-// MARK: - Queue Item Row
+// MARK: - File Row
 
-struct QueueItemRow: View {
+struct FileRowView: View {
     let job: ConversionJob
-    let isSelected: Bool
-    let onSelect: () -> Void
+    let isDefaultOpen: Bool
+    let glyphName: String? = nil
     let onRemove: () -> Void
     let onCancel: () -> Void
-    let onRetry: (_ id: UUID) -> Void
+    let onRetry: () -> Void
 
-    private let windowSize: AppTheme.WindowSize = .main
-    @State private var hoverActions = false
+    @State private var hover = false
+    @State private var selected = false
+
+    private let tokenSize: CGFloat = 20
 
     var body: some View {
         HStack(spacing: AppTheme.Spacing.lg) {
-            // File icon in colored box
-            ZStack {
-                RoundedRectangle(cornerRadius: AppTheme.Radius.sm)
-                    .fill(AppTheme.Colour.iconBoxFill)
-                    .frame(width: AppTheme.Size.fileIconBox, height: AppTheme.Size.fileIconBox)
+            fileIconTile
 
-                if FileManager.default.fileExists(atPath: job.sourceURL.path),
-                   let icon = NSWorkspace.shared.icon(forFile: job.sourceURL.path) as NSImage? {
-                    Image(nsImage: icon)
-                        .resizable()
-                        .frame(width: AppTheme.Size.fileIcon, height: AppTheme.Size.fileIcon)
-                } else {
-                    Image(systemName: "doc.fill")
-                        .font(.system(size: 18))
-                        .foregroundStyle(.blue)
-                }
-            }
-
-            // File info
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+            VStack(alignment: .leading, spacing: 0) {
                 Text(job.name)
                     .font(AppTheme.Font.body)
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
+                    .truncationMode(.middle)
 
                 Text(statusLabel)
                     .font(AppTheme.Font.caption)
-                    .foregroundStyle(job.stage == .failed ? AppTheme.Status.failed : Color.secondary)
+                    .foregroundStyle(statusTextColor)
+                    .lineLimit(1)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            Spacer()
-
-            // Progress or status icon
-            if job.isRunning {
-                ZStack {
-                    Circle()
-                        .stroke(Color.primary.opacity(0.1), lineWidth: AppTheme.Size.strokeRingThin)
-                    ArcProgressRing(progress: job.progress)
-                        .stroke(Color.accentColor, style: StrokeStyle(lineWidth: AppTheme.Size.strokeRingThin, lineCap: .round))
-                        .animation(.linear(duration: 0.4), value: job.progress)
-                }
-                .frame(width: AppTheme.Size.statusIcon + 4, height: AppTheme.Size.statusIcon + 4)
-            } else if job.stage == .complete {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(AppTheme.Status.complete)
-                    .font(.system(size: AppTheme.Size.statusIcon, weight: .semibold))
-            } else if job.stage == .failed {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(AppTheme.Status.failed)
-                    .font(.system(size: AppTheme.Size.statusIcon, weight: .semibold))
-            }
-
-            // Actions
             HStack(spacing: AppTheme.Spacing.xs) {
-                if job.isRunning {
-                    Button(action: onCancel) {
-                        Image(systemName: "stop.fill")
-                    }
-                    .buttonStyle(AppActionButtonStyle())
-                } else if job.stage == .complete, let output = job.result?.output {
-                    Button {
-                        let formatted = OutputFormatter.format(
-                            output,
-                            sourceDisplayName: job.sourceURL.lastPathComponent,
-                            mode: OutputPreference.shared.mode
-                        )
-                        FileAccessService.shared.copyMarkdown(formatted.text)
-                    } label: {
-                        Image(systemName: "doc.on.doc")
-                    }
-                    .buttonStyle(AppActionButtonStyle())
-                    .help("Copy")
-
-                    Button {
-                        let formatted = OutputFormatter.format(
-                            output,
-                            sourceDisplayName: job.sourceURL.lastPathComponent,
-                            mode: OutputPreference.shared.mode
-                        )
-                        let savedURL = SavePreference.shared.save(
-                            markdown: formatted.text,
-                            title: output.title,
-                            sourceURL: job.sourceURL,
-                            fileExtension: formatted.fileExtension
-                        )
-                        if let url = savedURL {
-                            FileAccessService.shared.open(url)
-                        }
-                    } label: {
-                        Image(systemName: "arrow.up.right.square")
-                    }
-                    .buttonStyle(AppActionButtonStyle())
-                    .help("Open")
-
-                    Button(action: onRemove) {
-                        Image(systemName: "xmark")
-                    }
-                    .buttonStyle(AppActionButtonStyle())
-                    .help("Remove")
-                } else if job.stage == .failed {
-                    Button { onRetry(job.id) } label: {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    .buttonStyle(AppActionButtonStyle())
-                    .help("Retry")
-
-                    Button(action: onRemove) {
-                        Image(systemName: "xmark")
-                    }
-                    .buttonStyle(AppActionButtonStyle())
-                    .help("Remove")
+                if open {
+                    actions
                 } else {
-                    if hoverActions {
-                        Button(action: onRemove) {
-                            Image(systemName: "xmark")
-                        }
-                        .buttonStyle(AppActionButtonStyle())
-                    }
+                    statusToken
                 }
             }
+            .frame(minHeight: tokenSize)
         }
         .padding(.horizontal, AppTheme.Spacing.lg)
         .padding(.vertical, AppTheme.Spacing.md)
         .background(rowBackground)
+        .cornerRadius(AppTheme.Radius.sm)
+        .animation(.easeInOut(duration: 0.2), value: open)
+        .animation(.easeInOut(duration: 0.2), value: selected)
         .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(job.name), \(statusLabel)")
         .onHover { hovering in
-            hoverActions = hovering
+            hover = hovering
         }
         .onTapGesture {
-            onSelect()
+            selected.toggle()
         }
     }
 
+    private var open: Bool {
+        hover || selected || isDefaultOpen
+    }
+
     private var rowBackground: Color {
-        if isSelected { return AppTheme.Colour.selectedFill }
-        if hoverActions { return AppTheme.Colour.accentTint10 }
+        if selected { return AppTheme.Colour.selectedFill }
+        if open { return AppTheme.Colour.accentTint10 }
         return AppTheme.Colour.subtleFill
+    }
+
+    private var statusTextColor: Color {
+        switch job.stage {
+        case .failed:
+            return AppTheme.Status.failed
+        case .complete:
+            return .secondary
+        default:
+            return .secondary
+        }
+    }
+
+    private var fileIconTile: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: AppTheme.Radius.sm)
+                .fill(AppTheme.Colour.iconBoxFill)
+                .frame(width: AppTheme.Size.fileIconBox, height: AppTheme.Size.fileIconBox)
+
+            Image(systemName: glyphName ?? job.glyphName)
+                .font(.system(size: AppTheme.Size.fileIcon, weight: .semibold))
+                .foregroundStyle(AppTheme.Colour.iconGlyphTint)
+        }
+    }
+
+    @ViewBuilder private var statusToken: some View {
+        if job.isRunning {
+            ArcRingView(
+                progress: job.progress,
+                size: tokenSize,
+                lineWidth: 2.5,
+                ringColor: .accentColor
+            ) {
+                EmptyView()
+            }
+            .help(statusLabel)
+        } else if job.stage == .complete {
+            AppStatusToken(color: AppTheme.Status.complete, kind: .check)
+                .help("Done")
+        } else if job.stage == .failed || job.stage == .cancelled {
+            AppStatusToken(color: job.stage == .failed ? AppTheme.Status.failed : .secondary.opacity(0.55), kind: .cross)
+                .help(statusLabel)
+        } else {
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder private var actions: some View {
+        if job.isRunning {
+            actionButton(symbol: "stop.fill", danger: true, help: "Stop") {
+                onCancel()
+            }
+        } else if job.stage == .complete {
+            if let output = job.result?.output {
+                actionButton(symbol: "doc.on.doc", help: "Copy") {
+                    let formatted = OutputFormatter.format(
+                        output,
+                        sourceDisplayName: job.sourceURL.lastPathComponent,
+                        mode: OutputPreference.shared.mode
+                    )
+                    FileAccessService.shared.copyMarkdown(formatted.text)
+                }
+
+                actionButton(symbol: "arrow.up.right.square", help: "Show") {
+                    let formatted = OutputFormatter.format(
+                        output,
+                        sourceDisplayName: job.sourceURL.lastPathComponent,
+                        mode: OutputPreference.shared.mode
+                    )
+                    let savedURL = SavePreference.shared.save(
+                        markdown: formatted.text,
+                        title: output.title,
+                        sourceURL: job.sourceURL,
+                        fileExtension: formatted.fileExtension
+                    )
+                    if let url = savedURL {
+                        FileAccessService.shared.open(url)
+                    }
+                }
+            }
+
+            actionButton(symbol: "trash", danger: true, help: "Delete") {
+                onRemove()
+            }
+        } else if job.stage == .failed || job.stage == .cancelled {
+            actionButton(symbol: "arrow.clockwise", help: "Retry") {
+                onRetry()
+            }
+
+            actionButton(symbol: "trash", danger: true, help: "Delete") {
+                onRemove()
+            }
+        }
+    }
+
+    private func actionButton(symbol: String, danger: Bool = false, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+        }
+        .buttonStyle(AppActionButtonStyle())
+        .foregroundStyle(
+            danger
+                ? AppTheme.Status.failed.opacity(0.82)
+                : .primary.opacity(0.78)
+        )
+        .help(help)
     }
 
     private var statusLabel: String {
@@ -501,7 +574,7 @@ struct QueueItemRow: View {
         case .complete:
             return "Done"
         case .failed:
-            return job.result?.errorMessage ?? "Failed"
+            return "Failed"
         case .cancelled:
             return "Cancelled"
         }
