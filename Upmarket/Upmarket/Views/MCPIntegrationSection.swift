@@ -4,14 +4,13 @@ struct MCPIntegrationSection: View {
     @ObservedObject var integration: MCPIntegrationService
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
             Text("LM Studio / MCP")
-                .font(.caption)
-                .fontWeight(.semibold)
+                .font(AppTheme.Font.sectionLabel)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                 Toggle("Make Upmarket available to LM Studio", isOn: Binding(
                     get: { integration.isEnabled },
                     set: { integration.setAdvertisementEnabled($0) }
@@ -23,7 +22,7 @@ struct MCPIntegrationSection: View {
                         .foregroundStyle(statusColor)
                 }
 
-                HStack(spacing: 8) {
+                HStack(spacing: AppTheme.Spacing.sm) {
                     Button("Add to LM Studio...") {
                         integration.addToLMStudio()
                     }
@@ -50,11 +49,11 @@ struct MCPIntegrationSection: View {
     private var statusColor: Color {
         switch integration.status {
         case .ready:
-            return .green
+            return AppTheme.Status.complete
         case .commandMissing, .appMoved:
-            return .orange
+            return AppTheme.Colour.warning
         case .disabled:
-            return .secondary
+            return AppTheme.Status.queued
         }
     }
 }

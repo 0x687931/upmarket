@@ -34,28 +34,22 @@ struct ReportProblemView: View {
 
             VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                 Text("What happened?")
-                    .font(.headline)
+                    .font(AppTheme.Font.title)
                 TextEditor(text: $summary)
                     .font(.body)
                     .frame(minHeight: 86)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: AppTheme.Radius.sm)
-                            .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
-                    }
+                    .appTextEditorChrome()
             }
 
             Toggle("Include redacted diagnostics and recent Upmarket logs", isOn: $includeDiagnostics)
 
             VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                 Text("Preview")
-                    .font(.headline)
+                    .font(AppTheme.Font.title)
                 TextEditor(text: .constant(preview.body))
-                    .font(.system(.caption, design: .monospaced))
+                    .font(AppTheme.Font.mono)
                     .frame(minHeight: 220)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: AppTheme.Radius.sm)
-                            .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
-                    }
+                    .appTextEditorChrome()
             }
 
             HStack {
@@ -69,12 +63,13 @@ struct ReportProblemView: View {
                     FileAccessService.shared.copySupportReport(preview.body)
                     copied = true
                 }
+                .buttonStyle(AppBorderedButtonStyle())
                 Button("Email Support") {
                     if let url = SupportReporter.mailURL(for: preview) {
                         FileAccessService.shared.open(url)
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(AppProminentButtonStyle())
             }
         }
         .padding(windowSize.contentPadding)

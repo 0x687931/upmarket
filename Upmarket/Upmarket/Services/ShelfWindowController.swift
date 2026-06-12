@@ -10,7 +10,7 @@ final class ShelfWindowController: NSWindowController {
     private let positioner = ShelfPositioner.shared
     private var mouseMonitor: Any?
     private var workspaceObserver: NSObjectProtocol?
-    private let restingShelfSize = ShelfLayout.miniSize
+    private let restingShelfSize = ShelfLayout.closedSize
     private let shelfInset: CGFloat = 10
     private let snapRadius: CGFloat = 60
 

@@ -17,6 +17,8 @@ enum AppTheme {
         static let lg: CGFloat = 16
         static let menuBar: CGFloat = 5
         static let pill: CGFloat = 999
+        // App-icon squircle ≈ 21.5% of side — matches --radius-app-icon
+        static let appIcon: CGFloat = 14
     }
 
     enum Size {
@@ -70,6 +72,9 @@ enum AppTheme {
         static let iconBoxFill = Color.blue.opacity(0.12)
         static let iconGlyphTint = Color(red: 0.184, green: 0.498, blue: 1.0) // #2F7FFF — file-icon glyph
         static let tintError = error.opacity(0.05) // banner background for "trial ended"
+
+        // Text tertiary — var(--text-tertiary): rgba(0,0,0,0.26)
+        static let textTertiary = Color.primary.opacity(0.26)
 
         // --- Accent tints (rgb of #E86E00 = 232,110,0) -----------
         static let accentTint04 = Color.accentColor.opacity(0.04) // drop-zone idle

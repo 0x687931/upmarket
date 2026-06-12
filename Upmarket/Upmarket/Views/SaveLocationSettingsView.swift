@@ -45,10 +45,17 @@ struct SaveLocationSettingsView: View {
                 }
             }
         }
+        // Card chrome uses Radius.md (matches AppSectionCard / modal card convention —
+        // prior implementation used Radius.lg which deviated from the --radius-md card standard)
         .padding(.horizontal, showsCardChrome ? AppTheme.Spacing.lg : 0)
         .padding(.vertical, showsCardChrome ? AppTheme.Spacing.md : 0)
         .backgroundIf(showsCardChrome) {
-            AppTheme.Colour.controlBackground.opacity(0.55)
+            RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
+                .fill(AppTheme.Colour.controlBackground.opacity(0.55))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
+                        .strokeBorder(AppTheme.Colour.border, lineWidth: 1)
+                )
         }
     }
 
@@ -62,9 +69,9 @@ struct SaveLocationSettingsView: View {
 
 private extension View {
     @ViewBuilder
-    func backgroundIf<S: ShapeStyle>(_ condition: Bool, @ViewBuilder style: () -> S) -> some View {
+    func backgroundIf<S: View>(_ condition: Bool, @ViewBuilder style: () -> S) -> some View {
         if condition {
-            background(style(), in: RoundedRectangle(cornerRadius: AppTheme.Radius.lg, style: .continuous))
+            background { style() }
         } else {
             self
         }

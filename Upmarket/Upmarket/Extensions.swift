@@ -11,8 +11,6 @@ extension Notification.Name {
 }
 
 struct ReprocessRequest {
-    let url: URL
     let itemID: UUID
     let useAI: Bool
-    let enhanced: Bool
 }

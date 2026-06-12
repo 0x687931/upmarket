@@ -14,7 +14,7 @@ struct AISuggestionView: View {
         VStack(spacing: AppTheme.Spacing.xl) {
             ZStack {
                 Circle()
-                    .fill(Color.accentColor.opacity(0.1))
+                    .fill(AppTheme.Colour.accentTint10)
                     .frame(width: 72, height: 72)
                 Image(symbol: UpmarketSymbols.ai)
                     .font(.system(size: 32))
@@ -45,23 +45,22 @@ struct AISuggestionView: View {
                     }
                 }
                 .padding(AppTheme.Spacing.md)
-                .background(Color.accentColor.opacity(0.06), in: RoundedRectangle(cornerRadius: AppTheme.Radius.md))
+                .background(AppTheme.Colour.accentTint06, in: RoundedRectangle(cornerRadius: AppTheme.Radius.md))
             }
 
             VStack(spacing: AppTheme.Spacing.sm) {
                 Button(action: onUseAI) {
                     Label(L("ai.suggestion.use_ai", proPrice), systemImage: UpmarketSymbols.ai)
-                        .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(AppProminentButtonStyle())
                 .controlSize(.large)
 
                 Button(action: onBasic) {
                     Text(L("ai.suggestion.basic"))
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(AppBorderedButtonStyle())
                 .controlSize(.regular)
             }
 
