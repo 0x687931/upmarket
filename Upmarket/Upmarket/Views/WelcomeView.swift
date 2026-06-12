@@ -22,6 +22,13 @@ final class WelcomeWindowController: NSWindowController {
         window.titleVisibility = .hidden
         window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
+        // Window content is a rounded card (see WelcomeView.body) — make the
+        // window itself transparent so the card's corners/shadow read correctly
+        // against the desktop, and drop AppKit's own rectangular window shadow
+        // in favor of the card's shadow.
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.hasShadow = false
         window.center()
 
         let rootView = WelcomeView { destination, chosenFolderURL in
@@ -57,6 +64,12 @@ struct WelcomeView: View {
             content
         }
         .frame(width: AppTheme.WindowSize.welcome.width, height: AppTheme.WindowSize.welcome.height)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.WindowSize.welcome.cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.WindowSize.welcome.cornerRadius, style: .continuous)
+                .strokeBorder(AppTheme.Colour.separator, lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.28), radius: 32, x: 0, y: 24) // --shadow-window
     }
 
     // MARK: - Background
@@ -87,6 +100,7 @@ struct WelcomeView: View {
 
                 Text("Convert most things to Markdown.")
                     .font(AppTheme.Font.heroRounded)
+                    .tracking(-0.4)
                     .multilineTextAlignment(.center)
                     .padding(.top, AppTheme.Spacing.lg)
 
@@ -103,7 +117,7 @@ struct WelcomeView: View {
             VStack(alignment: .leading, spacing: 14) {
                 featureRow(
                     symbol: "doc.fill",
-                    color: .blue,
+                    color: AppTheme.Colour.iconGlyphTint,
                     title: "PDFs, Word, PowerPoint and more",
                     detail: "Drop in a file and get clean, readable Markdown out."
                 )
@@ -138,7 +152,7 @@ struct WelcomeView: View {
 
                 Text("3 free conversions included. No sign-up needed.")
                     .font(AppTheme.Font.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(AppTheme.Colour.textTertiary)
             }
         }
         .padding(.top, 42)

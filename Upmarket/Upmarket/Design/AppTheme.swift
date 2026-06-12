@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 enum AppTheme {
     enum Spacing {
@@ -70,6 +71,13 @@ enum AppTheme {
         static let iconBoxFill = Color.blue.opacity(0.12)
         static let iconGlyphTint = Color(red: 0.184, green: 0.498, blue: 1.0) // #2F7FFF — file-icon glyph
         static let tintError = error.opacity(0.05) // banner background for "trial ended"
+
+        // --text-tertiary: rgba(0,0,0,0.26) light / rgba(255,255,255,0.30) dark
+        static let textTertiary = Color(nsColor: NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor.white.withAlphaComponent(0.30)
+                : NSColor.black.withAlphaComponent(0.26)
+        })
 
         // --- Accent tints (rgb of #E86E00 = 232,110,0) -----------
         static let accentTint04 = Color.accentColor.opacity(0.04) // drop-zone idle
@@ -163,7 +171,7 @@ enum AppTheme {
             case .main: return Radius.md
             case .modal: return Radius.md
             case .compact: return Radius.md
-            case .welcome: return Radius.lg
+            case .welcome: return Radius.md // --shadow-window card: borderRadius 12
             }
         }
 
