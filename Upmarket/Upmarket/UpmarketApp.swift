@@ -71,6 +71,10 @@ struct UpmarketApp: App {
                 }
                 .keyboardShortcut("q", modifiers: .command)
             }
+
+            // Remove the system-generated "Close" (xmark) item — not meaningful
+            // in a shelf/menu bar app that has no persistent document windows.
+            CommandGroup(replacing: .windowList) {}
         }
     }
 

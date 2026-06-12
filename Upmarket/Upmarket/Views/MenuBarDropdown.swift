@@ -60,7 +60,7 @@ struct MenuBarDropdown: View {
 
     private var versionLine: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        return "v\(version) · support@upmarket.app"
+        return "Upmarket v\(version)"
     }
 
     private var conversionStatusTitle: String {
