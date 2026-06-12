@@ -4,6 +4,7 @@ import AppKit
 import OSLog
 
 enum ShelfLayout {
+    static let miniSize = CGSize(width: 56, height: 56)
     static let controlStripWidth: CGFloat = 48
     static let peekPanelWidth: CGFloat = 168
     static let expandedPanelWidth: CGFloat = 420
@@ -28,6 +29,7 @@ private enum ShelfTourSpotlight: String {
 }
 
 private enum ShelfDisplayMode: Equatable {
+    case mini
     case peek
     case queue
 }
@@ -40,14 +42,20 @@ struct ShelfView: View {
 
     @State private var isTargeted = false
     @State private var isShelfHovered = false
-    @State private var displayMode: ShelfDisplayMode = .peek
+    @State private var displayMode: ShelfDisplayMode = .mini
     @State private var dragScale: CGFloat = 1.0
+    @State private var selectedJobID: UUID?
     @State private var tourSpotlight: ShelfTourSpotlight?
+    @State private var layoutAnchor: ShelfWindowController.ShelfAnchor = .bottomRight
 
     // Hover states per button
     @State private var hoverClose  = false
     @State private var hoverAdd    = false
     @State private var hoverToggle = false
+
+    private var isRightAnchored: Bool {
+        layoutAnchor == .bottomRight || layoutAnchor == .topRight
+    }
 
     // UI-5: asymmetric closed state
     // Left: narrow control strip  |  Right: peek panel showing live job state
@@ -71,11 +79,23 @@ struct ShelfView: View {
         if displayMode == .queue, hasQueueItems {
             return .queue
         }
-        return .peek
+
+        if isShelfHovered || isTargeted || tourSpotlight != nil {
+            return .peek
+        }
+
+        switch displayMode {
+        case .mini:
+            return .mini
+        case .peek:
+            return .peek
+        case .queue:
+            return hasQueueItems ? .queue : .mini
+        }
     }
 
     private var isShelfActive: Bool {
-        effectiveMode == .queue || isTargeted
+        effectiveMode != .mini || isTargeted || selectedJobID != nil
     }
 
     private var shelfGlassOpacity: CGFloat {
@@ -90,25 +110,36 @@ struct ShelfView: View {
 
     private var totalWidth: CGFloat {
         switch effectiveMode {
-        case .peek:
-            return closedWidth
-        case .queue:
-            return closedWidth + ShelfLayout.expandedPanelWidth
+        case .mini:   return ShelfLayout.miniSize.width
+        case .peek:   return closedWidth
+        case .queue:  return closedWidth + ShelfLayout.expandedPanelWidth
         }
     }
 
     private var totalHeight: CGFloat {
-        closedHeight
+        effectiveMode == .mini ? ShelfLayout.miniSize.height : closedHeight
     }
 
     var body: some View {
         HStack(spacing: 0) {
-            closedPanel
-                .transition(.move(edge: .leading).combined(with: .opacity))
-
-            if effectiveMode == .queue {
-                itemsView
+            if effectiveMode == .mini {
+                miniShelf
+                    .transition(.scale(scale: 0.86).combined(with: .opacity))
+            } else if isRightAnchored {
+                if effectiveMode == .queue {
+                    itemsView
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
+                closedPanel
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            } else {
+                closedPanel
                     .transition(.move(edge: .leading).combined(with: .opacity))
+
+                if effectiveMode == .queue {
+                    itemsView
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                }
             }
         }
         .frame(width: totalWidth, height: totalHeight)
@@ -141,6 +172,9 @@ struct ShelfView: View {
             }
         }
         .onAppear {
+            DispatchQueue.main.async {
+                layoutAnchor = ShelfWindowController.shared.anchor
+            }
             resizeShelfWindow()
         }
         .onReceive(NotificationCenter.default.publisher(for: .upmarketConvertFile)) { note in
@@ -157,7 +191,7 @@ struct ShelfView: View {
         .onReceive(NotificationCenter.default.publisher(for: .upmarketSetShelfExpanded)) { note in
             guard let expanded = note.object as? Bool else { return }
             withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
-                displayMode = expanded ? (hasQueueItems ? .queue : .peek) : .peek
+                displayMode = expanded ? (hasQueueItems ? .queue : .peek) : .mini
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .upmarketSetShelfSpotlight)) { note in
@@ -168,8 +202,15 @@ struct ShelfView: View {
         .onChange(of: conversion.jobs.count) { count in
             if count == 0 {
                 withAnimation(.spring(duration: 0.25)) {
-                    displayMode = .peek
+                    displayMode = .mini
+                    selectedJobID = nil
                 }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .upmarketShelfAnchorChanged)) { note in
+            if let raw = note.object as? Int,
+               let newAnchor = ShelfWindowController.ShelfAnchor(rawValue: raw) {
+                layoutAnchor = newAnchor
             }
         }
         .onChange(of: totalWidth) { _ in
@@ -188,19 +229,98 @@ struct ShelfView: View {
         }
     }
 
+    // MARK: - Mini shelf
+
+    private var miniShelf: some View {
+        ZStack(alignment: .topTrailing) {
+            miniSymbol
+
+            if hasQueueItems {
+                Text("\(min(conversion.jobs.count, 99))")
+                    .font(windowSize.fontCaption.weight(.semibold))
+                    .foregroundStyle(.primary.opacity(0.78))
+                    .padding(.horizontal, AppTheme.Spacing.xs)
+                    .padding(.vertical, 1)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .overlay(
+                        Capsule()
+                            .strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5)
+                    )
+                    .offset(x: 4, y: -4)
+            }
+        }
+        .frame(width: ShelfLayout.miniSize.width, height: ShelfLayout.miniSize.height)
+        .contentShape(RoundedRectangle(cornerRadius: windowSize.cornerRadius, style: .continuous))
+        .onTapGesture {
+            withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
+                displayMode = hasQueueItems ? .queue : .peek
+            }
+        }
+        .help(hasQueueItems ? "Show queue" : "Drop files")
+        .accessibilityLabel(hasQueueItems ? "Conversion shelf — \(conversion.jobs.count) items" : "Conversion shelf")
+        .accessibilityHint(hasQueueItems ? "Double-tap to show the queue" : "Drop files here or double-tap to expand")
+    }
+
+    @ViewBuilder private var miniSymbol: some View {
+        if let activeJob = conversion.jobs.first(where: \.isRunning) {
+            ZStack {
+                Circle()
+                    .stroke(Color.primary.opacity(0.12), lineWidth: 2.5)
+                    .frame(width: 34, height: 34)
+                ArcProgressRing(progress: activeJob.progress)
+                    .stroke(
+                        Color.accentColor,
+                        style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
+                    )
+                    .frame(width: 34, height: 34)
+                Image(systemName: "doc")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(.primary.opacity(0.62))
+            }
+        } else if hasQueueItems {
+            Image(systemName: "tray.full")
+                .font(.system(size: windowSize.iconSize, weight: .medium))
+                .foregroundStyle(.primary.opacity(0.62))
+                .symbolRenderingMode(.hierarchical)
+        } else {
+            idleMiniSymbol
+        }
+    }
+
+    private var idleMiniSymbol: some View {
+        Image(nsImage: NSImage(named: "MenuBarHash") ?? NSImage())
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: windowSize.iconSize, height: windowSize.iconSize)
+            .foregroundStyle(.primary.opacity(0.62))
+    }
+
     // MARK: - Closed panel: [control strip] | [peek panel]
 
     private var closedPanel: some View {
         HStack(spacing: 0) {
-            controlStrip
+            if isRightAnchored {
+                peekPanel
+                    .frame(width: peekPanelWidth, height: closedHeight)
+                    .clipped()
 
-            Rectangle()
-                .fill(AppTheme.Colour.separator)
-                .frame(width: 0.5, height: closedHeight)
+                Rectangle()
+                    .fill(AppTheme.Colour.separator)
+                    .frame(width: 0.5, height: closedHeight)
 
-            peekPanel
-                .frame(width: peekPanelWidth, height: closedHeight)
-                .clipped()
+                controlStrip
+            } else {
+                controlStrip
+
+                Rectangle()
+                    .fill(AppTheme.Colour.separator)
+                    .frame(width: 0.5, height: closedHeight)
+
+                peekPanel
+                    .frame(width: peekPanelWidth, height: closedHeight)
+                    .clipped()
+            }
         }
     }
 

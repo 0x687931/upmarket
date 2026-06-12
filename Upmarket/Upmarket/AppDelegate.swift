@@ -443,7 +443,7 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
 
     private var versionLine: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        return "v\(version) · support@upmarket.app"
+        return "Upmarket v\(version)"
     }
 
     private func disabledItem(_ title: String) -> NSMenuItem {

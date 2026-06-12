@@ -29,7 +29,6 @@ struct ContentView: View {
                 )
 
             VStack(spacing: 0) {
-                workbenchTitlebar
                 statusBanner
                 VStack(spacing: 0) {
                     dropZoneView
@@ -75,42 +74,11 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .openFilePicker)) { _ in
             openFilePicker()
         }
-    }
-
-    // MARK: - Titlebar
-
-    private var workbenchTitlebar: some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(AppTheme.Colour.trafficRed)
-                    .frame(width: 12, height: 12)
-                Circle()
-                    .fill(AppTheme.Colour.trafficYellow)
-                    .frame(width: 12, height: 12)
-                Circle()
-                    .fill(AppTheme.Colour.trafficGreen)
-                    .frame(width: 12, height: 12)
-            }
-            .frame(width: 88, alignment: .leading)
-
-            Text("Upmarket")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-
-            Color.clear.frame(width: 88, height: 1)
-        }
-        .frame(height: 38)
-        .padding(.horizontal, 14)
-        .background(AppTheme.Colour.surface)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(AppTheme.Colour.separator)
-                .frame(height: 0.5)
+        .onReceive(NotificationCenter.default.publisher(for: .upmarketOpenFiles)) { note in
+            guard let urls = note.object as? [URL] else { return }
+            for url in urls { handleFile(url) }
         }
     }
-
 
     // MARK: - Drop Zone
 
@@ -314,9 +282,8 @@ struct ContentView: View {
 
     private func openFilePicker() {
         guard store.canConvert else { PaywallWindowController.shared.show(); return }
-        if let url = FileAccessService.shared.chooseDocuments(allowsMultipleSelection: false).first {
-            handleFile(url)
-        }
+        let urls = FileAccessService.shared.chooseDocuments(allowsMultipleSelection: true)
+        for url in urls { handleFile(url) }
     }
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {

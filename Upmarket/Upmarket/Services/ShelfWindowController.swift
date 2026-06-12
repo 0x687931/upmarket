@@ -10,9 +10,11 @@ final class ShelfWindowController: NSWindowController {
     private let positioner = ShelfPositioner.shared
     private var mouseMonitor: Any?
     private var workspaceObserver: NSObjectProtocol?
-    private let restingShelfSize = ShelfLayout.closedSize
-    private let shelfInset: CGFloat = 10
+    private let restingShelfSize = ShelfLayout.miniSize
+    private let shelfInset: CGFloat = 0
     private let snapRadius: CGFloat = 60
+    // Suppresses the drag-snap logic when we programmatically resize the panel.
+    private var isProgrammaticResize = false
 
     // Persisted shelf position preference
     enum ShelfAnchor: Int {
@@ -29,8 +31,8 @@ final class ShelfWindowController: NSWindowController {
 
     var anchor: ShelfAnchor {
         get {
-            guard UserDefaults.standard.object(forKey: "upmarket.shelfAnchor") != nil else { return .center }
-            return ShelfAnchor(rawValue: UserDefaults.standard.integer(forKey: "upmarket.shelfAnchor")) ?? .center
+            guard UserDefaults.standard.object(forKey: "upmarket.shelfAnchor") != nil else { return .bottomRight }
+            return ShelfAnchor(rawValue: UserDefaults.standard.integer(forKey: "upmarket.shelfAnchor")) ?? .bottomRight
         }
         set { UserDefaults.standard.set(newValue.rawValue, forKey: "upmarket.shelfAnchor") }
     }
@@ -83,6 +85,12 @@ final class ShelfWindowController: NSWindowController {
         )
         hosting.wantsLayer = true
         hosting.layer?.backgroundColor = NSColor.clear.cgColor
+        // Disable automatic window resizing — we size the panel ourselves via resizeToContent.
+        // Without this, NSHostingView grows the panel from its top-left corner (down+right),
+        // which is the opposite of what corner-anchored expansion requires.
+        if #available(macOS 13.0, *) {
+            hosting.sizingOptions = []
+        }
         panel.contentView = hosting
     }
 
@@ -91,8 +99,7 @@ final class ShelfWindowController: NSWindowController {
 
     func reposition() {
         guard let panel = window else { return }
-        let frame = shelfFrame()
-        panel.setFrame(frame, display: true)
+        panel.setFrame(shelfFrame(), display: true)
     }
 
     private func shelfFrame() -> NSRect {
@@ -100,18 +107,22 @@ final class ShelfWindowController: NSWindowController {
         let visible = screen.visibleFrame
         let w = restingShelfSize.width
         let h = restingShelfSize.height
+        let origin = anchoredOrigin(size: CGSize(width: w, height: h), in: visible)
+        return NSRect(origin: origin, size: CGSize(width: w, height: h))
+    }
 
+    func anchoredOrigin(size: CGSize, in visible: NSRect) -> NSPoint {
         switch anchor {
         case .center:
-            return NSRect(x: visible.midX - w / 2, y: visible.midY - h / 2, width: w, height: h)
+            return NSPoint(x: visible.midX - size.width / 2, y: visible.midY - size.height / 2)
         case .bottomLeft:
-            return NSRect(x: visible.minX + shelfInset, y: visible.minY + shelfInset, width: w, height: h)
+            return NSPoint(x: visible.minX + shelfInset, y: visible.minY + shelfInset)
         case .bottomRight:
-            return NSRect(x: visible.maxX - w - shelfInset, y: visible.minY + shelfInset, width: w, height: h)
+            return NSPoint(x: visible.maxX - size.width - shelfInset, y: visible.minY + shelfInset)
         case .topLeft:
-            return NSRect(x: visible.minX + shelfInset, y: visible.maxY - h - shelfInset, width: w, height: h)
+            return NSPoint(x: visible.minX + shelfInset, y: visible.maxY - size.height - shelfInset)
         case .topRight:
-            return NSRect(x: visible.maxX - w - shelfInset, y: visible.maxY - h - shelfInset, width: w, height: h)
+            return NSPoint(x: visible.maxX - size.width - shelfInset, y: visible.maxY - size.height - shelfInset)
         }
     }
 
@@ -140,6 +151,7 @@ final class ShelfWindowController: NSWindowController {
 
         if let nearest {
             anchor = nearest.0
+            NotificationCenter.default.post(name: .upmarketShelfAnchorChanged, object: nearest.0.rawValue)
             NSAnimationContext.runAnimationGroup { ctx in
                 ctx.duration = 0.25
                 ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -204,17 +216,24 @@ final class ShelfWindowController: NSWindowController {
     }
 
     func resizeToContent(width: CGFloat) {
-        resizeToContent(width: width, height: window?.frame.height ?? ShelfLayout.closedHeight)
+        resizeToContent(width: width, height: window?.frame.height ?? ShelfLayout.miniSize.height)
     }
 
     func resizeToContent(width: CGFloat, height: CGFloat) {
         guard let panel = window else { return }
-        let frame = Self.resizedFrame(
-            panel.frame,
-            to: CGSize(width: width, height: height),
-            anchor: anchor
-        )
-        panel.setFrame(frame, display: false)
+        let newSize = CGSize(width: width, height: height)
+        let visible = positioner.primaryScreen.visibleFrame
+        let origin = anchoredOrigin(size: newSize, in: visible)
+        let newFrame = NSRect(origin: origin, size: newSize)
+        guard newFrame != panel.frame else { return }
+        isProgrammaticResize = true
+        NSAnimationContext.runAnimationGroup({ ctx in
+            ctx.duration = 0.28
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            panel.animator().setFrame(newFrame, display: true)
+        }, completionHandler: { [weak self] in
+            self?.isProgrammaticResize = false
+        })
     }
 
     func animateTourDragDemo() {
@@ -320,12 +339,16 @@ extension ShelfWindowController {
 
 extension ShelfWindowController: NSWindowDelegate {
     func windowDidMove(_ notification: Notification) {
-        // Snap to nearest corner after user stops dragging
+        // Ignore moves we triggered programmatically (hover expand/collapse).
+        guard !isProgrammaticResize else { return }
         NSObject.cancelPreviousPerformRequests(withTarget: self)
         perform(#selector(delayedSnap), with: nil, afterDelay: 0.3)
     }
 
     @objc private func delayedSnap() {
+        // Only snap when at resting (mini) size — expanded state means the user
+        // is hovering, not dragging, so snapping would collapse the shelf.
+        guard let panel = window, panel.frame.size == restingShelfSize else { return }
         snapToNearestCorner()
     }
 }

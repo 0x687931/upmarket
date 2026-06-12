@@ -33,13 +33,20 @@ final class MainWindowController: NSWindowController {
 
     func show(pickFile: Bool = false) {
         guard let window else { return }
-        window.centerIfNeeded()
-        NSApp.activate(ignoringOtherApps: true)
-        window.makeKeyAndOrderFront(nil)
 
-        guard pickFile else { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            NotificationCenter.default.post(name: .openFilePicker, object: nil)
+        if pickFile {
+            let urls = FileAccessService.shared.chooseDocuments(allowsMultipleSelection: true)
+            guard !urls.isEmpty else { return }
+            window.centerIfNeeded()
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .upmarketOpenFiles, object: urls)
+            }
+        } else {
+            window.centerIfNeeded()
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
         }
     }
 }
