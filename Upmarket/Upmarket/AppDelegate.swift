@@ -415,7 +415,6 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
-        menu.addItem(disabledItem(versionLine))
 
         menu.addItem(actionItem(
             title: "Quit Upmarket",
@@ -439,11 +438,6 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
         case .pro:
             return "Upmarket + AI"
         }
-    }
-
-    private var versionLine: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        return "Upmarket v\(version)"
     }
 
     private func disabledItem(_ title: String) -> NSMenuItem {

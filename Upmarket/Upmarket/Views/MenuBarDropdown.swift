@@ -51,16 +51,9 @@ struct MenuBarDropdown: View {
 
         Divider()
 
-        StatusRow(versionLine)
-
         MenuRow(icon: "power", label: "Quit Upmarket", shortcut: "⌘Q") {
             NSApp.terminate(nil)
         }
-    }
-
-    private var versionLine: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        return "Upmarket v\(version)"
     }
 
     private var conversionStatusTitle: String {
