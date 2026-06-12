@@ -79,29 +79,38 @@ struct UpmarketApp: App {
     }
 
     init() {
+        AppLaunchMetrics.reset()
         RuntimePrivilegeGuard.abortIfPrivilegedProcess()
+        AppLaunchMetrics.mark("privilege-check")
         AppVisibilityPreference.normalizePersistentVisibility()
+        AppLaunchMetrics.mark("visibility-normalized")
         AppRuntime.exitIfDuplicateInstance()
+        AppLaunchMetrics.mark("single-instance-checked")
         AppRuntime.installTerminationSignalCleanup()
-        AppWorkspace.removeStaleWorkspaces()
         AppRuntime.writeUITestWorkspacePathIfRequested()
+        AppRuntime.scheduleStartupCleanup()
+        AppLaunchMetrics.mark("startup-cleanup-scheduled")
         if !AppRuntime.isRunningTests {
             FeatureFlags.shared.fetchFlags()
             Task { @MainActor in
                 WatchedFolderService.shared.start()
             }
         }
+        AppLaunchMetrics.mark("services-kicked-off")
 
         if AppRuntime.isRunningUITests { return }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        DispatchQueue.main.async {
             guard !AppRuntime.isRunningTests else { return }
             if !UserDefaults.standard.bool(forKey: "upmarket.tourComplete") {
                 WelcomeWindowController.shared.show()
+                AppLaunchMetrics.mark("first-surface-welcome")
             } else if AppVisibilityPreference.showShelf {
                 ShelfWindowController.shared.show(animate: true)
+                AppLaunchMetrics.mark("first-surface-shelf")
             } else {
                 MainWindowController.shared.show()
+                AppLaunchMetrics.mark("first-surface-main")
             }
         }
     }

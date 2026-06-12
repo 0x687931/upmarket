@@ -2,8 +2,6 @@ import AppKit
 import Combine
 import SwiftUI
 
-private let appGroupID = "group.com.upmarket.app"
-
 private struct QuickActionHandoff: Decodable {
     let files: [String]
 }
@@ -30,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        AppLaunchMetrics.mark("didFinishLaunching")
         AppVisibilityPreference.apply()
         if AppRuntime.isRunningUITests {
             MainWindowController.shared.show()
@@ -37,7 +36,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         NSApp.servicesProvider = self
         MemoryPressureMonitor.shared.start()
-        removeStaleQuickActionHandoffs()
+        if !AppRuntime.isRunningTests {
+            ConversionHistoryStore.shared.loadDeferred()
+        }
+        AppLaunchMetrics.mark("post-launch-services")
+        DispatchQueue.global(qos: .utility).async {
+            Self.removeStaleQuickActionHandoffs()
+        }
 
         // Observe conversion state for Dock tile animation
         NotificationCenter.default.addObserver(
@@ -162,7 +167,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func openQuickActionHandoff(id: String) {
         guard UUID(uuidString: id) != nil,
-              let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID)
+              let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.upmarket.app")
         else { return }
 
         let handoffDirectory = container
@@ -185,8 +190,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func removeStaleQuickActionHandoffs() {
-        guard let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else {
+    nonisolated private static func removeStaleQuickActionHandoffs() {
+        guard let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.upmarket.app") else {
             return
         }
         let root = container.appendingPathComponent("QuickActionHandoffs", isDirectory: true)

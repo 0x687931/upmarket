@@ -4,7 +4,7 @@ import OSLog
 
 @MainActor
 final class ConversionHistoryStore: ObservableObject {
-    static let shared = ConversionHistoryStore()
+    static let shared = ConversionHistoryStore(loadImmediately: false)
 
     @Published private(set) var records: [ConversionHistoryRecord] = []
     @Published var isEnabled: Bool {
@@ -58,34 +58,23 @@ final class ConversionHistoryStore: ObservableObject {
             return
         }
 
-        guard fileManager.fileExists(atPath: directoryURL.path) else {
+        records = Self.loadRecords(from: directoryURL, fileManager: fileManager)
+    }
+
+    func loadDeferred() {
+        guard isEnabled else {
             records = []
             return
         }
 
-        do {
-            let urls = try fileManager.contentsOfDirectory(
-                at: directoryURL,
-                includingPropertiesForKeys: nil,
-                options: [.skipsHiddenFiles]
-            )
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            records = urls
-                .filter { $0.pathExtension == "json" }
-                .compactMap { url in
-                    do {
-                        let data = try Data(contentsOf: url)
-                        return try decoder.decode(ConversionHistoryRecord.self, from: data)
-                    } catch {
-                        AppLog.fileAccess.error("Ignoring corrupt conversion history record: \(error.localizedDescription, privacy: .private)")
-                        return nil
-                    }
-                }
-                .sorted { $0.createdAt > $1.createdAt }
-        } catch {
-            AppLog.fileAccess.error("Failed to load conversion history: \(error.localizedDescription, privacy: .private)")
-            records = []
+        let directoryURL = self.directoryURL
+        let fileManager = self.fileManager
+        Task.detached(priority: .utility) { [directoryURL, fileManager] in
+            let records = Self.loadRecords(from: directoryURL, fileManager: fileManager)
+            await MainActor.run { [weak self] in
+                guard let self, self.isEnabled else { return }
+                self.records = Self.mergeLoadedRecords(records, with: self.records)
+            }
         }
     }
 
@@ -120,5 +109,46 @@ final class ConversionHistoryStore: ObservableObject {
         let data = try encoder.encode(record)
         let url = directoryURL.appendingPathComponent(record.id.uuidString).appendingPathExtension("json")
         try data.write(to: url, options: .atomic)
+    }
+
+    nonisolated private static func loadRecords(from directoryURL: URL, fileManager: FileManager) -> [ConversionHistoryRecord] {
+        guard fileManager.fileExists(atPath: directoryURL.path) else {
+            return []
+        }
+
+        do {
+            let urls = try fileManager.contentsOfDirectory(
+                at: directoryURL,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
+            )
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return urls
+                .filter { $0.pathExtension == "json" }
+                .compactMap { url in
+                    do {
+                        let data = try Data(contentsOf: url)
+                        return try decoder.decode(ConversionHistoryRecord.self, from: data)
+                    } catch {
+                        AppLog.fileAccess.error("Ignoring corrupt conversion history record: \(error.localizedDescription, privacy: .private)")
+                        return nil
+                    }
+                }
+                .sorted { $0.createdAt > $1.createdAt }
+        } catch {
+            AppLog.fileAccess.error("Failed to load conversion history: \(error.localizedDescription, privacy: .private)")
+            return []
+        }
+    }
+
+    nonisolated private static func mergeLoadedRecords(
+        _ loadedRecords: [ConversionHistoryRecord],
+        with currentRecords: [ConversionHistoryRecord]
+    ) -> [ConversionHistoryRecord] {
+        let merged = Dictionary(
+            uniqueKeysWithValues: (currentRecords + loadedRecords).map { ($0.id, $0) }
+        )
+        return merged.values.sorted { $0.createdAt > $1.createdAt }
     }
 }

@@ -38,6 +38,16 @@ enum AppRuntime {
         }
     }
 
+    static func scheduleStartupCleanup() {
+        if isRunningTests {
+            AppWorkspace.removeStaleWorkspaces()
+            return
+        }
+        DispatchQueue.global(qos: .utility).async {
+            AppWorkspace.removeStaleWorkspaces()
+        }
+    }
+
     static func exitIfDuplicateInstance() {
         guard !isRunningTests else { return }
         switch acquireSingleInstanceLock() {

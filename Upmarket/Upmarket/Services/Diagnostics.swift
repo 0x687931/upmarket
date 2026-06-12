@@ -6,6 +6,7 @@ enum AppLog {
     nonisolated static let subsystem = "com.upmarket.app"
 
     nonisolated static let conversion = Logger(subsystem: subsystem, category: "conversion")
+    nonisolated static let launch = Logger(subsystem: subsystem, category: "launch")
     nonisolated static let pythonBridge = Logger(subsystem: subsystem, category: "pythonBridge")
     nonisolated static let modelDownload = Logger(subsystem: subsystem, category: "modelDownload")
     nonisolated static let storeKit = Logger(subsystem: subsystem, category: "storeKit")
@@ -16,6 +17,28 @@ enum AppLog {
 
 enum AppSignpost {
     nonisolated static let conversion = OSSignposter(logger: AppLog.conversion)
+}
+
+enum AppLaunchMetrics {
+    private static var startedAt = DispatchTime.now()
+    private static var hasStarted = false
+
+    static func reset() {
+        startedAt = DispatchTime.now()
+        hasStarted = true
+        AppLog.launch.info("Launch timing started")
+    }
+
+    static func mark(_ phase: String) {
+        if !hasStarted {
+            reset()
+        }
+        let elapsed = DispatchTime.now().uptimeNanoseconds &- startedAt.uptimeNanoseconds
+        let elapsedMilliseconds = Double(elapsed) / 1_000_000
+        AppLog.launch.info(
+            "Launch phase \(phase, privacy: .public) at \(String(format: "%.1f", elapsedMilliseconds), privacy: .public)ms"
+        )
+    }
 }
 
 struct DiagnosticSnapshot: Codable, Equatable {
