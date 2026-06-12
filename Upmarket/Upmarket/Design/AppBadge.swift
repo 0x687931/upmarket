@@ -17,7 +17,13 @@ struct AppBadge: View {
 
     var body: some View {
         Text(text)
-            .font(variant == .count ? .system(size: 10, weight: .semibold, design: .monospaced) : .caption2.weight(.semibold))
+            .font({
+                switch variant {
+                case .count:   return .system(size: 10, weight: .semibold, design: .monospaced)
+                case .accent:  return .caption2.weight(.heavy)
+                case .neutral: return .caption2.weight(.semibold)
+                }
+            }())
             .foregroundStyle(foregroundStyle)
             .padding(.horizontal, variant == .count ? 6 : 6)
             .padding(.vertical, variant == .count ? 1 : 2)

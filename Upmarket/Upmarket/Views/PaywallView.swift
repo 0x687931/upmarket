@@ -73,9 +73,9 @@ struct PaywallView: View {
                 Image(nsImage: NSImage(named: "AppIcon") ?? NSApp.applicationIconImage)
                     .resizable()
                     .frame(width: 64, height: 64)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.appIcon, style: .continuous))
                     .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)
-                    .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 4)
+                    .shadow(color: .black.opacity(0.08), radius: 18, x: 0, y: 6)
                     .padding(.top, 32)
 
                 Text(headerTitle)
@@ -152,7 +152,7 @@ struct PaywallView: View {
                         Spacer()
                         VStack(alignment: .trailing, spacing: AppTheme.Spacing.xs) {
                             Text(tierPrice(tier))
-                                .font(.title2)
+                                .font(.title3)
                                 .fontWeight(.bold)
                             Text("one-time")
                                 .font(.caption2)
@@ -260,8 +260,8 @@ struct PaywallView: View {
 
     private var legalFooter: some View {
         Text(L("paywall.footer"))
-            .font(.caption2)
-            .foregroundStyle(.tertiary)
+            .font(.caption)
+            .foregroundStyle(AppTheme.Colour.textTertiary)
             .multilineTextAlignment(.center)
             .padding(.horizontal, 24)
             .padding(.vertical, 18)
@@ -273,7 +273,7 @@ struct PaywallView: View {
         HStack(spacing: AppTheme.Spacing.sm) {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(isHighlight ? Color.accentColor : AppTheme.Colour.success)
-                .font(.caption)
+                .font(.system(size: 14))
             Text(text)
                 .font(.caption)
                 .fontWeight(isHighlight ? .medium : .regular)

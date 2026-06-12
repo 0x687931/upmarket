@@ -70,7 +70,7 @@ struct WelcomeView: View {
                 Image(nsImage: NSApp.applicationIconImage)
                     .resizable()
                     .frame(width: 84, height: 84)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.appIconLarge, style: .continuous))
                     .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)
                     .shadow(color: .black.opacity(0.08), radius: 18, x: 0, y: 6)
 

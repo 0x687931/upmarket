@@ -13,7 +13,7 @@ struct ArcRingView<Content: View>: View {
         size: CGFloat,
         lineWidth: CGFloat,
         ringColor: Color,
-        trackColor: Color = Color.primary.opacity(0.1),
+        trackColor: Color = AppTheme.Colour.arcTrack,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.progress = progress

@@ -22,7 +22,7 @@ struct AppSectionCard<Content: View>: View {
                     Text(title)
                         .font(.caption2.weight(.semibold))
                         .textCase(.uppercase)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppTheme.Colour.textTertiary)
                         .tracking(0.8)
                     if let subtitle {
                         Text(subtitle)

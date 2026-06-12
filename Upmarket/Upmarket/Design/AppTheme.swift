@@ -19,7 +19,8 @@ enum AppTheme {
         static let menuBar: CGFloat = 5
         static let pill: CGFloat = 999
         // App-icon squircle ≈ 21.5% of side — matches --radius-app-icon
-        static let appIcon: CGFloat = 14
+        static let appIcon: CGFloat = 14      // 21.5% × 64px (Paywall icon)
+        static let appIconLarge: CGFloat = 18 // 21.5% × 84px (Welcome icon)
     }
 
     enum Size {
@@ -56,6 +57,7 @@ enum AppTheme {
 
     enum Colour {
         static let background = Color(nsColor: .windowBackgroundColor)
+        static let surface = Color(nsColor: .controlBackgroundColor)           // --surface: white (light) / dark card
         static let controlBackground = Color(nsColor: .controlBackgroundColor)
         static let subtleFill = Color.secondary.opacity(0.04)
         static let selectedFill = Color.accentColor.opacity(0.06)
@@ -79,6 +81,13 @@ enum AppTheme {
             appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
                 ? NSColor.white.withAlphaComponent(0.30)
                 : NSColor.black.withAlphaComponent(0.26)
+        })
+
+        // --fill-track: rgba(0,0,0,0.10) light / rgba(255,255,255,0.12) dark
+        static let arcTrack = Color(nsColor: NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor.white.withAlphaComponent(0.12)
+                : NSColor.black.withAlphaComponent(0.10)
         })
 
         // --- Accent tints (rgb of #E86E00 = 232,110,0) -----------
@@ -111,9 +120,14 @@ enum AppTheme {
         static let glassFillThin = controlBackground.opacity(0.50)
         static let glassStroke = Color.white.opacity(0.55)
 
+        // --- Traffic-light / window chrome controls -----------
+        static let trafficRed    = Color(red: 1.0,   green: 0.373, blue: 0.341) // #ff5f57
+        static let trafficYellow = Color(red: 0.996, green: 0.737, blue: 0.180) // #febc2e
+        static let trafficGreen  = Color(red: 0.157, green: 0.784, blue: 0.251) // #28c840
+
         // --- Shelf control strip --------------------------------
-        static let shelfHoverClose = Color(red: 1.0, green: 0.373, blue: 0.341)   // #ff5f57
-        static let shelfHoverAdd = Color(red: 0.157, green: 0.784, blue: 0.251)   // #28c840
+        static let shelfHoverClose  = trafficRed
+        static let shelfHoverAdd    = trafficGreen
         static let shelfHoverToggle = iconGlyphTint                              // #2f7fff
         static let shelfControlStripFill = Color.white.opacity(0.25)
 

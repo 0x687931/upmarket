@@ -27,17 +27,17 @@ struct AppProminentButtonStyle: ButtonStyle {
     private static func metrics(for controlSize: ControlSize) -> (fontSize: CGFloat, verticalPadding: CGFloat, horizontalPadding: CGFloat, minHeight: CGFloat, cornerRadius: CGFloat) {
         switch controlSize {
         case .mini:
-            return (12, 4, 8, 20, 5)
+            return (10, 4, 8, 20, 5)
         case .small:
-            return (13, 5, 12, 24, 6)
+            return (11, 5, 12, 24, 6)
         case .regular:
-            return (14, 6, 16, 28, AppTheme.Radius.sm)
+            return (13, 6, 16, 28, AppTheme.Radius.sm)
         case .large:
             return (13, 9, 20, 36, AppTheme.Radius.md)
         case .extraLarge:
             return (13, 9, 20, 36, AppTheme.Radius.md)
         @unknown default:
-            return (14, 6, 16, 28, AppTheme.Radius.sm)
+            return (13, 6, 16, 28, AppTheme.Radius.sm)
         }
     }
 }
@@ -69,17 +69,17 @@ struct AppBorderedButtonStyle: ButtonStyle {
     private static func metrics(for controlSize: ControlSize) -> (fontSize: CGFloat, verticalPadding: CGFloat, horizontalPadding: CGFloat, minHeight: CGFloat, cornerRadius: CGFloat) {
         switch controlSize {
         case .mini:
-            return (12, 3, 8, 20, 5)
+            return (10, 3, 8, 20, 5)
         case .small:
-            return (13, 4, 12, 24, 6)
+            return (11, 4, 12, 24, 6)
         case .regular:
-            return (14, 6, 16, 28, AppTheme.Radius.sm)
+            return (13, 6, 16, 28, AppTheme.Radius.sm)
         case .large:
-            return (15, 9, 20, 36, AppTheme.Radius.md)
+            return (13, 9, 20, 36, AppTheme.Radius.md)
         case .extraLarge:
-            return (15, 9, 20, 36, AppTheme.Radius.md)
+            return (13, 9, 20, 36, AppTheme.Radius.md)
         @unknown default:
-            return (14, 6, 16, 28, AppTheme.Radius.sm)
+            return (13, 6, 16, 28, AppTheme.Radius.sm)
         }
     }
 }
@@ -87,7 +87,7 @@ struct AppBorderedButtonStyle: ButtonStyle {
 struct AppPlainButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(AppTheme.Font.caption.weight(.medium))
+            .font(AppTheme.Font.body.weight(.medium))
             .foregroundStyle(Color.accentColor.opacity(configuration.isPressed ? 0.82 : 1))
             .opacity(configuration.isPressed ? 0.9 : 1)
             .scaleEffect(configuration.isPressed ? 0.99 : 1)
@@ -138,6 +138,8 @@ struct AppActionButtonStyle: ButtonStyle {
                 RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
                     .strokeBorder(AppTheme.Colour.border, lineWidth: 0.5)
             )
+            .opacity(configuration.isPressed ? 1 : 0.82)
+            .scaleEffect(configuration.isPressed ? 0.94 : 1)
     }
 
     private static func metrics(for size: Size) -> (fontSize: CGFloat, padding: CGFloat) {
@@ -170,7 +172,7 @@ struct AppCardStyle: ButtonStyle {
         configuration.label
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, AppTheme.Spacing.lg)
-            .padding(.vertical, AppTheme.Spacing.md)
+            .padding(.vertical, 14)
             .background(background)
             .overlay(border)
             .opacity(isDisabled ? 0.6 : (pressed ? 0.98 : 1))

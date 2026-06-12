@@ -83,13 +83,13 @@ struct ContentView: View {
         HStack(spacing: 8) {
             HStack(spacing: 8) {
                 Circle()
-                    .fill(Color(red: 1.0, green: 0.372, blue: 0.341))
+                    .fill(AppTheme.Colour.trafficRed)
                     .frame(width: 12, height: 12)
                 Circle()
-                    .fill(Color(red: 0.996, green: 0.737, blue: 0.180))
+                    .fill(AppTheme.Colour.trafficYellow)
                     .frame(width: 12, height: 12)
                 Circle()
-                    .fill(Color(red: 0.157, green: 0.784, blue: 0.251))
+                    .fill(AppTheme.Colour.trafficGreen)
                     .frame(width: 12, height: 12)
             }
             .frame(width: 88, alignment: .leading)
@@ -103,7 +103,7 @@ struct ContentView: View {
         }
         .frame(height: 38)
         .padding(.horizontal, 14)
-        .background(AppTheme.Colour.background)
+        .background(AppTheme.Colour.surface)
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(AppTheme.Colour.separator)
@@ -176,7 +176,7 @@ struct ContentView: View {
     private var queueListView: some View {
         Group {
             if conversion.jobs.isEmpty {
-                VStack(spacing: AppTheme.Spacing.md) {
+                VStack(spacing: 10) {
                     Image(systemName: "tray")
                         .font(.system(size: 40))
                         .foregroundStyle(.secondary.opacity(0.5))
@@ -185,7 +185,7 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                     Text("Drop files above or use Choose File to start")
                         .font(AppTheme.Font.caption)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(AppTheme.Colour.textTertiary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(AppTheme.Colour.background)
@@ -227,7 +227,7 @@ struct ContentView: View {
         } else if let nudge = store.nudgeMessage {
             bannerRow(icon: "arrow.up.circle.fill", text: nudge,
                       action: ("See Plans", { PaywallWindowController.shared.show() }),
-                      tint: Color.accentColor.opacity(0.07))
+                      tint: AppTheme.Colour.accentTint06)
         } else {
             bannerRow(icon: "lock.fill", text: "Free trial ended — unlock to keep converting",
                       action: ("Unlock", { PaywallWindowController.shared.show() }),
@@ -238,7 +238,7 @@ struct ContentView: View {
 
     private func bannerRow(icon: String, text: String, action: (String, () -> Void), tint: Color, iconColor: Color = .accentColor) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: icon).foregroundStyle(iconColor).font(.caption)
+            Image(systemName: icon).foregroundStyle(iconColor).font(.system(size: 13))
             Text(text).font(.caption).fontWeight(.medium)
             Spacer()
             Button(action.0, action: action.1)
