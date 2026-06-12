@@ -733,11 +733,7 @@ struct PreferencesView: View {
                             HStack(spacing: 6) {
                                 Text(model.name).fontWeight(.medium)
                                 if model.tier == "pro" {
-                                    Text("PRO")
-                                        .font(.caption2).fontWeight(.semibold)
-                                        .foregroundStyle(.white)
-                                        .padding(.horizontal, 5).padding(.vertical, 1)
-                                        .background(Color.accentColor, in: Capsule())
+                                    AppBadge("PRO", variant: .accent)
                                 }
                             }
                             Text(modelDetail(for: model))

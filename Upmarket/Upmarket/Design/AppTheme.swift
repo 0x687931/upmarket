@@ -18,6 +18,8 @@ enum AppTheme {
         static let lg: CGFloat = 16
         static let menuBar: CGFloat = 5
         static let pill: CGFloat = 999
+        // App-icon squircle ≈ 21.5% of side — matches --radius-app-icon
+        static let appIcon: CGFloat = 14
     }
 
     enum Size {

@@ -83,6 +83,26 @@ struct ConversionJob: Identifiable, Equatable {
     var ext: String { sourceURL.pathExtension.uppercased() }
     var correlationID: String { id.uuidString }
     var isRunning: Bool { stage.isRunning }
+    var glyphName: String {
+        switch sourceURL.pathExtension.lowercased() {
+        case "pdf":
+            return "doc.richtext"
+        case "docx", "doc":
+            return "doc.text"
+        case "pptx", "ppt":
+            return "rectangle.on.rectangle"
+        case "xlsx", "xls":
+            return "tablecells"
+        case "html", "htm":
+            return "globe"
+        case "mp3", "m4a", "wav":
+            return "waveform"
+        case "png", "jpg", "jpeg":
+            return "photo"
+        default:
+            return "doc"
+        }
+    }
 
     // Scalar progress used by arc ring and progress bar.
     // Python stage owns the widest band because it is the longest phase.
