@@ -32,6 +32,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AppVisibilityPreference.apply()
         if AppRuntime.isRunningUITests {
             MainWindowController.shared.show()
+            if AppRuntime.isOpeningPaywall {
+                PaywallWindowController.shared.show()
+            }
+            if AppRuntime.isOpeningPreferences {
+                PreferencesWindowController.shared.show()
+            }
+            if AppRuntime.isOpeningShelf {
+                AppVisibilityPreference.showShelf = true
+                ShelfWindowController.shared.show(ignoringPreference: true)
+            }
         }
 
         NSApp.servicesProvider = self
@@ -42,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AppLaunchMetrics.mark("post-launch-services")
         DispatchQueue.global(qos: .utility).async {
             Self.removeStaleQuickActionHandoffs()
+            BundledModelService.installBundledModelsIfNeeded()
         }
 
         // Observe conversion state for Dock tile animation
@@ -514,12 +525,13 @@ final class PreferencesWindowController: NSWindowController {
             .environmentObject(ConversionHistoryStore.shared)
             .environmentObject(WatchedFolderService.shared)
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 600, height: 680),
-            styleMask: [.titled, .closable, .miniaturizable],
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: 480),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         window.title = "Settings"
+        window.minSize = NSSize(width: 500, height: 440)
         window.contentView = NSHostingView(rootView: rootView)
         window.isReleasedWhenClosed = false
         window.center()

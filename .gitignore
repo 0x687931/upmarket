@@ -26,10 +26,7 @@ venv/
 dist/
 .Python
 
-# ML Models (large files — downloaded at runtime)
-UpmarketPython/models/*.bin
-UpmarketPython/models/*.safetensors
-UpmarketPython/models/*.gguf
+# ML model weight formats (formats not used by this project's pinned models)
 *.mlpackage/
 *.mlmodel
 
@@ -49,7 +46,7 @@ Icon?
 
 # Dependencies
 Upmarket/Python/python-stdlib/
-Upmarket/Python/Python.xcframework/
+# Python.xcframework is tracked via Git LFS — do not ignore it
 
 # Archives
 *.xcarchive

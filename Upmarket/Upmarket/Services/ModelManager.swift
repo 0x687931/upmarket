@@ -111,9 +111,7 @@ final class ModelManager: ObservableObject {
         checkModelsHandler: @escaping CheckModelsHandler = {
             try await PythonWorker().checkModels()
         },
-        downloadModelHandler: @escaping DownloadModelHandler = { key, progressFile in
-            await FirstPartyModelDownloadService().downloadModel(key: key, progressFile: progressFile)
-        },
+        downloadModelHandler: @escaping DownloadModelHandler = ModelManager.makeDownloadHandler(),
         offlineModeHandler: @escaping OfflineModeHandler = {
             await PythonWorker().setOfflineMode()
         }
@@ -368,6 +366,28 @@ final class ModelManager: ObservableObject {
     }
 
     // MARK: - Private
+
+    private static func makeDownloadHandler() -> DownloadModelHandler {
+        { key, progressFile in
+#if DEBUG
+            let baseDir = key == "python_runtime"
+                ? ModelManager.defaultRuntimeDirectoryURL()
+                : ModelManager.defaultModelsDirectoryURL()
+            return await FirstPartyModelDownloadService(modelsDirectoryURL: baseDir)
+                .downloadModel(key: key, progressFile: progressFile)
+#else
+            switch key {
+            case "layout":
+                // Layout model is bundled in the app — just copy from the bundle.
+                return await BundledModelService().install(progressFile: progressFile)
+            case "python_runtime", "upmarket_ai":
+                return await BackgroundAssetsDownloadService.shared.install(key: key, progressFile: progressFile)
+            default:
+                return ModelDownloadResult(success: false, error: "Unknown model key: \(key)")
+            }
+#endif
+        }
+    }
 
     private func downloadModels(keys: [String]) {
         guard !isDownloading else { return }
