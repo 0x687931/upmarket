@@ -59,6 +59,7 @@ enum AppTheme {
         static let dropFill = Color.accentColor.opacity(0.04)
         static let dropFillActive = Color.accentColor.opacity(0.08)
         static let border = Color.secondary.opacity(0.2)
+        static let separator = Color.primary.opacity(0.10)
         static let borderActive = Color.accentColor
 
         static let success = Color(red: 0.204, green: 0.780, blue: 0.349) // systemGreen #34C759
@@ -67,6 +68,8 @@ enum AppTheme {
         static let info = Color.accentColor
 
         static let iconBoxFill = Color.blue.opacity(0.12)
+        static let iconGlyphTint = Color(red: 0.184, green: 0.498, blue: 1.0) // #2F7FFF — file-icon glyph
+        static let tintError = error.opacity(0.05) // banner background for "trial ended"
 
         // --- Accent tints (rgb of #E86E00 = 232,110,0) -----------
         static let accentTint04 = Color.accentColor.opacity(0.04) // drop-zone idle
@@ -92,6 +95,21 @@ enum AppTheme {
         // --- Warm shadow / shelf bloom ---------------------------
         static let amberShadow = Color(red: 0.478, green: 0.227, blue: 0.0) // #7A3A00
         static let shelfBloomShadow = Color(red: 0.478, green: 0.227, blue: 0.0).opacity(0.30)
+
+        // DS glass fills are explicit translucent surfaces, not native AppKit material recipes.
+        static let glassFill = controlBackground.opacity(0.62)
+        static let glassFillThin = controlBackground.opacity(0.50)
+        static let glassStroke = Color.white.opacity(0.55)
+
+        // --- Shelf control strip --------------------------------
+        static let shelfHoverClose = Color(red: 1.0, green: 0.373, blue: 0.341)   // #ff5f57
+        static let shelfHoverAdd = Color(red: 0.157, green: 0.784, blue: 0.251)   // #28c840
+        static let shelfHoverToggle = iconGlyphTint                              // #2f7fff
+        static let shelfControlStripFill = Color.white.opacity(0.25)
+
+        // --- Shelf cards ------------------------------------------
+        static let shelfCardFill = Color.white.opacity(0.5) // ShelfCard background
+        static let shelfOverflowFill = Color.white.opacity(0.55) // Overflow stack cards
     }
 
     enum Status {
@@ -187,7 +205,7 @@ enum AppTheme {
 
         var width: CGFloat {
             switch self {
-            case .main: return 420        // Primary Upmarket workbench
+            case .main: return 480        // Primary Upmarket workbench
             case .modal: return 480       // Modal dialogs
             case .compact: return 217     // Shelf floating widget
             case .welcome: return 520     // Welcome/onboarding
@@ -199,7 +217,7 @@ enum AppTheme {
             case .main: return 560        // Upmarket workbench
             case .modal: return 600       // Modal dialogs
             case .compact: return 132     // Shelf widget
-            case .welcome: return 680     // Welcome/onboarding window
+            case .welcome: return 540     // Welcome/onboarding window
             }
         }
     }
