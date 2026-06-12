@@ -126,6 +126,8 @@ struct ContentView: View {
             .frame(height: AppTheme.Size.dropZoneHeight)
             .contentShape(Rectangle())
             .onTapGesture { openFilePicker() }
+            .accessibilityIdentifier("ContentDropZone")
+            .accessibilityAddTraits(.isButton)
 
             Button(action: openFilePicker) {
                 Text("Choose File")
@@ -134,6 +136,7 @@ struct ContentView: View {
             }
             .buttonStyle(AppProminentButtonStyle())
             .controlSize(.large)
+            .accessibilityIdentifier("ChooseDocumentButton")
         }
         .padding(.horizontal, AppTheme.Spacing.xl)
         .padding(.vertical, AppTheme.Spacing.lg)
@@ -487,7 +490,7 @@ struct FileRowView: View {
                     )
                     let savedURL = SavePreference.shared.save(
                         markdown: formatted.text,
-                        title: output.title,
+                        title: job.sourceURL.deletingPathExtension().lastPathComponent,
                         sourceURL: job.sourceURL,
                         fileExtension: formatted.fileExtension
                     )
