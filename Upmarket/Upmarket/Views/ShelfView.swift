@@ -162,9 +162,9 @@ struct ShelfView: View {
         }
         .frame(width: totalWidth, height: totalHeight)
         .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 8)
                 .stroke(Color.white.opacity(0.3), lineWidth: 0.5)
         )
         .shadow(
@@ -188,6 +188,14 @@ struct ShelfView: View {
             if count == 0 {
                 withAnimation(.spring(duration: 0.25)) {
                     displayMode = .mini
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .upmarketShelfAnchorChanged)) { notification in
+            if let rawValue = notification.object as? Int,
+               let newAnchor = ShelfWindowController.ShelfAnchor(rawValue: rawValue) {
+                withAnimation(.easeOut(duration: 0.25)) {
+                    layoutAnchor = newAnchor
                 }
             }
         }

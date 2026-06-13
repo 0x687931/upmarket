@@ -363,14 +363,23 @@ struct PreferencesView: View {
 			}
 
 			PrefSection(icon: "folder.fill", color: AppTheme.Colour.sectionGreen, title: "Save Location") {
-				Picker("", selection: saveDestinationBinding) {
-					Text("Same folder as original").tag(SavePreference.Destination.sameFolder)
-					Text("Ask each time").tag(SavePreference.Destination.askEachTime)
-					Text("Choose folder…").tag(SavePreference.Destination.chosenFolder)
+				HStack {
+					Picker("", selection: saveDestinationBinding) {
+						Text("Same folder as original").tag(SavePreference.Destination.sameFolder)
+						Text("Ask each time").tag(SavePreference.Destination.askEachTime)
+						Text("Choose folder…").tag(SavePreference.Destination.chosenFolder)
+					}
+					.pickerStyle(.menu)
+					.labelsHidden()
+					Image(systemName: "chevron.down")
+						.font(.system(size: 11, weight: .semibold))
+						.foregroundStyle(.secondary)
 				}
-				.pickerStyle(.menu)
-				.labelsHidden()
-				.frame(maxWidth: .infinity, alignment: .leading)
+				.padding(.horizontal, 12)
+				.padding(.vertical, 10)
+				.background(Color(nsColor: .controlBackgroundColor))
+				.clipShape(RoundedRectangle(cornerRadius: 8))
+				.overlay(RoundedRectangle(cornerRadius: 8).stroke(AppTheme.Colour.separator, lineWidth: 0.5))
 			}
 		}
 	}
@@ -443,8 +452,8 @@ struct PreferencesView: View {
 					Button("Manage Models…") {
 						showModelDownload = true
 					}
-					.buttonStyle(.bordered)
-					.font(.system(size: 12, weight: .medium))
+					.buttonStyle(.borderedProminent)
+					.font(.system(size: 12, weight: .semibold))
 				}
 
 				// Content — indented 38pt
@@ -763,16 +772,6 @@ private struct ModelStatusRow: View {
 		let isDownloading = modelManager.isDownloading && modelManager.downloadingModelKey == modelKey
 
 		return HStack(spacing: 12) {
-			// Left icon
-			ZStack {
-				Circle()
-					.fill(leftIconColor(isDownloaded: isDownloaded, isAvailable: isAvailable).opacity(0.10))
-					.frame(width: 28, height: 28)
-				Image(systemName: leftIconName(isDownloaded: isDownloaded, isAvailable: isAvailable))
-					.font(.system(size: 12, weight: .semibold))
-					.foregroundStyle(leftIconColor(isDownloaded: isDownloaded, isAvailable: isAvailable))
-			}
-
 			// Model info
 			VStack(alignment: .leading, spacing: 2) {
 				Text(modelName)
@@ -838,18 +837,6 @@ private struct ModelStatusRow: View {
 		.clipShape(RoundedRectangle(cornerRadius: 8))
 		.overlay(RoundedRectangle(cornerRadius: 8).stroke(AppTheme.Colour.separator, lineWidth: 0.5))
 		.onReceive(modelManager.objectWillChange) { _ in }
-	}
-
-	private func leftIconName(isDownloaded: Bool, isAvailable: Bool) -> String {
-		if isDownloaded { return "checkmark.circle.fill" }
-		if !isAvailable { return "lock.circle.fill" }
-		return "icloud.and.arrow.down"
-	}
-
-	private func leftIconColor(isDownloaded: Bool, isAvailable: Bool) -> Color {
-		if isDownloaded { return AppTheme.Colour.sectionGreen }
-		if !isAvailable { return .secondary }
-		return Color.accentColor
 	}
 }
 

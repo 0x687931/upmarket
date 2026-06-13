@@ -78,7 +78,7 @@ struct ReportProblemView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Include system logs & diagnostics")
                                 .font(.system(size: 14, weight: .medium))
-                            Text("Helps us diagnose faster. Logs don't contain file contents.")
+                            Text("Sends: error logs, conversion settings, system info (not your files)")
                                 .font(.system(size: 12))
                                 .foregroundStyle(.secondary)
                         }

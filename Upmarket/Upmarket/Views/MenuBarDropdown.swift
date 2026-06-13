@@ -16,7 +16,7 @@ struct MenuBarDropdown: View {
             // Primary actions
             MenuRow(icon: "doc.badge.plus", label: "Convert Document…", shortcut: "⌘O", action: {
                 MainWindowController.shared.show(pickFile: true)
-            })
+            }, keyEquivalent: "o")
             MenuRow(icon: "macwindow", label: "Show Upmarket Window", action: {
                 MainWindowController.shared.show()
             })
@@ -32,7 +32,7 @@ struct MenuBarDropdown: View {
             // Settings
             MenuRow(icon: "gearshape", label: "Preferences…", shortcut: "⌘,", action: {
                 PreferencesWindowController.shared.show()
-            })
+            }, keyEquivalent: ",")
             MenuRow(icon: "exclamationmark.triangle", label: "Report a Problem…", action: {
                 ReportProblemWindowController.shared.show()
             })
@@ -60,7 +60,7 @@ struct MenuBarDropdown: View {
             StatusRow(text: userEmail)
             MenuRow(icon: "power", label: "Quit Upmarket", shortcut: "⌘Q", action: {
                 NSApp.terminate(nil)
-            })
+            }, keyEquivalent: "q")
         }
         .frame(width: 260)
         .background(.ultraThinMaterial)
@@ -85,6 +85,8 @@ struct MenuRow: View {
     var accent: Bool = false
     var isStatus: Bool = false
     var action: (() -> Void)? = nil
+    var keyEquivalent: String? = nil
+    var keyModifiers: EventModifiers = .command
 
     @State private var hovered = false
 
@@ -120,6 +122,7 @@ struct MenuRow: View {
         .disabled(isStatus)
         .padding(.horizontal, 4)
         .onHover { hovered = $0 && !isStatus }
+        .modifier(KeyboardShortcutModifier(keyEquivalent: keyEquivalent, modifiers: keyModifiers))
     }
 }
 
@@ -145,5 +148,20 @@ struct MenuDivider: View {
         Divider()
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
+    }
+}
+
+// MARK: - KeyboardShortcutModifier
+
+struct KeyboardShortcutModifier: ViewModifier {
+    let keyEquivalent: String?
+    let modifiers: EventModifiers
+
+    func body(content: Content) -> some View {
+        if let key = keyEquivalent, let first = key.first {
+            content.keyboardShortcut(KeyEquivalent(first), modifiers: modifiers)
+        } else {
+            content
+        }
     }
 }

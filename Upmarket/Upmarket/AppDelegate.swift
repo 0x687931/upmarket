@@ -530,6 +530,7 @@ final class PreferencesWindowController: NSWindowController {
         )
         window.title = "Settings"
         window.minSize = NSSize(width: prefsSize.width, height: 400)
+        window.maxSize = NSSize(width: prefsSize.width * 1.5, height: NSScreen.main?.frame.height ?? 1000)
         window.contentView = NSHostingView(rootView: rootView)
         window.isReleasedWhenClosed = false
         window.center()

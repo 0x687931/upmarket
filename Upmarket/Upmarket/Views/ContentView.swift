@@ -112,6 +112,10 @@ struct ContentView: View {
                             Text("or click below to choose")
                                 .font(.system(size: 12))
                                 .foregroundStyle(.secondary)
+                            Text(capabilityLabel)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                                .padding(.top, 4)
                         }
                     }
                 }
@@ -123,6 +127,8 @@ struct ContentView: View {
             .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isTargeted)
             .onTapGesture { openFilePicker() }
             .accessibilityIdentifier("ContentDropZone")
+            .accessibilityLabel("Drop zone for document conversion")
+            .accessibilityHint("Drop documents here to convert them, or click to select files")
             .accessibilityAddTraits(.isButton)
 
             Button("Choose File") {
@@ -236,6 +242,17 @@ struct ContentView: View {
                     .frame(height: 1)
             }
             .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+    }
+
+    private var capabilityLabel: String {
+        switch store.tier {
+        case .basic:
+            return "Native conversion"
+        case .pro:
+            return "Enhanced conversion"
+        case .max:
+            return "AI-powered conversion"
         }
     }
 
@@ -388,7 +405,7 @@ struct FileRowView: View {
                 Text(job.filename)
                     .font(.system(size: 13, weight: .medium))
                     .lineLimit(1)
-                    .truncationMode(.middle)
+                    .truncationMode(.tail)
                 Text(statusLabelText)
                     .font(.system(size: 11))
                     .foregroundStyle(statusLabelColor)
@@ -446,6 +463,7 @@ struct FileRowView: View {
                     .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(.white)
             }
+            .accessibilityLabel("Conversion complete")
         case .failed:
             ZStack {
                 Circle()
@@ -455,6 +473,7 @@ struct FileRowView: View {
                     .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(.white)
             }
+            .accessibilityLabel("Conversion failed")
         default:
             PulseRingView(size: 20, color: .accentColor)
         }
@@ -555,6 +574,8 @@ struct ActionButton: View {
         }
         .buttonStyle(.plain)
         .help(label)
+        .accessibilityLabel(label)
+        .accessibilityHint("Action: \(label)")
     }
 }
 
