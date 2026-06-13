@@ -2,51 +2,44 @@ import XCTest
 @testable import Upmarket
 
 final class PackCreditLedgerTests: XCTestCase {
-    func testVerifiedTransactionCreditsPackOnce() async throws {
+    func testVerifiedTransactionCreditsPackOnce() throws {
         let ledger = makeLedger()
 
-        _ = try await ledger.recordPackPurchase(transactionID: 1001)
-        _ = try await ledger.recordPackPurchase(transactionID: 1001)
+        try ledger.recordPackPurchase(transactionID: 1001)
+        try ledger.recordPackPurchase(transactionID: 1001)
 
         let snapshot = try ledger.snapshot()
         XCTAssertEqual(snapshot.purchasedPackCount, 1)
         XCTAssertEqual(snapshot.availableCredits, 5)
     }
 
-    func testConsumptionPersistsAsDebitsAgainstVerifiedCredits() async throws {
+    func testConsumptionPersistsAsDebitsAgainstVerifiedCredits() throws {
         let fileURL = temporaryLedgerURL()
         let ledger = PackCreditLedger(fileURL: fileURL)
 
-        _ = try await ledger.recordPackPurchase(transactionID: 1001)
-        let consumed1 = try await ledger.consumeCredit()
-        let consumed2 = try await ledger.consumeCredit()
-
-        XCTAssertTrue(consumed1)
-        XCTAssertTrue(consumed2)
+        try ledger.recordPackPurchase(transactionID: 1001)
+        XCTAssertTrue(try ledger.consumeCredit())
+        XCTAssertTrue(try ledger.consumeCredit())
 
         let reloaded = PackCreditLedger(fileURL: fileURL)
         XCTAssertEqual(try reloaded.snapshot().availableCredits, 3)
         XCTAssertEqual(try reloaded.snapshot().consumedCreditCount, 2)
     }
 
-    func testCannotConsumeWithoutAvailableCredit() async throws {
+    func testCannotConsumeWithoutAvailableCredit() throws {
         let ledger = makeLedger()
 
-        let consumed = try await ledger.consumeCredit()
-        XCTAssertFalse(consumed)
+        XCTAssertFalse(try ledger.consumeCredit())
         XCTAssertEqual(try ledger.snapshot().availableCredits, 0)
     }
 
-    func testRevokedTransactionRemovesRemainingPackCredits() async throws {
+    func testRevokedTransactionRemovesRemainingPackCredits() throws {
         let ledger = makeLedger()
 
-        _ = try await ledger.recordPackPurchase(transactionID: 1001)
-        let consumed1 = try await ledger.consumeCredit()
-        let consumed2 = try await ledger.consumeCredit()
-        _ = try await ledger.revokePackPurchase(transactionID: 1001)
-
-        XCTAssertTrue(consumed1)
-        XCTAssertTrue(consumed2)
+        try ledger.recordPackPurchase(transactionID: 1001)
+        XCTAssertTrue(try ledger.consumeCredit())
+        XCTAssertTrue(try ledger.consumeCredit())
+        try ledger.revokePackPurchase(transactionID: 1001)
 
         let snapshot = try ledger.snapshot()
         XCTAssertEqual(snapshot.revokedPackCount, 1)
@@ -54,25 +47,23 @@ final class PackCreditLedgerTests: XCTestCase {
         XCTAssertEqual(snapshot.availableCredits, 0)
     }
 
-    func testNewPurchaseAfterRevocationGetsFreshCredits() async throws {
+    func testNewPurchaseAfterRevocationGetsFreshCredits() throws {
         let ledger = makeLedger()
 
-        _ = try await ledger.recordPackPurchase(transactionID: 1001)
-        let consumed1 = try await ledger.consumeCredit()
-        let consumed2 = try await ledger.consumeCredit()
-        _ = try await ledger.revokePackPurchase(transactionID: 1001)
-        _ = try await ledger.recordPackPurchase(transactionID: 1002)
+        try ledger.recordPackPurchase(transactionID: 1001)
+        XCTAssertTrue(try ledger.consumeCredit())
+        XCTAssertTrue(try ledger.consumeCredit())
+        try ledger.revokePackPurchase(transactionID: 1001)
+        try ledger.recordPackPurchase(transactionID: 1002)
 
-        XCTAssertTrue(consumed1)
-        XCTAssertTrue(consumed2)
         XCTAssertEqual(try ledger.snapshot().availableCredits, 5)
     }
 
-    func testLegacyCreditsMigrateOnce() async throws {
+    func testLegacyCreditsMigrateOnce() throws {
         let ledger = makeLedger()
 
-        _ = try await ledger.migrateLegacyCredits(credits: 3, packsEverPurchased: 2)
-        _ = try await ledger.migrateLegacyCredits(credits: 9, packsEverPurchased: 4)
+        try ledger.migrateLegacyCredits(credits: 3, packsEverPurchased: 2)
+        try ledger.migrateLegacyCredits(credits: 9, packsEverPurchased: 4)
 
         let snapshot = try ledger.snapshot()
         XCTAssertTrue(snapshot.legacyMigrationComplete)
@@ -82,7 +73,7 @@ final class PackCreditLedgerTests: XCTestCase {
         XCTAssertEqual(snapshot.availableCredits, 3)
     }
 
-    func testCorruptLedgerFailsClosed() async throws {
+    func testCorruptLedgerFailsClosed() throws {
         let fileURL = temporaryLedgerURL()
         try FileManager.default.createDirectory(
             at: fileURL.deletingLastPathComponent(),
@@ -92,12 +83,7 @@ final class PackCreditLedgerTests: XCTestCase {
         let ledger = PackCreditLedger(fileURL: fileURL)
 
         XCTAssertThrowsError(try ledger.snapshot())
-        do {
-            _ = try await ledger.recordPackPurchase(transactionID: 1001)
-            XCTFail("Should have thrown")
-        } catch {
-            // Expected
-        }
+        XCTAssertThrowsError(try ledger.recordPackPurchase(transactionID: 1001))
     }
 
     private func makeLedger() -> PackCreditLedger {

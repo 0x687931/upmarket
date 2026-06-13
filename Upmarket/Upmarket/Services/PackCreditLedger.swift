@@ -64,46 +64,46 @@ final class PackCreditLedger {
     }
 
     @discardableResult
-    func migrateLegacyCredits(credits: Int, packsEverPurchased: Int) async throws -> Snapshot {
+    func migrateLegacyCredits(credits: Int, packsEverPurchased: Int) throws -> Snapshot {
         var ledger = try loadLedger()
         guard !ledger.legacyMigrationComplete else { return snapshot(from: ledger) }
         ledger.migratedCreditCount = max(0, credits)
         ledger.migratedPackCount = max(0, packsEverPurchased)
         ledger.legacyMigrationComplete = true
-        try await save(ledger)
+        try save(ledger)
         return snapshot(from: ledger)
     }
 
     @discardableResult
-    func recordPackPurchase(transactionID: UInt64) async throws -> Snapshot {
+    func recordPackPurchase(transactionID: UInt64) throws -> Snapshot {
         var ledger = try loadLedger()
         let id = String(transactionID)
         if !ledger.creditedTransactionIDs.contains(id) {
             ledger.creditedTransactionIDs.append(id)
-            try await save(ledger)
+            try save(ledger)
         }
         return snapshot(from: ledger)
     }
 
     @discardableResult
-    func revokePackPurchase(transactionID: UInt64) async throws -> Snapshot {
+    func revokePackPurchase(transactionID: UInt64) throws -> Snapshot {
         var ledger = try loadLedger()
         let id = String(transactionID)
         if ledger.creditedTransactionIDs.contains(id),
            !ledger.revokedTransactionIDs.contains(id) {
             ledger.revokedCreditCount += min(snapshot(from: ledger).availableCredits, Self.creditsPerPack)
             ledger.revokedTransactionIDs.append(id)
-            try await save(ledger)
+            try save(ledger)
         }
         return snapshot(from: ledger)
     }
 
     @discardableResult
-    func consumeCredit() async throws -> Bool {
+    func consumeCredit() throws -> Bool {
         var ledger = try loadLedger()
         guard snapshot(from: ledger).availableCredits > 0 else { return false }
         ledger.consumedCreditCount += 1
-        try await save(ledger)
+        try save(ledger)
         return true
     }
 
@@ -121,14 +121,13 @@ final class PackCreditLedger {
         return try JSONDecoder().decode(Ledger.self, from: data)
     }
 
-    private func save(_ ledger: Ledger) async throws {
+    private func save(_ ledger: Ledger) throws {
         try fileManager.createDirectory(
             at: fileURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
         let data = try JSONEncoder().encode(ledger)
-        let jsonString = String(data: data, encoding: .utf8) ?? ""
-        try await FileWriteService.shared.writeMarkdown(jsonString, to: fileURL)
+        try data.write(to: fileURL, options: .atomic)
     }
 
     private func snapshot(from ledger: Ledger) -> Snapshot {

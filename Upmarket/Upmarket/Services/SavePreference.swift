@@ -55,23 +55,22 @@ final class SavePreference {
     /// Save markdown, respecting the user's preference.
     /// Shows the first-use prompt if not yet configured.
     /// Returns the URL where the file was saved (nil if user cancelled).
-    /// Non-blocking: writes happen on background thread.
     @discardableResult
     @MainActor
-    func save(markdown: String, title: String, sourceURL: URL?, fileExtension: String = "md") async -> URL? {
+    func save(markdown: String, title: String, sourceURL: URL?, fileExtension: String = "md") -> URL? {
         // First use — prompt once
         if !hasPrompted {
             let chosen = promptFirstUse(sourceURL: sourceURL)
             if !chosen { return nil }
         }
 
-        return await performSave(markdown: markdown, title: title, sourceURL: sourceURL, fileExtension: fileExtension)
+        return performSave(markdown: markdown, title: title, sourceURL: sourceURL, fileExtension: fileExtension)
     }
 
     // MARK: - Perform save based on preference
 
     @MainActor
-    private func performSave(markdown: String, title: String, sourceURL: URL?, fileExtension: String) async -> URL? {
+    private func performSave(markdown: String, title: String, sourceURL: URL?, fileExtension: String) -> URL? {
         let signpost = AppSignpost.conversion.beginInterval("saveOutput")
         defer { AppSignpost.conversion.endInterval("saveOutput", signpost) }
 
@@ -81,7 +80,8 @@ final class SavePreference {
         switch destination {
         case .sameFolder:
             guard let sourceURL else {
-                return await showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
+                // No source URL (e.g. dragged from elsewhere) — fall back to ask
+                return showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
             }
             let folder = sourceURL.deletingLastPathComponent()
             let scoped = folder.startAccessingSecurityScopedResource()
@@ -92,27 +92,28 @@ final class SavePreference {
             }
             do {
                 let saveURL = uniqueMarkdownURL(in: folder, fileName: fileName)
-                try await FileWriteService.shared.writeMarkdown(markdown, to: saveURL)
+                try markdown.write(to: saveURL, atomically: true, encoding: .utf8)
                 return saveURL
             } catch {
-                return await showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
+                // Permission denied on sandboxed path — fall back to panel
+                return showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
             }
 
         case .askEachTime:
-            return await showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
+            return showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
 
         case .chosenFolder:
             guard let folder = chosenFolderURL else {
-                return await showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
+                return showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
             }
             _ = folder.startAccessingSecurityScopedResource()
             defer { folder.stopAccessingSecurityScopedResource() }
             do {
                 let saveURL = uniqueMarkdownURL(in: folder, fileName: fileName)
-                try await FileWriteService.shared.writeMarkdown(markdown, to: saveURL)
+                try markdown.write(to: saveURL, atomically: true, encoding: .utf8)
                 return saveURL
             } catch {
-                return await showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
+                return showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
             }
         }
     }
@@ -134,7 +135,7 @@ final class SavePreference {
     }
 
     @MainActor
-    private func showSavePanel(defaultName: String, markdown: String, fileExtension: String) async -> URL? {
+    private func showSavePanel(defaultName: String, markdown: String, fileExtension: String) -> URL? {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.init(filenameExtension: fileExtension) ?? .plainText]
         panel.nameFieldStringValue = defaultName
@@ -146,12 +147,8 @@ final class SavePreference {
                 url.stopAccessingSecurityScopedResource()
             }
         }
-        do {
-            try await FileWriteService.shared.writeMarkdown(markdown, to: url)
-            return url
-        } catch {
-            return nil
-        }
+        try? markdown.write(to: url, atomically: true, encoding: .utf8)
+        return url
     }
 
     private static func normalisedFileExtension(_ fileExtension: String) -> String {

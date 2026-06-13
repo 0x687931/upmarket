@@ -78,7 +78,7 @@ struct ConversionRunner {
     }
 
     func run(_ job: ConversionJob, progress: ProgressHandler? = nil) async -> ConversionResult {
-        let fileSizeBytes = await FileSizeReader.shared.readSize(job.sourceURL)
+        let fileSizeBytes = (try? job.sourceURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
         AppLog.conversion.info("Starting conversion correlationID=\(job.correlationID, privacy: .public) ext=\(job.ext, privacy: .public) bytes=\(fileSizeBytes, privacy: .public)")
         guard !Task.isCancelled else { return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.") }
 

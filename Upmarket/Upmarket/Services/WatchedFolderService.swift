@@ -277,7 +277,7 @@ final class WatchedFolderService: ObservableObject {
         guard case .success(let output) = result else { return }
 
         if let destination = resolveOutputFolder(for: folder, sourceFolder: folderURL) {
-            await write(output: output, sourceURL: url, destination: destination)
+            write(output: output, sourceURL: url, destination: destination)
         }
 
         if folder.notificationsEnabled {
@@ -297,7 +297,7 @@ final class WatchedFolderService: ObservableObject {
         }
     }
 
-    private func write(output: ConversionOutput, sourceURL: URL, destination: URL) async {
+    private func write(output: ConversionOutput, sourceURL: URL, destination: URL) {
         let scoped = destination.startAccessingSecurityScopedResource()
         defer {
             if scoped {
@@ -314,7 +314,7 @@ final class WatchedFolderService: ObservableObject {
         let fileName = "\(baseName.sanitisedForFilename).\(formatted.fileExtension)"
         let outputURL = uniqueURL(in: destination, fileName: fileName)
         do {
-            try await FileWriteService.shared.writeMarkdown(formatted.text, to: outputURL)
+            try Data(formatted.text.utf8).write(to: outputURL, options: .atomic)
         } catch {
             AppLog.fileAccess.error("Watched folder output write failed: \(error.localizedDescription, privacy: .private)")
         }

@@ -42,12 +42,13 @@ final class ConversionHistoryStore: ObservableObject {
     func record(job: ConversionJob, output: ConversionOutput) {
         guard isEnabled else { return }
         let record = ConversionHistoryRecord(job: job, output: output)
-        records.removeAll { $0.id == record.id }
-        records.insert(record, at: 0)
-        records.sort { $0.createdAt > $1.createdAt }
-
-        Task.detached(priority: .utility) { [weak self, record] in
-            await self?.saveRecord(record)
+        do {
+            try save(record)
+            records.removeAll { $0.id == record.id }
+            records.insert(record, at: 0)
+            records.sort { $0.createdAt > $1.createdAt }
+        } catch {
+            AppLog.fileAccess.error("Failed to save conversion history: \(error.localizedDescription, privacy: .private)")
         }
     }
 
@@ -100,18 +101,14 @@ final class ConversionHistoryStore: ObservableObject {
             .appendingPathComponent("History", isDirectory: true)
     }
 
-    private func saveRecord(_ record: ConversionHistoryRecord) async {
-        do {
-            try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let data = try encoder.encode(record)
-            let url = directoryURL.appendingPathComponent(record.id.uuidString).appendingPathExtension("json")
-            try await FileWriteService.shared.writeMarkdown(String(data: data, encoding: .utf8) ?? "", to: url)
-        } catch {
-            AppLog.fileAccess.error("Failed to save conversion history: \(error.localizedDescription, privacy: .private)")
-        }
+    private func save(_ record: ConversionHistoryRecord) throws {
+        try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(record)
+        let url = directoryURL.appendingPathComponent(record.id.uuidString).appendingPathExtension("json")
+        try data.write(to: url, options: .atomic)
     }
 
     nonisolated private static func loadRecords(from directoryURL: URL, fileManager: FileManager) -> [ConversionHistoryRecord] {

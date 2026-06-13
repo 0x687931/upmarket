@@ -171,9 +171,8 @@ final class FileAccessService {
     }
 
     func copyMarkdown(_ markdown: String) {
-        Task {
-            await FileWriteService.shared.copyMarkdown(markdown)
-        }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(markdown, forType: .string)
     }
 
     nonisolated private static func normalisedFileExtension(_ fileExtension: String) -> String {
@@ -182,15 +181,13 @@ final class FileAccessService {
     }
 
     func copySupportReport(_ report: String) {
-        Task {
-            await FileWriteService.shared.copyMarkdown(report)
-        }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(report, forType: .string)
     }
 
     func copyFilePath(_ url: URL) {
-        Task {
-            await FileWriteService.shared.copyMarkdown(url.path)
-        }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(url.path, forType: .string)
     }
 
     nonisolated static func userVisibleMessage(for error: Error) -> String {
