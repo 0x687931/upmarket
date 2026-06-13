@@ -1,0 +1,19 @@
+# Upmarket Max Tier AI Libraries
+#
+# These are the machine learning frameworks needed for AI/VLM conversion
+# with Granite Docling MLX. Downloaded separately; requires Pro runtime
+# to already be installed.
+#
+# This keeps Pro tier lean (~350MB) and Max users only download ML
+# frameworks (~750MB) if they choose Max tier.
+
+# ML frameworks (PyTorch ecosystem)
+torch==2.12.0
+torchvision==0.27.0
+transformers==5.9.0
+huggingface_hub==1.17.0
+
+# Apple MLX (Apple Silicon acceleration)
+mlx==0.31.2
+mlx-metal==0.31.2
+mlx-vlm==0.3.3

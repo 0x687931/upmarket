@@ -56,9 +56,26 @@ final class StoreManager: ObservableObject {
         Task { await loadProducts() }
         Task { await refreshEntitlement() }
         applyAccountingSnapshot(accounting.loadInitialState())
+
+        #if DEBUG
+        Task { @MainActor in
+            self.tier = .max
+        }
+        #endif
     }
 
     deinit { transactionListener?.cancel() }
+
+    // MARK: - Debug testing
+
+    #if DEBUG
+    /// Override tier for UI testing (DEBUG only)
+    func setDebugTier(_ newTier: AppTier) {
+        Task { @MainActor in
+            self.tier = newTier
+        }
+    }
+    #endif
 
     // MARK: - Tier checks
 

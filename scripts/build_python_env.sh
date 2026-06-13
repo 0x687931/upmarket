@@ -55,7 +55,8 @@ else
 fi
 echo ""
 
-echo "==> Rebuilding bundled site-packages from requirements.txt"
+echo "==> Rebuilding bundled site-packages from requirements-basic.txt"
+echo "    (Pro & Max tier dependencies download separately per tier contract)"
 mkdir -p "$(dirname "$SITE")"
 STAGING_SITE="$(mktemp -d "${TMPDIR:-/tmp}/upmarket-site-packages.XXXXXX")"
 BUILD_VENV="$(mktemp -d "${TMPDIR:-/tmp}/upmarket-python-build.XXXXXX")"
@@ -68,7 +69,7 @@ trap 'rm -rf "$STAGING_SITE" "$BUILD_VENV"' EXIT
   --disable-pip-version-check \
   --ignore-installed \
   --target "$STAGING_SITE" \
-  --requirement requirements.txt
+  --requirement requirements-basic.txt
 echo ""
 
 echo "==> Copying first-party bridge packages"

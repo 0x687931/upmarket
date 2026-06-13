@@ -41,16 +41,18 @@ enum AppTier: Int, Comparable, Equatable, Sendable {
 
 /// Every binary asset that must be present on disk for a conversion capability to function.
 /// Raw values match the Python model_manager.py MODELS dict keys exactly.
+/// See docs/TIER_CONTRACT.md for what each asset contains and which tier requires it.
 enum ModelAsset: String, CaseIterable, Equatable, Hashable, Sendable {
-    case pythonRuntime = "python_runtime"
-    case layout        = "layout"
-    case upmarketAI    = "upmarket_ai"
+    case pythonRuntime = "python_runtime_pro"   // Pro tier: ~350MB
+    case aiLibraries   = "ai_libraries"         // Max tier: ~750MB
+    case upmarketAI    = "upmarket_ai"          // Max tier: ~600MB (model weights)
+    case layout        = "layout"               // Enhanced detection: ~20MB
 
     /// The minimum purchased tier required to download and use this asset.
     var requiredTier: AppTier {
         switch self {
         case .pythonRuntime, .layout: return .pro
-        case .upmarketAI:             return .max
+        case .aiLibraries, .upmarketAI: return .max
         }
     }
 
@@ -64,26 +66,29 @@ enum ModelAsset: String, CaseIterable, Equatable, Hashable, Sendable {
 
     var delivery: Delivery {
         switch self {
-        case .layout:                return .bundledInApp
+        case .layout:                           return .bundledInApp
         case .pythonRuntime,
-             .upmarketAI:           return .backgroundAssets
+             .aiLibraries,
+             .upmarketAI:                       return .backgroundAssets
         }
     }
 
     var displayName: String {
         switch self {
-        case .pythonRuntime: return "Upmarket Runtime"
+        case .pythonRuntime: return "Enhanced Conversions"
+        case .aiLibraries:   return "AI Libraries"
+        case .upmarketAI:    return "AI for Complex Documents"
         case .layout:        return "Enhanced Model"
-        case .upmarketAI:    return "Upmarket AI Model"
         }
     }
 
     /// Approximate on-disk size for display purposes.
     var sizeMB: Int {
         switch self {
-        case .pythonRuntime: return 1300
-        case .layout:        return 300
-        case .upmarketAI:    return 618
+        case .pythonRuntime: return 350
+        case .aiLibraries:   return 750
+        case .upmarketAI:    return 600
+        case .layout:        return 20
         }
     }
 }
@@ -113,7 +118,7 @@ enum ConversionCapability: Equatable, Sendable {
         switch self {
         case .native:   return []
         case .enhanced: return [.pythonRuntime, .layout]
-        case .ai:       return [.pythonRuntime, .upmarketAI]
+        case .ai:       return [.pythonRuntime, .aiLibraries, .upmarketAI]
         }
     }
 
@@ -153,7 +158,7 @@ struct AppTierGate: Sendable {
 
         case .enhanced:
             if tier < .pro {
-                return "Enhanced conversion requires Upmarket Pro (\(AppTier.pro.price))."
+                return "Enhanced conversion requires Upmarket Pro."
             }
             if !deviceSupportsRuntime {
                 return "Enhanced conversion requires Apple Silicon."
@@ -164,7 +169,7 @@ struct AppTierGate: Sendable {
 
         case .ai:
             if tier < .max {
-                return "Upmarket AI requires Upmarket Max (\(AppTier.max.price))."
+                return "Upmarket AI requires Upmarket Max."
             }
             if !deviceSupportsRuntime {
                 return "Upmarket AI requires Apple Silicon."
@@ -190,13 +195,15 @@ struct AppTierGate: Sendable {
         if tier < asset.requiredTier {
             switch asset.requiredTier {
             case .basic: return nil
-            case .pro:   return "Enhanced conversion requires Upmarket Pro (\(AppTier.pro.price))."
-            case .max:   return "Upmarket AI requires Upmarket Max (\(AppTier.max.price))."
+            case .pro:   return "Enhanced conversion requires Upmarket Pro."
+            case .max:   return "Upmarket AI requires Upmarket Max."
             }
         }
         switch asset {
         case .pythonRuntime, .layout:
             if !deviceSupportsRuntime { return "Enhanced conversion requires Apple Silicon." }
+        case .aiLibraries:
+            if !deviceSupportsRuntime { return "Upmarket AI requires Apple Silicon." }
         case .upmarketAI:
             if !deviceSupportsRuntime { return "Upmarket AI requires Apple Silicon." }
             if !aiFeatureEnabled {

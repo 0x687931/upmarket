@@ -1,0 +1,22 @@
+# Upmarket Basic Tier Dependencies (Bundled in App)
+#
+# This is the MINIMAL Python environment bundled inside Upmarket.app.
+# Size target: ~50MB
+#
+# Includes:
+# - Native macOS OCR via Vision framework (ocrmac)
+# - Image processing (Pillow)
+# - Basic data structures (numpy, pydantic)
+#
+# Does NOT include:
+# - Docling (requires Pro download)
+# - ML frameworks (torch, mlx, etc. - Max only)
+# - Office format handlers (Pro only)
+
+# Native macOS OCR (Apple Vision framework integration)
+ocrmac==1.0.1
+
+# Utilities
+pydantic==2.13.4
+Pillow==12.2.0
+numpy==2.3.5

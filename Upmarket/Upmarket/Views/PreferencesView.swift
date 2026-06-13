@@ -202,12 +202,12 @@ struct PreferencesView: View {
 	@State private var selectedTab: Tab = .general
 	@State private var watchedFolderError: String?
 	@State private var showAttributions = false
+	@State private var showPaywall = false
 
 	@AppStorage(AppVisibilityPreference.showDockIconKey) private var showDockIcon = AppVisibilityPreference.defaultShowDockIcon
 	@AppStorage(AppVisibilityPreference.showMenuBarIconKey) private var showMenuBarIcon = AppVisibilityPreference.defaultShowMenuBarIcon
 	@AppStorage(AppVisibilityPreference.showShelfKey) private var showShelf = AppVisibilityPreference.defaultShowShelf
 	@AppStorage("upmarket.shelfAnchor") private var shelfAnchorRaw: Int = ShelfWindowController.ShelfAnchor.center.rawValue
-	@State private var showModelDownload = false
 
 	var body: some View {
 		VStack(spacing: 0) {
@@ -230,6 +230,10 @@ struct PreferencesView: View {
 			.transaction { $0.animation = nil }
 		}
 		.frame(width: 600)
+		.sheet(isPresented: $showPaywall) {
+			PaywallView()
+				.environmentObject(store)
+		}
 		.onChange(of: showDockIcon) { value in
 			AppVisibilityPreference.apply(showDockIcon: value)
 			showDockIcon = AppVisibilityPreference.showDockIcon
@@ -430,62 +434,22 @@ struct PreferencesView: View {
 				}
 			}
 
-			VStack(alignment: .leading, spacing: 14) {
-				// Header row with button
-				HStack(spacing: 10) {
-					ZStack {
-						RoundedRectangle(cornerRadius: 7)
-							.fill(AppTheme.Colour.sectionPurple.opacity(0.12))
-							.frame(width: 28, height: 28)
-						Image(systemName: "brain.head.profile")
-							.font(.system(size: 13, weight: .medium))
-							.foregroundStyle(AppTheme.Colour.sectionPurple)
-					}
+			PrefSection(icon: "brain.head.profile", color: AppTheme.Colour.sectionPurple, title: "AI Models") {
+				Text("Download models to unlock enhanced and AI-powered conversion. Everything runs on your Mac — nothing is sent to the cloud.")
+					.font(.system(size: 13))
+					.foregroundStyle(.secondary)
+					.fixedSize(horizontal: false, vertical: true)
+					.padding(.bottom, 4)
 
-					Text("AI Models".uppercased())
-						.font(.system(size: 11, weight: .semibold))
-						.foregroundStyle(.secondary)
-						.kerning(0.4)
+				VStack(spacing: 8) {
+					ModelManagementRow(asset: .pythonRuntime, onUpgrade: { showPaywall = true })
+						.environmentObject(modelManager)
+						.environmentObject(store)
 
-					Spacer()
-
-					Button("Manage Models…") {
-						showModelDownload = true
-					}
-					.buttonStyle(.borderedProminent)
-					.font(.system(size: 12, weight: .semibold))
+					ModelManagementRow(asset: .upmarketAI, onUpgrade: { showPaywall = true })
+						.environmentObject(modelManager)
+						.environmentObject(store)
 				}
-
-				// Content — indented 38pt
-				VStack(alignment: .leading, spacing: 10) {
-					Text("Advanced models for layout and table detection. Download once, use forever.")
-						.font(.system(size: 13))
-						.foregroundStyle(.secondary)
-						.padding(.bottom, 4)
-
-					let displayedModels = modelManager.models.filter { model in
-						if model.tier == "pro" {
-							return model.key != "upmarket_ai"
-						} else if model.tier == "max" {
-							return store.tier >= .max
-						}
-						return false
-					}
-
-					if !displayedModels.isEmpty {
-						VStack(spacing: 8) {
-							ForEach(displayedModels, id: \.key) { model in
-								ModelStatusRow(modelKey: model.key, modelName: model.name, modelSize: model.sizeMB, modelManager: modelManager)
-							}
-						}
-					}
-				}
-				.padding(.leading, 38)
-			}
-			.sheet(isPresented: $showModelDownload) {
-				ModelDownloadView()
-					.environmentObject(modelManager)
-					.environmentObject(store)
 			}
 		}
 	}
@@ -623,6 +587,27 @@ struct PreferencesView: View {
 					.font(.system(size: 12, weight: .medium))
 					.foregroundStyle(.secondary)
 			}
+
+			#if DEBUG
+			PrefSection(icon: "hammer.fill", color: Color.red, title: "Debug Tier Override") {
+				VStack(spacing: 8) {
+					Text("Current: \(store.tier.displayName)")
+						.font(.system(size: 12, weight: .medium))
+						.foregroundStyle(.secondary)
+					HStack(spacing: 8) {
+						Button("Basic") { store.setDebugTier(.basic) }
+							.buttonStyle(.bordered)
+							.controlSize(.small)
+						Button("Pro") { store.setDebugTier(.pro) }
+							.buttonStyle(.bordered)
+							.controlSize(.small)
+						Button("Max") { store.setDebugTier(.max) }
+							.buttonStyle(.bordered)
+							.controlSize(.small)
+					}
+				}
+			}
+			#endif
 		}
 	}
 
@@ -757,86 +742,177 @@ private struct WatchPatternOption: Identifiable {
 
 // MARK: - Model Status Row
 
-private struct ModelStatusRow: View {
-	let modelKey: String
-	let modelName: String
-	let modelSize: Int
-	let modelManager: ModelManager
+// MARK: - ModelManagementRow
 
+private struct ModelManagementRow: View {
+	let asset: ModelAsset
+	@EnvironmentObject private var modelManager: ModelManager
 	@EnvironmentObject private var store: StoreManager
+	var onUpgrade: () -> Void
+
+	private var gate: AppTierGate { modelManager.gate(tier: store.tier) }
+	private var isDownloaded: Bool { modelManager.downloadedAssets.contains(asset) }
+	private var isBundled: Bool { asset.delivery == .bundledInApp }
+	private var gateReason: String? { gate.downloadUnavailableReason(for: asset) }
+	private var isLocked: Bool { store.tier < asset.requiredTier }
+	private var isDownloading: Bool { modelManager.isDownloading && modelManager.downloadingModelKey == asset.rawValue }
+	private var canDownload: Bool { gateReason == nil && !isDownloaded }
+
+	private var badgeLabel: String {
+		switch asset.requiredTier {
+		case .pro:  return "PRO"
+		case .max:  return "MAX"
+		case .basic: return ""
+		}
+	}
+
+	private var stateDescription: String {
+		if isLocked {
+			return gateReason ?? "Requires \(asset.requiredTier.displayName)"
+		}
+		if isDownloading {
+			return "Downloading…"
+		}
+
+		switch asset {
+		case .pythonRuntime:
+			let sizeString = isDownloaded
+				? "\(modelManager.actualInstalledSizeMB(asset)) MB installed"
+				: "\(asset.sizeMB) MB (one-time download)"
+			return "Layout analysis and table extraction · \(sizeString)"
+
+		case .aiLibraries:
+			// Hidden from UI — only shown if advanced settings enabled
+			let sizeString = isDownloaded
+				? "\(modelManager.actualInstalledSizeMB(asset)) MB installed"
+				: "\(asset.sizeMB) MB (one-time download)"
+			return "Machine learning frameworks · \(sizeString)"
+
+		case .upmarketAI:
+			// Shows both AI model + libraries together
+			let aiModelSize = isDownloaded ? modelManager.actualInstalledSizeMB(.upmarketAI) : asset.sizeMB
+			let libSize = modelManager.downloadedAssets.contains(.aiLibraries) ? 0 : 750
+			let totalSize = aiModelSize + libSize
+			let sizeString = isDownloaded && modelManager.downloadedAssets.contains(.aiLibraries)
+				? "\(aiModelSize) MB installed"
+				: "\(totalSize) MB (one-time download)"
+			return "Understands scanned pages and complex documents · \(sizeString)"
+
+		case .layout:
+			return "Included with app"
+		}
+	}
+
+	private var stateIconName: String {
+		if isLocked        { return "lock.fill" }
+		if isDownloading   { return "arrow.down.circle.fill" }
+		if isDownloaded    { return "checkmark.circle.fill" }
+		return asset == .pythonRuntime ? "cpu.fill" : "sparkles"
+	}
+
+	private var iconColor: Color {
+		if isLocked        { return .secondary }
+		if isDownloading   { return .accentColor }
+		if isDownloaded    { return Color(red: 0.2, green: 0.78, blue: 0.35) }
+		return .accentColor
+	}
 
 	var body: some View {
-		let currentModel = modelManager.models.first { $0.key == modelKey }
-		let isDownloaded = currentModel?.isDownloaded ?? false
-		let isAvailable = currentModel?.isAvailable ?? false
-		let isDownloading = modelManager.isDownloading && modelManager.downloadingModelKey == modelKey
+		VStack(alignment: .leading, spacing: 0) {
+			HStack(spacing: 12) {
+				// Icon
+				ZStack {
+					Circle()
+						.fill(iconColor.opacity(0.12))
+						.frame(width: 28, height: 28)
+					Image(systemName: stateIconName)
+						.font(.system(size: 13, weight: .semibold))
+						.foregroundStyle(iconColor)
+				}
 
-		return HStack(spacing: 12) {
-			// Model info
-			VStack(alignment: .leading, spacing: 2) {
-				Text(modelName)
-					.font(.system(size: 14, weight: .medium))
-				Text(isDownloaded ? "Installed" : "\(modelSize) MB")
-					.font(.system(size: 12))
-					.foregroundStyle(.secondary)
+				// Name + description
+				VStack(alignment: .leading, spacing: 2) {
+					HStack(spacing: 6) {
+						Text(asset.displayName)
+							.font(.system(size: 14, weight: .medium))
+						if !badgeLabel.isEmpty {
+							AppBadge(badgeLabel, variant: .accent)
+						}
+					}
+					Text(stateDescription)
+						.font(.system(size: 12))
+						.foregroundStyle(.secondary)
+						.lineLimit(2)
+				}
+
+				Spacer(minLength: 8)
+
+				// Right action area
+				HStack(spacing: 8) {
+					rightLabel
+					rightAction
+				}
 			}
+			.padding(.horizontal, 12)
+			.padding(.vertical, 10)
 
-			Spacer()
-
-			// Right action/status
-			if isDownloaded {
-				HStack(spacing: 6) {
-					Image(systemName: "checkmark.circle.fill")
-						.font(.system(size: 14))
-						.foregroundStyle(AppTheme.Colour.sectionGreen)
-					Text("Installed")
-						.font(.system(size: 12, weight: .semibold))
-						.foregroundStyle(AppTheme.Colour.sectionGreen)
-				}
-			} else if isDownloading {
-				HStack(spacing: 6) {
-					ProgressView()
-						.scaleEffect(0.8, anchor: .center)
-					Text("Downloading \(Int(modelManager.downloadProgress))%")
-						.font(.system(size: 12, weight: .semibold))
-						.foregroundStyle(Color.accentColor)
-				}
-			} else if !isAvailable {
-				Button {
-					NotificationCenter.default.post(name: .showPaywall, object: nil)
-				} label: {
-					HStack(spacing: 6) {
-						Image(systemName: "lock.circle.fill")
-							.font(.system(size: 14))
-						Text("Upgrade")
-							.font(.system(size: 12, weight: .semibold))
-					}
-					.foregroundStyle(Color.accentColor)
-				}
-				.buttonStyle(.plain)
-			} else {
-				Button {
-					if let asset = ModelAsset(rawValue: modelKey) {
-						modelManager.downloadAsset(asset, gate: modelManager.gate(tier: store.tier))
-					}
-				} label: {
-					HStack(spacing: 6) {
-						Image(systemName: "arrow.down.circle.fill")
-							.font(.system(size: 14))
-						Text("Download")
-							.font(.system(size: 12, weight: .semibold))
-					}
-					.foregroundStyle(Color.accentColor)
-				}
-				.buttonStyle(.plain)
+			// Progress bar during download
+			if isDownloading {
+				ProgressView(value: modelManager.downloadProgress, total: 100)
+					.progressViewStyle(.linear)
+					.tint(Color.accentColor)
+					.padding(.horizontal, 12)
+					.padding(.bottom, 10)
 			}
 		}
-		.padding(.horizontal, 12)
-		.padding(.vertical, 10)
 		.background(Color(nsColor: .controlBackgroundColor))
 		.clipShape(RoundedRectangle(cornerRadius: 8))
 		.overlay(RoundedRectangle(cornerRadius: 8).stroke(AppTheme.Colour.separator, lineWidth: 0.5))
-		.onReceive(modelManager.objectWillChange) { _ in }
+		.opacity(isLocked ? 0.75 : 1.0)
+	}
+
+	@ViewBuilder private var rightLabel: some View {
+		if isDownloading {
+			Text("\(Int(modelManager.downloadProgress))%")
+				.font(.system(size: 12, weight: .semibold).monospacedDigit())
+				.foregroundStyle(Color.accentColor)
+		} else if isDownloaded {
+			Text("Ready")
+				.font(.system(size: 12, weight: .semibold))
+				.foregroundStyle(Color(red: 0.2, green: 0.78, blue: 0.35))
+		} else if !isLocked {
+			Text("\(asset.sizeMB) MB")
+				.font(.system(size: 12, weight: .semibold))
+				.foregroundStyle(.secondary)
+		}
+	}
+
+	@ViewBuilder private var rightAction: some View {
+		if isBundled {
+			EmptyView()
+		} else if isLocked {
+			Button("Upgrade") {
+				onUpgrade()
+			}
+			.buttonStyle(.plain)
+			.font(.system(size: 12, weight: .medium))
+			.foregroundStyle(Color.accentColor)
+		} else if isDownloading {
+			EmptyView()
+		} else if isDownloaded {
+			Button("Delete") {
+				modelManager.deleteModel(key: asset.rawValue)
+			}
+			.buttonStyle(AppActionButtonStyle())
+			.controlSize(.small)
+			.foregroundStyle(Color(red: 1.0, green: 0.2, blue: 0.35))
+		} else if canDownload {
+			Button("Download") {
+				modelManager.downloadAsset(asset, gate: gate)
+			}
+			.buttonStyle(AppActionButtonStyle())
+			.controlSize(.small)
+		}
 	}
 }
 

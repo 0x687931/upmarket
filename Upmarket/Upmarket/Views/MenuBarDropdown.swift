@@ -42,15 +42,15 @@ struct MenuBarDropdown: View {
             // Tier row — adapts to current entitlement
             switch store.tier {
             case .basic:
-                MenuRow(icon: "arrow.up.circle", label: "Upgrade to Upmarket Pro…", accent: true, action: {
+                MenuRow(icon: "arrow.up.circle", label: "Unlock Enhanced (350 MB)…", accent: true, action: {
                     NotificationCenter.default.post(name: .showPaywall, object: nil)
                 })
             case .pro:
-                MenuRow(icon: "arrow.up.circle", label: "Upgrade to Upmarket Max…", accent: true, action: {
+                MenuRow(icon: "arrow.up.circle", label: "Add AI (750 MB)…", accent: true, action: {
                     NotificationCenter.default.post(name: .showPaywall, object: nil)
                 })
             case .max:
-                MenuRow(icon: "checkmark.circle.fill", label: "Upmarket Max", isStatus: true)
+                MenuRow(icon: "checkmark.circle.fill", label: "All Features Unlocked", isStatus: true)
             }
 
             MenuDivider()

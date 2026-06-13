@@ -324,24 +324,42 @@ struct UpmarketRuntimeHelper {
         let stdlibPath = frameworkRoot.appendingPathComponent("lib/python3.12", isDirectory: true)
         let sitePackagesPath = stdlibPath.appendingPathComponent("site-packages", isDirectory: true)
 
+        // Build PYTHONPATH: bundled stdlib + tier-specific downloads per TIER_CONTRACT.md
+        // Order: Basic (bundled) → Pro (downloaded) → Max (downloaded)
+        var pythonPath = "\(stdlibPath.path):\(sitePackagesPath.path)"
+
+        // Add tier-specific downloads to PYTHONPATH per TIER_CONTRACT.md
+        let appSupportURL = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+
+        let runtimeURL = appSupportURL.appendingPathComponent("Upmarket/runtime", isDirectory: true)
+        let proRuntimePath = runtimeURL
+            .appendingPathComponent("python_runtime_pro/lib/python3.12/site-packages", isDirectory: true)
+        if FileManager.default.fileExists(atPath: proRuntimePath.path) {
+            pythonPath.append(":\(proRuntimePath.path)")
+        }
+
+        let aiLibrariesPath = runtimeURL
+            .appendingPathComponent("ai_libraries/lib/python3.12/site-packages", isDirectory: true)
+        if FileManager.default.fileExists(atPath: aiLibrariesPath.path) {
+            pythonPath.append(":\(aiLibrariesPath.path)")
+        }
+
         setenv("PYTHONHOME", frameworkRoot.path, 1)
-        setenv("PYTHONPATH", "\(stdlibPath.path):\(sitePackagesPath.path)", 1)
+        setenv("PYTHONPATH", pythonPath, 1)
         setenv("HF_HUB_OFFLINE", getenv("HF_HUB_OFFLINE").map { String(cString: $0) } ?? "1", 1)
         setenv("TRANSFORMERS_OFFLINE", getenv("TRANSFORMERS_OFFLINE").map { String(cString: $0) } ?? "1", 1)
         setenv("UPMARKET_RUNTIME_SANDBOX", "1", 1)
 
-        let appSupport = FileManager.default
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let modelsDir = appSupportURL
             .appendingPathComponent("Upmarket/models", isDirectory: true)
             .path
-        setenv("UPMARKET_MODELS_DIR", appSupport, 1)
-        setenv("HF_HUB_CACHE", appSupport, 1)
+        setenv("UPMARKET_MODELS_DIR", modelsDir, 1)
+        setenv("HF_HUB_CACHE", modelsDir, 1)
 
-        let runtimeDir = FileManager.default
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Upmarket/runtime", isDirectory: true)
-            .path
-        setenv("UPMARKET_RUNTIME_DIR", runtimeDir, 1)
+        setenv("UPMARKET_RUNTIME_DIR", runtimeURL.path, 1)
+        // Note: python_runtime_pro and ai_libraries are stored under Upmarket/runtime/
+        // and automatically added to PYTHONPATH above if present
 
         if let workspacePath {
             setenv("TMPDIR", workspacePath, 1)

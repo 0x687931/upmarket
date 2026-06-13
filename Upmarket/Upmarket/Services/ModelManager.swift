@@ -166,6 +166,14 @@ final class ModelManager: ObservableObject {
     var runtimeSizeMB: Int  { ModelAsset.pythonRuntime.sizeMB }
     var proSizeMB: Int      { ModelAsset.upmarketAI.sizeMB }
 
+    func actualInstalledSizeMB(_ asset: ModelAsset) -> Int {
+        guard downloadedAssets.contains(asset) else { return 0 }
+        let modelDir = models.first { $0.key == asset.rawValue }?.storageDirectory ?? asset.rawValue
+        let modelURL = modelsDirectoryURL.appendingPathComponent(modelDir, isDirectory: true)
+        let bytes = directorySize(modelURL)
+        return Int(bytes / 1_000_000)
+    }
+
     var checkError: String? {
         guard case .failed(let message) = installState else { return nil }
         return message
