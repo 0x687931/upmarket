@@ -265,7 +265,7 @@ final class WatchedFolderService: ObservableObject {
         let name = url.lastPathComponent
         guard matchesIncludeRules(name), !matchesExcludeRules(name) else { return false }
         guard SupportedInputPolicy.supports(url) else { return false }
-        guard let signature = fileSignature(for: url, folderID: folderID),
+        guard let signature = await fileSignature(for: url, folderID: folderID),
               !processedSignatures.contains(signature) else { return false }
         guard await isStable(url, folderID: folderID, firstSignature: signature) else { return false }
         processedSignatures.insert(signature)
@@ -340,22 +340,19 @@ final class WatchedFolderService: ObservableObject {
         if stabilityDelayNanoseconds > 0 {
             try? await Task.sleep(nanoseconds: stabilityDelayNanoseconds)
         }
-        return fileSignature(for: url, folderID: folderID) == firstSignature
+        let currentSignature = await fileSignature(for: url, folderID: folderID)
+        return currentSignature == firstSignature
     }
 
-    private func fileSignature(for url: URL, folderID: UUID) -> FileSignature? {
-        guard let values = try? url.resourceValues(forKeys: [
-            .isDirectoryKey,
-            .isRegularFileKey,
-            .fileSizeKey,
-            .contentModificationDateKey
-        ]) else { return nil }
-        guard values.isDirectory != true, values.isRegularFile != false else { return nil }
+    private func fileSignature(for url: URL, folderID: UUID) async -> FileSignature? {
+        guard let readerSignature = await FileSignatureReader.shared.getSignature(for: url, folderID: folderID) else {
+            return nil
+        }
         return FileSignature(
-            folderID: folderID,
-            name: url.lastPathComponent,
-            size: values.fileSize ?? 0,
-            modified: values.contentModificationDate?.timeIntervalSince1970 ?? 0
+            folderID: readerSignature.folderID,
+            name: readerSignature.name,
+            size: readerSignature.size,
+            modified: readerSignature.modified
         )
     }
 
