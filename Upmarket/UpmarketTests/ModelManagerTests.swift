@@ -157,7 +157,7 @@ final class ModelManagerTests: XCTestCase {
         )
 
         XCTAssertEqual(manager.downloadedModelCount, 1)
-        XCTAssertEqual(manager.downloadedModelEstimatedSizeMB, 172)
+        XCTAssertEqual(manager.downloadedModelEstimatedSizeMB, 20)
         XCTAssertEqual(manager.totalStorageUsed, 11)
     }
 
@@ -294,7 +294,7 @@ final class ModelManagerTests: XCTestCase {
             name: "Upmarket AI",
             description: "Advanced local conversion",
             isDownloaded: isDownloaded,
-            sizeMB: 631,
+            sizeMB: 600,
             isRequired: false,
             tier: "max",
             storageDirectory: storageDirectory
@@ -303,15 +303,15 @@ final class ModelManagerTests: XCTestCase {
 
     private static func runtimeModel(isDownloaded: Bool) -> ModelStatus {
         ModelStatus(
-            key: "python_runtime",
+            key: "python_runtime_pro",
             name: "Upmarket Runtime",
             description: "Required for Enhanced and AI conversion",
             isDownloaded: isDownloaded,
-            sizeMB: 1300,
+            sizeMB: 367,
             isRequired: false,
             tier: "pro",
             error: isDownloaded ? nil : "not downloaded",
-            storageDirectory: "python_runtime"
+            storageDirectory: "python_runtime_pro"
         )
     }
 
@@ -321,7 +321,7 @@ final class ModelManagerTests: XCTestCase {
             name: "Upmarket Enhanced",
             description: "Better results for complex PDFs",
             isDownloaded: isDownloaded,
-            sizeMB: 172,
+            sizeMB: 20,
             isRequired: false,
             tier: "pro",
             error: isDownloaded ? nil : "not downloaded"
