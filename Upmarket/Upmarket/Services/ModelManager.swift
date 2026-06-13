@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import Combine
 
@@ -382,14 +383,74 @@ final class ModelManager: ObservableObject {
 
         let resultBox = ModelDownloadResultBox()
 
-        // Start download in a separate task so we can poll progress.
+        // Start download in a separate task so we can monitor progress.
         let downloadTask = Task.detached {
             let result = await self.downloadModelHandler(key, progressFile)
             await resultBox.set(result)
         }
 
-        // Poll progress file every 500ms until the helper reports completion.
-        while true {
+        // Monitor progress file for changes (event-driven instead of polling).
+        await monitorDownloadProgress(progressFile: progressFile, downloadTask: downloadTask, resultBox: resultBox)
+
+        try? FileManager.default.removeItem(atPath: progressFile)
+    }
+
+    private func monitorDownloadProgress(progressFile: String, downloadTask: Task<Void, Never>, resultBox: ModelDownloadResultBox) async {
+        let descriptor = open(progressFile, O_EVTONLY)
+        guard descriptor >= 0 else {
+            // Fallback to polling if file monitoring unavailable
+            await pollingDownloadProgress(progressFile: progressFile, downloadTask: downloadTask, resultBox: resultBox)
+            return
+        }
+
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: descriptor,
+            eventMask: [.write, .extend],
+            queue: DispatchQueue.global(qos: .utility)
+        )
+
+        source.setEventHandler { [weak self] in
+            Task { @MainActor [weak self] in
+                if let line = Self.lastProgressLine(atPath: progressFile),
+                   let data = line.data(using: .utf8),
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    let percent = json["percent"] as? Double ?? 0
+                    let message = json["message"] as? String ?? ""
+                    self?.downloadProgress = percent
+                    self?.downloadMessage = message
+                }
+            }
+        }
+        source.setCancelHandler {
+            close(descriptor)
+        }
+        source.resume()
+
+        // Wait for download to complete
+        while await resultBox.result == nil && !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: 100_000_000)  // Check every 100ms for completion
+        }
+
+        source.cancel()
+
+        // Process final result
+        if let result = await resultBox.result {
+            await downloadTask.value
+            await MainActor.run { [weak self] in
+                if result.success {
+                    self?.downloadProgress = max(self?.downloadProgress ?? 0, 100)
+                    if self?.downloadMessage.isEmpty ?? true {
+                        self?.downloadMessage = "Download complete"
+                    }
+                } else {
+                    self?.downloadError = result.error ?? "Download failed"
+                }
+            }
+        }
+    }
+
+    private func pollingDownloadProgress(progressFile: String, downloadTask: Task<Void, Never>, resultBox: ModelDownloadResultBox) async {
+        while await resultBox.result == nil && !Task.isCancelled {
             try? await Task.sleep(nanoseconds: 500_000_000)
 
             if let line = Self.lastProgressLine(atPath: progressFile),
@@ -397,34 +458,26 @@ final class ModelManager: ObservableObject {
                let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                 let percent = json["percent"] as? Double ?? 0
                 let message = json["message"] as? String ?? ""
-                await MainActor.run {
-                    self.downloadProgress = percent
-                    self.downloadMessage = message
+                await MainActor.run { [weak self] in
+                    self?.downloadProgress = percent
+                    self?.downloadMessage = message
                 }
-            }
-
-            if let result = await resultBox.result {
-                await downloadTask.value
-                await MainActor.run {
-                    if result.success {
-                        self.downloadProgress = max(self.downloadProgress, 100)
-                        if self.downloadMessage.isEmpty {
-                            self.downloadMessage = "Download complete"
-                        }
-                    } else {
-                        self.downloadError = result.error ?? "Download failed"
-                    }
-                }
-                break
-            }
-
-            if Task.isCancelled {
-                downloadTask.cancel()
-                break
             }
         }
 
-        try? FileManager.default.removeItem(atPath: progressFile)
+        if let result = await resultBox.result {
+            await downloadTask.value
+            await MainActor.run { [weak self] in
+                if result.success {
+                    self?.downloadProgress = max(self?.downloadProgress ?? 0, 100)
+                    if self?.downloadMessage.isEmpty ?? true {
+                        self?.downloadMessage = "Download complete"
+                    }
+                } else {
+                    self?.downloadError = result.error ?? "Download failed"
+                }
+            }
+        }
     }
 
     private static func lastProgressLine(atPath path: String) -> String? {
