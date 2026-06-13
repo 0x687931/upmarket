@@ -40,7 +40,8 @@ enum ConversionPostProcessor {
             let logger = Logger(subsystem: "com.upmarket.app", category: "structure-validation")
             for issue in structureReport.issues {
                 let severity = issue.severity == .error ? "ERROR" : "WARNING"
-                logger.warning("[\(severity)] \(issue.description, privacy: .public)")
+                // Log only machine-safe fields; redact user-document-derived text
+                logger.warning("[\(severity)] \(issue.description, privacy: .private)")
             }
             let retention = Int(structureReport.metrics.structureRetention * 100)
             logger.debug("Structure retention: \(retention)% (headings: \(structureReport.metrics.outputHeadingCount)/\(structureReport.metrics.inputHeadingCount))")
