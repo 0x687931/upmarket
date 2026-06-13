@@ -132,7 +132,7 @@ struct FirstPartyModelDownloadService: Sendable {
             let temporaryURL = try await fileDownloader(sourceURL)
             defer { try? fileManager.removeItem(at: temporaryURL) }
 
-            let actualSize = try fileSize(temporaryURL)
+            let actualSize = await FileSizeReader.shared.readSize(temporaryURL)
             if let expectedSize = file.bytes, expectedSize != actualSize {
                 throw ModelDownloadError.sizeMismatch(file.path)
             }
@@ -393,11 +393,6 @@ struct FirstPartyModelDownloadService: Sendable {
         if fileManager.fileExists(atPath: url.path) {
             try fileManager.removeItem(at: url)
         }
-    }
-
-    private func fileSize(_ url: URL) throws -> Int64 {
-        let values = try url.resourceValues(forKeys: [.fileSizeKey])
-        return Int64(values.fileSize ?? 0)
     }
 
     private func sha256Hex(for url: URL) throws -> String {

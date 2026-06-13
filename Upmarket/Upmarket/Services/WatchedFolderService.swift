@@ -265,7 +265,7 @@ final class WatchedFolderService: ObservableObject {
         let name = url.lastPathComponent
         guard matchesIncludeRules(name), !matchesExcludeRules(name) else { return false }
         guard SupportedInputPolicy.supports(url) else { return false }
-        guard let signature = fileSignature(for: url, folderID: folderID),
+        guard let signature = await fileSignature(for: url, folderID: folderID),
               !processedSignatures.contains(signature) else { return false }
         guard await isStable(url, folderID: folderID, firstSignature: signature) else { return false }
         processedSignatures.insert(signature)
@@ -277,7 +277,7 @@ final class WatchedFolderService: ObservableObject {
         guard case .success(let output) = result else { return }
 
         if let destination = resolveOutputFolder(for: folder, sourceFolder: folderURL) {
-            write(output: output, sourceURL: url, destination: destination)
+            await write(output: output, sourceURL: url, destination: destination)
         }
 
         if folder.notificationsEnabled {
@@ -297,7 +297,7 @@ final class WatchedFolderService: ObservableObject {
         }
     }
 
-    private func write(output: ConversionOutput, sourceURL: URL, destination: URL) {
+    private func write(output: ConversionOutput, sourceURL: URL, destination: URL) async {
         let scoped = destination.startAccessingSecurityScopedResource()
         defer {
             if scoped {
@@ -314,7 +314,7 @@ final class WatchedFolderService: ObservableObject {
         let fileName = "\(baseName.sanitisedForFilename).\(formatted.fileExtension)"
         let outputURL = uniqueURL(in: destination, fileName: fileName)
         do {
-            try Data(formatted.text.utf8).write(to: outputURL, options: .atomic)
+            try await FileWriteService.shared.writeMarkdown(formatted.text, to: outputURL)
         } catch {
             AppLog.fileAccess.error("Watched folder output write failed: \(error.localizedDescription, privacy: .private)")
         }
@@ -340,22 +340,19 @@ final class WatchedFolderService: ObservableObject {
         if stabilityDelayNanoseconds > 0 {
             try? await Task.sleep(nanoseconds: stabilityDelayNanoseconds)
         }
-        return fileSignature(for: url, folderID: folderID) == firstSignature
+        let currentSignature = await fileSignature(for: url, folderID: folderID)
+        return currentSignature == firstSignature
     }
 
-    private func fileSignature(for url: URL, folderID: UUID) -> FileSignature? {
-        guard let values = try? url.resourceValues(forKeys: [
-            .isDirectoryKey,
-            .isRegularFileKey,
-            .fileSizeKey,
-            .contentModificationDateKey
-        ]) else { return nil }
-        guard values.isDirectory != true, values.isRegularFile != false else { return nil }
+    private func fileSignature(for url: URL, folderID: UUID) async -> FileSignature? {
+        guard let readerSignature = await FileSignatureReader.shared.getSignature(for: url, folderID: folderID) else {
+            return nil
+        }
         return FileSignature(
-            folderID: folderID,
-            name: url.lastPathComponent,
-            size: values.fileSize ?? 0,
-            modified: values.contentModificationDate?.timeIntervalSince1970 ?? 0
+            folderID: readerSignature.folderID,
+            name: readerSignature.name,
+            size: readerSignature.size,
+            modified: readerSignature.modified
         )
     }
 

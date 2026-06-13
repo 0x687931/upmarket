@@ -14,6 +14,7 @@ final class ConversionQueue: ObservableObject {
     @Published private(set) var complexityAdvice: ComplexityAdvice?
     @Published private(set) var needsPassword = false
     @Published private(set) var latestResult: ConversionResult?
+    @Published private(set) var overallProgressCached: Double = 0
 
     private let runHandler: RunHandler
     private let analyseHandler: AnalyseHandler
@@ -27,17 +28,15 @@ final class ConversionQueue: ObservableObject {
     private var lastFailedJobContext: DiagnosticJobContext?
     private let historyStore: ConversionHistoryStore?
     private let livenessThreshold: TimeInterval = 60
+    private var jobIndex: [UUID: Int] = [:]
 
     var isConverting: Bool {
         jobs.contains { $0.isRunning }
     }
 
-    // Mean progress across all active jobs (0.0–1.0).
-    // Returns 1.0 when jobs exist but none are running; 0.0 when queue is empty.
+    // DEPRECATED: Use overallProgressCached instead. Kept for compatibility.
     var overallProgress: Double {
-        let active = jobs.filter(\.isRunning)
-        guard !active.isEmpty else { return jobs.isEmpty ? 0.0 : 1.0 }
-        return active.map(\.progress).reduce(0.0, +) / Double(active.count)
+        overallProgressCached
     }
 
     func stalledJobs(referenceDate: Date = Date(), threshold: TimeInterval = 60) -> [ConversionJob] {
@@ -104,7 +103,9 @@ final class ConversionQueue: ObservableObject {
     func add(_ url: URL, useAI: Bool = false, password: String? = nil) -> UUID {
         let job = ConversionJob(sourceURL: url, useAI: useAI, password: password)
         jobs.insert(job, at: 0)
+        rebuildJobIndex()
         latestResult = nil
+        updateOverallProgressCache()
         AppLog.conversion.info("Queued conversion correlationID=\(job.correlationID, privacy: .public) ext=\(job.ext, privacy: .public)")
         startLivenessMonitorIfNeeded()
         enqueue(job.id)
@@ -116,6 +117,7 @@ final class ConversionQueue: ObservableObject {
         let result = ConversionResult.failure(message)
         let job = ConversionJob(sourceURL: url, stage: .failed, result: result)
         jobs.insert(job, at: 0)
+        rebuildJobIndex()
         latestResult = result
         lastFailedJobContext = DiagnosticJobContext(
             correlationID: job.correlationID,
@@ -182,12 +184,22 @@ final class ConversionQueue: ObservableObject {
 
     @discardableResult
     func retry(_ id: UUID, useAI: Bool? = nil) -> UUID? {
-        guard let job = jobs.first(where: { $0.id == id }) else { return nil }
+        guard let index = jobIndex[id], jobs.indices.contains(index) else { return nil }
+        let job = jobs[index]
         return add(job.sourceURL, useAI: useAI ?? job.useAI, password: job.password)
     }
 
     func remove(_ id: UUID) {
         jobs.removeAll { $0.id == id }
+        rebuildJobIndex()
+        updateOverallProgressCache()
+    }
+
+    private func rebuildJobIndex() {
+        jobIndex.removeAll(keepingCapacity: true)
+        for (index, job) in jobs.enumerated() {
+            jobIndex[job.id] = index
+        }
     }
 
     private func enqueue(_ id: UUID) {
@@ -259,7 +271,7 @@ final class ConversionQueue: ObservableObject {
     }
 
     private func update(_ id: UUID, progress: ConversionProgress) {
-        guard let index = jobs.firstIndex(where: { $0.id == id }) else { return }
+        guard let index = jobIndex[id], jobs.indices.contains(index) else { return }
         guard jobs[index].isRunning else { return }
         let previousStage = jobs[index].stage
         jobs[index].stage = progress.stage
@@ -270,11 +282,18 @@ final class ConversionQueue: ObservableObject {
         }
         jobs[index].lastProgressAt = Date()
         jobs[index].isStalled = false
+        updateOverallProgressCache()
         AppLog.conversion.info("Conversion stage correlationID=\(id.uuidString, privacy: .public) stage=\(progress.stage.rawValue, privacy: .public)")
     }
 
+    /// Recalculate overall progress cache (called only on job changes, not every render).
+    private func updateOverallProgressCache() {
+        let active = jobs.filter(\.isRunning)
+        overallProgressCached = active.isEmpty ? (jobs.isEmpty ? 0.0 : 1.0) : active.map(\.progress).reduce(0.0, +) / Double(active.count)
+    }
+
     private func markHeartbeat(_ id: UUID) {
-        guard let index = jobs.firstIndex(where: { $0.id == id }) else { return }
+        guard let index = jobIndex[id], jobs.indices.contains(index) else { return }
         guard jobs[index].isRunning else { return }
         jobs[index].lastProgressAt = Date()
         if jobs[index].isStalled {
@@ -284,7 +303,7 @@ final class ConversionQueue: ObservableObject {
     }
 
     private func finish(_ id: UUID, result: ConversionResult, stage: ConversionStage, diagnosticStage: ConversionStage? = nil) {
-        guard let index = jobs.firstIndex(where: { $0.id == id }) else { return }
+        guard let index = jobIndex[id], jobs.indices.contains(index) else { return }
         guard jobs[index].stage != .cancelled || stage == .cancelled else { return }
         if stage == .failed {
             lastFailedJobContext = DiagnosticJobContext(
@@ -300,6 +319,7 @@ final class ConversionQueue: ObservableObject {
         jobs[index].progressFraction = nil
         jobs[index].lastProgressAt = Date()
         jobs[index].isStalled = false
+        updateOverallProgressCache()
         latestResult = result
         if stage == .complete, let output = result.output {
             historyStore?.record(job: jobs[index], output: output)
