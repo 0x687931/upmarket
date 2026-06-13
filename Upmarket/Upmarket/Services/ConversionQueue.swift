@@ -55,9 +55,9 @@ final class ConversionQueue: ObservableObject {
 
     func diagnosticSnapshotForLastFailedJob() -> DiagnosticSnapshot {
         guard let context = lastFailedJobContext else {
-            return DiagnosticsService.shared.makeSnapshot()
+            return Diagnostics.makeSnapshot()
         }
-        return DiagnosticsService.shared.makeSnapshot(
+        return Diagnostics.makeSnapshot(
             correlationID: context.correlationID,
             lastConversionStage: context.stage,
             lastErrorCode: context.errorCode,

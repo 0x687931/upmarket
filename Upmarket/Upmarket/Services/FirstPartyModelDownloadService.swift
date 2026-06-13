@@ -132,7 +132,7 @@ struct FirstPartyModelDownloadService: Sendable {
             let temporaryURL = try await fileDownloader(sourceURL)
             defer { try? fileManager.removeItem(at: temporaryURL) }
 
-            let actualSize = await FileSizeReader.shared.readSize(temporaryURL)
+            let actualSize = await FileSystemMetrics.shared.readFileSize(temporaryURL)
             if let expectedSize = file.bytes, expectedSize != actualSize {
                 throw ModelDownloadError.sizeMismatch(file.path)
             }

@@ -345,7 +345,7 @@ final class WatchedFolderService: ObservableObject {
     }
 
     private func fileSignature(for url: URL, folderID: UUID) async -> FileSignature? {
-        guard let readerSignature = await FileSignatureReader.shared.getSignature(for: url, folderID: folderID) else {
+        guard let readerSignature = await FileSystemMetrics.shared.getFileSignature(for: url, folderID: folderID) else {
             return nil
         }
         return FileSignature(

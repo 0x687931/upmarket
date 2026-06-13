@@ -85,7 +85,7 @@ final class PostProcessingTests: XCTestCase {
     func testFallbackOnOlderOS() async {
         // WritingToolsRefinerAdapter always returns input unchanged on unsupported OS
         let input = "# Test\n\nSome content here."
-        let output = await WritingToolsRefinerAdapter.refine(markdown: input, language: "en")
+        let output = await WritingToolsService.refineMarkdown(input, language: "en")
         // On macOS < 15.1 or Intel, wasRefined should be false
         if !WritingToolsAvailabilityCheck.isAvailable {
             XCTAssertFalse(output.wasRefined)
@@ -96,14 +96,14 @@ final class PostProcessingTests: XCTestCase {
     func testChunkSplitting() async {
         // Large document should be chunked without losing content
         let longText = (0..<50).map { "Paragraph \($0). This is body text for testing." }.joined(separator: "\n\n")
-        let output = await WritingToolsRefinerAdapter.refine(markdown: longText, language: "en")
+        let output = await WritingToolsService.refineMarkdown(longText, language: "en")
         // Content should be preserved regardless of refinement
         XCTAssertFalse(output.markdown.isEmpty)
     }
 
     func testHeadingsNotCorrupted() async {
         let input = "# Main Title\n\n## Section One\n\nBody text here.\n\n### Subsection\n\nMore text."
-        let output = await WritingToolsRefinerAdapter.refine(markdown: input, language: "en")
+        let output = await WritingToolsService.refineMarkdown(input, language: "en")
         XCTAssertTrue(output.markdown.contains("# Main Title"))
         XCTAssertTrue(output.markdown.contains("## Section One"))
         XCTAssertTrue(output.markdown.contains("### Subsection"))
@@ -133,8 +133,8 @@ final class PostProcessingTests: XCTestCase {
         XCTAssertTrue(nlOutput.sentenceCount > 0)
 
         // Step 2: Writing Tools refinement (may be no-op on older OS)
-        let wtOutput = await WritingToolsRefinerAdapter.refine(
-            markdown: nlOutput.markdown,
+        let wtOutput = await WritingToolsService.refineMarkdown(
+            nlOutput.markdown,
             language: nlOutput.detectedLanguage
         )
 

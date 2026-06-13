@@ -1,5 +1,26 @@
 import Foundation
 
+// MARK: - Version-safe public API (always available)
+
+struct WritingToolsOutput {
+    let markdown: String
+    let wasRefined: Bool
+}
+
+enum WritingToolsService {
+    static func refineMarkdown(_ markdown: String, language: String) async -> WritingToolsOutput {
+        if #available(macOS 15.1, *) {
+            let input = WritingToolsRefiner.Input(markdown: markdown, language: language)
+            let result = await WritingToolsRefiner.refine(input)
+            return WritingToolsOutput(markdown: result.markdown, wasRefined: result.wasRefined)
+        } else {
+            return WritingToolsOutput(markdown: markdown, wasRefined: false)
+        }
+    }
+}
+
+// MARK: - macOS 15.1+ Implementation
+
 /// Refines structured Markdown using Apple Intelligence Writing Tools.
 /// Available on macOS 15.1+ with Apple Silicon.
 ///
@@ -109,30 +130,5 @@ struct WritingToolsRefiner {
         // TODO: Implement NSWritingToolsCoordinator integration once API is stable.
         // See: https://developer.apple.com/documentation/appkit/nswritingtoolscoordinator
         return nil
-    }
-}
-
-/// Fallback for older macOS — returns input unchanged.
-struct WritingToolsRefinerFallback {
-    static func refine(markdown: String) -> String { markdown }
-}
-
-/// Version-safe wrapper that picks the right implementation at runtime.
-struct WritingToolsRefinerAdapter {
-
-    struct Output {
-        let markdown: String
-        let wasRefined: Bool
-    }
-
-    static func refine(markdown: String, language: String) async -> Output {
-        if #available(macOS 15.1, *) {
-            let result = await WritingToolsRefiner.refine(
-                WritingToolsRefiner.Input(markdown: markdown, language: language)
-            )
-            return Output(markdown: result.markdown, wasRefined: result.wasRefined)
-        } else {
-            return Output(markdown: markdown, wasRefined: false)
-        }
     }
 }

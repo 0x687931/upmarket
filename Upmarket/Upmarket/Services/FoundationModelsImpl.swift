@@ -1,12 +1,10 @@
 import Foundation
+
+#if canImport(FoundationModels)
 import FoundationModels
 
-// MARK: - macOS 26 Implementation
-
 @available(macOS 26, *)
-enum _FMImpl {
-
-    // @Generable — compile-time JSON schema, type-safe guided generation
+enum FoundationModelsImpl {
     @Generable(description: "Structured metadata extracted from a document")
     struct DocumentMetadata {
         @Guide(description: "The main title of the document") var title: String
@@ -27,7 +25,6 @@ enum _FMImpl {
         markdown: String,
         documentType: String
     ) async throws -> FoundationModelEnhancer.DocumentEnhancement {
-
         guard SystemLanguageModel.default.isAvailable else {
             return FoundationModelEnhancer.DocumentEnhancement(
                 extractedTitle: FoundationModelEnhancer.titleFallback(from: markdown),
@@ -36,7 +33,6 @@ enum _FMImpl {
             )
         }
 
-        // Session 1: extract metadata from document header/abstract
         let metaSession = LanguageModelSession(
             instructions: "You analyse documents and extract structured metadata accurately."
         )
@@ -47,9 +43,8 @@ enum _FMImpl {
         )
         let meta = metaResponse.content
 
-        // Session 2: summarise major sections (H2 headings)
-        let sections = extractSections(from: markdown)
         var summaries: [FoundationModelEnhancer.SectionSummary] = []
+        let sections = extractSections(from: markdown)
 
         for section in sections.prefix(5) {
             let sSession = LanguageModelSession(
@@ -71,12 +66,10 @@ enum _FMImpl {
             extractedTitle: meta.title.isEmpty ? nil : meta.title,
             extractedAuthors: meta.authors,
             sectionSummaries: summaries,
-            refinedMarkdown: markdown,   // grammar refinement is Writing Tools' job
+            refinedMarkdown: markdown,
             wasEnhanced: true
         )
     }
-
-    // MARK: - Section extraction
 
     private struct Section { let heading: String; let content: String }
 
@@ -93,3 +86,4 @@ enum _FMImpl {
         return sections
     }
 }
+#endif

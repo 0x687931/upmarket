@@ -9,12 +9,12 @@ enum ConversionPostProcessor {
         )
         let nlResult = TextStructurer.refine(nlInput)
 
-        let wtResult = await WritingToolsRefinerAdapter.refine(
-            markdown: nlResult.markdown,
+        let wtOutput = await WritingToolsService.refineMarkdown(
+            nlResult.markdown,
             language: nlResult.detectedLanguage
         )
         let fmResult = await FoundationModelEnhancer.enhance(
-            markdown: wtResult.markdown,
+            markdown: wtOutput.markdown,
             documentType: intelligence.documentType.rawValue
         )
 

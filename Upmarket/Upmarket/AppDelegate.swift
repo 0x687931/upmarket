@@ -23,39 +23,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        MemoryPressureMonitor.shared.stop()
         ConversionQueue.shared.cancelAll()
         AppWorkspace.removeStaleWorkspaces()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppLaunchMetrics.mark("didFinishLaunching")
-        AppVisibilityPreference.apply()
-        if AppRuntime.isRunningUITests {
-            MainWindowController.shared.show()
-            if AppRuntime.isOpeningPaywall {
-                PaywallWindowController.shared.show()
-            }
-            if AppRuntime.isOpeningPreferences {
-                PreferencesWindowController.shared.show()
-            }
-            if AppRuntime.isOpeningShelf {
-                AppVisibilityPreference.showShelf = true
-                ShelfWindowController.shared.show(ignoringPreference: true)
-            }
-        }
+        setupPreferences()
+        setupUITestWindows()
+        setupServices()
+        setupBackgroundTasks()
+        setupObservers()
+        AppLaunchMetrics.mark("post-launch-services")
+    }
 
+    private func setupPreferences() {
+        AppVisibilityPreference.apply()
+    }
+
+    private func setupUITestWindows() {
+        guard AppRuntime.isRunningUITests else { return }
+        MainWindowController.shared.show()
+        if AppRuntime.isOpeningPaywall {
+            PaywallWindowController.shared.show()
+        }
+        if AppRuntime.isOpeningPreferences {
+            PreferencesWindowController.shared.show()
+        }
+        if AppRuntime.isOpeningShelf {
+            AppVisibilityPreference.showShelf = true
+            ShelfWindowController.shared.show(ignoringPreference: true)
+        }
+    }
+
+    private func setupServices() {
         NSApp.servicesProvider = self
         MemoryPressureMonitor.shared.start()
         if !AppRuntime.isRunningTests {
             ConversionHistoryStore.shared.loadDeferred()
         }
-        AppLaunchMetrics.mark("post-launch-services")
+    }
+
+    private func setupBackgroundTasks() {
         DispatchQueue.global(qos: .utility).async {
             Self.removeStaleQuickActionHandoffs()
             BundledModelService.installBundledModelsIfNeeded()
         }
+    }
 
-        // Observe conversion state for Dock tile animation
+    private func setupObservers() {
         NotificationCenter.default.addObserver(
             self, selector: #selector(conversionStarted),
             name: .upmarketConversionStarted, object: nil
@@ -511,75 +528,3 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
     }
 }
 
-@MainActor
-final class PreferencesWindowController: NSWindowController {
-    static let shared = PreferencesWindowController()
-
-    private init() {
-        let rootView = PreferencesView()
-            .environmentObject(ModelManager.shared)
-            .environmentObject(StoreManager.shared)
-            .environmentObject(ConversionHistoryStore.shared)
-            .environmentObject(WatchedFolderService.shared)
-        let prefsSize = AppTheme.WindowSize.preferences
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: prefsSize.width, height: prefsSize.height),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Settings"
-        window.minSize = NSSize(width: prefsSize.width, height: 400)
-        window.maxSize = NSSize(width: prefsSize.width * 1.5, height: NSScreen.main?.frame.height ?? 1000)
-        window.contentView = NSHostingView(rootView: rootView)
-        window.isReleasedWhenClosed = false
-        window.center()
-
-        super.init(window: window)
-    }
-
-    required init?(coder: NSCoder) { fatalError() }
-
-    func show() {
-        guard let window else { return }
-        if !window.isVisible {
-            window.center()
-        }
-        NSApp.activate(ignoringOtherApps: true)
-        window.makeKeyAndOrderFront(nil)
-    }
-}
-
-@MainActor
-final class ReportProblemWindowController: NSWindowController {
-    static let shared = ReportProblemWindowController()
-
-    private init() {
-        let reportSize = AppTheme.WindowSize.modal
-        let rootView = ReportProblemView()
-            .environmentObject(ConversionQueue.shared)
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: reportSize.width, height: reportSize.height),
-            styleMask: [.titled, .closable, .miniaturizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Report a Problem"
-        window.contentView = NSHostingView(rootView: rootView)
-        window.isReleasedWhenClosed = false
-        window.center()
-
-        super.init(window: window)
-    }
-
-    required init?(coder: NSCoder) { fatalError() }
-
-    func show() {
-        guard let window else { return }
-        if !window.isVisible {
-            window.center()
-        }
-        NSApp.activate(ignoringOtherApps: true)
-        window.makeKeyAndOrderFront(nil)
-    }
-}

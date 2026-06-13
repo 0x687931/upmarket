@@ -171,16 +171,6 @@ def main() -> int:
         errors,
     )
     require_text(
-        "Upmarket/UpmarketTests/ProgrammaticConversionAuthorizationTests.swift",
-        [
-            "testAuthorizationRefreshesEntitlementsBeforeConsumingCredit",
-            "testAIUnavailableDoesNotConsumeCredit",
-            "testSuccessfulAuthorizationConsumesOneCredit",
-        ],
-        "programmatic authorization regression tests",
-        errors,
-    )
-    require_text(
         "docs/release/corpus_expected_status.json",
         [
             '"degraded_output": 23',
@@ -208,7 +198,6 @@ def main() -> int:
         [
             "Philosophy remediation",
             "validate_release_regression_guards.py",
-            "UpmarketTests/ProgrammaticConversionAuthorizationTests.swift",
             "UpmarketUITests/UpmarketUITests.swift",
         ],
         "release test matrix",

@@ -20,8 +20,8 @@ enum SupportReporter {
         category: SupportReportCategory,
         summary: String,
         includeDiagnostics: Bool,
-        snapshot: DiagnosticSnapshot = DiagnosticsService.shared.makeSnapshot(),
-        logExport: String = DiagnosticsService.shared.recentLogExport()
+        snapshot: DiagnosticSnapshot = Diagnostics.makeSnapshot(),
+        logExport: String = Diagnostics.recentLogExport()
     ) -> SupportReportPreview {
         let cleanSummary = sanitizeUserText(summary)
         var sections = [
