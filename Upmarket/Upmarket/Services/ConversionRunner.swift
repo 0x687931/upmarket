@@ -442,11 +442,29 @@ struct ConversionRunner {
 
     /// Extract a single chunk of a PDF.
     private func extractChunk(_ chunk: DocumentChunker.Chunk, password: String?) async throws -> (markdown: String, tables: [TableRepair.StructuredTable]) {
-        // TODO: Implement chunk extraction
-        // This would create a temporary PDF with just the chunk's pages,
-        // save it to a temp file, and extract using Vision (macOS 26+) or VisionOCR.
-        // For now, return placeholder.
-        return (markdown: "", tables: [])
+        // Create temporary PDF with just this chunk's pages
+        let tempPDF = PDFDocument()
+        for page in chunk.pages {
+            tempPDF.insert(page, at: tempPDF.pageCount)
+        }
+
+        // Save to temporary file
+        let tempDir = try AppWorkspace.create(prefix: "chunk")
+        defer { try? AppWorkspace.remove(tempDir) }
+
+        let tempURL = tempDir.appendingPathComponent("chunk.pdf")
+        guard tempPDF.write(to: tempURL) else {
+            throw ConversionError.failed("Could not save PDF chunk to temporary file")
+        }
+
+        // Extract using Vision on macOS 26+ or VisionOCR as fallback
+        if #available(macOS 26, *) {
+            let result = try await VisionDocumentExtractor.extract(pdfURL: tempURL, password: password)
+            return (markdown: result.markdown, tables: result.structuredTables)
+        } else {
+            let result = try await VisionOCR.recognise(pdfURL: tempURL, password: password)
+            return (markdown: result.text, tables: [])
+        }
     }
 
     private func runSpeechTranscription(fileURL: URL, title: String) async -> ConversionResult {
