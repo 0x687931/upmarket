@@ -92,6 +92,15 @@ final class ConversionHistoryStore: ObservableObject {
         records.filter { $0.matches(query: query) }
     }
 
+    // Test helper: wait for pending async writes to complete
+    nonisolated func waitForPendingWrites(timeout: TimeInterval = 2.0) async {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !FileManager.default.fileExists(atPath: directoryURL.path) {
+            if Date() > deadline { break }
+            try? await Task.sleep(nanoseconds: 10_000_000)  // 10ms
+        }
+    }
+
     private static func defaultDirectoryURL(fileManager: FileManager) -> URL {
         let base = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)

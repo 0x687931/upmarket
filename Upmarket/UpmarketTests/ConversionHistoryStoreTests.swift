@@ -29,7 +29,7 @@ final class ConversionHistoryStoreTests: XCTestCase {
         try super.tearDownWithError()
     }
 
-    func testAtomicWriteAndLoad() throws {
+    func testAtomicWriteAndLoad() async throws {
         let store = makeStore(loadImmediately: false)
         let output = ConversionOutput(
             markdown: "# Q3 Report\n\nRevenue was up.",
@@ -46,7 +46,7 @@ final class ConversionHistoryStoreTests: XCTestCase {
         XCTAssertEqual(store.records.count, 1)
 
         // Wait for async file write to complete
-        Thread.sleep(forTimeInterval: 0.1)
+        await store.waitForPendingWrites(timeout: 2.0)
 
         let savedFiles = try FileManager.default.contentsOfDirectory(atPath: tempDirectory.path)
         XCTAssertEqual(savedFiles.filter { $0.hasSuffix(".json") }.count, 1)
