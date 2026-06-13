@@ -29,29 +29,32 @@ MODELS = {
     "python_runtime": {
         "name": "Upmarket Runtime",
         "description": "Required for Enhanced and AI conversion on Apple Silicon",
-        "repo_id": None,   # not a HF Hub model — downloaded via Apple CDN manifest
+        "source_id": "com.upmarket.runtime.python",
+        "repo_id": None,   # not a HF Hub model — downloaded via CDN manifest
         "revision": "1",
         "storage_dir": "python_runtime",
         "expected_files": ["upmarket_runtime_ready"],
         "expected_dirs": ["Python.framework"],
         "size_mb": 1300,
         "required": False,
-        "tier": "basic",
+        "tier": "pro",
     },
     "layout": {
         "name": "Upmarket Enhanced",
         "description": "Better results for complex PDFs, tables, and multi-column documents",
+        "source_id": "com.upmarket.models.layout",
         "repo_id": "ds4sd/docling-models",
         "revision": "72661864b9c29fb7cced011822786bed346811ea",
         "expected_files": ["config.json"],
         "expected_dirs": ["model_artifacts"],
         "size_mb": 172,
         "required": False,   # not required — fast path works without it
-        "tier": "enhanced",
+        "tier": "pro",       # same as python_runtime — both required for Enhanced conversion
     },
     "upmarket_ai": {
         "name": "Upmarket AI",
         "description": "Best results for scanned, handwritten, and research documents",
+        "source_id": "com.upmarket.models.upmarket-ai",
         "repo_id": "ibm-granite/granite-docling-258M-mlx",
         "revision": "e9939db25d2f296c8678d0491c4609a8c596c50a",
         "storage_dir": "ibm-granite--granite-docling-258M-mlx",
@@ -65,7 +68,7 @@ MODELS = {
         "expected_dirs": [],
         "size_mb": 631,
         "required": False,
-        "tier": "pro",
+        "tier": "max",
     },
 }
 
@@ -417,5 +420,5 @@ def required_download_size_mb() -> int:
     return sum(info["size_mb"] for info in MODELS.values() if info["required"])
 
 
-def pro_download_size_mb() -> int:
-    return sum(info["size_mb"] for info in MODELS.values() if info["tier"] == "pro")
+def max_download_size_mb() -> int:
+    return sum(info["size_mb"] for info in MODELS.values() if info["tier"] == "max")

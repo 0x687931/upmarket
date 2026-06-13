@@ -90,6 +90,41 @@ UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS=1 scripts/ci/verify_entitlements.sh /path/t
 
 ## Model Asset Hosting
 
+### Debug / development (GitHub CDN)
+
+Debug builds download models from GitHub Releases. Manifests are small JSON files committed to the repo; archives are `.tar.gz` files attached to a GitHub Release. Downloads are resumable — if interrupted, the next attempt picks up from where it stopped.
+
+**One-time setup** (repeat when models change):
+
+```sh
+# 1. Stage archives and manifests.
+#    python_runtime is sourced from the bundled xcframework — no prior download needed.
+#    layout and upmarket_ai require a developer-intake download first (see below).
+scripts/build/stage_github_model_assets.py \
+  --release-url https://github.com/OWNER/REPO/releases/download/models-v1
+
+# 2. Create the GitHub Release and upload archives.
+gh release create models-v1 --title "Model Assets v1"
+gh release upload models-v1 build/github-model-assets/archives/*.tar.gz
+
+# 3. Commit manifests to the repo.
+cp build/github-model-assets/manifests/*.json resources/model-manifests/
+git add resources/model-manifests/ && git commit -m "Add GitHub CDN model manifests v1"
+
+# 4. Enable in Xcode: open the Upmarket scheme → Run → Environment Variables.
+#    Set UPMARKET_MODEL_MANIFEST_BASE_URL (enable the row):
+#      https://raw.githubusercontent.com/OWNER/REPO/main/resources/model-manifests/
+```
+
+**Developer-intake download** (to stage layout / upmarket_ai):
+
+```sh
+# Launch the app with developer intake enabled, then trigger download from Preferences → Models.
+UPMARKET_ENABLE_DEVELOPER_MODEL_INTAKE=1 scripts/dev/run_app.sh
+```
+
+### Production / TestFlight (Apple CDN)
+
 Production and TestFlight model downloads must be first-party. Stage model assets from a manifest-validated local cache, upload the staged directory to the Apple-hosted model location, and build the app with that base URL:
 
 ```sh
@@ -111,6 +146,28 @@ Verify release archives with the model URL gate enabled. By default it accepts A
 APP=build/Upmarket.xcarchive/Products/Applications/Upmarket.app
 UPMARKET_REQUIRE_MODEL_MANIFEST_BASE_URL=1 scripts/ci/verify_release_app.sh "$APP"
 ```
+
+**Testing the Apple CDN path locally (before uploading to production hosting):**
+
+The app's download runtime has no host restriction — only the release verification script does. You can exercise the exact same code path against a local HTTP server:
+
+```sh
+# 1. Stage models locally (requires models in Application Support — use developer intake first).
+scripts/build/stage_first_party_model_assets.py --output build/first-party-model-assets
+
+# 2. Serve the staged directory.
+python3 -m http.server 8765 --directory build/first-party-model-assets
+
+# 3. In Xcode scheme → Run → Environment Variables, enable and set:
+#      UPMARKET_MODEL_MANIFEST_BASE_URL = http://localhost:8765/
+
+# 4. Launch the app and trigger a download from Preferences → Models.
+scripts/dev/run_app.sh --relaunch
+```
+
+This tests the full individual-file download path (manifest fetch → per-file download → checksum → atomic promote) before any files touch Apple infrastructure. The local server is HTTP; the sandbox allows it because `com.apple.security.network.client` is not restricted to HTTPS.
+
+When you're satisfied, upload `build/first-party-model-assets/` to Apple-hosted storage and switch the URL in the production archive build.
 
 ## Archive
 

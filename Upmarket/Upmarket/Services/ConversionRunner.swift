@@ -7,8 +7,9 @@ struct ConversionRunner {
     let pythonWorker: PythonWorker
     private let supportsAdvancedRuntime: Bool
     private let supportsAI: Bool
-    private let hasProEntitlement: @Sendable () -> Bool
+    private let tier: @Sendable () -> AppTier
     private let modelsReady: @Sendable () -> Bool
+    private let usesInjectedModelReadiness: Bool
     private let classifyOverride: (@Sendable (URL, String?, Bool, Bool) async -> ContentClassifier.Classification?)?
 
     @MainActor
@@ -16,7 +17,7 @@ struct ConversionRunner {
         pythonWorker: PythonWorker = PythonWorker(),
         supportsAdvancedRuntime: Bool = DeviceCapability.currentSupportsAdvancedRuntime,
         supportsAI: Bool = DeviceCapability.shared.supportsUpmarketAI,
-        hasProEntitlement: (@Sendable () -> Bool)? = nil,
+        tier: (@Sendable () -> AppTier)? = nil,
         modelsReady: (@Sendable () -> Bool)? = nil,
         classifyOverride: (@Sendable (URL, String?, Bool, Bool) async -> ContentClassifier.Classification?)? = nil
     ) {
@@ -24,18 +25,20 @@ struct ConversionRunner {
         self.supportsAdvancedRuntime = supportsAdvancedRuntime
         self.supportsAI = supportsAI
 
-        if let hasProEntitlement {
-            self.hasProEntitlement = hasProEntitlement
+        if let tier {
+            self.tier = tier
         } else {
-            let hasProValue = StoreManager.shared.hasProOrAbove
-            self.hasProEntitlement = { hasProValue }
+            let tierValue = StoreManager.shared.tier
+            self.tier = { tierValue }
         }
 
         if let modelsReady {
             self.modelsReady = modelsReady
+            self.usesInjectedModelReadiness = true
         } else {
-            let modelsReadyValue = ModelManager.shared.hasCheckedModels
+            let modelsReadyValue = ModelManager.shared.assetsReady(for: .ai)
             self.modelsReady = { modelsReadyValue }
+            self.usesInjectedModelReadiness = false
         }
 
         self.classifyOverride = classifyOverride
@@ -118,7 +121,7 @@ struct ConversionRunner {
         // Entitlement gate: check if the user's tier can handle this content.
         // Basic users cannot convert scanned documents or documents requiring AI/Enhanced.
         if let classification {
-            let entitlementCheck = checkEntitlement(for: classification, job: job)
+            let entitlementCheck = checkCapability(for: classification, job: job)
             if let failure = entitlementCheck { return failure }
         }
 
@@ -139,36 +142,37 @@ struct ConversionRunner {
         return .success(refined)
     }
 
-    // MARK: - Entitlement gate
+    // MARK: - Capability gate
 
-    /// Returns a failure result if the user's entitlement cannot handle this content,
-    /// nil if conversion should proceed.
-    private func checkEntitlement(
+    /// Returns a failure result if the user cannot use the required capability, nil to proceed.
+    private func checkCapability(
         for classification: ContentClassifier.Classification,
         job: ConversionJob
     ) -> ConversionResult? {
-        switch classification.requiredTier {
-        case .basic:
-            return nil  // always available
-        case .enhanced:
-            guard supportsAdvancedRuntime else {
-                // Apple Silicon required for Enhanced
-                return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
-            }
-            return nil  // Enhanced is available to all tiers on Apple Silicon
-        case .ai:
-            guard supportsAdvancedRuntime else {
-                return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
-            }
-            guard hasProEntitlement() else {
-                AppLog.conversion.info("Content requires AI but user lacks Pro entitlement correlationID=\(job.correlationID, privacy: .public)")
-                return .failure(ConversionError.upgradeRequired.errorDescription ?? "Upgrade to Pro to convert this document.")
-            }
-            guard supportsAI, modelsReady() else {
-                return .failure(ConversionError.modelUnavailable.errorDescription ?? "The AI model isn't installed.")
-            }
-            return nil
+        let downloadedAssets: Set<ModelAsset>
+        if usesInjectedModelReadiness {
+            downloadedAssets = modelsReady() ? Set(classification.requiredTier.requiredAssets) : []
+        } else {
+            downloadedAssets = ModelManager.shared.downloadedAssets
         }
+
+        let gate = AppTierGate(
+            tier: tier(),
+            downloadedAssets: downloadedAssets,
+            deviceSupportsRuntime: supportsAdvancedRuntime,
+            aiFeatureEnabled: supportsAI && FeatureFlags.shared.aiAvailable,
+            aiFeatureUnavailableReason: FeatureFlags.shared.aiUnavailableReason
+        )
+        if let reason = gate.unavailableReason(for: classification.requiredTier) {
+            if classification.requiredTier == .ai {
+                AppLog.conversion.info("AI capability blocked correlationID=\(job.correlationID, privacy: .public) reason=\(reason, privacy: .public)")
+            }
+            let error: ConversionError = classification.requiredTier == .ai
+                ? (tier() < .max ? .upgradeRequired : .modelUnavailable)
+                : .unsupportedOnThisMac
+            return .failure(error.errorDescription ?? reason)
+        }
+        return nil
     }
 
     // MARK: - Content-driven routing
@@ -251,7 +255,7 @@ struct ConversionRunner {
             // Image/TIFF/scanned PDF requiring OCR or AI
             // Entitlement gate already passed above; route to best available
             let useAI = job.useAI && supportsAI
-                && hasProEntitlement()
+                && tier() >= .max
             if useAI {
                 // Pro+AI: PDFKit baseline + Vision OCR + AI (concurrent in runQualitySelectedPDFConversion)
                 let evidence = classification.pdfEvidence

@@ -135,7 +135,7 @@ final class ContentClassifierTests: XCTestCase {
             "Architecture diagram with no text must classify as photo/artwork → metadata only")
         XCTAssertFalse(classification.hasExtractableText)
         XCTAssertEqual(classification.recommendedPathway, .metadata)
-        XCTAssertEqual(classification.requiredTier, .basic)
+        XCTAssertEqual(classification.requiredTier, .native)
     }
 
     // MARK: - WebP document
@@ -195,8 +195,8 @@ final class ContentClassifierTests: XCTestCase {
 
         let classification = try XCTUnwrap(result)
         XCTAssertEqual(classification.kind, .scannedDocument)
-        XCTAssertEqual(classification.requiredTier, .basic,
-            "When AI not available, scanned doc tier falls back to basic (Vision OCR)")
+        XCTAssertEqual(classification.requiredTier, .native,
+            "When AI not available, scanned doc tier falls back to native (Vision OCR)")
         XCTAssertEqual(classification.recommendedPathway, .visionOCR)
     }
 
@@ -214,7 +214,7 @@ final class ContentClassifierTests: XCTestCase {
         )
 
         let classification = try XCTUnwrap(result)
-        XCTAssertEqual(classification.requiredTier, .basic)
+        XCTAssertEqual(classification.requiredTier, .native)
         XCTAssertEqual(classification.recommendedPathway, .metadata)
     }
 }

@@ -382,7 +382,9 @@ final class PythonBridgeTests: XCTestCase {
         try Data("slow advanced conversion".utf8).write(to: input)
         let runner = ConversionRunner(
             pythonWorker: PythonWorker(helperClient: RuntimeHelperClient(executableURL: helper, livenessInterval: 15)),
-            supportsAdvancedRuntime: true
+            supportsAdvancedRuntime: true,
+            tier: { .pro },
+            modelsReady: { true }
         )
 
         let task = Task {

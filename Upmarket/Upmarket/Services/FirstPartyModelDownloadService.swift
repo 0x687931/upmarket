@@ -43,12 +43,22 @@ struct FirstPartyModelDownloadService: Sendable {
             try fileManager.createDirectory(at: stagingURL, withIntermediateDirectories: true)
 
             do {
-                try await downloadFiles(
-                    manifest.files,
-                    manifestURL: manifestURL,
-                    stagingURL: stagingURL,
-                    progressFile: progressFile
-                )
+                if let archive = manifest.archive {
+                    try await downloadAndExtractArchive(
+                        archive,
+                        key: key,
+                        manifestURL: manifestURL,
+                        stagingURL: stagingURL,
+                        progressFile: progressFile
+                    )
+                } else {
+                    try await downloadFiles(
+                        manifest.files,
+                        manifestURL: manifestURL,
+                        stagingURL: stagingURL,
+                        progressFile: progressFile
+                    )
+                }
                 try validateExpectedPaths(spec: spec, modelURL: stagingURL)
                 try writeValidationManifest(spec: spec, files: manifest.files, modelURL: stagingURL)
 
@@ -92,12 +102,14 @@ struct FirstPartyModelDownloadService: Sendable {
         guard manifest.expectedDirs == spec.expectedDirs else {
             throw ModelDownloadError.manifestMismatch("expected directories")
         }
-        guard !manifest.files.isEmpty else {
+        guard !manifest.files.isEmpty || manifest.archive != nil else {
             throw ModelDownloadError.emptyManifest
         }
 
         return manifest
     }
+
+    // MARK: - Individual file download (Apple CDN)
 
     private func downloadFiles(
         _ files: [ModelSourceFile],
@@ -140,6 +152,168 @@ struct FirstPartyModelDownloadService: Sendable {
         }
     }
 
+    // MARK: - Archive download (GitHub CDN)
+
+    private func downloadAndExtractArchive(
+        _ archive: ModelSourceArchive,
+        key: String,
+        manifestURL: URL,
+        stagingURL: URL,
+        progressFile: String
+    ) async throws {
+        guard let archiveURL = archive.resolvedURL(relativeTo: manifestURL) else {
+            throw ModelDownloadError.invalidURL(archive.url)
+        }
+
+        // Partial file lives outside the staging dir so it survives retries.
+        // Staging dir is wiped on each attempt; the partial carries progress across them.
+        let partialURL = modelsDirectoryURL.appendingPathComponent(".\(key).archive.partial")
+
+        let downloadedURL = try await downloadWithResume(
+            from: archiveURL,
+            expectedTotalBytes: archive.bytes,
+            partialFileURL: partialURL,
+            progressFile: progressFile,
+            progressStart: 2,
+            progressEnd: 78
+        )
+
+        writeProgress(80, "Verifying archive…", progressFile: progressFile)
+        let actualHash = try sha256Hex(for: downloadedURL)
+        guard actualHash == archive.sha256.lowercased() else {
+            // Bad checksum — delete partial so next attempt starts clean.
+            try? fileManager.removeItem(at: downloadedURL)
+            throw ModelDownloadError.checksumMismatch("archive")
+        }
+
+        writeProgress(83, "Extracting…", progressFile: progressFile)
+        try await extractTarGz(at: downloadedURL, to: stagingURL)
+
+        // Partial is no longer needed after successful extraction.
+        try? fileManager.removeItem(at: partialURL)
+        writeProgress(95, "Verifying installation…", progressFile: progressFile)
+    }
+
+    /// Downloads `url` to `partialFileURL`, resuming from existing bytes if present.
+    /// Writes download progress to `progressFile` between `progressStart` and `progressEnd`.
+    private func downloadWithResume(
+        from url: URL,
+        expectedTotalBytes: Int64?,
+        partialFileURL: URL,
+        progressFile: String,
+        progressStart: Double,
+        progressEnd: Double
+    ) async throws -> URL {
+        try fileManager.createDirectory(
+            at: partialFileURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+
+        // Determine how many bytes we already have.
+        let existingBytes: Int64
+        if fileManager.fileExists(atPath: partialFileURL.path) {
+            existingBytes = (try? fileManager.attributesOfItem(atPath: partialFileURL.path)[.size] as? Int64) ?? 0
+        } else {
+            existingBytes = 0
+            fileManager.createFile(atPath: partialFileURL.path, contents: nil)
+        }
+
+        // If we already have all the bytes (re-run after checksum fail clears the partial),
+        // skip the network round-trip.
+        if let total = expectedTotalBytes, existingBytes >= total, total > 0 {
+            return partialFileURL
+        }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 120
+        if existingBytes > 0 {
+            request.setValue("bytes=\(existingBytes)-", forHTTPHeaderField: "Range")
+            writeProgress(progressStart, "Resuming download…", progressFile: progressFile)
+        } else {
+            writeProgress(progressStart, "Starting download…", progressFile: progressFile)
+        }
+
+        let handle = try FileHandle(forWritingTo: partialFileURL)
+        defer { try? handle.close() }
+        try handle.seekToEnd()
+
+        let (asyncBytes, response) = try await URLSession.shared.bytes(for: request)
+        let httpStatus = (response as? HTTPURLResponse)?.statusCode ?? 200
+        guard httpStatus == 200 || httpStatus == 206 else {
+            throw URLError(.badServerResponse)
+        }
+
+        // Compute the full expected size for progress reporting.
+        let contentLength = (response as? HTTPURLResponse)?.expectedContentLength ?? -1
+        let fullTotal: Int64
+        if let expected = expectedTotalBytes {
+            fullTotal = expected
+        } else if contentLength > 0 {
+            fullTotal = existingBytes + contentLength
+        } else {
+            fullTotal = -1
+        }
+
+        var written: Int64 = existingBytes
+        var buffer = Data(capacity: 256 * 1024)
+
+        for try await byte in asyncBytes {
+            buffer.append(byte)
+            if buffer.count >= 256 * 1024 {
+                try handle.write(contentsOf: buffer)
+                written += Int64(buffer.count)
+                buffer.removeAll(keepingCapacity: true)
+
+                if fullTotal > 0 {
+                    let fraction = min(Double(written) / Double(fullTotal), 1.0)
+                    let pct = progressStart + (progressEnd - progressStart) * fraction
+                    writeProgress(pct, "Downloading \(formatBytes(written)) of \(formatBytes(fullTotal))…", progressFile: progressFile)
+                } else {
+                    writeProgress(progressStart, "Downloading \(formatBytes(written))…", progressFile: progressFile)
+                }
+            }
+        }
+
+        if !buffer.isEmpty {
+            try handle.write(contentsOf: buffer)
+            written += Int64(buffer.count)
+        }
+
+        return partialFileURL
+    }
+
+    private func extractTarGz(at archiveURL: URL, to destinationURL: URL) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
+            process.arguments = ["xzf", archiveURL.path, "-C", destinationURL.path]
+            process.standardOutput = Pipe()
+            let errorPipe = Pipe()
+            process.standardError = errorPipe
+
+            process.terminationHandler = { proc in
+                if proc.terminationStatus == 0 {
+                    continuation.resume()
+                } else {
+                    let msg = String(
+                        data: errorPipe.fileHandleForReading.readDataToEndOfFile(),
+                        encoding: .utf8
+                    ) ?? ""
+                    AppLog.modelDownload.error("tar extraction failed: \(msg, privacy: .private)")
+                    continuation.resume(throwing: ModelDownloadError.archiveExtractionFailed)
+                }
+            }
+
+            do {
+                try process.run()
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
+    }
+
+    // MARK: - Validation
+
     private func validateExpectedPaths(spec: ModelDownloadSpec, modelURL: URL) throws {
         for relative in spec.expectedFiles {
             guard fileManager.isReadableFile(atPath: modelURL.appendingPathComponent(relative).path) else {
@@ -164,8 +338,13 @@ struct FirstPartyModelDownloadService: Sendable {
         files: [ModelSourceFile],
         modelURL: URL
     ) throws {
+        // The Python validator requires sha256 checksums for every expected_files entry.
+        // Compute those first, then add any remaining individually-downloaded files.
         var hashes: [String: String] = [:]
-        for file in files {
+        for relative in spec.expectedFiles {
+            hashes[relative] = try sha256Hex(for: modelURL.appendingPathComponent(relative))
+        }
+        for file in files where hashes[file.path] == nil {
             hashes[file.path] = try sha256Hex(for: modelURL.appendingPathComponent(file.path))
         }
 
@@ -182,6 +361,8 @@ struct FirstPartyModelDownloadService: Sendable {
         let data = try JSONEncoder.upmarketModelManifest.encode(manifest)
         try data.write(to: modelURL.appendingPathComponent("upmarket_manifest.json"), options: .atomic)
     }
+
+    // MARK: - Utilities
 
     private func writeProgress(_ percent: Double, _ message: String, progressFile: String) {
         guard !progressFile.isEmpty else { return }
@@ -239,6 +420,14 @@ struct FirstPartyModelDownloadService: Sendable {
             return false
         }
         return true
+    }
+
+    private func formatBytes(_ bytes: Int64) -> String {
+        let gb = Double(bytes) / 1_073_741_824
+        if gb >= 1 { return String(format: "%.1f GB", gb) }
+        let mb = Double(bytes) / 1_048_576
+        if mb >= 1 { return String(format: "%.0f MB", mb) }
+        return "\(bytes / 1024) KB"
     }
 
     nonisolated private static func defaultManifestBaseURL() -> URL? {
@@ -346,6 +535,7 @@ private struct ModelSourceManifest: Decodable {
     let storageDirectory: String
     let expectedFiles: [String]
     let expectedDirs: [String]
+    let archive: ModelSourceArchive?
     let files: [ModelSourceFile]
 
     private enum CodingKeys: String, CodingKey {
@@ -356,7 +546,24 @@ private struct ModelSourceManifest: Decodable {
         case storageDirectory = "storage_dir"
         case expectedFiles = "expected_files"
         case expectedDirs = "expected_dirs"
+        case archive
         case files
+    }
+}
+
+// A single downloadable archive (used by the GitHub CDN path).
+// When present, the manifest's `files` array is ignored in favour of
+// downloading and extracting this archive.
+private struct ModelSourceArchive: Decodable {
+    let url: String
+    let sha256: String
+    let bytes: Int64?
+
+    func resolvedURL(relativeTo manifestURL: URL) -> URL? {
+        if let absolute = URL(string: url), absolute.scheme != nil {
+            return absolute
+        }
+        return URL(string: url, relativeTo: manifestURL.deletingLastPathComponent())?.absoluteURL
     }
 }
 
@@ -406,6 +613,7 @@ private enum ModelDownloadError: Error {
     case sizeMismatch(String)
     case checksumMismatch(String)
     case missingExpectedPath(String)
+    case archiveExtractionFailed
 
     var errorDescription: String {
         switch self {
@@ -427,6 +635,8 @@ private enum ModelDownloadError: Error {
             return "Downloaded model file checksum did not match the manifest."
         case .missingExpectedPath:
             return "Downloaded model files were incomplete."
+        case .archiveExtractionFailed:
+            return "Model archive could not be extracted."
         }
     }
 }

@@ -10,48 +10,58 @@ struct MenuBarDropdown: View {
             Divider()
         }
 
-        MenuRow(icon: "doc.badge.plus", label: "Convert Document…", shortcut: "⌘O") {
+        MenuRow(icon: "doc.badge.plus", label: "Convert Document…", shortcut: "⌘O",
+                identifier: "MenuConvertDocument") {
             MainWindowController.shared.show(pickFile: true)
         }
 
-        MenuRow(icon: "macwindow", label: "Show Upmarket Window") {
+        MenuRow(icon: "macwindow", label: "Show Upmarket Window",
+                identifier: "MenuShowMainWindow") {
             MainWindowController.shared.show()
         }
 
-        MenuRow(icon: "square.grid.2x2", label: AppVisibilityPreference.showShelf ? "Hide Shelf" : "Show Shelf") {
+        MenuRow(icon: "square.grid.2x2",
+                label: AppVisibilityPreference.showShelf ? "Hide Shelf" : "Show Shelf",
+                identifier: "MenuToggleShelf") {
             let showing = AppVisibilityPreference.showShelf
             AppVisibilityPreference.applyShelfVisibility(showShelf: !showing)
         }
 
         Divider()
 
-        MenuRow(icon: "gearshape", label: "Preferences…", shortcut: "⌘,") {
+        MenuRow(icon: "gearshape", label: "Preferences…", shortcut: "⌘,",
+                identifier: "MenuPreferences") {
             PreferencesWindowController.shared.show()
         }
 
-        MenuRow(icon: "exclamationmark.bubble", label: "Report a Problem…") {
+        MenuRow(icon: "exclamationmark.bubble", label: "Report a Problem…",
+                identifier: "MenuReportProblem") {
             ReportProblemWindowController.shared.show()
         }
 
         Divider()
 
-        if store.hasProOrAbove {
-            MenuRow(icon: "checkmark.circle", label: "Upmarket + AI", status: true) {
+        if store.tier >= .max {
+            MenuRow(icon: "checkmark.circle", label: "Upmarket Max", status: true,
+                    identifier: "MenuEntitlementStatus") {
                 // No-op: status row only.
             }
-        } else if store.hasBasicOrAbove {
-            MenuRow(icon: "arrow.up.circle", label: "Upgrade to Upmarket + AI…") {
+        } else if store.tier >= .pro {
+            MenuRow(icon: "arrow.up.circle", label: "Upgrade to Upmarket Max…",
+                    identifier: "MenuUpgrade") {
                 NotificationCenter.default.post(name: .showPaywall, object: nil)
             }
         } else {
-            MenuRow(icon: "lock.open", label: "Unlock Upmarket…") {
+            MenuRow(icon: "arrow.up.circle", label: "Upgrade to Upmarket Pro…",
+                    identifier: "MenuUpgrade") {
                 NotificationCenter.default.post(name: .showPaywall, object: nil)
             }
         }
 
         Divider()
 
-        MenuRow(icon: "power", label: "Quit Upmarket", shortcut: "⌘Q") {
+        MenuRow(icon: "power", label: "Quit Upmarket", shortcut: "⌘Q",
+                identifier: "MenuQuit") {
             NSApp.terminate(nil)
         }
     }
@@ -83,6 +93,7 @@ private struct MenuRow: View {
     let label: String
     var shortcut: String? = nil
     var status: Bool = false
+    var identifier: String = ""
     let action: () -> Void
 
     @State private var isHovering = false
@@ -122,5 +133,6 @@ private struct MenuRow: View {
         .buttonStyle(.plain)
         .padding(.horizontal, 4)
         .onHover { if !status { isHovering = $0 } }
+        .accessibilityIdentifier(identifier)
     }
 }

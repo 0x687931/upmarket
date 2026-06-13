@@ -715,7 +715,7 @@ final class ConversionQueueTests: XCTestCase {
             pythonWorker: PythonWorker(helperClient: RuntimeHelperClient(executableURL: helper, livenessInterval: 5)),
             supportsAdvancedRuntime: true,
             supportsAI: true,
-            hasProEntitlement: { true },
+            tier: { .max },
             modelsReady: { true },
             classifyOverride: { _, _, _, _ in scannedClassification }
         )

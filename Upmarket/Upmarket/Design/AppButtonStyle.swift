@@ -22,6 +22,7 @@ struct AppProminentButtonStyle: ButtonStyle {
             )
             .opacity(configuration.isPressed ? 0.96 : 1)
             .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .contentShape(RoundedRectangle(cornerRadius: metrics.cornerRadius, style: .continuous))
     }
 
     private static func metrics(for controlSize: ControlSize) -> (fontSize: CGFloat, verticalPadding: CGFloat, horizontalPadding: CGFloat, minHeight: CGFloat, cornerRadius: CGFloat) {
@@ -64,6 +65,7 @@ struct AppBorderedButtonStyle: ButtonStyle {
             )
             .opacity(configuration.isPressed ? 0.98 : 1)
             .scaleEffect(configuration.isPressed ? 0.988 : 1)
+            .contentShape(RoundedRectangle(cornerRadius: metrics.cornerRadius, style: .continuous))
     }
 
     private static func metrics(for controlSize: ControlSize) -> (fontSize: CGFloat, verticalPadding: CGFloat, horizontalPadding: CGFloat, minHeight: CGFloat, cornerRadius: CGFloat) {
@@ -108,6 +110,7 @@ struct AppSubtleRowButtonStyle: ButtonStyle {
             )
             .opacity(configuration.isPressed ? 0.98 : 1)
             .scaleEffect(configuration.isPressed ? 0.995 : 1)
+            .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
     }
 }
 
@@ -140,6 +143,7 @@ struct AppActionButtonStyle: ButtonStyle {
             )
             .opacity(configuration.isPressed ? 1 : 0.82)
             .scaleEffect(configuration.isPressed ? 0.94 : 1)
+            .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous))
     }
 
     private static func metrics(for size: Size) -> (fontSize: CGFloat, padding: CGFloat) {
@@ -177,6 +181,7 @@ struct AppCardStyle: ButtonStyle {
             .overlay(border)
             .opacity(isDisabled ? 0.6 : (pressed ? 0.98 : 1))
             .scaleEffect(pressed ? 0.995 : 1)
+            .contentShape(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
     }
 
     private var background: some View {

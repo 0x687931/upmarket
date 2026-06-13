@@ -52,6 +52,7 @@ struct ShelfView: View {
     @State private var hoverClose  = false
     @State private var hoverAdd    = false
     @State private var hoverToggle = false
+    @State private var hoverClear  = false
 
     private var isRightAnchored: Bool {
         layoutAnchor == .bottomRight || layoutAnchor == .topRight
@@ -74,6 +75,10 @@ struct ShelfView: View {
     }
 
     private var hasQueueItems: Bool { !conversion.jobs.isEmpty }
+
+    private var terminalJobCount: Int {
+        conversion.jobs.filter { !$0.isRunning }.count
+    }
 
     private var effectiveMode: ShelfDisplayMode {
         if displayMode == .queue, hasQueueItems {
@@ -259,6 +264,8 @@ struct ShelfView: View {
         .help(hasQueueItems ? "Show queue" : "Drop files")
         .accessibilityLabel(hasQueueItems ? "Conversion shelf — \(conversion.jobs.count) items" : "Conversion shelf")
         .accessibilityHint(hasQueueItems ? "Double-tap to show the queue" : "Drop files here or double-tap to expand")
+        .accessibilityIdentifier("ShelfMini")
+        .accessibilityAddTraits(.isButton)
     }
 
     @ViewBuilder private var miniSymbol: some View {
@@ -327,13 +334,16 @@ struct ShelfView: View {
     // MARK: - Control strip (left column)
 
     private var controlStrip: some View {
-        VStack(spacing: 14) {
+        // Tighten spacing to fit a 4th button when there are done items to clear.
+        let spacing: CGFloat = terminalJobCount > 0 ? 8 : 14
+        return VStack(spacing: spacing) {
             controlButton(symbol: "xmark",
                           hoverColor: AppTheme.Colour.shelfHoverClose,
                           isHovered: hoverClose,
                           isSpotlighted: tourSpotlight == .closeButton,
                           help: "Hide shelf",
-                          accessibilityHint: "Hides the conversion shelf from the screen") {
+                          accessibilityHint: "Hides the conversion shelf from the screen",
+                          accessibilityIdentifier: "ShelfCloseButton") {
                 ShelfWindowController.shared.hide()
             }
             .onHover { hoverClose = $0 }
@@ -343,7 +353,8 @@ struct ShelfView: View {
                           isHovered: hoverAdd,
                           isSpotlighted: tourSpotlight == .addButton,
                           help: "Add files",
-                          accessibilityHint: "Opens a file picker to add documents to the conversion queue") {
+                          accessibilityHint: "Opens a file picker to add documents to the conversion queue",
+                          accessibilityIdentifier: "ShelfAddButton") {
                 openFilePicker()
             }
             .onHover { hoverAdd = $0 }
@@ -353,10 +364,15 @@ struct ShelfView: View {
                           isHovered: hoverToggle,
                           isSpotlighted: tourSpotlight == .expandButton,
                           help: queueControlHelp,
-                          accessibilityHint: queueControlA11yHint) {
+                          accessibilityHint: queueControlA11yHint,
+                          accessibilityIdentifier: "ShelfToggleButton") {
                 toggleQueueMode()
             }
             .onHover { hoverToggle = $0 }
+
+            if terminalJobCount > 0 {
+                clearDoneButton
+            }
         }
         .frame(width: controlStripWidth, height: closedHeight)
         .background(AppTheme.Colour.shelfControlStripFill)
@@ -401,6 +417,7 @@ struct ShelfView: View {
         isEnabled: Bool = true,
         help: String,
         accessibilityHint: String = "",
+        accessibilityIdentifier: String = "",
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -422,6 +439,7 @@ struct ShelfView: View {
         .help(help)
         .accessibilityLabel(help)
         .accessibilityHint(accessibilityHint)
+        .accessibilityIdentifier(accessibilityIdentifier)
         .animation(.easeInOut(duration: 0.12), value: isHovered)
         .animation(.easeInOut(duration: 0.18), value: isSpotlighted)
     }
@@ -562,7 +580,6 @@ struct ShelfView: View {
                 let ordered = Array(conversion.jobs.reversed())
                 let visible = Array(ordered.prefix(maxVisible))
                 let extra = max(0, ordered.count - visible.count)
-                let doneCount = conversion.jobs.filter { !$0.isRunning }.count
 
                 ForEach(visible) { item in
                     ShelfItemView(
@@ -582,9 +599,6 @@ struct ShelfView: View {
                 }
                 if extra > 0 {
                     overflowBadge(extra: extra)
-                }
-                if doneCount > 0 {
-                    clearDoneButton
                 }
             }
             .padding(.horizontal, AppTheme.Spacing.sm)
@@ -606,6 +620,7 @@ struct ShelfView: View {
                 .foregroundStyle(.primary.opacity(0.7))
         }
         .frame(width: overflowCardWidth)
+        .contentShape(Rectangle())
         .help("\(extra) more queued")
         .accessibilityLabel("\(extra) more items queued")
         .accessibilityHint("Double-tap to show all queued items")
@@ -614,31 +629,18 @@ struct ShelfView: View {
     }
 
     private var clearDoneButton: some View {
-        Button {
+        controlButton(
+            symbol: "broom",
+            hoverColor: AppTheme.Colour.shelfHoverClose,
+            isHovered: hoverClear,
+            isSpotlighted: false,
+            help: "Clear completed",
+            accessibilityHint: "Removes completed, failed, and cancelled items from the shelf",
+            accessibilityIdentifier: "ShelfClearButton"
+        ) {
             clearTerminalJobs()
-        } label: {
-            VStack(spacing: 4) {
-                ZStack {
-                    Circle()
-                        .fill(AppTheme.Colour.glassFillThin)
-                        .overlay(
-                            Circle()
-                                .strokeBorder(AppTheme.Colour.border, lineWidth: 0.5)
-                        )
-                        .frame(width: 30, height: 30)
-                    Image(systemName: "broom")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.primary.opacity(0.7))
-                }
-                Text("Clear")
-                    .font(windowSize.fontCaption)
-            }
-            .frame(width: clearButtonWidth)
         }
-        .buttonStyle(AppPlainButtonStyle())
-        .help("Clear completed")
-        .accessibilityLabel("Clear completed")
-        .accessibilityHint("Removes completed, failed, and cancelled items from the shelf")
+        .onHover { hoverClear = $0 }
     }
 
     private func clearTerminalJobs() {
@@ -720,6 +722,14 @@ struct ShelfView: View {
             }
             if !conversion.isConverting {
                 NotificationCenter.default.post(name: .upmarketConversionEnded, object: nil)
+                // Collapse to mini so the badge shows completed count.
+                // Guard: a new file may have been queued during the delay.
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                if !conversion.isConverting {
+                    withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
+                        displayMode = .mini
+                    }
+                }
             }
             if store.shouldShowTrialPaywallAfterConversion() {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
@@ -767,10 +777,8 @@ struct ShelfView: View {
 
     private func allowedAISelection(_ requested: Bool) async -> Bool {
         guard requested else { return false }
-        return await modelManager.aiUseUnavailableReasonAfterChecking(hasPro: store.hasProOrAbove) == nil
+        return await modelManager.gateAfterChecking(tier: store.tier).canUse(.ai)
     }
-
-    private var clearButtonWidth: CGFloat { 40 }
 
     private var overflowCardWidth: CGFloat { 56 }
 
@@ -960,7 +968,7 @@ struct ShelfItemView: View {
             let formatted = formattedOutput(output)
             let savedURL = SavePreference.shared.save(
                 markdown: formatted.text,
-                title: output.title,
+                title: item.sourceURL.deletingPathExtension().lastPathComponent,
                 sourceURL: item.sourceURL,
                 fileExtension: formatted.fileExtension
             )
@@ -973,7 +981,7 @@ struct ShelfItemView: View {
             let formatted = formattedOutput(output)
             _ = FileAccessService.shared.saveMarkdown(
                 formatted.text,
-                title: output.title,
+                title: item.sourceURL.deletingPathExtension().lastPathComponent,
                 fileExtension: formatted.fileExtension
             )
         }

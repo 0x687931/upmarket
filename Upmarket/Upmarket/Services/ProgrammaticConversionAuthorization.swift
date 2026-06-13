@@ -38,7 +38,7 @@ enum ProgrammaticConversionAuthorization {
             },
             aiUnavailableReason: { useAI in
                 guard useAI else { return nil }
-                return await ModelManager.shared.aiUseUnavailableReasonAfterChecking(hasPro: store.hasProOrAbove)
+                return await ModelManager.shared.gateAfterChecking(tier: store.tier).unavailableReason(for: .ai)
             },
             consumeConversion: {
                 store.consumeConversion()

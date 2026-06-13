@@ -96,12 +96,13 @@ struct ModelDownloadView: View {
                     }
                 }
 
-                // Basic tier: Python runtime (required for Enhanced + AI)
-                ForEach(modelManager.models.filter { $0.tier == "basic" }, id: \.key) { model in
-                    let gateReason = modelManager.basicDownloadUnavailableReason(hasBasic: store.hasBasicOrAbove)
+                // Pro tier: Python runtime + layout models (required for Enhanced conversion)
+                ForEach(modelManager.models.filter { $0.tier == "pro" && $0.key != "upmarket_ai" }, id: \.key) { model in
+                    let asset = ModelAsset(rawValue: model.key)
+                    let gateReason = asset.flatMap { modelManager.gate(tier: store.tier).downloadUnavailableReason(for: $0) }
                     modelRow(
                         key: model.key,
-                        icon: "cpu",
+                        icon: model.key == ModelAsset.pythonRuntime.rawValue ? "cpu" : "doc.text.magnifyingglass",
                         title: model.name,
                         description: gateReason ?? model.error ?? model.description,
                         sizeMB: model.sizeMB,
@@ -111,23 +112,9 @@ struct ModelDownloadView: View {
                     )
                 }
 
-                // Enhanced tier: layout/table models
-                ForEach(modelManager.models.filter { $0.tier == "enhanced" }, id: \.key) { model in
-                    modelRow(
-                        key: model.key,
-                        icon: "doc.text.magnifyingglass",
-                        title: model.name,
-                        description: model.error ?? model.description,
-                        sizeMB: model.sizeMB,
-                        isDownloaded: model.isDownloaded,
-                        badge: nil,
-                        available: model.isAvailable
-                    )
-                }
-
-                if store.hasProOrAbove {
-                    ForEach(modelManager.models.filter { $0.tier == "pro" }, id: \.key) { model in
-                        let gateReason = modelManager.proDownloadUnavailableReason(hasPro: store.hasProOrAbove)
+                if store.tier >= .max {
+                    ForEach(modelManager.models.filter { $0.tier == "max" }, id: \.key) { model in
+                        let gateReason = modelManager.gate(tier: store.tier).downloadUnavailableReason(for: .upmarketAI)
                         modelRow(
                             key: model.key,
                             icon: "sparkles",
@@ -135,7 +122,7 @@ struct ModelDownloadView: View {
                             description: gateReason ?? model.error ?? model.description,
                             sizeMB: model.sizeMB,
                             isDownloaded: model.isDownloaded,
-                            badge: "PRO",
+                            badge: "MAX",
                             available: model.isAvailable && gateReason == nil
                         )
                     }
@@ -185,7 +172,7 @@ struct ModelDownloadView: View {
                         .controlSize(.small)
                     } else if available {
                         Button("Download") {
-                            modelManager.downloadModel(key: key, hasPro: store.hasProOrAbove)
+                            modelManager.downloadAsset(ModelAsset(rawValue: key) ?? .upmarketAI, gate: modelManager.gate(tier: store.tier))
                         }
                         .buttonStyle(AppActionButtonStyle())
                         .controlSize(.small)
@@ -202,11 +189,11 @@ struct ModelDownloadView: View {
         AppSectionCard(title: "Downloads") {
             VStack(spacing: AppTheme.Spacing.sm) {
             // Basic tier: Python runtime — shown to Basic+ users on Apple Silicon
-            if modelManager.basicDownloadUnavailableReason(hasBasic: store.hasBasicOrAbove) == nil {
-                let runtimeReady = modelManager.runtimeDownloaded
+            if modelManager.gate(tier: store.tier).downloadUnavailableReason(for: .pythonRuntime) == nil {
+                let runtimeReady = modelManager.downloadedAssets.contains(.pythonRuntime)
                 if !runtimeReady {
                     Button {
-                        modelManager.downloadBasicRuntime(hasBasic: store.hasBasicOrAbove)
+                        modelManager.downloadAssets(for: .enhanced, gate: modelManager.gate(tier: store.tier))
                     } label: {
                         Label("Download Upmarket Runtime — \(modelManager.runtimeSizeMB) MB", systemImage: "arrow.down.circle.fill")
                             .frame(maxWidth: .infinity)
@@ -217,12 +204,12 @@ struct ModelDownloadView: View {
                 }
             }
 
-            // Pro tier: AI model weights — shown to Pro users once runtime is ready
-            if modelManager.proDownloadUnavailableReason(hasPro: store.hasProOrAbove) == nil {
-                let proReady = modelManager.models.filter { $0.tier == "pro" }.allSatisfy(\.isDownloaded)
+            // Max tier: AI model weights — shown to Max users once runtime is ready
+            if modelManager.gate(tier: store.tier).downloadUnavailableReason(for: .upmarketAI) == nil {
+                let proReady = modelManager.models.filter { $0.tier == "max" }.allSatisfy(\.isDownloaded)
                 if !proReady {
                     Button {
-                        modelManager.downloadProModels(hasPro: store.hasProOrAbove)
+                        modelManager.downloadAssets(for: .ai, gate: modelManager.gate(tier: store.tier))
                     } label: {
                         Label("Download Upmarket AI — \(modelManager.proSizeMB) MB", systemImage: "sparkles")
                             .frame(maxWidth: .infinity)
@@ -329,8 +316,8 @@ struct ModelDownloadView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                 Button("Try Again") {
-                    if modelManager.proDownloadUnavailableReason(hasPro: store.hasProOrAbove) == nil {
-                        modelManager.downloadProModels(hasPro: store.hasProOrAbove)
+                    if modelManager.gate(tier: store.tier).downloadUnavailableReason(for: .upmarketAI) == nil {
+                        modelManager.downloadAssets(for: .ai, gate: modelManager.gate(tier: store.tier))
                     } else {
                         modelManager.checkModels()
                     }

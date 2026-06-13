@@ -22,6 +22,18 @@ enum AppRuntime {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil || isRunningUITests
     }
 
+    static var isOpeningPaywall: Bool {
+        ProcessInfo.processInfo.environment["UPMARKET_UI_TEST_OPEN_PAYWALL"] == "1"
+    }
+
+    static var isOpeningPreferences: Bool {
+        ProcessInfo.processInfo.environment["UPMARKET_UI_TEST_OPEN_PREFERENCES"] == "1"
+    }
+
+    static var isOpeningShelf: Bool {
+        ProcessInfo.processInfo.environment["UPMARKET_UI_TEST_OPEN_SHELF"] == "1"
+    }
+
     static func installTerminationSignalCleanup() {
         guard terminationSignalSources.isEmpty else { return }
 

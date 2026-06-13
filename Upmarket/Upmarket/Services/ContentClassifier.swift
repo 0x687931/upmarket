@@ -32,19 +32,9 @@ enum ContentClassifier {
         case audioVideo
     }
 
-    /// Minimum pipeline tier required to convert this content.
-    enum RequiredTier: Equatable {
-        /// PDFKit or metadata — always available.
-        case basic
-        /// Enhanced Docling layout model — requires Advanced Runtime (Apple Silicon).
-        case enhanced
-        /// AI VLM (Granite) — requires Pro entitlement + AI model downloaded.
-        case ai
-    }
-
     struct Classification: Equatable {
         let kind: ContentKind
-        let requiredTier: RequiredTier
+        let requiredTier: ConversionCapability
         /// True when Vision detected substantial text in an image/TIFF.
         let hasExtractableText: Bool
         /// Page/frame count from ImageIO or PDFKit.
@@ -58,6 +48,7 @@ enum ContentClassifier {
         var needsAdvancedProcessing: Bool {
             requiredTier == .enhanced || requiredTier == .ai
         }
+
 
         /// Complexity advice for the pre-conversion analysis prompt.
         var complexityAdvice: ComplexityAdvice? {
@@ -102,7 +93,7 @@ enum ContentClassifier {
             || ToolFormatCapabilityMatrix.supports(.speech, format) {
             return Classification(
                 kind: .audioVideo,
-                requiredTier: .basic,
+                requiredTier: .native,
                 hasExtractableText: false,
                 frameCount: 1,
                 pdfEvidence: nil,
@@ -118,7 +109,7 @@ enum ContentClassifier {
         if let format, structuredFormats.contains(format) {
             return Classification(
                 kind: .structuredDocument,
-                requiredTier: supportsAdvancedRuntime ? .enhanced : .basic,
+                requiredTier: supportsAdvancedRuntime ? .enhanced : .native,
                 hasExtractableText: true,
                 frameCount: 1,
                 pdfEvidence: nil,
@@ -163,21 +154,21 @@ enum ContentClassifier {
         }
 
         let kind: ContentKind
-        let tier: RequiredTier
+        let tier: ConversionCapability
         let pathway: ConversionPathway
 
         switch pdfClass.recommendedPathway {
         case .pdfKit:
             kind = .digitalDocument
-            tier = .basic
+            tier = .native
             pathway = .pdfKit
         case .enhanced:
             kind = .digitalDocument
-            tier = supportsAdvancedRuntime ? .enhanced : .basic
+            tier = supportsAdvancedRuntime ? .enhanced : .native
             pathway = supportsAdvancedRuntime ? .enhanced : .pdfKit
         case .visionOCR:
             kind = .scannedDocument
-            tier = supportsAI ? .ai : .basic
+            tier = supportsAI ? .ai : .native
             pathway = supportsAI ? .ai : .visionOCR
         }
 
@@ -210,7 +201,7 @@ enum ContentClassifier {
             )
             return Classification(
                 kind: .scannedDocument,
-                requiredTier: supportsAI ? .ai : .basic,
+                requiredTier: supportsAI ? .ai : .native,
                 hasExtractableText: true,
                 frameCount: frameCount,
                 pdfEvidence: nil,
@@ -238,7 +229,7 @@ enum ContentClassifier {
             )
             return Classification(
                 kind: .scannedDocument,
-                requiredTier: supportsAI ? .ai : .basic,
+                requiredTier: supportsAI ? .ai : .native,
                 hasExtractableText: true,
                 frameCount: 1,
                 pdfEvidence: nil,
@@ -250,7 +241,7 @@ enum ContentClassifier {
             )
             return Classification(
                 kind: .photoOrArtwork,
-                requiredTier: .basic,
+                requiredTier: .native,
                 hasExtractableText: false,
                 frameCount: 1,
                 pdfEvidence: nil,
@@ -317,12 +308,3 @@ extension ContentClassifier.ContentKind {
     }
 }
 
-extension ContentClassifier.RequiredTier {
-    var diagnosticLabel: String {
-        switch self {
-        case .basic:    return "basic"
-        case .enhanced: return "enhanced"
-        case .ai:       return "ai"
-        }
-    }
-}

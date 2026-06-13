@@ -73,6 +73,13 @@
             ReferencedContainer = "container:Upmarket.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "UPMARKET_MODEL_MANIFEST_BASE_URL"
+            value = ""
+            isEnabled = "NO">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
       <StoreKitConfigurationFileReference
          identifier = "Upmarket/Store.storekit">
       </StoreKitConfigurationFileReference>

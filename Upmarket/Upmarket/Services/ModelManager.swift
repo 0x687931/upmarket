@@ -124,33 +124,47 @@ final class ModelManager: ObservableObject {
         self.offlineModeHandler = offlineModeHandler
     }
 
-    // Fast local conversion works without downloaded models.
-    var allRequiredDownloaded: Bool { true }
+    // MARK: - Asset state
 
-    var runtimeDownloaded: Bool {
-        models.first { $0.tier == "basic" }?.isDownloaded ?? false
+    /// The set of assets currently installed and validated on disk.
+    var downloadedAssets: Set<ModelAsset> {
+        Set(models.filter(\.isDownloaded).compactMap { ModelAsset(rawValue: $0.key) })
     }
 
-    var enhancedDownloaded: Bool {
-        models.first { $0.tier == "enhanced" }?.isDownloaded ?? false
+    /// True when all assets required for `capability` are present on disk.
+    func assetsReady(for capability: ConversionCapability) -> Bool {
+        capability.requiredAssets.allSatisfy { downloadedAssets.contains($0) }
     }
 
-    var proDownloaded: Bool {
-        let proModels = models.filter { $0.tier == "pro" }
-        return !proModels.isEmpty && proModels.allSatisfy(\.isDownloaded)
+    // MARK: - Gating
+
+    /// Builds an AppTierGate snapshot for the current model state and supplied tier.
+    /// Pass this to UI and services instead of calling individual check functions.
+    func gate(tier: AppTier) -> AppTierGate {
+        AppTierGate(
+            tier: tier,
+            downloadedAssets: downloadedAssets,
+            deviceSupportsRuntime: DeviceCapability.shared.isAppleSilicon,
+            aiFeatureEnabled: FeatureFlags.shared.aiAvailable,
+            aiFeatureUnavailableReason: FeatureFlags.shared.aiUnavailableReason
+        )
     }
 
-    var runtimeSizeMB: Int {
-        models.filter { $0.tier == "basic" }.reduce(0) { $0 + $1.sizeMB }
+    /// Ensures models have been checked, then returns the gate. Use before AI conversion.
+    func gateAfterChecking(tier: AppTier) async -> AppTierGate {
+        switch installState {
+        case .unchecked, .checking: await checkModelsNow()
+        case .ready, .failed: break
+        }
+        return gate(tier: tier)
     }
 
-    var requiredSizeMB: Int {
-        models.filter(\.isRequired).reduce(0) { $0 + $1.sizeMB }
-    }
+    // MARK: - Size display helpers
 
-    var proSizeMB: Int {
-        models.filter { $0.tier == "pro" }.reduce(0) { $0 + $1.sizeMB }
-    }
+    var enhancedSizeMB: Int { ModelAsset.pythonRuntime.sizeMB + ModelAsset.layout.sizeMB }
+    var aiSizeMB: Int       { ModelAsset.upmarketAI.sizeMB }
+    var runtimeSizeMB: Int  { ModelAsset.pythonRuntime.sizeMB }
+    var proSizeMB: Int      { ModelAsset.upmarketAI.sizeMB }
 
     var checkError: String? {
         guard case .failed(let message) = installState else { return nil }
@@ -255,114 +269,28 @@ final class ModelManager: ObservableObject {
         downloadModels(keys: models.filter(\.isRequired).map(\.key))
     }
 
-    func downloadModel(key: String, hasPro: Bool) {
-        guard let model = models.first(where: { $0.key == key }) else {
-            downloadError = "Check local model status before downloading."
+    /// Download all missing assets needed for `capability`.
+    /// The gate is checked first; if blocked, `downloadError` is set and nothing downloads.
+    func downloadAssets(for capability: ConversionCapability, gate: AppTierGate) {
+        let missing = gate.missingDownloadableAssets(for: capability)
+
+        if missing.isEmpty {
+            if let reason = gate.downloadUnavailableReason(for: capability.requiredAssets.first ?? .layout) {
+                downloadError = reason
+            }
             return
         }
-        if model.tier == "pro", let reason = proDownloadUnavailableReason(hasPro: hasPro) {
+        downloadModels(keys: missing.map(\.rawValue))
+    }
+
+    /// Download a single asset if the gate permits it.
+    func downloadAsset(_ asset: ModelAsset, gate: AppTierGate) {
+        if let reason = gate.downloadUnavailableReason(for: asset) {
             downloadError = reason
             return
         }
-        downloadModels(keys: [key])
-    }
-
-    func basicDownloadUnavailableReason(
-        hasBasic: Bool,
-        deviceSupportsRuntime: Bool = DeviceCapability.shared.supportsAdvancedRuntime
-    ) -> String? {
-        if !hasBasic {
-            return "Enhanced conversion requires an Upmarket license."
-        }
-        if !deviceSupportsRuntime {
-            return "Enhanced conversion requires Apple Silicon."
-        }
-        if models.filter({ $0.tier == "basic" }).isEmpty {
-            return "Check local status before downloading."
-        }
-        return nil
-    }
-
-    func downloadBasicRuntime(hasBasic: Bool) {
-        if let reason = basicDownloadUnavailableReason(hasBasic: hasBasic) {
-            downloadError = reason
-            return
-        }
-        downloadModels(keys: models.filter { $0.tier == "basic" && !$0.isDownloaded }.map(\.key))
-    }
-
-    func proDownloadUnavailableReason(
-        hasPro: Bool,
-        featureEnabled: Bool = FeatureFlags.shared.aiAvailable,
-        featureReason: String? = FeatureFlags.shared.aiUnavailableReason,
-        deviceSupportsAI: Bool = DeviceCapability.shared.supportsUpmarketAI,
-        deviceReason: String = DeviceCapability.shared.upmarketAIUnavailableReason
-    ) -> String? {
-        if !hasPro {
-            return "Upmarket AI requires a Pro license."
-        }
-        if !deviceSupportsAI {
-            return deviceReason
-        }
-        if !featureEnabled {
-            return featureReason ?? "Upmarket AI is not available for this Mac or language yet."
-        }
-        if models.filter({ $0.tier == "pro" }).isEmpty {
-            return "Check local model status before downloading Upmarket AI."
-        }
-        return nil
-    }
-
-    func aiUseUnavailableReason(
-        hasPro: Bool,
-        featureEnabled: Bool = FeatureFlags.shared.aiAvailable,
-        featureReason: String? = FeatureFlags.shared.aiUnavailableReason,
-        deviceSupportsAI: Bool = DeviceCapability.shared.supportsUpmarketAI,
-        deviceReason: String = DeviceCapability.shared.upmarketAIUnavailableReason
-    ) -> String? {
-        if let reason = proDownloadUnavailableReason(
-            hasPro: hasPro,
-            featureEnabled: featureEnabled,
-            featureReason: featureReason,
-            deviceSupportsAI: deviceSupportsAI,
-            deviceReason: deviceReason
-        ) {
-            return reason
-        }
-        if !proDownloaded {
-            return "Download Upmarket AI before using it for conversion."
-        }
-        return nil
-    }
-
-    func aiUseUnavailableReasonAfterChecking(
-        hasPro: Bool,
-        featureEnabled: Bool? = nil,
-        featureReason: String? = nil,
-        deviceSupportsAI: Bool? = nil,
-        deviceReason: String? = nil
-    ) async -> String? {
-        switch installState {
-        case .unchecked, .checking:
-            await checkModelsNow()
-        case .ready, .failed:
-            break
-        }
-        return aiUseUnavailableReason(
-            hasPro: hasPro,
-            featureEnabled: featureEnabled ?? FeatureFlags.shared.aiAvailable,
-            featureReason: featureReason ?? FeatureFlags.shared.aiUnavailableReason,
-            deviceSupportsAI: deviceSupportsAI ?? DeviceCapability.shared.supportsUpmarketAI,
-            deviceReason: deviceReason ?? DeviceCapability.shared.upmarketAIUnavailableReason
-        )
-    }
-
-    func downloadProModels(hasPro: Bool) {
-        if let reason = proDownloadUnavailableReason(hasPro: hasPro) {
-            downloadError = reason
-            return
-        }
-        downloadModels(keys: models.filter { $0.tier == "pro" && !$0.isDownloaded }.map(\.key))
+        if downloadedAssets.contains(asset) { return }
+        downloadModels(keys: [asset.rawValue])
     }
 
     // MARK: - Private
