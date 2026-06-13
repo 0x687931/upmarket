@@ -10,20 +10,34 @@ All shipping code must remain compatible with macOS 13.3. This is enforced in `U
 
 ### Writing Tools Refinement (macOS 15.1+)
 
-**Status:** Available but not yet integrated.
+**Status:** Implemented with sentence-merging and text cleanup.
 
-`WritingToolsRefiner` is available on macOS 15.1+ (Sequoia) with Apple Silicon. The implementation is intentionally a graceful no-op because:
+`WritingToolsRefiner` refines extracted Markdown by merging broken sentences and cleaning up whitespace. This addresses the most common PDF extraction artifact: sentences split across line breaks during OCR or layout extraction.
 
-1. **API Limitation:** `NSWritingToolsCoordinator` requires a responder/view context (text editing surface).
-2. **Architecture Mismatch:** Upmarket's conversion pipeline runs in the background without an active text view.
-3. **Future Integration:** Writing Tools refinement could be wired to a post-conversion editor surface in a future release.
+**What It Does:**
+1. **Merge broken sentences** — Detects when a sentence was split across lines and merges them back together.
+2. **Preserve structure** — Respects paragraph boundaries (double newlines), headings, lists, and code blocks.
+3. **Clean whitespace** — Removes excessive blank lines and normalizes spacing.
+4. **Detect improvements** — Sets `wasRefined = true` only if actual changes were made.
 
-**Behavior:**
-- macOS < 15.1: Returns input unchanged (`wasRefined = false`)
-- macOS 15.1+: Returns input unchanged (`wasRefined = false`)
-- Intel (any version): Returns input unchanged (`wasRefined = false`)
+**Implementation Details:**
+- Uses heuristic-based sentence detection (looks for sentence terminators: `.`, `!`, `?`, `:`)
+- Runs synchronously on background thread (via Task.detached)
+- Operates on paragraph chunks for memory efficiency
+- Does not depend on NSWritingToolsCoordinator (which requires a view context)
 
-**Why Keep It?** The scaffolding is in place for future integration without requiring a major refactor.
+**Example:**
+```
+Input:
+This sentence was broken
+across two lines in the PDF. And this is another sentence.
+
+Output:
+This sentence was broken across two lines in the PDF. And this is another sentence.
+```
+
+**Future Enhancement:**
+On macOS 15.1+, the implementation could be extended to optionally use `NSWritingToolsCoordinator` if a user-facing editor surface is added. Currently, this background refinement provides solid baseline improvement without requiring view context.
 
 ### Foundation Models (macOS 26+, Apple Silicon)
 

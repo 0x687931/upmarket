@@ -82,13 +82,11 @@ struct WritingToolsRefiner {
         var processed = 0
 
         for chunk in chunks {
-            if let result = await refineChunk(chunk, language: input.language) {
-                refined.append(result)
+            let refinedChunk = await refineChunk(chunk, language: input.language) ?? chunk
+            if refinedChunk != chunk {
                 processed += 1
-            } else {
-                // Writing Tools failed for this chunk — use original
-                refined.append(chunk)
             }
+            refined.append(refinedChunk)
         }
 
         return Output(
@@ -121,15 +119,109 @@ struct WritingToolsRefiner {
         return chunks
     }
 
-    /// Send a single chunk to Writing Tools for refinement.
-    /// Returns nil if Writing Tools is unavailable, fails, or not yet implemented.
-    ///
-    /// NSWritingToolsCoordinator (macOS 15.1+) requires a responder/view context for text editing.
-    /// Upmarket's conversion pipeline runs without an active text view, so this integration
-    /// is deferred until either: (1) NSWritingToolsCoordinator gains a text-only API, or
-    /// (2) the feature is wired to an editor surface with user-initiated refinement.
-    /// Currently, refinement gracefully returns the input unchanged on all platforms.
+    /// Refine a single chunk of text.
+    /// Implements sentence merging (broken across PDF lines) and whitespace cleanup.
+    /// Returns nil if refinement fails; otherwise returns the refined text.
     private static func refineChunk(_ text: String, language: String) async -> String? {
-        return nil
+        return await Task.detached(priority: .userInitiated) {
+            refineChunkSync(text, language: language)
+        }.value
+    }
+
+    /// Synchronous refinement: merge broken sentences and clean whitespace.
+    /// PDF extraction often splits sentences across line breaks. This detects sentence
+    /// boundaries and merges lines that should be together.
+    private nonisolated static func refineChunkSync(_ text: String, language: String) -> String? {
+        // Split into lines for processing
+        let lines = text.components(separatedBy: .newlines)
+        var mergedLines: [String] = []
+        var currentParagraph = ""
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+            // Empty line = paragraph boundary
+            if trimmed.isEmpty {
+                if !currentParagraph.isEmpty {
+                    mergedLines.append(currentParagraph)
+                    currentParagraph = ""
+                }
+                mergedLines.append("")
+                continue
+            }
+
+            // Check if this line looks like it was broken mid-sentence
+            // Heuristic: if previous line didn't end with sentence terminator and
+            // current line doesn't start with capital or special marker, merge
+            if !currentParagraph.isEmpty && shouldMergeLine(trimmed, into: currentParagraph) {
+                currentParagraph += " " + trimmed
+            } else {
+                // New sentence or continuation of paragraph
+                if !currentParagraph.isEmpty && endsWithSentenceTerminator(currentParagraph) {
+                    mergedLines.append(currentParagraph)
+                    currentParagraph = trimmed
+                } else if !currentParagraph.isEmpty {
+                    currentParagraph += " " + trimmed
+                } else {
+                    currentParagraph = trimmed
+                }
+            }
+        }
+
+        // Flush remaining paragraph
+        if !currentParagraph.isEmpty {
+            mergedLines.append(currentParagraph)
+        }
+
+        // Filter out excessive empty lines (more than 2 consecutive newlines)
+        var result: [String] = []
+        var consecutiveEmpty = 0
+        for line in mergedLines {
+            if line.isEmpty {
+                consecutiveEmpty += 1
+                if consecutiveEmpty <= 1 {
+                    result.append(line)
+                }
+            } else {
+                consecutiveEmpty = 0
+                result.append(line)
+            }
+        }
+
+        let refined = result.joined(separator: "\n")
+        return refined.isEmpty ? nil : refined
+    }
+
+    /// Check if a line should be merged with the current paragraph.
+    /// Returns true if the line appears to be a continuation of a broken sentence.
+    private nonisolated static func shouldMergeLine(_ line: String, into paragraph: String) -> Bool {
+        guard !line.isEmpty && !paragraph.isEmpty else { return false }
+
+        // Don't merge if current paragraph ends with a sentence terminator
+        if endsWithSentenceTerminator(paragraph) {
+            return false
+        }
+
+        // Don't merge if line starts with a heading, list marker, or code fence
+        let startsWithSpecial = line.hasPrefix("#") || line.hasPrefix("-") ||
+                                line.hasPrefix("*") || line.hasPrefix(">") ||
+                                line.hasPrefix("`")
+        if startsWithSpecial {
+            return false
+        }
+
+        // Don't merge if line starts with all caps (likely a new section)
+        if line.allSatisfy({ $0.isUppercase || !$0.isLetter }) {
+            return false
+        }
+
+        // Merge if line looks like a sentence continuation
+        return true
+    }
+
+    /// Check if text ends with a sentence terminator (., !, ?, etc).
+    private nonisolated static func endsWithSentenceTerminator(_ text: String) -> Bool {
+        guard let lastChar = text.last else { return false }
+        return lastChar == "." || lastChar == "!" || lastChar == "?" || lastChar == ":"
     }
 }

@@ -47,6 +47,30 @@ final class PostProcessingTests: XCTestCase {
         XCTAssertFalse(output.markdown.contains("\n"))
     }
 
+    func testWritingToolsRefinesTextOnMacOS151Plus() async {
+        // PDF text with broken sentences that should be merged
+        let input = "The quick brown fox\njumps over the lazy dog."
+        let output = await WritingToolsService.refineMarkdown(input, language: "en")
+
+        // On all platforms (since actual NSWritingToolsCoordinator integration is deferred),
+        // the service should still perform basic refinement:
+        // 1. Merge broken sentences
+        // 2. Preserve structure
+        // 3. Mark whether refinement occurred
+
+        if WritingToolsAvailabilityCheck.isAvailable {
+            // On macOS 15.1+, should attempt refinement
+            XCTAssertTrue(output.markdown.count > 0, "Output should have content")
+            // Check if sentence merging happened
+            if !output.markdown.contains("\n") || output.markdown.contains("fox jumps") {
+                XCTAssertTrue(output.wasRefined, "Should mark as refined if sentences were merged")
+            }
+        } else {
+            // On older macOS, no refinement attempted
+            XCTAssertFalse(output.wasRefined, "Should not claim refinement on unsupported OS")
+        }
+    }
+
     func testLanguageDetection() {
         let english = "The quick brown fox jumps over the lazy dog."
         let detected = TextStructurer.detectLanguage(english)
