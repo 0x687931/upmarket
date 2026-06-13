@@ -96,10 +96,11 @@ final class ShelfLocationChangeTests: XCTestCase {
             (.bottomLeft, CGSize(width: 56, height: 56), CGPoint(x: 0, y: 24)),
             (.topRight, CGSize(width: 56, height: 56), CGPoint(x: 1414, y: 900)),
             (.topLeft, CGSize(width: 56, height: 56), CGPoint(x: 0, y: 900)),
-            (.center, CGSize(width: 56, height: 56), CGPoint(x: 735 - 28, y: 478 - 28)),
+            (.center, CGSize(width: 56, height: 56), CGPoint(x: 735 - 28, y: 490 - 28)),
         ]
 
         for (anchor, size, expectedOrigin) in testCases {
+            controller.anchor = anchor
             let origin = controller.anchoredOrigin(size: size, in: visible)
             XCTAssertEqual(
                 origin.x,

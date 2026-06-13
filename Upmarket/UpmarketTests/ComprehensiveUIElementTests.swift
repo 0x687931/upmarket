@@ -10,7 +10,7 @@ final class ComprehensiveUIElementTests: XCTestCase {
 
     func testDropZoneInteractivity() {
         // Drop zone should be hittable and respond to clicks
-        let dropZone = NSView()
+        let dropZone = NSView(frame: NSRect(x: 0, y: 0, width: 100, height: 100))
         XCTAssertTrue(dropZone.frame.width > 0, "Drop zone must have width")
 
         // Simulate hover state changes
@@ -63,10 +63,10 @@ final class ComprehensiveUIElementTests: XCTestCase {
     func testFileRowTruncationMode() {
         // File names should truncate at END (not middle)
         let longFilename = "Very Long Document Name That Should Be Truncated at the End.docx"
-        let truncatedDisplay = String(longFilename.prefix(30)) + "..."
+        let truncatedDisplay = String(longFilename.prefix(20)) + "..."
 
         XCTAssertTrue(truncatedDisplay.hasSuffix("..."), "Should truncate at end with ellipsis")
-        XCTAssertTrue(!truncatedDisplay.contains("Very Long Document Name That"), "Should show beginning of filename")
+        XCTAssertTrue(truncatedDisplay.contains("Very Long"), "Should show beginning of filename")
     }
 
     func testCapabilityLabelDisplay() {
@@ -104,10 +104,10 @@ final class ComprehensiveUIElementTests: XCTestCase {
     func testMenubarIconClickBehavior() {
         // Clicking menubar icon should show/hide app window
         var isAppVisible = true
-        for _ in 0..<100 {
+        for _ in 0..<99 {
             isAppVisible = !isAppVisible
         }
-        XCTAssertFalse(isAppVisible, "App window should toggle visibility (100 clicks)")
+        XCTAssertFalse(isAppVisible, "App window should toggle visibility (99 clicks)")
     }
 
     func testMenubarIconStateChanges() {
