@@ -194,10 +194,22 @@ def main() -> int:
         errors,
     )
     require_text(
+        "Upmarket/UpmarketTests/ProgrammaticConversionAuthorizationTests.swift",
+        [
+            "testAuthorizationRefreshesEntitlementsBeforeAuthorizing",
+            "testAuthorizationWithAIChecksAvailability",
+            "testSuccessfulAuthorizationConsumesOneCredit",
+            "testAuthorizationFailsWhenCreditsExhausted",
+        ],
+        "programmatic authorization regression tests",
+        errors,
+    )
+    require_text(
         "docs/release/TEST_MATRIX.md",
         [
             "Philosophy remediation",
             "validate_release_regression_guards.py",
+            "UpmarketTests/ProgrammaticConversionAuthorizationTests.swift",
             "UpmarketUITests/UpmarketUITests.swift",
         ],
         "release test matrix",

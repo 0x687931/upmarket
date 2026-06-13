@@ -122,13 +122,14 @@ struct WritingToolsRefiner {
     }
 
     /// Send a single chunk to Writing Tools for refinement.
-    /// Returns nil if Writing Tools is unavailable or fails.
+    /// Returns nil if Writing Tools is unavailable, fails, or not yet implemented.
+    ///
+    /// NSWritingToolsCoordinator (macOS 15.1+) requires a responder/view context for text editing.
+    /// Upmarket's conversion pipeline runs without an active text view, so this integration
+    /// is deferred until either: (1) NSWritingToolsCoordinator gains a text-only API, or
+    /// (2) the feature is wired to an editor surface with user-initiated refinement.
+    /// Currently, refinement gracefully returns the input unchanged on all platforms.
     private static func refineChunk(_ text: String, language: String) async -> String? {
-        // Writing Tools API is accessed via UITextView/NSTextView integration.
-        // On macOS, we use the NSWritingToolsCoordinator introduced in macOS 15.1.
-        // For now this is a placeholder — the actual API requires a view context.
-        // TODO: Implement NSWritingToolsCoordinator integration once API is stable.
-        // See: https://developer.apple.com/documentation/appkit/nswritingtoolscoordinator
         return nil
     }
 }
