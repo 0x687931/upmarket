@@ -8,6 +8,43 @@ All shipping code must remain compatible with macOS 13.3. This is enforced in `U
 
 ## Feature-Specific Version Requirements
 
+### AI Conversion Pipeline (Advanced/VLM)
+
+**Status:** Implemented. Routes to Docling with AI models when available.
+
+When a user requests "AI Conversion", the app uses Docling's Vision Language Model (VLM) pipeline for improved document understanding:
+
+1. **For PDFs:**
+   - Runs Docling with VLM + layout analysis
+   - Better table extraction
+   - Improved text flow understanding
+   - Preserves document structure
+
+2. **For Images/TIFF:**
+   - Uses VLM to understand image content natively
+   - No OCR fallback needed (VLM reads directly)
+   - Better diagram/chart interpretation
+
+**Requirements:**
+- Max tier (paid)
+- Apple Silicon (device must support AI)
+- Python runtime installed
+- AI models downloaded and installed
+
+**Graceful Degradation:**
+- Missing any requirement → Falls back to basic PDFKit/Vision OCR
+- No error shown to user; users get slightly lower quality output
+- Console logs the fallback reason for debugging
+
+**How It Works:**
+
+1. User clicks "Convert with AI" (or selects Max tier pathway)
+2. ConversionRunner checks: `supportsAdvancedRuntime && supportsAI && modelsReady()`
+3. If all checks pass → Routes to `runQualitySelectedPDFConversion(..., useAI: true)`
+4. If any check fails → Falls back to basic conversion, no interruption
+
+This is not "feature gating" (blocking users); it's intelligent routing based on device capabilities.
+
 ### Writing Tools Refinement (macOS 15.1+)
 
 **Status:** Implemented with sentence-merging and text cleanup.
@@ -39,17 +76,47 @@ This sentence was broken across two lines in the PDF. And this is another senten
 **Future Enhancement:**
 On macOS 15.1+, the implementation could be extended to optionally use `NSWritingToolsCoordinator` if a user-facing editor surface is added. Currently, this background refinement provides solid baseline improvement without requiring view context.
 
-### Foundation Models (macOS 26+, Apple Silicon)
+### Foundation Models Enhancement (macOS 26+, Apple Intelligence)
 
-**Status:** Available but returns fallback implementation.
+**Status:** Implemented. Extracts structured metadata from documents.
 
-`FoundationModelEnhancer` is available on macOS 26+ (Sequoia) with Apple Intelligence enabled. The implementation currently:
+`FoundationModelEnhancer` uses Apple's on-device Foundation Models (~3B parameters) to extract:
 
-1. Falls back to title extraction from markdown headers.
-2. Does not perform semantic enhancement.
-3. Returns `wasEnhanced = false`.
+1. **Document Metadata**
+   - Main title
+   - Author names
+   - One-sentence abstract
+   - Document type (academic, business, technical, legal, general)
+   - Up to 5 key topics
 
-**Why?** The Foundation Models framework is new (macOS 26) and still stabilizing. Once the API stabilizes, full semantic extraction (title, authors, abstract, key topics, section summaries) can be enabled.
+2. **Section Summaries** (first 5 sections)
+   - Section heading
+   - One-sentence summary
+   - Up to 3 key points
+
+**Requirements:**
+- macOS 26+ (Sequoia)
+- Apple Intelligence enabled
+- Foundation Models framework available
+
+**Graceful Degradation:**
+- macOS < 26: Falls back to header-based title extraction
+- Foundation Models unavailable: Header extraction only
+- Model call fails (out of memory, etc): Header extraction + error logged
+- Test mode: Header extraction only (for consistent test results)
+
+**Example Output:**
+
+For a PDF about machine learning:
+```
+Title: "Deep Learning with Neural Networks"
+Authors: ["Jane Doe", "John Smith"]
+Abstract: "A comprehensive guide to building and training deep neural networks"
+Document Type: "technical"
+Key Topics: ["neural networks", "deep learning", "backpropagation", "optimization", "CNNs"]
+```
+
+This enhancement only runs on Max tier with Apple Intelligence available. Basic and Pro tiers use header-based title extraction.
 
 ### App Sandbox & Entitlements (macOS 13.3+)
 
