@@ -248,7 +248,21 @@ struct ConversionRunner {
                     workspaceURL: workspaceURL, classifierEvidence: evidence,
                     secondary: .advanced(useAI: false), progress: progress
                 )
-            case .ai, .speech, .metadata:
+            case .ai:
+                // AI pathway: use advanced Docling with AI models if available
+                guard supportsAdvancedRuntime, supportsAI, modelsReady() else {
+                    // Fallback to basic PDF if AI/models unavailable
+                    return await runPDFKitConversion(
+                        fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
+                    )
+                }
+                return await runQualitySelectedPDFConversion(
+                    fileURL: tempURL, title: title, password: job.password,
+                    workspaceURL: workspaceURL, classifierEvidence: evidence,
+                    secondary: .advanced(useAI: true), progress: progress
+                )
+            case .speech, .metadata:
+                // Speech and metadata extraction use native APIs
                 return await runPDFKitConversion(
                     fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
                 )

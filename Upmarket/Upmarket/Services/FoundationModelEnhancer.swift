@@ -70,9 +70,25 @@ struct FoundationModelEnhancer {
         markdown: String,
         documentType: String
     ) async throws -> DocumentEnhancement {
-        // This implementation uses FoundationModels framework (macOS 26+ only)
-        // The actual model calls would be made here via the FoundationModelsImpl module
-        // For now, return unenhanced result as Foundation Models API is still in preview
+        #if canImport(FoundationModels)
+        // Use the FoundationModelsImpl module to extract structured metadata and summaries.
+        do {
+            return try await FoundationModelsImpl.enhance(markdown: markdown, documentType: documentType)
+        } catch {
+            // If the model call fails (no models available, out of memory, etc),
+            // fall back to header-based title extraction
+            let logger = Logger(subsystem: "com.upmarket.app", category: "foundation-models")
+            logger.error("Enhancement failed: \(error.localizedDescription, privacy: .private)")
+            return DocumentEnhancement(
+                extractedTitle: titleFallback(from: markdown),
+                extractedAuthors: [],
+                sectionSummaries: [],
+                refinedMarkdown: markdown,
+                wasEnhanced: false
+            )
+        }
+        #else
+        // FoundationModels framework not available on this build
         return DocumentEnhancement(
             extractedTitle: titleFallback(from: markdown),
             extractedAuthors: [],
@@ -80,6 +96,7 @@ struct FoundationModelEnhancer {
             refinedMarkdown: markdown,
             wasEnhanced: false
         )
+        #endif
     }
 
     private struct Section { let heading: String; let content: String }
