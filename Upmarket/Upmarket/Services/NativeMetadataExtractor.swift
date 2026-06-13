@@ -71,7 +71,7 @@ enum NativeMetadataExtractor {
             let duration = try await asset.load(.duration)
             let tracks = try await asset.load(.tracks)
             let metadata = try await asset.load(.commonMetadata)
-            let fileSize = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            let fileSize = await FileSizeReader.shared.readSize(url)
 
             var lines = [
                 "# Media: \(title)",
