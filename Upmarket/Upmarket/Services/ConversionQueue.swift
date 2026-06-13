@@ -28,6 +28,7 @@ final class ConversionQueue: ObservableObject {
     private var lastFailedJobContext: DiagnosticJobContext?
     private let historyStore: ConversionHistoryStore?
     private let livenessThreshold: TimeInterval = 60
+    private var jobIndex: [UUID: Int] = [:]
 
     var isConverting: Bool {
         jobs.contains { $0.isRunning }
@@ -102,6 +103,7 @@ final class ConversionQueue: ObservableObject {
     func add(_ url: URL, useAI: Bool = false, password: String? = nil) -> UUID {
         let job = ConversionJob(sourceURL: url, useAI: useAI, password: password)
         jobs.insert(job, at: 0)
+        rebuildJobIndex()
         latestResult = nil
         updateOverallProgressCache()
         AppLog.conversion.info("Queued conversion correlationID=\(job.correlationID, privacy: .public) ext=\(job.ext, privacy: .public)")
@@ -115,6 +117,7 @@ final class ConversionQueue: ObservableObject {
         let result = ConversionResult.failure(message)
         let job = ConversionJob(sourceURL: url, stage: .failed, result: result)
         jobs.insert(job, at: 0)
+        rebuildJobIndex()
         latestResult = result
         lastFailedJobContext = DiagnosticJobContext(
             correlationID: job.correlationID,
@@ -181,13 +184,22 @@ final class ConversionQueue: ObservableObject {
 
     @discardableResult
     func retry(_ id: UUID, useAI: Bool? = nil) -> UUID? {
-        guard let job = jobs.first(where: { $0.id == id }) else { return nil }
+        guard let index = jobIndex[id], jobs.indices.contains(index) else { return nil }
+        let job = jobs[index]
         return add(job.sourceURL, useAI: useAI ?? job.useAI, password: job.password)
     }
 
     func remove(_ id: UUID) {
         jobs.removeAll { $0.id == id }
+        rebuildJobIndex()
         updateOverallProgressCache()
+    }
+
+    private func rebuildJobIndex() {
+        jobIndex.removeAll(keepingCapacity: true)
+        for (index, job) in jobs.enumerated() {
+            jobIndex[job.id] = index
+        }
     }
 
     private func enqueue(_ id: UUID) {
@@ -259,7 +271,7 @@ final class ConversionQueue: ObservableObject {
     }
 
     private func update(_ id: UUID, progress: ConversionProgress) {
-        guard let index = jobs.firstIndex(where: { $0.id == id }) else { return }
+        guard let index = jobIndex[id], jobs.indices.contains(index) else { return }
         guard jobs[index].isRunning else { return }
         let previousStage = jobs[index].stage
         jobs[index].stage = progress.stage
@@ -281,7 +293,7 @@ final class ConversionQueue: ObservableObject {
     }
 
     private func markHeartbeat(_ id: UUID) {
-        guard let index = jobs.firstIndex(where: { $0.id == id }) else { return }
+        guard let index = jobIndex[id], jobs.indices.contains(index) else { return }
         guard jobs[index].isRunning else { return }
         jobs[index].lastProgressAt = Date()
         if jobs[index].isStalled {
@@ -291,7 +303,7 @@ final class ConversionQueue: ObservableObject {
     }
 
     private func finish(_ id: UUID, result: ConversionResult, stage: ConversionStage, diagnosticStage: ConversionStage? = nil) {
-        guard let index = jobs.firstIndex(where: { $0.id == id }) else { return }
+        guard let index = jobIndex[id], jobs.indices.contains(index) else { return }
         guard jobs[index].stage != .cancelled || stage == .cancelled else { return }
         if stage == .failed {
             lastFailedJobContext = DiagnosticJobContext(
