@@ -42,11 +42,11 @@ struct MenuBarDropdown: View {
             // Tier row — adapts to current entitlement
             switch store.tier {
             case .basic:
-                MenuRow(icon: "arrow.up.circle", label: "Unlock Enhanced (350 MB)…", accent: true, action: {
+                MenuRow(icon: "arrow.up.circle", label: "Unlock Enhanced (367 MB)…", accent: true, action: {
                     NotificationCenter.default.post(name: .showPaywall, object: nil)
                 })
             case .pro:
-                MenuRow(icon: "arrow.up.circle", label: "Add AI (750 MB)…", accent: true, action: {
+                MenuRow(icon: "arrow.up.circle", label: "Add AI (373 MB)…", accent: true, action: {
                     NotificationCenter.default.post(name: .showPaywall, object: nil)
                 })
             case .max:

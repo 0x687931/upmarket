@@ -82,12 +82,12 @@ enum ModelAsset: String, CaseIterable, Equatable, Hashable, Sendable {
         }
     }
 
-    /// Approximate on-disk size for display purposes.
+    /// Download size (compressed tar.gz file size users will actually download).
     var sizeMB: Int {
         switch self {
-        case .pythonRuntime: return 350
-        case .aiLibraries:   return 750
-        case .upmarketAI:    return 600
+        case .pythonRuntime: return 367   // python_runtime_pro.tar.gz actual size
+        case .aiLibraries:   return 373   // ai_libraries.tar.gz actual size
+        case .upmarketAI:    return 600   // Model weights (estimate)
         case .layout:        return 20
         }
     }

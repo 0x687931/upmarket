@@ -208,11 +208,11 @@ final class BackgroundAssetsDownloadService: NSObject, ObservableObject {
     private func estimatedFileSize(for key: String) -> Int {
         switch key {
         case "python_runtime_pro", "python_runtime":
-            return 350_000_000  // Updated per TIER_CONTRACT: 350MB for Pro tier
+            return 367_000_000  // python_runtime_pro.tar.gz actual compressed size
         case "ai_libraries":
-            return 750_000_000  // New: 750MB for Max tier ML frameworks
+            return 373_000_000  // ai_libraries.tar.gz actual compressed size
         case "upmarket_ai":
-            return 600_000_000  // Updated per TIER_CONTRACT: 600MB for model weights
+            return 600_000_000  // Model weights (estimate)
         default:
             return 0
         }
