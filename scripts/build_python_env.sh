@@ -33,6 +33,12 @@ echo "    Build interpreter: $BUILD_PYTHON ($BUILD_PYTHON_VERSION)"
 echo ""
 
 FRAMEWORK_URL="https://github.com/beeware/Python-Apple-support/releases/download/${BEEWARE_VERSION}/Python-${PYTHON_VERSION}-macOS-support.b8.tar.gz"
+XCFRAMEWORK_PLIST="$DEST/Python.xcframework/Info.plist"
+
+if [[ -f "$XCFRAMEWORK_PLIST" ]] && ! plutil -lint "$XCFRAMEWORK_PLIST" >/dev/null 2>&1; then
+  echo "==> Existing Python.xcframework Info.plist is invalid; removing stale bundle"
+  rm -rf "$DEST/Python.xcframework"
+fi
 
 echo "==> Validating exact release pins"
 scripts/ci/validate_dependency_lock.py
