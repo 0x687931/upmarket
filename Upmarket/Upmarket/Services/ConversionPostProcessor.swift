@@ -22,24 +22,44 @@ enum ConversionPostProcessor {
         )
 
         let title = fmResult.extractedTitle ?? intelligence.title ?? output.title
-        let finalMarkdown = fmResult.refinedMarkdown
+        var finalMarkdown = fmResult.refinedMarkdown
 
-        // Validate output against input to detect data loss or extraction failures
-        let validation = ConversionValidator.validate(
+        // Validate output structure against input
+        let structureReport = DocumentStructureValidator.validateAndRepair(
+            originalMarkdown: originalMarkdown,
+            convertedMarkdown: finalMarkdown
+        )
+
+        // Use repaired markdown if structure issues detected
+        if let repairedMarkdown = structureReport.reformattedMarkdown {
+            finalMarkdown = repairedMarkdown
+        }
+
+        // Log structure validation issues
+        if !structureReport.isValid {
+            let logger = Logger(subsystem: "com.upmarket.app", category: "structure-validation")
+            for issue in structureReport.issues {
+                let severity = issue.severity == .error ? "ERROR" : "WARNING"
+                logger.warning("[\(severity)] \(issue.description, privacy: .public)")
+            }
+            let retention = Int(structureReport.metrics.structureRetention * 100)
+            logger.debug("Structure retention: \(retention)% (headings: \(structureReport.metrics.outputHeadingCount)/\(structureReport.metrics.inputHeadingCount))")
+        }
+
+        // Validate output content against input to detect data loss
+        let contentValidation = ConversionValidator.validate(
             originalMarkdown: originalMarkdown,
             convertedMarkdown: finalMarkdown,
-            tablesDetected: 0,  // Would be populated from extraction context
-            listsDetected: 0,   // Would be populated from extraction context
+            tablesDetected: structureReport.metrics.outputTableCount,
+            listsDetected: structureReport.metrics.outputListCount,
             pagesProcessed: output.pages
         )
 
-        if !validation.passed {
-            let logger = Logger(subsystem: "com.upmarket.app", category: "conversion-validation")
-            for warning in validation.warnings {
+        if !contentValidation.passed {
+            let logger = Logger(subsystem: "com.upmarket.app", category: "content-validation")
+            for warning in contentValidation.warnings {
                 logger.warning("Conversion quality issue: \(warning, privacy: .public)")
             }
-            let retention = Int(validation.metrics.retentionRatio * 100)
-            logger.debug("Retention: \(validation.metrics.outputWordCount)/\(validation.metrics.inputWordCount) words (\(retention)%)")
         }
 
         return ConversionOutput(
