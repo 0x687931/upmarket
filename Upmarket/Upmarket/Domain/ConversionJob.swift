@@ -80,9 +80,23 @@ struct ConversionJob: Identifiable, Equatable {
     }
 
     var name: String { sourceURL.deletingPathExtension().lastPathComponent }
+    var filename: String { sourceURL.deletingPathExtension().lastPathComponent }
     var ext: String { sourceURL.pathExtension.uppercased() }
     var correlationID: String { id.uuidString }
     var isRunning: Bool { stage.isRunning }
+    var fileTypeIcon: String { glyphName }
+    var stageLabel: String {
+        switch stage {
+        case .queued:         return "Queued"
+        case .copying, .analysing: return "Preparing…"
+        case .extracting:     return "Reading…"
+        case .python:         return "Processing…"
+        case .postProcessing: return "Refining…"
+        case .complete:       return "Done"
+        case .failed:         return "Failed"
+        case .cancelled:      return "Cancelled"
+        }
+    }
     var glyphName: String {
         switch sourceURL.pathExtension.lowercased() {
         case "pdf":

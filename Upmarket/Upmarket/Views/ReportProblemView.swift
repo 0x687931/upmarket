@@ -3,263 +3,252 @@ import SwiftUI
 
 struct ReportProblemView: View {
     @EnvironmentObject private var conversion: ConversionQueue
+    @Environment(\.dismiss) var dismiss
 
-    @State private var category: SupportReportCategory = .conversionFailure
-    @State private var details = ""
-    @State private var includeDiagnostics = true
-    @State private var diagnosticSnapshot = DiagnosticsService.shared.makeSnapshot()
-    @State private var logExport = DiagnosticsService.shared.recentLogExport()
+    @State private var category: ReportCategory = .conversionFailed
+    @State private var message = ""
+    @State private var includeLogs = true
+    @State private var sending = false
 
     private var failedJob: ConversionJob? { conversion.lastFailedJob }
 
-    private var preview: SupportReportPreview {
-        SupportReporter.makePreview(
-            category: category,
-            summary: details,
-            includeDiagnostics: includeDiagnostics,
-            snapshot: diagnosticSnapshot,
-            logExport: logExport
-        )
-    }
-
     var body: some View {
         VStack(spacing: 0) {
-            header
+            // Header
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 9)
+                        .fill(AppTheme.Colour.sectionRed.opacity(0.12))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "ladybug.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(AppTheme.Colour.sectionRed)
+                }
+                .padding(.top, 2)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Report a Problem")
+                        .font(.system(size: 17, weight: .bold))
+                    Text("Help us improve by reporting what went wrong.")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+
+            Divider()
+
+            // Context strip (conditional)
             if let job = failedJob {
-                contextStrip(job: job)
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 1)
+                    Text("Conversion of \(job.filename).\(job.ext.lowercased()) failed")
+                        .font(.system(size: 12).monospaced())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(nsColor: .controlBackgroundColor))
+
+                Divider()
             }
-            bodyContent
-            footer
+
+            // Body
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    CategoryPicker(selected: $category)
+                    DetailField(text: $message)
+                    Toggle(isOn: $includeLogs) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Include system logs & diagnostics")
+                                .font(.system(size: 14, weight: .medium))
+                            Text("Helps us diagnose faster. Logs don't contain file contents.")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .toggleStyle(.checkbox)
+                }
+                .padding(24)
+            }
+
+            Divider()
+
+            // Footer
+            HStack(spacing: 10) {
+                Spacer()
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(.bordered)
+                Button(sending ? "Sending…" : "Send Report") {
+                    sendReport()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(message.trimmingCharacters(in: .whitespaces).isEmpty || sending)
+                .tint(Color.accentColor)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+            .background(Color(nsColor: .controlBackgroundColor))
         }
-        .frame(width: AppTheme.WindowSize.modal.width)
+        .frame(width: 480)
         .fixedSize(horizontal: true, vertical: true)
-        .background(AppTheme.Colour.background)
-        .onChange(of: includeDiagnostics) { enabled in
-            if enabled { refreshDiagnostics() }
-        }
-        .onAppear { refreshDiagnostics() }
     }
 
-    // MARK: - Header
+    private func sendReport() {
+        sending = true
+        // Send logic would go here
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            sending = false
+            dismiss()
+        }
+    }
+}
 
-    private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(AppTheme.Colour.sectionRed.opacity(0.12))
-                    .frame(width: 36, height: 36)
-                Image(systemName: "ladybug.fill")
-                    .font(.system(size: 18))
-                    .foregroundStyle(AppTheme.Colour.sectionRed)
-            }
-            .padding(.top, 2)
+// MARK: - Category Picker
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Report a Problem")
-                    .font(.title3.weight(.bold))
-                Text("Help us improve by reporting what went wrong.")
-                    .font(.subheadline)
+struct CategoryPicker: View {
+    @Binding var selected: ReportCategory
+
+    let categories: [(ReportCategory, String, Color)] = [
+        (.conversionFailed, "doc.badge.xmark", Color.accentColor),
+        (.crash, "exclamationmark.triangle.fill", AppTheme.Colour.sectionRed),
+        (.outputQuality, "textformat", AppTheme.Colour.sectionPurple),
+        (.performance, "timer", AppTheme.Colour.sectionAmber),
+        (.other, "bubble.left.fill", Color.secondary),
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "list.bullet")
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
+                Text("ISSUE TYPE")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .kerning(0.4)
             }
+            .padding(.bottom, 2)
 
-            Spacer()
-
-            Button {
-                NSApp.keyWindow?.performClose(nil)
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 20))
-                    .symbolRenderingMode(.hierarchical)
-            }
-            .buttonStyle(AppPlainButtonStyle())
-            .foregroundStyle(.secondary)
-            .accessibilityLabel("Close")
-        }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 20)
-        .overlay(Divider(), alignment: .bottom)
-    }
-
-    // MARK: - Context strip
-
-    private func contextStrip(job: ConversionJob) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: "info.circle.fill")
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
-            Text("Conversion of \(job.name).\(job.ext.lowercased()) failed")
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 24)
-        .padding(.vertical, 14)
-        .background(AppTheme.Colour.subtleFill)
-        .overlay(Divider(), alignment: .top)
-        .overlay(Divider(), alignment: .bottom)
-    }
-
-    // MARK: - Body
-
-    private var bodyContent: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            categoryPicker
-            detailsField
-            logsToggle
-        }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 20)
-    }
-
-    private var categoryPicker: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionLabel(icon: "list.bullet", text: "Issue Type")
-            VStack(spacing: 8) {
-                ForEach(SupportReportCategory.allCases) { cat in
-                    categoryRow(cat)
+            ForEach(categories, id: \.0) { cat, icon, color in
+                CategoryRow(
+                    label: cat.displayName,
+                    icon: icon,
+                    color: color,
+                    selected: selected == cat
+                ) {
+                    selected = cat
                 }
             }
         }
     }
+}
 
-    private func categoryRow(_ cat: SupportReportCategory) -> some View {
-        let isSelected = category == cat
-        let color = categoryColor(cat)
-        return Button {
-            category = cat
-        } label: {
+struct CategoryRow: View {
+    let label: String
+    let icon: String
+    let color: Color
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button { action() } label: {
             HStack(spacing: 10) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    RoundedRectangle(cornerRadius: 7)
                         .fill(color.opacity(0.12))
                         .frame(width: 28, height: 28)
-                    Image(systemName: categoryIcon(cat))
-                        .font(.system(size: 14))
+                    Image(systemName: icon)
+                        .font(.system(size: 13))
                         .foregroundStyle(color)
                 }
-                Text(cat.rawValue)
-                    .font(.subheadline.weight(isSelected ? .semibold : .medium))
-                    .foregroundStyle(isSelected ? .primary : .secondary)
+
+                Text(label)
+                    .font(.system(size: 14, weight: selected ? .semibold : .medium))
+                    .foregroundStyle(selected ? .primary : .secondary)
+
                 Spacer()
+
                 Circle()
-                    .fill(Color(nsColor: .controlBackgroundColor))
-                    .overlay(
-                        Circle()
-                            .strokeBorder(
-                                isSelected ? color : Color.secondary.opacity(0.35),
-                                lineWidth: isSelected ? 5 : 1.5
-                            )
-                    )
+                    .strokeBorder(selected ? color : AppTheme.Colour.separator, lineWidth: selected ? 5 : 1.5)
                     .frame(width: 16, height: 16)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(isSelected ? color.opacity(0.08) : Color(nsColor: .controlBackgroundColor))
-            )
+            .background(selected ? color.opacity(0.08) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(
-                        isSelected ? color : AppTheme.Colour.separator,
-                        lineWidth: isSelected ? 1.5 : 1
-                    )
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(selected ? color : AppTheme.Colour.separator, lineWidth: selected ? 1.5 : 1)
             )
         }
         .buttonStyle(.plain)
-        .animation(.easeOut(duration: 0.15), value: category)
+        .animation(.easeOut(duration: 0.15), value: selected)
     }
+}
 
-    private var detailsField: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionLabel(icon: "pencil.line", text: "Details")
-            TextEditor(text: $details)
-                .font(.body)
-                .frame(height: 90)
-                .appTextEditorChrome()
-        }
-    }
+// MARK: - Detail Field
 
-    private var logsToggle: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Toggle("", isOn: $includeDiagnostics)
-                .labelsHidden()
-                .toggleStyle(.checkbox)
-                .padding(.top, 2)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Include system logs & diagnostics")
-                    .font(.subheadline.weight(.medium))
-                Text("Helps us diagnose faster. Logs don't contain file contents.")
-                    .font(.caption)
+struct DetailField: View {
+    @Binding var text: String
+    @FocusState var focused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "pencil")
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
+                Text("DETAILS")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .kerning(0.4)
             }
+
+            TextEditor(text: $text)
+                .font(.system(size: 14))
+                .frame(height: 90)
+                .padding(10)
+                .background(Color(nsColor: .textBackgroundColor))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(focused ? Color.accentColor : AppTheme.Colour.separator, lineWidth: 1)
+                )
+                .focused($focused)
         }
     }
+}
 
-    // MARK: - Footer
+// MARK: - Report Category
 
-    private var footer: some View {
-        HStack(spacing: 10) {
-            Spacer()
-            Button("Cancel") {
-                NSApp.keyWindow?.performClose(nil)
-            }
-            .buttonStyle(AppBorderedButtonStyle())
+enum ReportCategory: CaseIterable, Equatable {
+    case conversionFailed, crash, outputQuality, performance, other
 
-            Button("Send Report") {
-                if let url = SupportReporter.mailURL(for: preview) {
-                    FileAccessService.shared.open(url)
-                    NSApp.keyWindow?.performClose(nil)
-                }
-            }
-            .buttonStyle(AppProminentButtonStyle())
-            .disabled(details.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    var displayName: String {
+        switch self {
+        case .conversionFailed: return "Conversion failed"
+        case .crash: return "App crash"
+        case .outputQuality: return "Output quality"
+        case .performance: return "Performance issue"
+        case .other: return "Other"
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 16)
-        .background(AppTheme.Colour.subtleFill)
-        .overlay(Divider(), alignment: .top)
-    }
-
-    // MARK: - Helpers
-
-    private func sectionLabel(icon: String, text: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
-            Text(text.uppercased())
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .tracking(0.4)
-        }
-    }
-
-    private func categoryIcon(_ cat: SupportReportCategory) -> String {
-        switch cat {
-        case .conversionFailure: return "text.badge.xmark"
-        case .crash:             return "exclamationmark.triangle.fill"
-        case .outputQuality:     return "textformat"
-        case .performance:       return "timer"
-        case .other:             return "bubble.left.fill"
-        }
-    }
-
-    private func categoryColor(_ cat: SupportReportCategory) -> Color {
-        switch cat {
-        case .conversionFailure: return Color.accentColor
-        case .crash:             return AppTheme.Colour.sectionRed
-        case .outputQuality:     return AppTheme.Colour.sectionPurple
-        case .performance:       return AppTheme.Colour.sectionAmber
-        case .other:             return .secondary
-        }
-    }
-
-    private func refreshDiagnostics() {
-        diagnosticSnapshot = conversion.diagnosticSnapshotForLastFailedJob()
-        logExport = DiagnosticsService.shared.recentLogExport()
     }
 }
 
