@@ -16,5 +16,7 @@ echo "warning: bundled Python runtime is missing or stale; rebuilding"
 if [[ -f "$PLIST" ]] && ! plutil -lint "$PLIST" >/dev/null 2>&1; then
   echo "warning: bundled Python.xcframework Info.plist is invalid; rebuilding from source"
 fi
-cat "$LOG"
+if [[ -s "$LOG" ]]; then
+  cat "$LOG"
+fi
 scripts/build_python_env.sh
