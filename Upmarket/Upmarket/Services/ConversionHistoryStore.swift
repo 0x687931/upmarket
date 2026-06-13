@@ -101,6 +101,7 @@ final class ConversionHistoryStore: ObservableObject {
     }
 
     private func saveRecord(_ record: ConversionHistoryRecord) async {
+        guard isEnabled else { return }
         do {
             try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
             let encoder = JSONEncoder()

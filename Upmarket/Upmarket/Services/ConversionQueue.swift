@@ -187,6 +187,7 @@ final class ConversionQueue: ObservableObject {
 
     func remove(_ id: UUID) {
         jobs.removeAll { $0.id == id }
+        updateOverallProgressCache()
     }
 
     private func enqueue(_ id: UUID) {
