@@ -43,7 +43,8 @@ struct RuntimeAdviceDTO: Codable {
 }
 
 struct RuntimeConversionOutputDTO: Codable {
-    let markdown: String
+    let markdown: String?
+    let markdownFile: String?
     let pages: Int
     let format: String
     let title: String
@@ -156,8 +157,13 @@ struct UpmarketRuntimeHelper {
             }
             let meta = pyResult["metadata"]
             emitProgress(stage: "python", fraction: 0.95, message: "Processing")
+            let markdownFile = try writeMarkdownOutput(
+                String(pyResult["markdown"]) ?? "",
+                workspacePath: request.workspacePath
+            )
             return RuntimeHelperResponse(success: true, output: RuntimeConversionOutputDTO(
-                markdown: String(pyResult["markdown"]) ?? "",
+                markdown: nil,
+                markdownFile: markdownFile,
                 pages: Int(meta["pages"]) ?? 0,
                 format: String(meta["format"]) ?? "",
                 title: title,
@@ -213,6 +219,15 @@ struct UpmarketRuntimeHelper {
         default:
             throw HelperError.invalidRequest
         }
+    }
+
+    private static func writeMarkdownOutput(_ markdown: String, workspacePath: String?) throws -> String {
+        guard let workspacePath else { throw HelperError.invalidRequest }
+        let workspaceURL = URL(fileURLWithPath: workspacePath, isDirectory: true)
+        try FileManager.default.createDirectory(at: workspaceURL, withIntermediateDirectories: true)
+        let outputURL = workspaceURL.appendingPathComponent("runtime-output-\(UUID().uuidString).md", isDirectory: false)
+        try Data(markdown.utf8).write(to: outputURL, options: .atomic)
+        return outputURL.path
     }
 
     private static func aiRuntimeProbeCanRun() -> Bool {

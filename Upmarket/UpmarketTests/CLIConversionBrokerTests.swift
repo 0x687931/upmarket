@@ -41,7 +41,10 @@ final class CLIConversionBrokerTests: XCTestCase {
 
         let response = try readResponse(from: directory)
         XCTAssertEqual(response.status, .success)
-        let output = try XCTUnwrap(response.output)
+        XCTAssertNil(response.output)
+        let outputFile = try XCTUnwrap(response.outputFile)
+        XCTAssertEqual(outputFile, "output.json")
+        let output = try String(contentsOf: directory.appendingPathComponent(outputFile), encoding: .utf8)
         XCTAssertTrue(output.contains(#""markdown""#))
         XCTAssertTrue(output.contains(#""source" : "private.txt""#))
         XCTAssertFalse(output.contains("/Users/alice"))
@@ -67,6 +70,7 @@ final class CLIConversionBrokerTests: XCTestCase {
         XCTAssertEqual(response.status, .purchaseRequired)
         XCTAssertEqual(response.message, "Open Upmarket to unlock more conversions.")
         XCTAssertNil(response.output)
+        XCTAssertNil(response.outputFile)
     }
 
     func testAIUnavailableWritesDedicatedStatusWithoutConsumingConversion() async throws {
@@ -91,6 +95,7 @@ final class CLIConversionBrokerTests: XCTestCase {
         let response = try readResponse(from: directory)
         XCTAssertEqual(response.status, .aiUnavailable)
         XCTAssertNil(response.output)
+        XCTAssertNil(response.outputFile)
     }
 
     func testUnsafeManifestInputIsRejectedBeforeConversion() async throws {
@@ -123,6 +128,7 @@ final class CLIConversionBrokerTests: XCTestCase {
         let response = try readResponse(from: directory)
         XCTAssertEqual(response.status, .inputRejected)
         XCTAssertNil(response.output)
+        XCTAssertNil(response.outputFile)
     }
 
     private func makeHandoff(root: URL, id: String, useAI: Bool = false) throws -> URL {

@@ -6,6 +6,9 @@ Upmarket treats upstream dependency changes as release changes, not routine main
 
 - `current`: exact pins in `requirements.txt`; this is the only dependency state allowed for release builds.
 - `candidate`: exact pins in `requirements-candidate.txt`; used for local validation of proposed upstream updates.
+- `basic`, `pro`, `ai`: exact tier locks in `requirements-basic.txt`,
+  `requirements-pro.txt`, and `requirements-ai.txt`. The release-current lock
+  must be exactly the union of these tier locks.
 - `latest-upstream`: versions reported by `scripts/ci/watch_upstream.py`; informational only.
 
 Promotion is one-way:
@@ -37,6 +40,11 @@ Conversion-quality changes require a corpus fixture or benchmark before adoption
 - `scripts/update_dependencies.sh --install-current` installs only exact pins from `requirements.txt`.
 - `scripts/update_dependencies.sh --install-candidate` installs only exact pins from `requirements-candidate.txt`.
 - No script may write `requirements.txt` or promote candidate pins automatically.
+- `scripts/ci/validate_dependency_lock.py` validates current, candidate, and
+  tier locks together: every lock must be exact-pinned, current and candidate
+  must have the same package set, current must match the Basic+Pro+AI union,
+  Basic may contain only the small native/OCR utility set, and Pro may not
+  contain AI-only frameworks.
 - `scripts/ci/validate_upstream_watch_workflow.py` keeps the scheduled workflow
   wired to `scripts/ci/watch_upstream.py`, the report artifacts, and the issue
   fields for tracking mode, current version, candidate version, latest version,

@@ -41,14 +41,15 @@ nonisolated struct CLIConversionResponse: Codable, Equatable, Sendable {
     let status: CLIConversionStatus
     let message: String?
     let output: String?
+    let outputFile: String?
     let fileExtension: String?
 
-    static func success(output: String, fileExtension: String) -> CLIConversionResponse {
-        CLIConversionResponse(version: 1, status: .success, message: nil, output: output, fileExtension: fileExtension)
+    static func success(outputFile: String, fileExtension: String) -> CLIConversionResponse {
+        CLIConversionResponse(version: 1, status: .success, message: nil, output: nil, outputFile: outputFile, fileExtension: fileExtension)
     }
 
     static func failure(_ status: CLIConversionStatus, message: String) -> CLIConversionResponse {
-        CLIConversionResponse(version: 1, status: status, message: message, output: nil, fileExtension: nil)
+        CLIConversionResponse(version: 1, status: status, message: message, output: nil, outputFile: nil, fileExtension: nil)
     }
 }
 
@@ -142,7 +143,10 @@ struct CLIConversionBroker {
                 sourceDisplayName: sourceDisplayName.isEmpty ? inputURL.lastPathComponent : sourceDisplayName,
                 mode: outputMode
             )
-            try write(.success(output: formatted.text, fileExtension: formatted.fileExtension), to: responseURL)
+            let outputFile = "output.\(formatted.fileExtension)"
+            let outputURL = directory.appendingPathComponent(outputFile, isDirectory: false)
+            try Data(formatted.text.utf8).write(to: outputURL, options: .atomic)
+            try write(.success(outputFile: outputFile, fileExtension: formatted.fileExtension), to: responseURL)
         } catch {
             AppLog.conversion.error("CLI conversion request failed: \(error.localizedDescription, privacy: .private)")
             try? write(.failure(.conversionFailed, message: "Upmarket couldn't convert this document."), to: responseURL)

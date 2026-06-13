@@ -5,12 +5,13 @@ enum VisionProcessingLimitError: LocalizedError {
     case invalidPageBounds
     case tooManyPages(Int)
     case imageTooLarge(Int)
+    case pageTooLarge
 
     var errorDescription: String? {
         switch self {
         case .invalidPageBounds:
             return "Upmarket couldn't process this page."
-        case .tooManyPages, .imageTooLarge:
+        case .tooManyPages, .imageTooLarge, .pageTooLarge:
             return "This document is too large to process safely."
         }
     }
@@ -18,13 +19,41 @@ enum VisionProcessingLimitError: LocalizedError {
 
 struct VisionProcessingLimits {
     static let maximumOCRPages = 80
+    static let maximumPDFKitPages = 1_000
     static let maximumRenderedPixels = 16_000_000
     static let maximumImagePixels = 40_000_000
     static let maximumRenderedSide = 4_096
+    static let maximumPDFPageSidePoints: CGFloat = 14_400
+    static let maximumPDFPageAreaPoints: CGFloat = 50_000_000
 
     static func validatePageCount(_ pageCount: Int) throws {
         if pageCount > maximumOCRPages {
             throw VisionProcessingLimitError.tooManyPages(pageCount)
+        }
+    }
+
+    static func validatePDFKitPageCount(_ pageCount: Int, maximum: Int = maximumPDFKitPages) throws {
+        if pageCount > maximum {
+            throw VisionProcessingLimitError.tooManyPages(pageCount)
+        }
+    }
+
+    static func validatePDFPageBounds(
+        _ bounds: CGRect,
+        maximumSide: CGFloat = maximumPDFPageSidePoints,
+        maximumArea: CGFloat = maximumPDFPageAreaPoints
+    ) throws {
+        guard bounds.width.isFinite,
+              bounds.height.isFinite,
+              bounds.width > 0,
+              bounds.height > 0 else {
+            throw VisionProcessingLimitError.invalidPageBounds
+        }
+        if bounds.width > maximumSide || bounds.height > maximumSide {
+            throw VisionProcessingLimitError.pageTooLarge
+        }
+        if bounds.width * bounds.height > maximumArea {
+            throw VisionProcessingLimitError.pageTooLarge
         }
     }
 

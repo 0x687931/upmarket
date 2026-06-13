@@ -44,6 +44,10 @@ final class ConversionHistoryStoreTests: XCTestCase {
         store.record(job: job, output: output)
 
         XCTAssertEqual(store.records.count, 1)
+
+        // Wait for async file write to complete
+        Thread.sleep(forTimeInterval: 0.1)
+
         let savedFiles = try FileManager.default.contentsOfDirectory(atPath: tempDirectory.path)
         XCTAssertEqual(savedFiles.filter { $0.hasSuffix(".json") }.count, 1)
 

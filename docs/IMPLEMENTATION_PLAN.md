@@ -26,6 +26,13 @@ SwiftUI app and shelf UI
 
 Runtime conversion must not require cloud inference. Network access is limited to model download, StoreKit/App Store flows, and remote feature flags.
 
+## P1/P2 Engineering Review TODO
+
+Initial speed, security, and maintainability follow-up work is staged in
+`docs/release/SPEED_SECURITY_MAINTAINABILITY_TODO.md`. Treat each TODO as a
+separate GitHub issue or agent checklist before implementation, with the listed
+scope, non-goals, acceptance criteria, release gate, and risk area.
+
 ## P0 Audit Blockers
 
 These items block mission-critical use, TestFlight confidence, and App Store submission. They must be resolved before v1.0 release gates can pass.

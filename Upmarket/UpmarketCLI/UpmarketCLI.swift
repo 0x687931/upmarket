@@ -50,6 +50,7 @@ private struct CLIConversionResponse: Codable {
     let status: CLIConversionStatus
     let message: String?
     let output: String?
+    let outputFile: String?
     let fileExtension: String?
 }
 
@@ -137,14 +138,16 @@ private enum UpmarketCLI {
 
         try openApp(handoffID: id)
         let response = try waitForResponse(at: responseURL)
-        try? FileManager.default.removeItem(at: directory)
+        defer { try? FileManager.default.removeItem(at: directory) }
 
         switch response.status {
         case .success:
-            guard let output = response.output else {
+            guard let outputFile = response.outputFile,
+                  isSafeRelativeFileName(outputFile) else {
                 throw CommandError(.conversionFailed, "Upmarket returned an unreadable conversion result.")
             }
-            try writeOutput(output, to: options.outputURL, force: options.force)
+            let handoffOutputURL = directory.appendingPathComponent(outputFile, isDirectory: false)
+            try copyOutput(from: handoffOutputURL, to: options.outputURL, force: options.force)
         case .inputRejected:
             throw CommandError(.inputRejected, response.message ?? "This file cannot be converted safely.")
         case .purchaseRequired:
@@ -267,11 +270,11 @@ private enum UpmarketCLI {
         throw CommandError(.conversionFailed, "Upmarket did not finish the conversion.")
     }
 
-    private static func writeOutput(_ output: String, to url: URL, force: Bool) throws {
+    private static func copyOutput(from sourceURL: URL, to url: URL, force: Bool) throws {
         let directory = url.deletingLastPathComponent()
         let temporaryURL = directory.appendingPathComponent(".\(url.lastPathComponent).\(UUID().uuidString).tmp")
         do {
-            try Data(output.utf8).write(to: temporaryURL)
+            try FileManager.default.copyItem(at: sourceURL, to: temporaryURL)
             if FileManager.default.fileExists(atPath: url.path) {
                 guard force else {
                     throw CommandError(.outputWriteFailed, "Output file already exists. Pass --force to replace it.")
@@ -287,6 +290,14 @@ private enum UpmarketCLI {
             try? FileManager.default.removeItem(at: temporaryURL)
             throw CommandError(.outputWriteFailed, "Could not write output file.")
         }
+    }
+
+    private static func isSafeRelativeFileName(_ value: String) -> Bool {
+        !value.isEmpty
+            && !value.contains("/")
+            && !value.contains("\\")
+            && value != "."
+            && value != ".."
     }
 
     private static func printUsage() {

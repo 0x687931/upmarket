@@ -68,6 +68,7 @@ final class ModelManagerTests: XCTestCase {
             checkModelsHandler: {
                 return [
                     Self.runtimeModel(isDownloaded: true),
+                    Self.aiLibrariesModel(isDownloaded: true),
                     Self.maxModel(isDownloaded: true)
                 ]
             }
@@ -76,6 +77,7 @@ final class ModelManagerTests: XCTestCase {
         let gate = await manager.gateAfterChecking(tier: .max)
         XCTAssertNil(gate.unavailableReason(for: .ai))
         XCTAssertTrue(manager.downloadedAssets.contains(.pythonRuntime))
+        XCTAssertTrue(manager.downloadedAssets.contains(.aiLibraries))
         XCTAssertTrue(manager.downloadedAssets.contains(.upmarketAI))
         XCTAssertTrue(manager.hasCheckedModels)
     }
@@ -84,6 +86,7 @@ final class ModelManagerTests: XCTestCase {
         let manager = ModelManager(
             models: [
                 Self.runtimeModel(isDownloaded: true),
+                Self.aiLibrariesModel(isDownloaded: false),
                 Self.maxModel(isDownloaded: false)
             ],
             downloadModelHandler: { _, progressFile in
@@ -102,7 +105,7 @@ final class ModelManagerTests: XCTestCase {
             manager.isDownloading && manager.downloadProgress >= 25
         }
         XCTAssertGreaterThanOrEqual(manager.downloadProgress, 25)
-        XCTAssertEqual(manager.downloadingModelKey, "upmarket_ai")
+        XCTAssertEqual(manager.downloadingModelKey, "ai_libraries")
 
         try await waitUntil(timeout: 8) {
             !manager.isDownloading
@@ -286,6 +289,18 @@ final class ModelManagerTests: XCTestCase {
             withIntermediateDirectories: true
         )
         try Data(repeating: 0, count: count).write(to: url)
+    }
+
+    private static func aiLibrariesModel(isDownloaded: Bool) -> ModelStatus {
+        ModelStatus(
+            key: "ai_libraries",
+            name: "AI Libraries",
+            description: "ML frameworks for AI conversion",
+            isDownloaded: isDownloaded,
+            sizeMB: 373,
+            isRequired: false,
+            tier: "max"
+        )
     }
 
     private static func maxModel(isDownloaded: Bool, storageDirectory: String? = nil) -> ModelStatus {

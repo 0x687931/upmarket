@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 protocol MCPConversionRunning {
@@ -78,13 +79,16 @@ struct UpmarketCLIRunner {
 
     private let cliURL: URL
     private let fileManager: FileManager
+    private let cliTimeout: TimeInterval
 
     init(
         cliURL: URL = UpmarketCLIRunner.defaultCLIURL(),
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        cliTimeout: TimeInterval = UpmarketCLIRunner.defaultCLITimeout()
     ) {
         self.cliURL = cliURL
         self.fileManager = fileManager
+        self.cliTimeout = cliTimeout
     }
 
     func convert(_ request: ConversionRequest) throws -> MCPToolResult {
@@ -128,9 +132,29 @@ struct UpmarketCLIRunner {
         }
 
         let result = try runCLI(arguments: arguments)
+        if result.timedOut {
+            try? fileManager.removeItem(at: outputURL)
+            return .error("Upmarket MCP conversion timed out.")
+        }
         guard result.exitCode == 0 else {
             try? fileManager.removeItem(at: outputURL)
             return .error(Self.message(for: result.exitCode, stderr: result.stderr))
+        }
+
+        let outputBytes = Self.fileSize(at: outputURL, fileManager: fileManager)
+        if request.returnMode == .file || outputBytes > request.maxChars {
+            let structured: [String: Any] = [
+                "status": "success",
+                "format": request.format.rawValue,
+                "returned": "file",
+                "output_path": outputURL.path,
+                "character_count": NSNull(),
+                "byte_count": outputBytes
+            ]
+            return .success(
+                text: "Converted document saved for MCP at \(outputURL.path).",
+                structuredContent: structured
+            )
         }
 
         guard let output = try? String(contentsOf: outputURL, encoding: .utf8) else {
@@ -138,27 +162,20 @@ struct UpmarketCLIRunner {
             return .error("Upmarket could not prepare the MCP output file.")
         }
 
-        let shouldReturnFile = request.returnMode == .file || output.count > request.maxChars
         let structured: [String: Any] = [
             "status": "success",
             "format": request.format.rawValue,
-            "returned": shouldReturnFile ? "file" : "inline",
-            "output_path": shouldReturnFile ? outputURL.path : NSNull(),
-            "character_count": output.count
+            "returned": "inline",
+            "output_path": NSNull(),
+            "character_count": output.count,
+            "byte_count": outputBytes
         ]
-
-        if shouldReturnFile {
-            return .success(
-                text: "Converted document saved for MCP at \(outputURL.path).",
-                structuredContent: structured
-            )
-        }
 
         try? fileManager.removeItem(at: outputURL)
         return .success(text: output, structuredContent: structured)
     }
 
-    private func runCLI(arguments: [String]) throws -> (exitCode: Int32, stdout: String, stderr: String) {
+    private func runCLI(arguments: [String]) throws -> CLIResult {
         let process = Process()
         process.executableURL = cliURL
         process.arguments = arguments
@@ -168,12 +185,33 @@ struct UpmarketCLIRunner {
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
 
+        let finished = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in
+            finished.signal()
+        }
+
         try process.run()
-        process.waitUntilExit()
+        let timeout = finished.wait(timeout: .now() + cliTimeout) == .timedOut
+        if timeout {
+            Self.terminate(process, graceInterval: 1)
+        }
 
         let stdout = String(data: stdoutPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
         let stderr = String(data: stderrPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        return (process.terminationStatus, stdout, stderr)
+        return CLIResult(exitCode: process.terminationStatus, stdout: stdout, stderr: stderr, timedOut: timeout)
+    }
+
+    private static func terminate(_ process: Process, graceInterval: TimeInterval) {
+        guard process.isRunning else { return }
+        process.terminate()
+        let deadline = Date().addingTimeInterval(graceInterval)
+        while process.isRunning && Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.02)
+        }
+        if process.isRunning {
+            Darwin.kill(process.processIdentifier, SIGKILL)
+        }
+        process.waitUntilExit()
     }
 
     private static func isDescendant(_ url: URL, of directory: URL) -> Bool {
@@ -182,6 +220,11 @@ struct UpmarketCLIRunner {
         let path = resolvedURL.path
         let directoryPath = resolvedDirectory.path
         return path == directoryPath || path.hasPrefix(directoryPath + "/")
+    }
+
+    private static func fileSize(at url: URL, fileManager: FileManager) -> Int {
+        let attributes = try? fileManager.attributesOfItem(atPath: url.path)
+        return attributes?[.size] as? Int ?? 0
     }
 
     private static func message(for exitCode: Int32, stderr: String) -> String {
@@ -212,6 +255,22 @@ struct UpmarketCLIRunner {
         let executableURL = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
         return executableURL.deletingLastPathComponent().appendingPathComponent("upmarket-cli")
     }
+
+    private static func defaultCLITimeout() -> TimeInterval {
+        if let raw = ProcessInfo.processInfo.environment["UPMARKET_MCP_CLI_TIMEOUT_SECONDS"],
+           let timeout = TimeInterval(raw),
+           timeout > 0 {
+            return timeout
+        }
+        return 15 * 60
+    }
 }
 
 extension UpmarketCLIRunner: MCPConversionRunning {}
+
+private struct CLIResult {
+    let exitCode: Int32
+    let stdout: String
+    let stderr: String
+    let timedOut: Bool
+}

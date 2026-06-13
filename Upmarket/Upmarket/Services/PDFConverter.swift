@@ -6,13 +6,25 @@ import PDFKit
 /// Quality: excellent for digital PDFs. Falls back gracefully for scanned.
 struct PDFConverter {
 
+    struct Limits {
+        let maximumPages: Int
+        let maximumPageSidePoints: CGFloat
+        let maximumPageAreaPoints: CGFloat
+
+        static let nativePDFKit = Limits(
+            maximumPages: VisionProcessingLimits.maximumPDFKitPages,
+            maximumPageSidePoints: VisionProcessingLimits.maximumPDFPageSidePoints,
+            maximumPageAreaPoints: VisionProcessingLimits.maximumPDFPageAreaPoints
+        )
+    }
+
     struct Result {
         let markdown: String
         let pageCount: Int
         let isLikelyScanned: Bool  // low text → suggest Enhanced
     }
 
-    static func convert(url: URL, password: String? = nil) throws -> Result {
+    static func convert(url: URL, password: String? = nil, limits: Limits = .nativePDFKit) throws -> Result {
         guard let document = PDFDocument(url: url) else {
             throw ConversionError.cannotOpen
         }
@@ -27,22 +39,29 @@ struct PDFConverter {
         }
 
         let pageCount = document.pageCount
-        var pages: [String] = []
+        try VisionProcessingLimits.validatePDFKitPageCount(pageCount, maximum: limits.maximumPages)
+
+        var markdown = ""
         var totalChars = 0
 
         for i in 0..<pageCount {
             guard let page = document.page(at: i) else { continue }
+            try VisionProcessingLimits.validatePDFPageBounds(
+                page.bounds(for: .mediaBox),
+                maximumSide: limits.maximumPageSidePoints,
+                maximumArea: limits.maximumPageAreaPoints
+            )
             let text = page.string ?? ""
             totalChars += text.count
 
             if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { continue }
 
-            // Convert page to structured markdown
             let md = pageToMarkdown(page: page, text: text)
-            pages.append(md)
+            if !markdown.isEmpty {
+                markdown += "\n\n---\n\n"
+            }
+            markdown += md
         }
-
-        let markdown = pages.joined(separator: "\n\n---\n\n")
 
         // Low text density suggests scanned document
         let avgCharsPerPage = pageCount > 0 ? totalChars / pageCount : 0

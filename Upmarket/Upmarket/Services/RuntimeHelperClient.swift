@@ -60,8 +60,9 @@ struct RuntimeHelperClient: Sendable {
         guard let output = response.output else {
             throw PythonBridgeError.invalidResponse("missing output")
         }
+        let markdown = try Self.markdown(from: output, workspaceURL: workspaceURL)
         return .success(ConversionOutput(
-            markdown: output.markdown,
+            markdown: markdown,
             pages: output.pages,
             format: output.format,
             title: output.title,
@@ -323,6 +324,28 @@ struct RuntimeHelperClient: Sendable {
     private nonisolated static func developerModelIntakeEnabled(in environment: [String: String]) -> Bool {
         environment["UPMARKET_ENABLE_DEVELOPER_MODEL_INTAKE"] == "1"
     }
+
+    private nonisolated static func markdown(from output: RuntimeConversionOutputDTO, workspaceURL: URL) throws -> String {
+        if let markdownFile = output.markdownFile {
+            let outputURL = URL(fileURLWithPath: markdownFile).standardizedFileURL
+            guard isDescendant(outputURL, of: workspaceURL) else {
+                throw PythonBridgeError.invalidResponse("output outside workspace")
+            }
+            return try String(contentsOf: outputURL, encoding: .utf8)
+        }
+        if let markdown = output.markdown {
+            return markdown
+        }
+        throw PythonBridgeError.invalidResponse("missing markdown")
+    }
+
+    private nonisolated static func isDescendant(_ url: URL, of directory: URL) -> Bool {
+        let resolvedURL = url.resolvingSymlinksInPath().standardizedFileURL
+        let resolvedDirectory = directory.resolvingSymlinksInPath().standardizedFileURL
+        let path = resolvedURL.path
+        let directoryPath = resolvedDirectory.path
+        return path == directoryPath || path.hasPrefix(directoryPath + "/")
+    }
 }
 
 nonisolated private enum RuntimeHelperProcessTerminator {
@@ -396,7 +419,8 @@ nonisolated struct RuntimeAdviceDTO: Codable, Sendable {
 }
 
 nonisolated struct RuntimeConversionOutputDTO: Codable, Sendable {
-    let markdown: String
+    let markdown: String?
+    let markdownFile: String?
     let pages: Int
     let format: String
     let title: String

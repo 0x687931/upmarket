@@ -53,6 +53,35 @@ final class PythonBridgeTests: XCTestCase {
         XCTAssertEqual(result.output?.selectedPathway, .enhanced)
     }
 
+    func testConversionCallReadsMarkdownFileResponse() async throws {
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("RuntimeHelperFileResponse-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: workspace)
+        }
+        let markdownFile = workspace.appendingPathComponent("runtime-output.md")
+        let helper = try makeHelperScript("""
+        #!/bin/sh
+        cat >/dev/null
+        printf '# File Converted' > '\(markdownFile.path)'
+        printf '{"success":true,"needsPassword":false,"output":{"markdownFile":"\(markdownFile.path)","pages":1,"format":"TXT","title":"Fixture","pipeline":"enhanced","selectedPathway":"enhanced"}}\\n'
+        """)
+        let client = RuntimeHelperClient(executableURL: helper, livenessInterval: 2)
+
+        let result = try await client.convert(
+            fileURL: workspace.appendingPathComponent("input.txt"),
+            title: "Fixture",
+            useAI: false,
+            password: nil,
+            workspaceURL: workspace
+        )
+
+        XCTAssertEqual(result.output?.markdown, "# File Converted")
+        XCTAssertEqual(result.output?.pipeline, .enhanced)
+        XCTAssertEqual(result.output?.selectedPathway, .enhanced)
+    }
+
     func testConversionCallDecodesExplicitSelectedPathway() async throws {
         let helper = try makeHelperScript("""
         #!/bin/sh

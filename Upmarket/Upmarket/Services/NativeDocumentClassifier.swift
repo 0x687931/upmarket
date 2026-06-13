@@ -285,16 +285,11 @@ struct NativeDocumentClassifier {
             }
         }
 
-        let pageIndexes = sampledPageIndexes(pageCount: document.pageCount, maximum: maximumSampledPages)
-        let samples = pageIndexes.compactMap { index -> PageSample? in
-            guard let page = document.page(at: index) else { return nil }
-            return PageSample(index: index, text: page.string ?? "", page: page)
-        }
-
-        let vision = await inspectWithVision(samples: samples, capabilities: capabilities)
+        let cheapInspection = inspectWithPDFKit(document: document, maximumSampledPages: maximumSampledPages)
+        let vision = await inspectWithVision(samples: cheapInspection.samples, capabilities: capabilities)
         let evidence = makeEvidence(
-            pageCount: document.pageCount,
-            samples: samples,
+            pageCount: cheapInspection.pageCount,
+            samples: cheapInspection.samples,
             capabilities: capabilities,
             vision: vision
         )
@@ -353,6 +348,11 @@ struct NativeDocumentClassifier {
         let index: Int
         let text: String
         let page: PDFPage
+    }
+
+    private struct CheapInspection {
+        let pageCount: Int
+        let samples: [PageSample]
     }
 
     private struct PagePreflight {
@@ -457,6 +457,15 @@ struct NativeDocumentClassifier {
         guard pageCount > 0, maximum > 0 else { return [] }
         let candidates = [0, pageCount / 2, pageCount - 1]
         return Array(NSOrderedSet(array: candidates).compactMap { $0 as? Int }.prefix(maximum))
+    }
+
+    private static func inspectWithPDFKit(document: PDFDocument, maximumSampledPages: Int) -> CheapInspection {
+        let pageIndexes = sampledPageIndexes(pageCount: document.pageCount, maximum: maximumSampledPages)
+        let samples = pageIndexes.compactMap { index -> PageSample? in
+            guard let page = document.page(at: index) else { return nil }
+            return PageSample(index: index, text: page.string ?? "", page: page)
+        }
+        return CheapInspection(pageCount: document.pageCount, samples: samples)
     }
 
     private static func makeEvidence(

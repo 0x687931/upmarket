@@ -11,6 +11,7 @@ struct ConversionRunner {
     private let modelsReady: @Sendable () -> Bool
     private let usesInjectedModelReadiness: Bool
     private let classifyOverride: (@Sendable (URL, String?, Bool, Bool) async -> ContentClassifier.Classification?)?
+    private let pdfCandidateBudget: PDFCandidateBudget
 
     @MainActor
     init(
@@ -19,7 +20,8 @@ struct ConversionRunner {
         supportsAI: Bool = DeviceCapability.shared.supportsUpmarketAI,
         tier: (@Sendable () -> AppTier)? = nil,
         modelsReady: (@Sendable () -> Bool)? = nil,
-        classifyOverride: (@Sendable (URL, String?, Bool, Bool) async -> ContentClassifier.Classification?)? = nil
+        classifyOverride: (@Sendable (URL, String?, Bool, Bool) async -> ContentClassifier.Classification?)? = nil,
+        pdfCandidateBudget: PDFCandidateBudget = .default
     ) {
         self.pythonWorker = pythonWorker
         self.supportsAdvancedRuntime = supportsAdvancedRuntime
@@ -42,6 +44,7 @@ struct ConversionRunner {
         }
 
         self.classifyOverride = classifyOverride
+        self.pdfCandidateBudget = pdfCandidateBudget
     }
 
     func analyse(fileURL: URL) async -> ComplexityAdvice? {
@@ -135,7 +138,7 @@ struct ConversionRunner {
 
         progress?(.postProcessing)
         let postProcessSignpost = AppSignpost.conversion.beginInterval("postProcess")
-        let refined = await postProcess(output)
+        let refined = await ConversionPostProcessor.process(output)
         AppSignpost.conversion.endInterval("postProcess", postProcessSignpost)
         progress?(.complete)
         AppLog.conversion.info("Conversion completed correlationID=\(job.correlationID, privacy: .public)")
@@ -387,6 +390,13 @@ struct ConversionRunner {
             ))
         } catch PDFConverter.ConversionError.passwordRequired {
             return .failure(ConversionError.passwordRequired.errorDescription ?? "This PDF is password-protected.")
+        } catch let error as VisionProcessingLimitError {
+            switch error {
+            case .tooManyPages, .imageTooLarge, .pageTooLarge:
+                return .failure(ConversionError.fileTooLarge.errorDescription ?? "This document is too large to convert safely.")
+            case .invalidPageBounds:
+                return .failure(ConversionError.inaccessible.errorDescription ?? "Upmarket couldn't access this file.")
+            }
         } catch {
             guard supportsAdvancedRuntime else {
                 return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
@@ -402,7 +412,7 @@ struct ConversionRunner {
         }
     }
 
-    private enum PDFSecondaryCandidate {
+    enum PDFSecondaryCandidate {
         case imageText
         case advanced(useAI: Bool)
         case all(useAI: Bool)
@@ -417,12 +427,11 @@ struct ConversionRunner {
         secondary: PDFSecondaryCandidate,
         progress: ProgressHandler?
     ) async -> ConversionResult {
-        // For the full multi-pathway case (Pro+AI), run all three candidates
-        // concurrently: PDFKit (CoreGraphics/CPU), Vision OCR (ANE, OS-managed),
-        // and Python/AI (helper process with its own Metal context).
-        // Each pathway uses independent hardware or an isolated process, so
-        // concurrent execution is safe and reduces wall time to ~max(slowest).
-        if case .all(let useAI) = secondary {
+        // Small Pro+AI PDFs can fan out across independent engines. Larger
+        // documents use the serial budget below so one input cannot multiply
+        // CPU, OCR, helper-process, and memory cost at the same time.
+        if case .all(let useAI) = secondary,
+           pdfCandidateBudget.allowsFullFanout(evidence: classifierEvidence) {
             async let basicResult = runPDFKitConversion(
                 fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL
             )
@@ -447,6 +456,14 @@ struct ConversionRunner {
         let basic = await runPDFKitConversion(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
         if case .success(let output) = basic {
             outputs.append((label: "basic", output: output))
+            guard pdfCandidateBudget.shouldRunSecondary(
+                afterBasic: output,
+                evidence: classifierEvidence,
+                secondary: secondary
+            ) else {
+                AppLog.conversion.info("PDF candidate budget accepted basic output without secondary path pages=\(output.pages, privacy: .public)")
+                return .success(output)
+            }
         } else {
             firstFailure = basic
         }
@@ -466,8 +483,14 @@ struct ConversionRunner {
                     password: password, workspaceURL: workspaceURL, progress: progress
                 )
             )]
-        case .all:
-            secondaryCandidates = []  // handled above
+        case .all(let useAI):
+            secondaryCandidates = [(
+                label: useAI ? "ai" : "advanced",
+                result: await runPythonConversion(
+                    fileURL: fileURL, title: title, useAI: useAI,
+                    password: password, workspaceURL: workspaceURL, progress: progress
+                )
+            )]
         }
 
         for candidate in secondaryCandidates {
@@ -554,34 +577,6 @@ struct ConversionRunner {
             progress: { helperProgress in
                 progress?(helperProgress)
             }
-        )
-    }
-
-    private func postProcess(_ output: ConversionOutput) async -> ConversionOutput {
-        let intelligence = DocumentIntelligence.extractMetadata(from: output.markdown)
-        let nlInput = TextStructurer.Input(
-            rawMarkdown: output.markdown,
-            detectedLanguage: intelligence.language
-        )
-        let nlResult = TextStructurer.refine(nlInput)
-
-        let wtResult = await WritingToolsRefinerAdapter.refine(
-            markdown: nlResult.markdown,
-            language: nlResult.detectedLanguage
-        )
-        let fmResult = await FoundationModelEnhancer.enhance(
-            markdown: wtResult.markdown,
-            documentType: intelligence.documentType.rawValue
-        )
-
-        let title = fmResult.extractedTitle ?? intelligence.title ?? output.title
-        return ConversionOutput(
-            markdown: fmResult.refinedMarkdown,
-            pages: output.pages,
-            format: output.format,
-            title: title,
-            pipeline: output.pipeline,
-            selectedPathway: output.selectedPathway
         )
     }
 }
