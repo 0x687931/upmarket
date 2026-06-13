@@ -581,7 +581,7 @@ struct ShelfCard: View {
         if let output = job.result?.output {
             let formatted = formattedOutput(output)
             Task { @MainActor in
-                let savedURL = SavePreference.shared.save(
+                let savedURL = await SavePreference.shared.save(
                     markdown: formatted.text,
                     title: job.sourceURL.deletingPathExtension().lastPathComponent,
                     sourceURL: job.sourceURL,

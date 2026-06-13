@@ -14,6 +14,7 @@ final class ConversionQueue: ObservableObject {
     @Published private(set) var complexityAdvice: ComplexityAdvice?
     @Published private(set) var needsPassword = false
     @Published private(set) var latestResult: ConversionResult?
+    @Published private(set) var overallProgressCached: Double = 0
 
     private let runHandler: RunHandler
     private let analyseHandler: AnalyseHandler
@@ -32,12 +33,9 @@ final class ConversionQueue: ObservableObject {
         jobs.contains { $0.isRunning }
     }
 
-    // Mean progress across all active jobs (0.0–1.0).
-    // Returns 1.0 when jobs exist but none are running; 0.0 when queue is empty.
+    // DEPRECATED: Use overallProgressCached instead. Kept for compatibility.
     var overallProgress: Double {
-        let active = jobs.filter(\.isRunning)
-        guard !active.isEmpty else { return jobs.isEmpty ? 0.0 : 1.0 }
-        return active.map(\.progress).reduce(0.0, +) / Double(active.count)
+        overallProgressCached
     }
 
     func stalledJobs(referenceDate: Date = Date(), threshold: TimeInterval = 60) -> [ConversionJob] {
@@ -105,6 +103,7 @@ final class ConversionQueue: ObservableObject {
         let job = ConversionJob(sourceURL: url, useAI: useAI, password: password)
         jobs.insert(job, at: 0)
         latestResult = nil
+        updateOverallProgressCache()
         AppLog.conversion.info("Queued conversion correlationID=\(job.correlationID, privacy: .public) ext=\(job.ext, privacy: .public)")
         startLivenessMonitorIfNeeded()
         enqueue(job.id)
@@ -270,7 +269,14 @@ final class ConversionQueue: ObservableObject {
         }
         jobs[index].lastProgressAt = Date()
         jobs[index].isStalled = false
+        updateOverallProgressCache()
         AppLog.conversion.info("Conversion stage correlationID=\(id.uuidString, privacy: .public) stage=\(progress.stage.rawValue, privacy: .public)")
+    }
+
+    /// Recalculate overall progress cache (called only on job changes, not every render).
+    private func updateOverallProgressCache() {
+        let active = jobs.filter(\.isRunning)
+        overallProgressCached = active.isEmpty ? (jobs.isEmpty ? 0.0 : 1.0) : active.map(\.progress).reduce(0.0, +) / Double(active.count)
     }
 
     private func markHeartbeat(_ id: UUID) {
@@ -300,6 +306,7 @@ final class ConversionQueue: ObservableObject {
         jobs[index].progressFraction = nil
         jobs[index].lastProgressAt = Date()
         jobs[index].isStalled = false
+        updateOverallProgressCache()
         latestResult = result
         if stage == .complete, let output = result.output {
             historyStore?.record(job: jobs[index], output: output)

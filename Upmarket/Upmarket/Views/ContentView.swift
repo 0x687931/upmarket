@@ -529,14 +529,16 @@ struct FileRowView: View {
                 sourceDisplayName: job.sourceURL.lastPathComponent,
                 mode: OutputPreference.shared.mode
             )
-            let savedURL = SavePreference.shared.save(
-                markdown: formatted.text,
-                title: job.sourceURL.deletingPathExtension().lastPathComponent,
-                sourceURL: job.sourceURL,
-                fileExtension: formatted.fileExtension
-            )
-            if let url = savedURL {
-                FileAccessService.shared.revealInFinder(url)
+            Task { @MainActor in
+                let savedURL = await SavePreference.shared.save(
+                    markdown: formatted.text,
+                    title: job.sourceURL.deletingPathExtension().lastPathComponent,
+                    sourceURL: job.sourceURL,
+                    fileExtension: formatted.fileExtension
+                )
+                if let url = savedURL {
+                    FileAccessService.shared.revealInFinder(url)
+                }
             }
         }
     }
