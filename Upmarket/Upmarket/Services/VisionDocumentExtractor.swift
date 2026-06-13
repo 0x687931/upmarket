@@ -18,6 +18,8 @@ struct VisionDocumentExtractor {
         let tablesFound: Int
         let listsFound: Int
         let usedStructuredAPI: Bool
+        let structuredTables: [TableRepair.StructuredTable]
+        let documentElementType: String?
     }
 
     static func extract(pdfURL: URL, password: String? = nil) async throws -> Result {
@@ -26,7 +28,8 @@ struct VisionDocumentExtractor {
         }
         let ocr = try await VisionOCR.recognise(pdfURL: pdfURL, password: password)
         return Result(markdown: ocr.text, pageCount: ocr.pageCount,
-                     tablesFound: 0, listsFound: 0, usedStructuredAPI: false)
+                     tablesFound: 0, listsFound: 0, usedStructuredAPI: false,
+                     structuredTables: [], documentElementType: nil)
     }
 
     static func extract(imageURL: URL) async throws -> Result {
@@ -35,7 +38,8 @@ struct VisionDocumentExtractor {
         }
         let ocr = try await VisionOCR.recognise(imageURL: imageURL)
         return Result(markdown: ocr.text, pageCount: 1,
-                     tablesFound: 0, listsFound: 0, usedStructuredAPI: false)
+                     tablesFound: 0, listsFound: 0, usedStructuredAPI: false,
+                     structuredTables: [], documentElementType: nil)
     }
 
     // MARK: - macOS 26 structured extraction
@@ -53,22 +57,30 @@ struct VisionDocumentExtractor {
         try VisionProcessingLimits.validatePageCount(pageCount)
         var pages: [String] = []
         var totalTables = 0; var totalLists = 0
+        var allStructuredTables: [TableRepair.StructuredTable] = []
+        var documentElementType: String? = nil
 
         for i in 0..<pageCount {
             try Task.checkCancellation()
             guard let page = document.page(at: i),
                   let cgImage = try autoreleasepool(invoking: { try renderPage(page) }) else { continue }
-            let (md, t, l) = try await processImage(cgImage)
+            let (md, t, l, tables, elementType) = try await processImage(cgImage)
             if !md.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 pages.append(md)
             }
             totalTables += t; totalLists += l
+            allStructuredTables.append(contentsOf: tables)
+            if documentElementType == nil, let et = elementType {
+                documentElementType = et
+            }
         }
 
         return Result(
             markdown: pages.joined(separator: "\n\n---\n\n"),
             pageCount: pageCount, tablesFound: totalTables,
-            listsFound: totalLists, usedStructuredAPI: true
+            listsFound: totalLists, usedStructuredAPI: true,
+            structuredTables: allStructuredTables,
+            documentElementType: documentElementType
         )
     }
 
@@ -79,21 +91,32 @@ struct VisionDocumentExtractor {
             throw ExtractionError.cannotReadImage
         }
         try VisionProcessingLimits.validateImagePixels(width: cg.width, height: cg.height)
-        let (md, t, l) = try await processImage(cg)
-        return Result(markdown: md, pageCount: 1, tablesFound: t, listsFound: l, usedStructuredAPI: true)
+        let (md, t, l, tables, elementType) = try await processImage(cg)
+        return Result(markdown: md, pageCount: 1, tablesFound: t, listsFound: l, usedStructuredAPI: true,
+                     structuredTables: tables, documentElementType: elementType)
     }
 
     @available(macOS 26, *)
-    private static func processImage(_ cgImage: CGImage) async throws -> (String, Int, Int) {
+    private static func processImage(_ cgImage: CGImage) async throws -> (String, Int, Int, [TableRepair.StructuredTable], String?) {
         let request = RecognizeDocumentsRequest()
         let handler = ImageRequestHandler(cgImage)
         let observations = try await handler.perform(request)
 
         var parts: [String] = []
         var tables = 0; var lists = 0
+        var structuredTables: [TableRepair.StructuredTable] = []
+        var elementType: String? = nil
 
         for obs in observations {
             let doc = obs.document
+
+            // Capture element type (semantic classification) - from observation if available
+            if elementType == nil {
+                // Note: elementType may not be directly accessible depending on Vision framework version
+                // Will check if the property is exposed in this macOS version
+                elementType = nil  // Placeholder - actual property path TBD from Apple docs
+            }
+
             // Title
             if let title = doc.title {
                 let t = textFromContainer(title).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -106,6 +129,10 @@ struct VisionDocumentExtractor {
             for table in doc.tables {
                 parts.append(tableToMarkdown(table))
                 tables += 1
+                // Extract structured table for repair capability
+                if let structured = extractStructuredTable(table) {
+                    structuredTables.append(structured)
+                }
             }
             // Lists
             for list in doc.lists {
@@ -114,7 +141,7 @@ struct VisionDocumentExtractor {
             }
         }
 
-        return (parts.joined(separator: "\n\n"), tables, lists)
+        return (parts.joined(separator: "\n\n"), tables, lists, structuredTables, elementType)
     }
 
     // MARK: - Container → Markdown converters
@@ -149,6 +176,25 @@ struct VisionDocumentExtractor {
         list.items.map { item in
             "- \(textFromContainerBox(item.content))"
         }.joined(separator: "\n")
+    }
+
+    /// Extract structured table data for auto-repair capability
+    @available(macOS 26, *)
+    private static func extractStructuredTable(_ table: DocumentObservation.Container.Table) -> TableRepair.StructuredTable? {
+        guard !table.rows.isEmpty else { return nil }
+
+        var rows: [[String]] = []
+        for row in table.rows {
+            var cellStrings: [String] = []
+            for cell in row {
+                let content = textFromContainerBox(cell.content)
+                cellStrings.append(content)
+            }
+            rows.append(cellStrings)
+        }
+
+        guard !rows.isEmpty else { return nil }
+        return TableRepair.StructuredTable(rows: rows)
     }
 
     // MARK: - PDF page renderer

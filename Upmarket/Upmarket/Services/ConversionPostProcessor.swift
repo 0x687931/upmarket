@@ -24,10 +24,11 @@ enum ConversionPostProcessor {
         let title = fmResult.extractedTitle ?? intelligence.title ?? output.title
         var finalMarkdown = fmResult.refinedMarkdown
 
-        // Validate output structure against input
+        // Validate output structure against input with table repair capability
         let structureReport = DocumentStructureValidator.validateAndRepair(
             originalMarkdown: originalMarkdown,
-            convertedMarkdown: finalMarkdown
+            convertedMarkdown: finalMarkdown,
+            originalTables: output.originalTables
         )
 
         // Use repaired markdown if structure issues detected
@@ -69,7 +70,9 @@ enum ConversionPostProcessor {
             format: output.format,
             title: title,
             pipeline: output.pipeline,
-            selectedPathway: output.selectedPathway
+            selectedPathway: output.selectedPathway,
+            metadata: output.metadata,
+            originalTables: output.originalTables
         )
     }
 }

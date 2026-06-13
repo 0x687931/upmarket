@@ -5,7 +5,7 @@ import Foundation
 struct TableRepair {
 
     /// Structured table data extracted from Vision framework.
-    struct StructuredTable {
+    struct StructuredTable: Equatable, Sendable {
         let rows: [[String]]  // Array of rows, each row is array of cell strings
         let headerRow: Int    // Index of header row (usually 0)
         let columnCount: Int

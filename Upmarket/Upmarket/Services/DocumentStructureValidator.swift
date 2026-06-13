@@ -82,15 +82,56 @@ struct DocumentStructureValidator {
         originalMarkdown: String,
         convertedMarkdown: String
     ) -> ValidationReport {
+        validateAndRepair(
+            originalMarkdown: originalMarkdown,
+            convertedMarkdown: convertedMarkdown,
+            originalTables: []
+        )
+    }
+
+    /// Validate and repair document structure with table preservation and repair.
+    static func validateAndRepair(
+        originalMarkdown: String,
+        convertedMarkdown: String,
+        originalTables: [TableRepair.StructuredTable]
+    ) -> ValidationReport {
         let originalStructure = extractStructure(from: originalMarkdown)
         let convertedStructure = extractStructure(from: convertedMarkdown)
 
-        let issues = compareStructures(original: originalStructure, converted: convertedStructure)
-        let reformatted = issues.isEmpty ? nil : repairMarkdown(
+        var issues = compareStructures(original: originalStructure, converted: convertedStructure)
+        var reformatted = issues.isEmpty ? nil : repairMarkdown(
             markdown: convertedMarkdown,
             targetStructure: originalStructure,
             currentStructure: convertedStructure
         )
+
+        // Check for missing tables and repair if Vision data available
+        if !originalTables.isEmpty {
+            let markdown = reformatted ?? convertedMarkdown
+            let missingTables = TableRepair.detectMissingTables(
+                originalTables: originalTables,
+                outputMarkdown: markdown
+            )
+
+            if !missingTables.isEmpty {
+                let repaired = TableRepair.repairMissingTables(
+                    markdown: markdown,
+                    insertTables: missingTables
+                )
+                reformatted = repaired
+
+                // Log that table repair was applied
+                for _ in missingTables {
+                    issues.append(
+                        ValidationReport.Issue(
+                            severity: .warning,
+                            category: .missingTable,
+                            description: "Missing table auto-repaired from Vision extraction data"
+                        )
+                    )
+                }
+            }
+        }
 
         let metrics = ValidationReport.Metrics(
             inputHeadingCount: originalStructure.headings.count,
