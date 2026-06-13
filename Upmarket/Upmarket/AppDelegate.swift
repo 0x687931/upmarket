@@ -408,19 +408,19 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
 
         menu.addItem(.separator())
 
-        switch StoreManager.shared.entitlement {
-        case .pro:
+        switch StoreManager.shared.tier {
+        case .max:
             menu.addItem(statusItem(title: entitlementTitle, systemImage: "checkmark.circle"))
-        case .basic:
+        case .pro:
             menu.addItem(actionItem(
-                title: "Upgrade to Upmarket + AI…",
+                title: "Upgrade to Upmarket Max…",
                 systemImage: "arrow.up.circle",
                 action: #selector(showPaywall(_:))
             ))
-        case .none:
+        case .basic:
             menu.addItem(actionItem(
-                title: "Unlock Upmarket…",
-                systemImage: "lock.open",
+                title: "Upgrade to Upmarket Pro…",
+                systemImage: "arrow.up.circle",
                 action: #selector(showPaywall(_:))
             ))
         }
@@ -441,13 +441,10 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
     }
 
     private var entitlementTitle: String {
-        switch StoreManager.shared.entitlement {
-        case .none:
-            return "Locked"
-        case .basic:
-            return "Upmarket"
-        case .pro:
-            return "Upmarket + AI"
+        switch StoreManager.shared.tier {
+        case .basic: return "Upmarket Basic"
+        case .pro:   return "Upmarket Pro"
+        case .max:   return "Upmarket Max"
         }
     }
 
@@ -524,14 +521,15 @@ final class PreferencesWindowController: NSWindowController {
             .environmentObject(StoreManager.shared)
             .environmentObject(ConversionHistoryStore.shared)
             .environmentObject(WatchedFolderService.shared)
+        let prefsSize = AppTheme.WindowSize.preferences
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 480),
+            contentRect: NSRect(x: 0, y: 0, width: prefsSize.width, height: prefsSize.height),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         window.title = "Settings"
-        window.minSize = NSSize(width: 500, height: 440)
+        window.minSize = NSSize(width: prefsSize.width, height: 400)
         window.contentView = NSHostingView(rootView: rootView)
         window.isReleasedWhenClosed = false
         window.center()
@@ -556,11 +554,11 @@ final class ReportProblemWindowController: NSWindowController {
     static let shared = ReportProblemWindowController()
 
     private init() {
-        let modalSize = AppTheme.WindowSize.modal
+        let reportSize = AppTheme.WindowSize.modal
         let rootView = ReportProblemView()
             .environmentObject(ConversionQueue.shared)
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: modalSize.width, height: modalSize.height),
+            contentRect: NSRect(x: 0, y: 0, width: reportSize.width, height: reportSize.height),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false

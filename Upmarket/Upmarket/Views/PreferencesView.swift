@@ -1,7 +1,31 @@
 import SwiftUI
 import AppKit
 
-// Every control is backed by a real service. No dead controls.
+// MARK: - Tab model
+
+private enum PrefTab: CaseIterable, Equatable {
+    case general, conversion, automation, about
+
+    var label: String {
+        switch self {
+        case .general:    return "General"
+        case .conversion: return "Conversion"
+        case .automation: return "Automation"
+        case .about:      return "About"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .general:    return "gearshape.fill"
+        case .conversion: return "doc.text.fill"
+        case .automation: return "cpu.fill"
+        case .about:      return "info.circle.fill"
+        }
+    }
+}
+
+// MARK: - Main view
 
 struct PreferencesView: View {
     @EnvironmentObject private var modelManager: ModelManager
@@ -10,158 +34,64 @@ struct PreferencesView: View {
 
     @StateObject private var mcpIntegration = MCPIntegrationService.shared
     private let device = DeviceCapability.shared
+    @State private var selectedTab: PrefTab = .general
     @State private var watchedFolderError: String?
+    @State private var showAttributions = false
     @AppStorage(AppVisibilityPreference.showDockIconKey) private var showDockIcon = AppVisibilityPreference.defaultShowDockIcon
     @AppStorage(AppVisibilityPreference.showMenuBarIconKey) private var showMenuBarIcon = AppVisibilityPreference.defaultShowMenuBarIcon
     @AppStorage(AppVisibilityPreference.showShelfKey) private var showShelf = AppVisibilityPreference.defaultShowShelf
     @AppStorage("upmarket.shelfAnchor") private var shelfAnchorRaw: Int = ShelfWindowController.ShelfAnchor.center.rawValue
 
     private static let watchDocumentOptions: [WatchPatternOption] = [
-        WatchPatternOption(
-            title: "PDF",
-            detail: ".pdf",
-            patterns: ["*.pdf"]
-        ),
-        WatchPatternOption(
-            title: "Word",
-            detail: ".docx",
-            patterns: ["*.docx"]
-        ),
-        WatchPatternOption(
-            title: "Slides",
-            detail: ".pptx",
-            patterns: ["*.pptx"]
-        ),
-        WatchPatternOption(
-            title: "Sheets",
-            detail: ".xlsx",
-            patterns: ["*.xlsx"]
-        ),
-        WatchPatternOption(
-            title: "HTML",
-            detail: ".html",
-            patterns: ["*.html", "*.htm"]
-        ),
-        WatchPatternOption(
-            title: "Text",
-            detail: ".txt",
-            patterns: ["*.txt"]
-        ),
-        WatchPatternOption(
-            title: "EPUB",
-            detail: ".epub",
-            patterns: ["*.epub"]
-        ),
-        WatchPatternOption(
-            title: "ZIP",
-            detail: ".zip",
-            patterns: ["*.zip"]
-        ),
-        WatchPatternOption(
-            title: "CSV",
-            detail: ".csv",
-            patterns: ["*.csv"]
-        ),
-        WatchPatternOption(
-            title: "XML",
-            detail: ".xml",
-            patterns: ["*.xml"]
-        )
+        WatchPatternOption(title: "PDF",    detail: ".pdf",  patterns: ["*.pdf"]),
+        WatchPatternOption(title: "Word",   detail: ".docx", patterns: ["*.docx"]),
+        WatchPatternOption(title: "Slides", detail: ".pptx", patterns: ["*.pptx"]),
+        WatchPatternOption(title: "Sheets", detail: ".xlsx", patterns: ["*.xlsx"]),
+        WatchPatternOption(title: "HTML",   detail: ".html", patterns: ["*.html", "*.htm"]),
+        WatchPatternOption(title: "Text",   detail: ".txt",  patterns: ["*.txt"]),
+        WatchPatternOption(title: "EPUB",   detail: ".epub", patterns: ["*.epub"]),
+        WatchPatternOption(title: "ZIP",    detail: ".zip",  patterns: ["*.zip"]),
+        WatchPatternOption(title: "CSV",    detail: ".csv",  patterns: ["*.csv"]),
+        WatchPatternOption(title: "XML",    detail: ".xml",  patterns: ["*.xml"]),
     ]
-
     private static let watchImageOptions: [WatchPatternOption] = [
-        WatchPatternOption(
-            title: "PNG",
-            detail: ".png",
-            patterns: ["*.png"]
-        ),
-        WatchPatternOption(
-            title: "JPEG",
-            detail: ".jpg",
-            patterns: ["*.jpg", "*.jpeg"]
-        ),
-        WatchPatternOption(
-            title: "GIF",
-            detail: ".gif",
-            patterns: ["*.gif"]
-        ),
-        WatchPatternOption(
-            title: "TIFF",
-            detail: ".tiff",
-            patterns: ["*.tif", "*.tiff"]
-        )
+        WatchPatternOption(title: "PNG",  detail: ".png",  patterns: ["*.png"]),
+        WatchPatternOption(title: "JPEG", detail: ".jpg",  patterns: ["*.jpg", "*.jpeg"]),
+        WatchPatternOption(title: "GIF",  detail: ".gif",  patterns: ["*.gif"]),
+        WatchPatternOption(title: "TIFF", detail: ".tiff", patterns: ["*.tif", "*.tiff"]),
     ]
-
     private static let watchAudioOptions: [WatchPatternOption] = [
-        WatchPatternOption(
-            title: "MP3/M4A",
-            detail: ".mp3 .m4a",
-            patterns: ["*.mp3", "*.m4a"]
-        ),
-        WatchPatternOption(
-            title: "WAV/AIFF",
-            detail: "+ Opus",
-            patterns: ["*.wav", "*.aiff", "*.opus"]
-        )
+        WatchPatternOption(title: "MP3/M4A",  detail: ".mp3 .m4a", patterns: ["*.mp3", "*.m4a"]),
+        WatchPatternOption(title: "WAV/AIFF", detail: "+ Opus",     patterns: ["*.wav", "*.aiff", "*.opus"]),
     ]
-
-    private static let watchIncludeOptions =
-        watchDocumentOptions + watchImageOptions + watchAudioOptions
-
+    private static let watchIncludeOptions = watchDocumentOptions + watchImageOptions + watchAudioOptions
     private static let watchExcludeOptions: [WatchPatternOption] = [
-        WatchPatternOption(
-            title: "Converted outputs",
-            detail: "Markdown and JSON files Upmarket may create",
-            patterns: ["*.md", "*.markdown", "*.json"]
-        ),
-        WatchPatternOption(
-            title: "Temporary downloads",
-            detail: "Partial browser and system download files",
-            patterns: ["*.tmp", "*.download", "*.part", "*.crdownload", "~$*"]
-        ),
-        WatchPatternOption(
-            title: "Drafts",
-            detail: "Files with draft in the name",
-            patterns: ["*draft*"]
-        )
+        WatchPatternOption(title: "Converted outputs",   detail: "Markdown and JSON",          patterns: ["*.md", "*.markdown", "*.json"]),
+        WatchPatternOption(title: "Temporary downloads", detail: "Partial download files",      patterns: ["*.tmp", "*.download", "*.part", "*.crdownload", "~$*"]),
+        WatchPatternOption(title: "Drafts",              detail: "Files with 'draft' in name",  patterns: ["*draft*"]),
     ]
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.xl) {
-                AppSectionCard(title: "General", subtitle: "App visibility and save location") {
-                    VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-                        generalControlsCard
-                        saveLocationCard
+        VStack(spacing: 0) {
+            tabBar
+            Divider()
+            ScrollView {
+                Group {
+                    switch selectedTab {
+                    case .general:    generalTabContent
+                    case .conversion: conversionTabContent
+                    case .automation: automationTabContent
+                    case .about:      aboutTabContent
                     }
                 }
-
-                AppSectionCard(title: "Conversion", subtitle: "Output and model options") {
-                    VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-                        outputCard
-                        MCPIntegrationSection(integration: mcpIntegration)
-                        aiModelsCard
-                    }
-                }
-
-                AppSectionCard(title: "Automation", subtitle: "Watched folders and file types") {
-                    VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-                        watchedFoldersCard
-                        fileTypesCard
-                    }
-                }
-
-                AppSectionCard(title: "About", subtitle: "Plan, links, and licenses") {
-                    VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-                        aboutCard
-                        linksCard
-                        attributionsCard
-                    }
-                }
+                .padding(.horizontal, 28)
+                .padding(.vertical, 24)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
-            .padding(24)
         }
-        .frame(width: 600, height: 680)
+        .frame(minWidth: AppTheme.WindowSize.preferences.width,
+               maxWidth: AppTheme.WindowSize.preferences.width,
+               minHeight: 400)
         .onChange(of: showDockIcon) { value in
             AppVisibilityPreference.apply(showDockIcon: value)
             showDockIcon = AppVisibilityPreference.showDockIcon
@@ -178,734 +108,625 @@ struct PreferencesView: View {
             showDockIcon = AppVisibilityPreference.showDockIcon
             AppVisibilityPreference.apply(showDockIcon: showDockIcon)
             AppVisibilityPreference.applyMenuBarVisibility(showMenuBarIcon: showMenuBarIcon)
-            if !showShelf {
-                ShelfWindowController.shared.hide(animate: false)
-            }
-            if case .unchecked = modelManager.installState { modelManager.checkModels() }
+            if !showShelf { ShelfWindowController.shared.hide(animate: false) }
+            modelManager.checkModels()
         }
     }
 
-    // MARK: - General
+    // MARK: - Tab bar
 
-    private var generalControlsCard: some View {
-        sectionCard(title: "App") {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                Toggle("Show Dock icon", isOn: dockIconBinding)
-                    .toggleStyle(.checkbox)
-                    .disabled(AppVisibilityPreference.requiresDockIcon)
+    private var tabBar: some View {
+        HStack(spacing: 0) {
+            ForEach(PrefTab.allCases, id: \.self) { tab in
+                tabButton(tab)
+            }
+        }
+        .padding(.horizontal, 28)
+        .padding(.top, 4)
+    }
 
-                Toggle("Show menu bar icon", isOn: menuBarIconBinding)
-                    .toggleStyle(.checkbox)
+    private func tabButton(_ tab: PrefTab) -> some View {
+        let isActive = selectedTab == tab
+        return Button {
+            withAnimation(.easeOut(duration: 0.15)) {
+                selectedTab = tab
+            }
+        } label: {
+            VStack(spacing: 0) {
+                HStack(spacing: 6) {
+                    Image(systemName: tab.icon)
+                        .font(.system(size: 13))
+                    Text(tab.label)
+                        .font(isActive ? .body.weight(.semibold) : .body.weight(.medium))
+                }
+                .foregroundStyle(isActive ? Color.accentColor : Color.secondary)
+                .padding(.horizontal, 14)
+                .padding(.top, 10)
+                .padding(.bottom, 9)
 
-                #if DEBUG
-                Toggle("Show shelf", isOn: $showShelf)
-                    .toggleStyle(.checkbox)
-                    .onChange(of: showShelf) { show in
-                        if show { ShelfWindowController.shared.show() }
-                        else { ShelfWindowController.shared.hide(animate: false) }
-                    }
+                Rectangle()
+                    .fill(isActive ? Color.accentColor : Color.clear)
+                    .frame(height: 2)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("PrefsTab_\(tab.label)")
+    }
 
-                if showShelf {
-                    LabeledContent("Shelf position:") {
-                        Picker("Shelf position", selection: shelfAnchorBinding) {
-                            Text("Bottom Left").tag(ShelfWindowController.ShelfAnchor.bottomLeft)
-                            Text("Bottom Right").tag(ShelfWindowController.ShelfAnchor.bottomRight)
-                            Text("Top Left").tag(ShelfWindowController.ShelfAnchor.topLeft)
-                            Text("Top Right").tag(ShelfWindowController.ShelfAnchor.topRight)
-                            Text("Center").tag(ShelfWindowController.ShelfAnchor.center)
+    // MARK: - Section header
+
+    private func sectionHeader(icon: String, color: Color, title: String) -> some View {
+        HStack(spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(color.opacity(0.12))
+                    .frame(width: 28, height: 28)
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(color)
+            }
+            Text(title.uppercased())
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .tracking(0.4)
+        }
+    }
+
+    // MARK: - General tab
+
+    private var generalTabContent: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            // App Visibility
+            VStack(alignment: .leading, spacing: 14) {
+                sectionHeader(icon: "app.badge", color: AppTheme.Colour.sectionBlue, title: "App Visibility")
+                VStack(alignment: .leading, spacing: 10) {
+                    Toggle("Show Dock icon", isOn: dockIconBinding)
+                        .toggleStyle(.checkbox)
+                        .disabled(AppVisibilityPreference.requiresDockIcon)
+                        .accessibilityIdentifier("PrefsDockIconToggle")
+                    Toggle("Show menu bar icon", isOn: menuBarIconBinding)
+                        .toggleStyle(.checkbox)
+                        .accessibilityIdentifier("PrefsMenuBarIconToggle")
+                    Text("The Dock icon stays visible so you can always reopen Upmarket, change settings, and quit.")
+                        .font(AppTheme.Font.caption).foregroundStyle(.secondary)
+                }
+                .padding(.leading, 38)
+            }
+
+            // Shelf Widget
+            VStack(alignment: .leading, spacing: 14) {
+                sectionHeader(icon: "sidebar.right", color: Color.accentColor, title: "Shelf Widget")
+                VStack(alignment: .leading, spacing: 10) {
+                    Toggle("Show shelf", isOn: $showShelf)
+                        .toggleStyle(.checkbox)
+                        .onChange(of: showShelf) { show in
+                            if show { ShelfWindowController.shared.show() }
+                            else    { ShelfWindowController.shared.hide(animate: false) }
                         }
-                        .pickerStyle(.menu)
-                        .labelsHidden()
-                        .frame(maxWidth: 160)
+                    if showShelf {
+                        LabeledContent("Position:") {
+                            Picker("", selection: shelfAnchorBinding) {
+                                Text("Bottom Left").tag(ShelfWindowController.ShelfAnchor.bottomLeft)
+                                Text("Bottom Right").tag(ShelfWindowController.ShelfAnchor.bottomRight)
+                                Text("Top Left").tag(ShelfWindowController.ShelfAnchor.topLeft)
+                                Text("Top Right").tag(ShelfWindowController.ShelfAnchor.topRight)
+                                Text("Center").tag(ShelfWindowController.ShelfAnchor.center)
+                            }
+                            .pickerStyle(.menu).labelsHidden().frame(maxWidth: 160)
+                        }
                     }
                 }
-                #endif
+                .padding(.leading, 38)
+            }
 
-                Text("The Dock icon stays visible so you can always reopen Upmarket, change settings, and quit.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            // Save Location
+            VStack(alignment: .leading, spacing: 14) {
+                sectionHeader(icon: "folder.fill", color: AppTheme.Colour.sectionGreen, title: "Save Location")
+                VStack(alignment: .leading, spacing: 10) {
+                    SaveLocationSettingsView(
+                        destination: saveDestinationBinding,
+                        chosenFolderURL: chosenFolderBinding,
+                        title: nil,
+                        description: nil,
+                        onChooseFolder: chooseSaveFolder,
+                        showsCardChrome: false
+                    )
+                }
+                .padding(.leading, 38)
             }
         }
     }
 
-    private var saveLocationCard: some View {
-        SaveLocationSettingsView(
-            destination: saveDestinationBinding,
-            chosenFolderURL: chosenFolderBinding,
-            title: "Save Location",
-            description: "Choose where converted files are saved.",
-            onChooseFolder: chooseSaveFolder,
-            showsCardChrome: true
-        )
-    }
+    // MARK: - Conversion tab
 
-    private var dockIconBinding: Binding<Bool> {
-        Binding(
-            get: { AppVisibilityPreference.showDockIcon },
-            set: { value in
-                AppVisibilityPreference.showDockIcon = value
-                showDockIcon = AppVisibilityPreference.showDockIcon
-            }
-        )
-    }
-
-    private var menuBarIconBinding: Binding<Bool> {
-        Binding(
-            get: { showMenuBarIcon },
-            set: { value in
-                showMenuBarIcon = value
-            }
-        )
-    }
-
-    private var shelfAnchorBinding: Binding<ShelfWindowController.ShelfAnchor> {
-        Binding(
-            get: { ShelfWindowController.ShelfAnchor(rawValue: shelfAnchorRaw) ?? .center },
-            set: { anchor in
-                shelfAnchorRaw = anchor.rawValue
-                ShelfWindowController.shared.anchor = anchor
-                ShelfWindowController.shared.reposition()
-            }
-        )
-    }
-
-    // MARK: - Conversion
-
-    private var outputCard: some View {
-        sectionCard(title: "Output") {
-            LabeledContent("Format:") {
-                Picker("Output format", selection: outputModeBinding) {
-                    ForEach(OutputMode.allCases) { mode in
-                        Text(mode.displayName).tag(mode)
+    private var conversionTabContent: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            // Output Format
+            VStack(alignment: .leading, spacing: 14) {
+                sectionHeader(icon: "doc.text", color: Color.accentColor, title: "Output Format")
+                VStack(alignment: .leading, spacing: 10) {
+                    LabeledContent("Format:") {
+                        Picker("", selection: outputModeBinding) {
+                            ForEach(OutputMode.allCases) { mode in Text(mode.displayName).tag(mode) }
+                        }
+                        .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 240)
+                    }
+                    Divider()
+                    Toggle("Advertise to LM Studio (MCP)", isOn: Binding(
+                        get: { mcpIntegration.isEnabled },
+                        set: { mcpIntegration.setAdvertisementEnabled($0) }
+                    ))
+                    .toggleStyle(.checkbox)
+                    if mcpIntegration.isEnabled {
+                        HStack(spacing: AppTheme.Spacing.sm) {
+                            Label(mcpIntegration.status.displayText, systemImage: mcpIntegration.status.systemImage)
+                                .font(AppTheme.Font.caption).foregroundStyle(.secondary)
+                            Spacer()
+                            Button("Add to LM Studio…") { mcpIntegration.addToLMStudio() }
+                                .buttonStyle(AppBorderedButtonStyle()).controlSize(.mini)
+                                .disabled(mcpIntegration.status == .commandMissing)
+                        }
                     }
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .frame(maxWidth: 320)
+                .padding(.leading, 38)
+            }
+
+            // AI Models
+            VStack(alignment: .leading, spacing: 14) {
+                sectionHeader(icon: "sparkles", color: AppTheme.Colour.sectionPurple, title: "AI Models")
+                VStack(spacing: AppTheme.Spacing.sm) {
+                    modelsContent
+                }
+                .padding(.leading, 38)
             }
         }
     }
 
-    private var aiModelsCard: some View {
-        sectionCard(title: "AI Models") {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                Text("Advanced models for layout detection and table structure. Required for \"Upmarket + AI\" features.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                modelRows
-                aiModelStatusRows
+    // MARK: - Models content (moved from dedicated tab)
+
+    @ViewBuilder private var modelsContent: some View {
+        if !device.isAppleSilicon {
+            AppSectionCard {
+                VStack(spacing: AppTheme.Spacing.md) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 32)).foregroundStyle(Color.green)
+                    Text("Fast conversion is ready").fontWeight(.medium)
+                    Text("Enhanced conversion requires Apple Silicon.")
+                        .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
             }
-        }
-    }
-
-    // MARK: - Automation
-
-    private var watchedFoldersCard: some View {
-        sectionCard(title: "Watch Folders") {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                if watchedFolderService.folders.isEmpty {
-                    watchFolderEmptyRow
-                } else {
-                    ForEach(watchedFolderService.folders) { folder in
-                        watchedFolderRow(folder)
-                    }
-
-                    Button {
-                        chooseWatchedFolder()
-                    } label: {
-                        Label("Add Folder…", systemImage: "folder.badge.plus")
+        } else if modelManager.isDownloading {
+            AppSectionCard { downloadProgressRow }
+        } else if let error = modelManager.checkError {
+            AppSectionCard {
+                VStack(spacing: AppTheme.Spacing.md) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 32)).foregroundStyle(.red)
+                    Text("Model check failed").fontWeight(.medium)
+                    Text(error).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    Button("Check Again") { modelManager.checkModels() }
+                        .buttonStyle(AppActionButtonStyle())
+                }
+                .frame(maxWidth: .infinity)
+            }
+        } else if let error = modelManager.downloadError {
+            AppSectionCard {
+                VStack(spacing: AppTheme.Spacing.md) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 32)).foregroundStyle(.red)
+                    Text("Download failed").fontWeight(.medium)
+                    Text(error).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    Button("Try Again") {
+                        if modelManager.gate(tier: store.tier).downloadUnavailableReason(for: .upmarketAI) == nil {
+                            modelManager.downloadAssets(for: .ai, gate: modelManager.gate(tier: store.tier))
+                        } else { modelManager.checkModels() }
                     }
                     .buttonStyle(AppActionButtonStyle())
-                    .controlSize(.small)
                 }
+                .frame(maxWidth: .infinity)
             }
-        }
-    }
-
-    private var fileTypesCard: some View {
-        sectionCard(title: "File Types") {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                Picker("Convert:", selection: watchedInputPresetBinding) {
-                    Text("All supported").tag(WatchedInputPreset.all)
-                    Text("Documents only").tag(WatchedInputPreset.documents)
-                    Text("Documents + images").tag(WatchedInputPreset.documentsAndImages)
+        } else if case .checking = modelManager.installState {
+            AppSectionCard {
+                VStack(spacing: AppTheme.Spacing.md) {
+                    ProgressView().controlSize(.small)
+                    Text("Checking local model files…")
+                        .font(.subheadline).foregroundStyle(.secondary)
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-
-                Toggle("Skip temporary files", isOn: defaultWatchedExclusionsBinding)
-                    .toggleStyle(.checkbox)
-                    .font(.subheadline)
-
-                if let watchedFolderError {
-                    Label(watchedFolderError, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                }
-            }
-        }
-    }
-
-    private var outputModeBinding: Binding<OutputMode> {
-        Binding(
-            get: { OutputPreference.shared.mode },
-            set: { OutputPreference.shared.mode = $0 }
-        )
-    }
-
-    private var saveDestinationBinding: Binding<SavePreference.Destination> {
-        Binding(
-            get: { SavePreference.shared.destination },
-            set: { SavePreference.shared.destination = $0 }
-        )
-    }
-
-    private var chosenFolderBinding: Binding<URL?> {
-        Binding(
-            get: { SavePreference.shared.chosenFolderURL },
-            set: { SavePreference.shared.chosenFolderURL = $0 }
-        )
-    }
-
-    private var watchedInputPreset: WatchedInputPreset {
-        if usesAllWatchedFileTypes {
-            return .all
-        }
-        if patternsEqual(Self.watchDocumentOptions.flatMap(\.patterns), watchedFolderService.includePatterns) {
-            return .documents
-        }
-        if patternsEqual(Self.watchDocumentAndImagePatterns, watchedFolderService.includePatterns) {
-            return .documentsAndImages
-        }
-        return .all
-    }
-
-    private var watchedInputPresetBinding: Binding<WatchedInputPreset> {
-        Binding(
-            get: { watchedInputPreset },
-            set: { preset in
-                switch preset {
-                case .all:
-                    watchedFolderService.includePatterns = ""
-                case .documents:
-                    watchedFolderService.includePatterns = Self.watchDocumentOptions
-                        .flatMap(\.patterns)
-                        .joined(separator: ", ")
-                case .documentsAndImages:
-                    watchedFolderService.includePatterns = Self.watchDocumentAndImagePatterns
-                        .joined(separator: ", ")
-                case .custom:
-                    break
-                }
-            }
-        )
-    }
-
-    private static var watchDocumentAndImagePatterns: [String] {
-        (watchDocumentOptions + watchImageOptions).flatMap(\.patterns)
-    }
-
-    private var watchedInputSummary: String {
-        let selected = Self.watchIncludeOptions
-            .filter { containsAll($0.patterns, in: watchedFolderService.includePatterns) }
-            .map(\.title)
-        return selected.isEmpty ? "No file types selected" : selected.joined(separator: ", ")
-    }
-
-    private var usesAllWatchedFileTypes: Bool {
-        watchedFolderService.includePatterns
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .isEmpty
-    }
-
-    private var defaultWatchedExclusionPatterns: [String] {
-        Self.watchExcludeOptions.flatMap(\.patterns)
-    }
-
-    private var usesDefaultWatchedExclusions: Bool {
-        containsAll(defaultWatchedExclusionPatterns, in: watchedFolderService.excludePatterns)
-    }
-
-    private var defaultWatchedExclusionsBinding: Binding<Bool> {
-        Binding(
-            get: { usesDefaultWatchedExclusions },
-            set: { enabled in
-                watchedFolderService.excludePatterns = enabled
-                    ? defaultWatchedExclusionPatterns.joined(separator: ", ")
-                    : ""
-            }
-        )
-    }
-
-    private func watchedIncludeBinding(for option: WatchPatternOption) -> Binding<Bool> {
-        Binding(
-            get: {
-                usesAllWatchedFileTypes || containsAll(
-                    option.patterns,
-                    in: watchedFolderService.includePatterns
-                )
-            },
-            set: { enabled in
-                if usesAllWatchedFileTypes {
-                    watchedFolderService.includePatterns = Self.watchIncludeOptions
-                        .flatMap(\.patterns)
-                        .joined(separator: ", ")
-                }
-                watchedFolderService.includePatterns = updatedPatterns(
-                    watchedFolderService.includePatterns,
-                    setting: option.patterns,
-                    enabled: enabled
-                )
-            }
-        )
-    }
-
-    private func watchedExcludeBinding(for option: WatchPatternOption) -> Binding<Bool> {
-        Binding(
-            get: { containsAll(option.patterns, in: watchedFolderService.excludePatterns) },
-            set: { enabled in
-                watchedFolderService.excludePatterns = updatedPatterns(
-                    watchedFolderService.excludePatterns,
-                    setting: option.patterns,
-                    enabled: enabled
-                )
-            }
-        )
-    }
-
-    @ViewBuilder
-    private func watchPatternListRow(_ option: WatchPatternOption, isOn: Binding<Bool>) -> some View {
-        Toggle(isOn: isOn) {
-            HStack(spacing: 8) {
-                Text(option.title)
-                Spacer()
-                Text(option.detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .toggleStyle(.checkbox)
-        .controlSize(.small)
-        .help(option.patterns.joined(separator: ", "))
-    }
-
-    private func containsAll(_ patterns: [String], in rawPatterns: String) -> Bool {
-        let tokens = Set(patternTokens(rawPatterns))
-        return patterns
-            .map { $0.lowercased() }
-            .allSatisfy { tokens.contains($0) }
-    }
-
-    private func patternsEqual(_ patterns: [String], _ rawPatterns: String) -> Bool {
-        Set(patterns.map { $0.lowercased() }) == Set(patternTokens(rawPatterns))
-    }
-
-    private func updatedPatterns(_ rawPatterns: String, setting patterns: [String], enabled: Bool) -> String {
-        var tokens = patternTokens(rawPatterns)
-        let target = Set(patterns.map { $0.lowercased() })
-        if enabled {
-            for pattern in patterns.map({ $0.lowercased() }) where !tokens.contains(pattern) {
-                tokens.append(pattern)
+                .frame(maxWidth: .infinity)
             }
         } else {
-            tokens.removeAll { target.contains($0) }
+            modelsListCard
+            modelsDownloadCard
         }
-        return tokens.joined(separator: ", ")
     }
 
-    private func patternTokens(_ rawPatterns: String) -> [String] {
-        var seen = Set<String>()
-        return rawPatterns
-            .split { $0 == "," || $0 == "\n" || $0 == " " || $0 == "\t" }
-            .map { String($0).lowercased() }
-            .filter { token in
-                guard !seen.contains(token) else { return false }
-                seen.insert(token)
-                return true
+    private var modelsListCard: some View {
+        AppSectionCard(title: "Available") {
+            VStack(spacing: AppTheme.Spacing.sm) {
+                if modelManager.models.isEmpty {
+                    AppSectionCard {
+                        HStack(spacing: AppTheme.Spacing.md) {
+                            Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.green).font(.title3)
+                            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                                Text("Fast conversion ready").fontWeight(.medium)
+                                Text("No optional models for this build.")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }
+                    }
+                }
+                ForEach(modelManager.models.filter { $0.tier == "pro" && $0.key != "upmarket_ai" }, id: \.key) { model in
+                    let asset = ModelAsset(rawValue: model.key)
+                    let reason = asset.flatMap { modelManager.gate(tier: store.tier).downloadUnavailableReason(for: $0) }
+                    modelRow(key: model.key,
+                             icon: model.key == ModelAsset.pythonRuntime.rawValue ? "cpu" : "doc.text.magnifyingglass",
+                             title: model.name,
+                             description: reason ?? model.error ?? model.description,
+                             sizeMB: model.sizeMB, isDownloaded: model.isDownloaded,
+                             badge: nil, available: model.isAvailable && reason == nil)
+                }
+                if store.tier >= .max {
+                    ForEach(modelManager.models.filter { $0.tier == "max" }, id: \.key) { model in
+                        let reason = modelManager.gate(tier: store.tier).downloadUnavailableReason(for: .upmarketAI)
+                        modelRow(key: model.key, icon: "sparkles", title: model.name,
+                                 description: reason ?? model.error ?? model.description,
+                                 sizeMB: model.sizeMB, isDownloaded: model.isDownloaded,
+                                 badge: "MAX", available: model.isAvailable && reason == nil)
+                    }
+                }
             }
-    }
-
-    private func chooseSaveFolder() {
-        if let url = FileAccessService.shared.chooseSaveDirectory(
-            message: "Upmarket will save converted files here."
-        ) {
-            SavePreference.shared.chosenFolderURL = url
-            SavePreference.shared.destination = .chosenFolder
         }
     }
 
-    private var watchFolderEmptyRow: some View {
-        HStack(alignment: .center, spacing: 10) {
-            Image(systemName: "folder.badge.plus")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 24)
+    private func modelRow(key: String, icon: String, title: String, description: String, sizeMB: Int, isDownloaded: Bool, badge: String?, available: Bool) -> some View {
+        AppSectionCard {
+            HStack(spacing: AppTheme.Spacing.md) {
+                ZStack {
+                    Circle()
+                        .fill((isDownloaded ? Color.green : Color.accentColor).opacity(0.10))
+                        .frame(width: 28, height: 28)
+                    Image(systemName: isDownloaded ? "checkmark" : icon)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(isDownloaded ? Color.green : Color.accentColor)
+                }
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                    HStack(spacing: AppTheme.Spacing.xs) {
+                        Text(title).font(.subheadline.weight(.semibold))
+                        if let badge { AppBadge(badge, variant: .accent) }
+                    }
+                    Text(description).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                }
+                Spacer(minLength: 12)
+                VStack(alignment: .trailing, spacing: 6) {
+                    Text(isDownloaded ? "Ready" : available ? "\(sizeMB) MB" : "Unavailable")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(isDownloaded ? Color.green : .secondary)
+                    if isDownloaded {
+                        Button("Delete") { modelManager.deleteModel(key: key) }
+                            .buttonStyle(AppActionButtonStyle()).controlSize(.small)
+                    } else if available {
+                        Button("Download") { modelManager.downloadAsset(ModelAsset(rawValue: key) ?? .upmarketAI, gate: modelManager.gate(tier: store.tier)) }
+                            .buttonStyle(AppActionButtonStyle()).controlSize(.small)
+                    }
+                }
+            }
+        }
+        .opacity(available ? 1.0 : 0.75)
+    }
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text("No folders are being watched.")
-                    .font(.subheadline)
-                Text("Add a folder to convert new documents as they arrive.")
-                    .font(.caption)
+    private var modelsDownloadCard: some View {
+        AppSectionCard(title: "Downloads") {
+            VStack(spacing: AppTheme.Spacing.sm) {
+                if modelManager.gate(tier: store.tier).downloadUnavailableReason(for: .pythonRuntime) == nil,
+                   !modelManager.downloadedAssets.contains(.pythonRuntime) {
+                    Button {
+                        modelManager.downloadAssets(for: .enhanced, gate: modelManager.gate(tier: store.tier))
+                    } label: {
+                        Label("Download Enhanced Runtime — \(modelManager.runtimeSizeMB) MB",
+                              systemImage: "arrow.down.circle.fill")
+                            .frame(maxWidth: .infinity).fontWeight(.semibold)
+                    }
+                    .buttonStyle(AppProminentButtonStyle()).controlSize(.large)
+                }
+                if modelManager.gate(tier: store.tier).downloadUnavailableReason(for: .upmarketAI) == nil {
+                    let proReady = modelManager.models.filter { $0.tier == "max" }.allSatisfy(\.isDownloaded)
+                    if !proReady {
+                        Button {
+                            modelManager.downloadAssets(for: .ai, gate: modelManager.gate(tier: store.tier))
+                        } label: {
+                            Label("Download Upmarket AI — \(modelManager.proSizeMB) MB", systemImage: "sparkles")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(AppBorderedButtonStyle()).controlSize(.large)
+                    }
+                }
+                Text("Internet required only for initial download. All conversion runs offline.")
+                    .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            }
+        }
+    }
+
+    private var downloadProgressRow: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+            HStack(spacing: 10) {
+                if #available(macOS 15.0, *) {
+                    Image(systemName: "arrow.down.circle", variableValue: modelManager.downloadProgress / 100)
+                        .font(.system(size: 18))
+                        .foregroundStyle(Color.accentColor)
+                        .symbolEffect(.pulse, isActive: true)
+                } else {
+                    ProgressView().controlSize(.small)
+                }
+                Text(modelManager.downloadMessage)
+                    .font(AppTheme.Font.body)
+                Spacer()
+                Text("\(Int(modelManager.downloadProgress))%")
+                    .font(AppTheme.Font.caption)
+                    .monospacedDigit()
                     .foregroundStyle(.secondary)
             }
-
-            Spacer()
-
-            Button("Add Folder…") {
-                chooseWatchedFolder()
-            }
-            .buttonStyle(AppActionButtonStyle())
-            .controlSize(.small)
+            ProgressView(value: modelManager.downloadProgress, total: 100)
+                .progressViewStyle(.linear)
         }
-        .padding(.vertical, 2)
+    }
+
+    // MARK: - Automation tab
+
+    private var automationTabContent: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            // Watched Folders
+            VStack(alignment: .leading, spacing: 14) {
+                sectionHeader(icon: "folder.badge.gearshape", color: AppTheme.Colour.sectionAmber, title: "Watched Folders")
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+                    if watchedFolderService.folders.isEmpty {
+                        watchFolderEmptyState
+                    } else {
+                        ForEach(watchedFolderService.folders) { folder in watchedFolderRow(folder) }
+                        Button {
+                            chooseWatchedFolder()
+                        } label: {
+                            Label("Add Folder…", systemImage: "folder.badge.plus")
+                        }
+                        .buttonStyle(AppBorderedButtonStyle()).controlSize(.small)
+                    }
+                    if let watchedFolderError {
+                        Label(watchedFolderError, systemImage: "exclamationmark.triangle.fill")
+                            .font(AppTheme.Font.caption).foregroundStyle(.red)
+                    }
+                }
+                .padding(.leading, 38)
+            }
+
+            // File Types
+            VStack(alignment: .leading, spacing: 14) {
+                sectionHeader(icon: "slider.horizontal.3", color: AppTheme.Colour.sectionRed, title: "File Types")
+                VStack(alignment: .leading, spacing: 10) {
+                    Picker("", selection: watchedInputPresetBinding) {
+                        Text("All supported").tag(WatchedInputPreset.all)
+                        Text("Documents only").tag(WatchedInputPreset.documents)
+                        Text("Documents + images").tag(WatchedInputPreset.documentsAndImages)
+                    }
+                    .pickerStyle(.segmented).labelsHidden()
+                    Toggle("Skip temporary files", isOn: defaultWatchedExclusionsBinding)
+                        .toggleStyle(.checkbox)
+                }
+                .padding(.leading, 38)
+            }
+        }
+    }
+
+    private var watchFolderEmptyState: some View {
+        VStack(spacing: AppTheme.Spacing.sm) {
+            VStack(spacing: 6) {
+                Image(systemName: "folder.badge.plus")
+                    .font(.system(size: 24))
+                    .foregroundStyle(AppTheme.Colour.textTertiary)
+                Text("No folders watched yet")
+                    .font(AppTheme.Font.caption).foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)
+                    .strokeBorder(AppTheme.Colour.separator, style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
+            )
+            .background(AppTheme.Colour.subtleFill.clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.sm, style: .continuous)))
+
+            Button("Add Folder…") { chooseWatchedFolder() }
+                .buttonStyle(AppBorderedButtonStyle())
+                .controlSize(.small)
+        }
     }
 
     private func watchedFolderRow(_ folder: WatchedFolder) -> some View {
         HStack(spacing: 8) {
             Label(folder.displayName, systemImage: "folder")
-                .font(.subheadline)
-                .lineLimit(1)
-                .truncationMode(.middle)
-
+                .font(AppTheme.Font.body).lineLimit(1).truncationMode(.middle)
             Spacer(minLength: 8)
-
             Picker("Output", selection: Binding(
-                get: {
-                    watchedFolderService.folder(id: folder.id)?.outputDestination ?? .historyOnly
-                },
+                get: { watchedFolderService.folder(id: folder.id)?.outputDestination ?? .historyOnly },
                 set: { destination in
-                    if destination == .chosenFolder {
-                        chooseWatchedOutputFolder(for: folder.id)
-                    } else {
-                        watchedFolderService.setOutputDestination(destination, for: folder.id)
-                    }
+                    if destination == .chosenFolder { chooseWatchedOutputFolder(for: folder.id) }
+                    else { watchedFolderService.setOutputDestination(destination, for: folder.id) }
                 }
             )) {
-                ForEach(WatchedFolderOutputDestination.allCases) { destination in
-                    Text(destination.displayName).tag(destination)
-                }
+                ForEach(WatchedFolderOutputDestination.allCases) { d in Text(d.displayName).tag(d) }
             }
-            .pickerStyle(.menu)
-            .labelsHidden()
-            .controlSize(.small)
-            .frame(width: 130)
-
+            .pickerStyle(.menu).labelsHidden().controlSize(.small).frame(width: 120)
             if (watchedFolderService.folder(id: folder.id)?.outputDestination ?? .historyOnly) == .chosenFolder {
-                Button {
-                    chooseWatchedOutputFolder(for: folder.id)
-                } label: {
-                    Image(systemName: "folder")
-                }
-                .buttonStyle(AppActionButtonStyle())
-                .controlSize(.small)
-                .help(folder.outputDisplayName ?? "Choose output folder")
+                Button { chooseWatchedOutputFolder(for: folder.id) } label: { Image(systemName: "folder") }
+                    .buttonStyle(AppActionButtonStyle()).controlSize(.small)
+                    .help(folder.outputDisplayName ?? "Choose output folder")
             }
-
             Toggle("Notify", isOn: Binding(
-                get: {
-                    watchedFolderService.folder(id: folder.id)?.notificationsEnabled ?? false
-                },
-                set: { enabled in
-                    watchedFolderService.setNotificationsEnabled(enabled, for: folder.id)
-                }
-            ))
-            .toggleStyle(.checkbox)
-            .controlSize(.small)
-
-            Button(role: .destructive) {
-                watchedFolderService.removeFolder(id: folder.id)
-            } label: {
+                get: { watchedFolderService.folder(id: folder.id)?.notificationsEnabled ?? false },
+                set: { watchedFolderService.setNotificationsEnabled($0, for: folder.id) }
+            )).toggleStyle(.checkbox).controlSize(.small)
+            Button(role: .destructive) { watchedFolderService.removeFolder(id: folder.id) } label: {
                 Image(systemName: "trash")
             }
-            .buttonStyle(AppActionButtonStyle())
-            .foregroundStyle(.red)
-            .controlSize(.small)
+            .buttonStyle(AppActionButtonStyle()).foregroundStyle(.red).controlSize(.small)
             .help("Remove watched folder")
         }
-        .padding(.vertical, 2)
     }
 
-    private func chooseWatchedFolder() {
-        watchedFolderError = nil
-        guard let url = FileAccessService.shared.chooseDirectory(
-            message: "Choose a folder for Upmarket to watch.",
-            prompt: "Watch"
-        ) else { return }
+    // MARK: - About tab
 
-        do {
-            try watchedFolderService.addFolder(url)
-        } catch {
-            watchedFolderError = FileAccessService.userVisibleMessage(for: error)
-        }
-    }
-
-    private func chooseWatchedOutputFolder(for id: UUID) {
-        watchedFolderError = nil
-        guard let url = FileAccessService.shared.chooseDirectory(
-            message: "Choose where Upmarket should save watched-folder conversions.",
-            prompt: "Choose",
-            canCreateDirectories: true
-        ) else { return }
-
-        do {
-            try watchedFolderService.setOutputFolder(url, for: id)
-        } catch {
-            watchedFolderError = FileAccessService.userVisibleMessage(for: error)
-        }
-    }
-
-    @ViewBuilder private var modelRows: some View {
-        if !device.supportsAdvancedRuntime {
-            Label("Fast conversion available. AI models require Apple Silicon.",
-                  systemImage: "checkmark.circle.fill")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        } else if case .checking = modelManager.installState, modelManager.models.isEmpty {
-            HStack(spacing: 8) {
-                ProgressView().controlSize(.small)
-                Text("Checking…")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        } else if let error = modelManager.checkError {
-            HStack {
-                Label(error, systemImage: "exclamationmark.triangle.fill")
-                    .font(.subheadline)
-                    .foregroundStyle(.red)
-                Spacer()
-                Button("Retry") { modelManager.checkModels() }
-                    .buttonStyle(AppActionButtonStyle()).controlSize(.mini)
-            }
-        } else if modelManager.models.isEmpty {
-            HStack {
-                Label("No models needed for fast conversion.",
-                      systemImage: "checkmark.circle.fill")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Button("Check Again") { modelManager.checkModels() }
-                    .buttonStyle(AppActionButtonStyle()).controlSize(.mini)
-            }
-        } else {
-            ForEach(modelManager.models, id: \.key) { model in
-                LabeledContent {
-                    HStack(spacing: 8) {
-                        Text("Est. \(model.sizeMB) MB")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        if model.isDownloaded {
-                            Button("Delete") { modelManager.deleteModel(key: model.key) }
-                                .foregroundStyle(.red)
-                                .buttonStyle(AppActionButtonStyle()).controlSize(.mini)
-                        } else if modelManager.downloadingModelKey == model.key {
-                            ProgressView()
-                                .controlSize(.mini)
-                            Text("Downloading…")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        } else {
-                            let unavailable = downloadUnavailable(for: model)
-                            Button("Download") {
-                                modelManager.downloadModel(key: model.key, hasPro: store.hasProOrAbove)
-                            }
-                            .buttonStyle(AppActionButtonStyle()).controlSize(.mini)
-                            .disabled(unavailable != nil || modelManager.isDownloading)
-                            .help(unavailable ?? (modelManager.isDownloading ? "Another model is downloading." : ""))
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: model.isDownloaded
-                              ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(
-                                model.isDownloaded ? Color.green
-                                    : model.isAvailable ? Color.secondary
-                                    : Color.red
-                            )
-                        VStack(alignment: .leading, spacing: 1) {
-                            HStack(spacing: 6) {
-                                Text(model.name).fontWeight(.medium)
-                                if model.tier == "pro" {
-                                    AppBadge("PRO", variant: .accent)
-                                }
-                            }
-                            Text(modelDetail(for: model))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                            if let unavailable = downloadUnavailable(for: model) {
-                                Text(unavailable)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder private var aiModelStatusRows: some View {
-        if device.supportsAdvancedRuntime {
-            if modelManager.isDownloading {
-                VStack(alignment: .leading, spacing: 6) {
-                    ProgressView(value: modelManager.downloadProgress, total: 100)
-                    Text(modelManager.downloadMessage)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-
-            if let error = modelManager.downloadError {
-                Label(error, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.red)
-            }
-
-            if modelManager.downloadedModelCount > 0 {
-                LabeledContent("Installed storage:") {
-                    HStack(spacing: 8) {
-                        VStack(alignment: .trailing, spacing: 1) {
-                            Text(modelManager.totalStorageUsedFormatted)
-                                .foregroundStyle(.secondary)
-                            Text(downloadedModelStorageSummary)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                        Button("Delete All") { modelManager.deleteAllModels() }
-                            .foregroundStyle(.red)
-                            .buttonStyle(AppActionButtonStyle())
-                            .controlSize(.mini)
-                    }
-                }
-            }
-        }
-    }
-
-    private var downloadedModelStorageSummary: String {
-        let count = modelManager.downloadedModelCount
-        let noun = count == 1 ? "model" : "models"
-        return "\(count) \(noun) installed · est. \(modelManager.downloadedModelEstimatedSizeMB) MB"
-    }
-
-    private func downloadUnavailable(for model: ModelStatus) -> String? {
-        if model.isDownloaded { return nil }
-        if model.tier == "pro" {
-            return modelManager.proDownloadUnavailableReason(hasPro: store.hasProOrAbove)
-        }
-        if !model.isAvailable {
-            return model.error ?? "Not available on this Mac."
-        }
-        return nil
-    }
-
-    private func modelDetail(for model: ModelStatus) -> String {
-        if model.isDownloaded { return "Ready" }
-        if model.error == nil || model.error == "not downloaded" {
-            return model.description
-        }
-        return model.error ?? model.description
-    }
-
-    // MARK: - About
-
-    @State private var showAttributions = false
-
-    private var aboutCard: some View {
-        sectionCard(title: "Upmarket") {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Upmarket").font(.headline)
-                    Text(appVersionLabel)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-            }
-        }
-    }
-
-    private var linksCard: some View {
-        sectionCard(title: "License") {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-                HStack {
+    private var aboutTabContent: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            // App
+            VStack(alignment: .leading, spacing: 14) {
+                sectionHeader(icon: "shippingbox.fill", color: Color.accentColor, title: "App")
+                HStack(spacing: 14) {
+                    Image(nsImage: NSImage(named: "AppIcon") ?? NSImage())
+                        .resizable().frame(width: 40, height: 40)
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.appIcon, style: .continuous))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(planName).font(.subheadline).fontWeight(.medium)
-                        Text(planDetail).font(.subheadline).foregroundStyle(.secondary)
+                        Text("Upmarket").font(AppTheme.Font.body.weight(.semibold))
+                        Text(appVersionLabel).font(AppTheme.Font.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    if !store.hasProOrAbove {
+                }
+                .padding(14)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(AppTheme.Colour.subtleFill)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(AppTheme.Colour.separator, lineWidth: 1)
+                )
+                .padding(.leading, 38)
+            }
+
+            // Plan
+            VStack(alignment: .leading, spacing: 14) {
+                sectionHeader(icon: "crown.fill", color: AppTheme.Colour.sectionAmber, title: "Plan")
+                VStack(alignment: .leading, spacing: 10) {
+                    planCard
+                    if store.tier < .max {
                         Button("Upgrade") {
                             NotificationCenter.default.post(name: .showPaywall, object: nil)
                         }
-                        .buttonStyle(AppActionButtonStyle())
+                        .buttonStyle(AppProminentButtonStyle()).controlSize(.small)
+                    }
+                    Button("Restore Purchases") { Task { await store.restorePurchases() } }
+                        .buttonStyle(AppPlainButtonStyle()).foregroundStyle(.secondary)
                         .controlSize(.small)
-                    }
+                        .accessibilityIdentifier("PrefsRestorePurchasesButton")
                 }
+                .padding(.leading, 38)
+            }
 
-                if store.packCredits > 0 {
-                    LabeledContent("Document credits:") {
-                        Text("\(store.packCredits) remaining")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Button("Restore Purchases") {
-                    Task { await store.restorePurchases() }
-                }
-                .buttonStyle(AppActionButtonStyle())
-
+            // Links
+            AppSectionCard {
                 HStack(spacing: 0) {
-                    linkButton(icon: "lock.shield", label: "Privacy Policy",
+                    linkButton(icon: "lock.shield", label: "Privacy",
                                url: "https://0x687931.github.io/upmarket/privacy")
                     Divider().frame(height: 28)
-                    linkButton(icon: "envelope", label: "Support",
-                               url: "mailto:support@upmarket.app")
+                    linkButton(icon: "envelope", label: "Support", url: "mailto:support@upmarket.app")
                     Divider().frame(height: 28)
-                    linkButton(icon: "star", label: "Rate",
-                               url: "macappstore://")
+                    linkButton(icon: "star", label: "Rate", url: "macappstore://")
+                    if !openSourcePackages.isEmpty {
+                        Divider().frame(height: 28)
+                        Button {
+                            showAttributions = true
+                        } label: {
+                            VStack(spacing: 4) {
+                                Image(systemName: "doc.text")
+                                    .font(.system(size: 14)).foregroundStyle(Color.accentColor)
+                                Text("Licenses")
+                                    .font(AppTheme.Font.caption).foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                        }
+                        .buttonStyle(AppSubtleRowButtonStyle())
+                        .sheet(isPresented: $showAttributions) {
+                            AttributionsSheet(groups: licenseGroups)
+                        }
+                    }
                 }
             }
         }
     }
 
-    private var attributionsCard: some View {
-        sectionCard(title: "Open Source") {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                if !openSourcePackages.isEmpty {
-                    Button {
-                        showAttributions = true
-                    } label: {
-                        Label("Attributions", systemImage: "doc.text")
-                    }
-                    .buttonStyle(AppActionButtonStyle())
-                    .sheet(isPresented: $showAttributions) {
-                        AttributionsSheet(groups: licenseGroups)
-                    }
-                } else {
-                    Text("No third-party license bundle was detected in this build.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+    // MARK: - Plan card
+
+    private var planCard: some View {
+        let config = planCardConfig
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
+                Image(systemName: config.icon)
+                    .font(.system(size: 16))
+                    .foregroundStyle(config.iconColor)
+                Text(config.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
             }
+            Text(config.detail)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.top, 5)
+                .padding(.leading, 24)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(config.fill)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(config.borderColor, lineWidth: config.borderWidth)
+        )
+    }
+
+    private var planCardConfig: PlanCardConfig {
+        switch store.tier {
+        case .basic:
+            return PlanCardConfig(
+                name: "Upmarket Basic",
+                detail: "Unlimited · Native conversion",
+                icon: "checkmark.circle",
+                iconColor: .secondary,
+                fill: AppTheme.Colour.subtleFill,
+                borderColor: AppTheme.Colour.separator,
+                borderWidth: 1
+            )
+        case .pro:
+            return PlanCardConfig(
+                name: "Upmarket Pro",
+                detail: "Unlimited · Enhanced conversion",
+                icon: "checkmark.circle.fill",
+                iconColor: Color.accentColor,
+                fill: Color.accentColor.opacity(0.06),
+                borderColor: Color.accentColor,
+                borderWidth: 1.5
+            )
+        case .max:
+            return PlanCardConfig(
+                name: "Upmarket Max",
+                detail: "Unlimited · AI pipeline included",
+                icon: "crown.fill",
+                iconColor: AppTheme.Colour.sectionAmber,
+                fill: AppTheme.Colour.sectionAmber.opacity(0.06),
+                borderColor: AppTheme.Colour.sectionAmber,
+                borderWidth: 1.5
+            )
         }
     }
 
-    // Equal-width tappable button: icon above label, fills 1/3 of the row
     private func linkButton(icon: String, label: String, url: String) -> some View {
         Button {
             if let u = URL(string: url) { NSWorkspace.shared.open(u) }
         } label: {
             VStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 16))
-                    .foregroundStyle(Color.accentColor)
-                Text(label)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                Image(systemName: icon).font(.system(size: 14)).foregroundStyle(Color.accentColor)
+                Text(label).font(AppTheme.Font.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
@@ -913,76 +734,121 @@ struct PreferencesView: View {
         .buttonStyle(AppSubtleRowButtonStyle())
     }
 
-    private func sectionCard<Content: View>(
-        title: String,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        AppSectionCard(title: title) {
-            content()
-        }
+    // MARK: - Bindings
+
+    private var dockIconBinding: Binding<Bool> {
+        Binding(
+            get: { AppVisibilityPreference.showDockIcon },
+            set: { AppVisibilityPreference.showDockIcon = $0; showDockIcon = AppVisibilityPreference.showDockIcon }
+        )
+    }
+    private var menuBarIconBinding: Binding<Bool> {
+        Binding(get: { showMenuBarIcon }, set: { showMenuBarIcon = $0 })
+    }
+    private var shelfAnchorBinding: Binding<ShelfWindowController.ShelfAnchor> {
+        Binding(
+            get: { ShelfWindowController.ShelfAnchor(rawValue: shelfAnchorRaw) ?? .center },
+            set: { anchor in shelfAnchorRaw = anchor.rawValue; ShelfWindowController.shared.anchor = anchor; ShelfWindowController.shared.reposition() }
+        )
+    }
+    private var outputModeBinding: Binding<OutputMode> {
+        Binding(get: { OutputPreference.shared.mode }, set: { OutputPreference.shared.mode = $0 })
+    }
+    private var saveDestinationBinding: Binding<SavePreference.Destination> {
+        Binding(get: { SavePreference.shared.destination }, set: { SavePreference.shared.destination = $0 })
+    }
+    private var chosenFolderBinding: Binding<URL?> {
+        Binding(get: { SavePreference.shared.chosenFolderURL }, set: { SavePreference.shared.chosenFolderURL = $0 })
+    }
+    private var watchedInputPreset: WatchedInputPreset {
+        if usesAllWatchedFileTypes { return .all }
+        if patternsEqual(Self.watchDocumentOptions.flatMap(\.patterns), watchedFolderService.includePatterns) { return .documents }
+        if patternsEqual(Self.watchDocumentAndImagePatterns, watchedFolderService.includePatterns) { return .documentsAndImages }
+        return .all
+    }
+    private var watchedInputPresetBinding: Binding<WatchedInputPreset> {
+        Binding(
+            get: { watchedInputPreset },
+            set: { preset in
+                switch preset {
+                case .all:                watchedFolderService.includePatterns = ""
+                case .documents:          watchedFolderService.includePatterns = Self.watchDocumentOptions.flatMap(\.patterns).joined(separator: ", ")
+                case .documentsAndImages: watchedFolderService.includePatterns = Self.watchDocumentAndImagePatterns.joined(separator: ", ")
+                case .custom:             break
+                }
+            }
+        )
+    }
+    private static var watchDocumentAndImagePatterns: [String] {
+        (watchDocumentOptions + watchImageOptions).flatMap(\.patterns)
+    }
+    private var usesAllWatchedFileTypes: Bool {
+        watchedFolderService.includePatterns.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    private var defaultWatchedExclusionPatterns: [String] { Self.watchExcludeOptions.flatMap(\.patterns) }
+    private var usesDefaultWatchedExclusions: Bool {
+        containsAll(defaultWatchedExclusionPatterns, in: watchedFolderService.excludePatterns)
+    }
+    private var defaultWatchedExclusionsBinding: Binding<Bool> {
+        Binding(
+            get: { usesDefaultWatchedExclusions },
+            set: { watchedFolderService.excludePatterns = $0 ? defaultWatchedExclusionPatterns.joined(separator: ", ") : "" }
+        )
     }
 
-    private var licenseGroups: [LicenseGroup] {
-        let packages = openSourcePackages
-        guard !packages.isEmpty else { return [] }
-        var buckets: [String: [LicenseEntry]] = [:]
-        for pkg in packages {
-            buckets[normalisedFamily(pkg.license), default: []].append(pkg)
-        }
-        return ["MIT", "BSD", "Apache-2.0"].compactMap { family in
-            buckets[family].map { LicenseGroup(family: family, packages: $0) }
-        }
+    // MARK: - Pattern helpers
+
+    private func containsAll(_ patterns: [String], in rawPatterns: String) -> Bool {
+        let tokens = Set(patternTokens(rawPatterns))
+        return patterns.map { $0.lowercased() }.allSatisfy { tokens.contains($0) }
+    }
+    private func patternsEqual(_ patterns: [String], _ rawPatterns: String) -> Bool {
+        Set(patterns.map { $0.lowercased() }) == Set(patternTokens(rawPatterns))
+    }
+    private func patternTokens(_ rawPatterns: String) -> [String] {
+        var seen = Set<String>()
+        return rawPatterns
+            .split { $0 == "," || $0 == "\n" || $0 == " " || $0 == "\t" }
+            .map { String($0).lowercased() }
+            .filter { seen.insert($0).inserted }
     }
 
-    private func normalisedFamily(_ raw: String) -> String {
-        let l = raw.lowercased()
-        if l.contains("mit")    { return "MIT" }
-        if l.contains("apache") { return "Apache-2.0" }
-        if l.contains("bsd")    { return "BSD" }
-        return "Other"
-    }
+    // MARK: - Folder actions
 
-    // MARK: - Helpers
-
-    private var planName: String {
-        switch store.entitlement {
-        case .pro:   return "Upmarket + AI"
-        case .basic: return "Upmarket"
-        case .none:  return "Not Purchased"
+    private func chooseSaveFolder() {
+        if let url = FileAccessService.shared.chooseSaveDirectory(message: "Upmarket will save converted files here.") {
+            SavePreference.shared.chosenFolderURL = url
+            SavePreference.shared.destination = .chosenFolder
         }
     }
-
-    private var planDetail: String {
-        switch store.entitlement {
-        case .pro:   return "Unlimited · AI included"
-        case .basic: return "Unlimited · One-time purchase"
-        case .none:  return "Unlock to continue converting"
-        }
+    private func chooseWatchedFolder() {
+        watchedFolderError = nil
+        guard let url = FileAccessService.shared.chooseDirectory(message: "Choose a folder for Upmarket to watch.", prompt: "Watch") else { return }
+        do { try watchedFolderService.addFolder(url) } catch { watchedFolderError = FileAccessService.userVisibleMessage(for: error) }
     }
+    private func chooseWatchedOutputFolder(for id: UUID) {
+        watchedFolderError = nil
+        guard let url = FileAccessService.shared.chooseDirectory(message: "Choose where Upmarket should save watched-folder conversions.", prompt: "Choose", canCreateDirectories: true) else { return }
+        do { try watchedFolderService.setOutputFolder(url, for: id) } catch { watchedFolderError = FileAccessService.userVisibleMessage(for: error) }
+    }
+
+    // MARK: - About helpers
 
     private var appVersionLabel: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
-
-        let baseLabel: String
+        let build   = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+        let base: String
         switch (version?.isEmpty == false ? version : nil, build?.isEmpty == false ? build : nil) {
-        case let (.some(version), .some(build)):
-            baseLabel = "Version \(version) (\(build))"
-        case let (.some(version), .none):
-            baseLabel = "Version \(version)"
-        case let (.none, .some(build)):
-            baseLabel = "Build \(build)"
-        case (.none, .none):
-            baseLabel = "Version unknown"
+        case let (.some(v), .some(b)): base = "Version \(v) (\(b))"
+        case let (.some(v), .none):    base = "Version \(v)"
+        case let (.none,    .some(b)): base = "Build \(b)"
+        case (.none, .none):           base = "Version unknown"
         }
-
-        if BuildMetadata.shouldShowCommitInAbout,
-           let commit = BuildMetadata.displayCommit {
-            return "\(baseLabel) · \(commit)"
+        if BuildMetadata.shouldShowCommitInAbout, let commit = BuildMetadata.displayCommit {
+            return "\(base) · \(commit)"
         }
-        return baseLabel
+        return base
     }
-
     private var openSourcePackages: [LicenseEntry] {
         guard let url = Bundle.main.url(forResource: "licenses", withExtension: "json"),
               let data = try? Data(contentsOf: url),
@@ -990,6 +856,34 @@ struct PreferencesView: View {
         else { return [] }
         return entries
     }
+    private var licenseGroups: [LicenseGroup] {
+        let packages = openSourcePackages
+        guard !packages.isEmpty else { return [] }
+        var buckets: [String: [LicenseEntry]] = [:]
+        for pkg in packages { buckets[normalisedFamily(pkg.license), default: []].append(pkg) }
+        return ["MIT", "BSD", "Apache-2.0"].compactMap { family in
+            buckets[family].map { LicenseGroup(family: family, packages: $0) }
+        }
+    }
+    private func normalisedFamily(_ raw: String) -> String {
+        let l = raw.lowercased()
+        if l.contains("mit")    { return "MIT" }
+        if l.contains("apache") { return "Apache-2.0" }
+        if l.contains("bsd")    { return "BSD" }
+        return "Other"
+    }
+}
+
+// MARK: - Plan card config
+
+private struct PlanCardConfig {
+    let name: String
+    let detail: String
+    let icon: String
+    let iconColor: Color
+    let fill: Color
+    let borderColor: Color
+    let borderWidth: CGFloat
 }
 
 // MARK: - Attributions sheet
@@ -999,22 +893,18 @@ struct AttributionsSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Attributions")
-                        .font(.headline)
+                    Text("Attributions").font(.headline)
                     Text("Open-source packages used by Upmarket.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(AppTheme.Font.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Done") { dismiss() }
-                    .keyboardShortcut(.defaultAction)
+                Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
-
+            .padding(20)
+            Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
                     ForEach(groups) { group in
@@ -1022,34 +912,27 @@ struct AttributionsSheet: View {
                             VStack(spacing: 0) {
                                 ForEach(Array(group.packages.enumerated()), id: \.element.id) { index, pkg in
                                     Button {
-                                        if let url = URL(string: pkg.url) {
-                                            NSWorkspace.shared.open(url)
-                                        }
+                                        if let url = URL(string: pkg.url) { NSWorkspace.shared.open(url) }
                                     } label: {
                                         HStack(spacing: AppTheme.Spacing.md) {
-                                            Text(pkg.name)
-                                                .foregroundStyle(.primary)
+                                            Text(pkg.name).foregroundStyle(.primary)
                                             Spacer()
-                                            Text(pkg.version)
-                                                .foregroundStyle(.secondary)
+                                            Text(pkg.version).foregroundStyle(.secondary)
                                         }
                                         .contentShape(Rectangle())
                                         .padding(.horizontal, AppTheme.Spacing.md)
                                         .padding(.vertical, 10)
                                     }
                                     .buttonStyle(AppSubtleRowButtonStyle())
-
                                     if index < group.packages.count - 1 {
-                                        Divider()
-                                            .padding(.leading, AppTheme.Spacing.md)
+                                        Divider().padding(.leading, AppTheme.Spacing.md)
                                     }
                                 }
                             }
                         }
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 20)
+                .padding(20)
             }
         }
         .frame(width: 380, height: 420)
@@ -1080,19 +963,14 @@ private struct WatchPatternOption: Identifiable {
 }
 
 private enum WatchedInputPreset: String, CaseIterable, Identifiable {
-    case all
-    case documents
-    case documentsAndImages
-    case custom
-
+    case all, documents, documentsAndImages, custom
     var id: String { rawValue }
-
     var displayName: String {
         switch self {
-        case .all: return "All supported"
-        case .documents: return "Documents"
+        case .all:                return "All supported"
+        case .documents:          return "Documents"
         case .documentsAndImages: return "Documents + images"
-        case .custom: return "Custom…"
+        case .custom:             return "Custom…"
         }
     }
 }

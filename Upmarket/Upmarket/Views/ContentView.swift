@@ -57,7 +57,7 @@ struct ContentView: View {
             if let advice = pendingAdvice, let url = pendingFileURL {
                 AISuggestionView(
                     advice: advice,
-                    proPrice: store.proProduct?.displayPrice ?? "$9.99",
+                    proPrice: store.maxProduct?.displayPrice ?? "$14.99",
                     onUseAI: {
                         showAISuggestion = false
                         PaywallWindowController.shared.show()
@@ -187,7 +187,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private var statusBanner: some View {
-        if store.hasBasicOrAbove {
+        if store.tier >= .basic {
             EmptyView()
         } else if store.freeDocsRemaining > 0 {
             let n = store.freeDocsRemaining
@@ -269,7 +269,7 @@ struct ContentView: View {
                 Button("Convert") {
                     guard let url = pendingFileURL else { return }
                     showPasswordPrompt = false
-                    _ = conversion.add(url, useAI: store.hasProOrAbove, password: passwordInput)
+                    _ = conversion.add(url, useAI: store.tier >= .max, password: passwordInput)
                     passwordInput = ""
                     pendingFileURL = nil
                 }
@@ -327,12 +327,12 @@ struct ContentView: View {
             if let warning = advice?.languageQualityWarning {
                 withAnimation { self.languageWarning = warning }
             }
-            if let advice, advice.suggestAI, !self.store.hasProOrAbove,
+            if let advice, advice.suggestAI, self.store.tier < .max,
                FeatureFlags.shared.aiAvailable {
                 self.pendingAdvice = advice
                 self.showAISuggestion = true
             } else {
-                self.beginConversion(url: url, useAI: self.store.hasProOrAbove)
+                self.beginConversion(url: url, useAI: self.store.tier >= .max)
             }
         }
     }
@@ -340,7 +340,7 @@ struct ContentView: View {
     private func beginConversion(url: URL, useAI: Bool) {
         Task { @MainActor in
             var shouldUseAI = useAI
-            if useAI, let reason = await modelManager.aiUseUnavailableReasonAfterChecking(hasPro: store.hasProOrAbove) {
+            if useAI, let reason = await modelManager.gateAfterChecking(tier: store.tier).unavailableReason(for: .ai) {
                 shouldUseAI = false
                 withAnimation {
                     languageWarning = reason
@@ -446,15 +446,9 @@ struct FileRowView: View {
 
     @ViewBuilder private var statusToken: some View {
         if job.isRunning {
-            ArcRingView(
-                progress: job.progress,
-                size: tokenSize,
-                lineWidth: 2.5,
-                ringColor: .accentColor
-            ) {
-                EmptyView()
-            }
-            .help(statusLabel)
+            PulseRingView(color: .accentColor, lineWidth: 2, isActive: true)
+                .frame(width: tokenSize, height: tokenSize)
+                .help(statusLabel)
         } else if job.stage == .complete {
             AppStatusToken(color: AppTheme.Status.complete, kind: .check)
                 .help("Done")
@@ -482,7 +476,7 @@ struct FileRowView: View {
                     FileAccessService.shared.copyMarkdown(formatted.text)
                 }
 
-                actionButton(symbol: "arrow.up.right.square", help: "Show") {
+                actionButton(symbol: "folder", help: "Reveal") {
                     let formatted = OutputFormatter.format(
                         output,
                         sourceDisplayName: job.sourceURL.lastPathComponent,
@@ -495,7 +489,7 @@ struct FileRowView: View {
                         fileExtension: formatted.fileExtension
                     )
                     if let url = savedURL {
-                        FileAccessService.shared.open(url)
+                        FileAccessService.shared.revealInFinder(url)
                     }
                 }
             }

@@ -2,7 +2,7 @@ import SwiftUI
 import StoreKit
 
 private enum PaywallTier {
-    case pro, basic
+    case max, pro
 }
 
 struct PaywallView: View {
@@ -20,7 +20,7 @@ struct PaywallView: View {
 
     init(onDismiss: (() -> Void)? = nil) {
         self.onDismiss = onDismiss
-        _selectedTier = State(initialValue: FeatureFlags.shared.aiAvailable ? .pro : .basic)
+        _selectedTier = State(initialValue: .pro)
     }
 
     var body: some View {
@@ -29,9 +29,11 @@ struct PaywallView: View {
                 header
                 VStack(spacing: 12) {
                     if flags.aiAvailable {
+                        tierCard(.max)
+                    }
+                    if store.tier < .pro {
                         tierCard(.pro)
                     }
-                    tierCard(.basic)
                 }
                 .padding(.horizontal, 20)
 
@@ -60,9 +62,7 @@ struct PaywallView: View {
             await store.loadProducts()
         }
         .onAppear(perform: normalizeSelectedTier)
-        .onChange(of: flags.aiAvailable) { _ in
-            normalizeSelectedTier()
-        }
+        .onChange(of: flags.aiAvailable) { _ in normalizeSelectedTier() }
     }
 
     // MARK: - Header
@@ -102,27 +102,27 @@ struct PaywallView: View {
                 .buttonStyle(AppPlainButtonStyle())
                 .foregroundStyle(.secondary)
                 .accessibilityLabel("Close")
+                .accessibilityIdentifier("PaywallCloseButton")
                 .padding(14)
             }
         }
     }
 
     private var headerTitle: String {
-        store.hasBasicOrAbove ? "Add Upmarket AI" : "Unlock Upmarket"
+        store.tier >= .pro ? "Upgrade to Upmarket Max" : "Upgrade to Upmarket Pro"
     }
 
     private var headerSubtitle: String {
-        if store.hasBasicOrAbove {
-            return "Add Upmarket AI for complex and scanned documents."
-        }
-        return "Convert unlimited documents, privately, on your Mac."
+        store.tier >= .pro
+            ? "Add AI for complex, scanned, and research documents."
+            : "Unlock enhanced conversion and AI capabilities."
     }
 
     // MARK: - Tier Card
 
     private func tierCard(_ tier: PaywallTier) -> some View {
         let isSelected = selectedTier == tier
-        let isDisabled = tier == .pro && !canPurchasePro
+        let isDisabled = tier == .max && !canPurchaseMax
 
         return Button {
             guard !isDisabled else { return }
@@ -141,7 +141,7 @@ struct PaywallView: View {
                                         Text(tierName(tier))
                                             .font(.title3)
                                             .fontWeight(.bold)
-                                        if tier == .pro {
+                                        if tier == .max {
                                             AppBadge("Best", variant: .accent)
                                         }
                                     }
@@ -169,64 +169,58 @@ struct PaywallView: View {
             }
         }
         .buttonStyle(AppCardStyle(
-            variant: tier == .pro ? .hero : .outlined,
+            variant: tier == .max ? .hero : .outlined,
             isSelected: isSelected,
             isDisabled: isDisabled
         ))
         .disabled(isDisabled)
+        .accessibilityIdentifier(tier == .max ? "PaywallMaxTierCard" : (tier == .pro ? "PaywallProTierCard" : "PaywallBasicTierCard"))
+        .accessibilityValue(isSelected ? "selected" : "deselected")
     }
 
     private func tierName(_ tier: PaywallTier) -> String {
         switch tier {
-        case .pro: return "Upmarket + AI"
-        case .basic: return "Upmarket"
+        case .max: return "Upmarket Max"
+        case .pro: return "Upmarket Pro"
         }
     }
 
     private func tierPrice(_ tier: PaywallTier) -> String {
         switch tier {
+        case .max: return store.maxProduct?.displayPrice ?? "$14.99"
         case .pro: return store.proProduct?.displayPrice ?? "$9.99"
-        case .basic: return store.basicProduct?.displayPrice ?? "$4.99"
         }
     }
 
     private func tierTagline(_ tier: PaywallTier) -> String {
         switch tier {
-        case .pro:
-            return "Everything, including Upmarket AI for complex documents"
-        case .basic:
-            return device.supportsAdvancedRuntime ? "For everyday documents without AI" : "For native Basic conversion on this Mac"
+        case .max: return "AI pipeline for complex, scanned, and research documents"
+        case .pro: return "Enhanced conversion for tables, multi-column layouts, and PDFs"
         }
     }
 
     private func tierFeatures(_ tier: PaywallTier) -> [(text: String, isHighlight: Bool)] {
         switch tier {
-        case .pro:
+        case .max:
             return [
                 ("Upmarket AI for scanned, complex and research documents", true),
-                ("Unlimited conversions — every format", false),
+                ("Includes everything in Pro", false),
                 ("100% on-device — nothing sent to the cloud", false)
             ]
-        case .basic:
-            if device.supportsAdvancedRuntime {
-                return [
-                    ("PDF, Word, PowerPoint, HTML → Markdown", false),
-                    ("Unlimited conversions", false)
-                ]
-            } else {
-                return [
-                    ("Native PDF and media metadata conversion", false),
-                    ("Unlimited conversions", false)
-                ]
-            }
+        case .pro:
+            return [
+                ("Enhanced table, layout, and multi-column PDFs", true),
+                ("Word, PowerPoint, Excel, HTML → Markdown", false),
+                ("Unlimited conversions — every format", false)
+            ]
         }
     }
 
     // MARK: - CTA
 
     private var ctaButton: some View {
-        let product = selectedTier == .pro ? store.proProduct : store.basicProduct
-        let purchasingID = selectedTier == .pro ? StoreManager.proID : StoreManager.basicID
+        let product: Product? = selectedTier == .max ? store.maxProduct : store.proProduct
+        let purchasingID: String = selectedTier == .max ? StoreManager.maxID : StoreManager.proID
 
         return Button {
             guard let product else { return }
@@ -242,7 +236,8 @@ struct PaywallView: View {
         }
         .buttonStyle(AppProminentButtonStyle())
         .controlSize(.large)
-        .disabled(isPurchasing != nil || product == nil || (selectedTier == .pro && !canPurchasePro))
+        .disabled(isPurchasing != nil || product == nil || (selectedTier == .max && !canPurchaseMax))
+        .accessibilityIdentifier("PaywallCTAButton")
     }
 
     // MARK: - Footer
@@ -256,6 +251,7 @@ struct PaywallView: View {
         .frame(minHeight: 44)
         .accessibilityLabel("Restore previous purchases")
         .accessibilityHint("Restores any previous Upmarket purchases from the App Store")
+        .accessibilityIdentifier("PaywallRestoreButton")
     }
 
     private var legalFooter: some View {
@@ -280,13 +276,14 @@ struct PaywallView: View {
         }
     }
 
-    private var canPurchasePro: Bool {
-        flags.aiAvailable
-    }
+    private var canPurchaseMax: Bool { flags.aiAvailable }
 
     private func normalizeSelectedTier() {
-        if selectedTier == .pro && !canPurchasePro {
-            selectedTier = .basic
+        if store.tier >= .pro {
+            // Only Max card shown — force selection to it
+            selectedTier = .max
+        } else if selectedTier == .max && !canPurchaseMax {
+            selectedTier = .pro
         }
     }
 

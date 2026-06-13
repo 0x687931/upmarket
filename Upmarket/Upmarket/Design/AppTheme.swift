@@ -105,11 +105,27 @@ enum AppTheme {
         static let brandStop4 = Color(red: 0.996, green: 0.639, blue: 0.0)   // #FEA300
         static let brandStop5 = Color(red: 0.910, green: 0.431, blue: 0.0)   // #E86E00 (accent)
 
+        // Stop locations are uneven (0.72 not 0.75) per the DS-3 handoff ramp.
         static let brandGradient = LinearGradient(
-            colors: [brandStop1, brandStop2, brandStop3, brandStop4, brandStop5],
+            stops: [
+                .init(color: brandStop1, location: 0.00),
+                .init(color: brandStop2, location: 0.25),
+                .init(color: brandStop3, location: 0.50),
+                .init(color: brandStop4, location: 0.72),
+                .init(color: brandStop5, location: 1.00),
+            ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
+
+        // --- Section accent palette (DS-3 README) -----------------
+        // Per-section icon squares, plan card, and report categories.
+        // Distinct from the semantic status tokens above.
+        static let sectionBlue   = iconGlyphTint                                  // #2F7FFF
+        static let sectionPurple = Color(red: 0.369, green: 0.361, blue: 0.902)   // #5E5CE6
+        static let sectionAmber  = Color(red: 1.0,   green: 0.624, blue: 0.039)   // #FF9F0A
+        static let sectionRed    = Color(red: 1.0,   green: 0.216, blue: 0.373)   // #FF375F
+        static let sectionGreen  = success                                        // #34C759
 
         // --- Warm shadow / shelf bloom ---------------------------
         static let amberShadow = Color(red: 0.478, green: 0.227, blue: 0.0) // #7A3A00
@@ -154,6 +170,8 @@ enum AppTheme {
         case compact
         // Welcome/onboarding window
         case welcome
+        // Preferences window (wider, scrollable)
+        case preferences
 
         var contentPadding: CGFloat {
             switch self {
@@ -161,6 +179,7 @@ enum AppTheme {
             case .modal: return Spacing.md
             case .compact: return Spacing.sm
             case .welcome: return Spacing.lg
+            case .preferences: return Spacing.xl
             }
         }
 
@@ -170,6 +189,7 @@ enum AppTheme {
             case .modal: return Spacing.sm
             case .compact: return Spacing.xs
             case .welcome: return Spacing.lg
+            case .preferences: return Spacing.lg
             }
         }
 
@@ -179,6 +199,7 @@ enum AppTheme {
             case .modal: return Spacing.md
             case .compact: return Spacing.sm
             case .welcome: return Spacing.lg
+            case .preferences: return Spacing.md
             }
         }
 
@@ -187,7 +208,8 @@ enum AppTheme {
             case .main: return Radius.md
             case .modal: return Radius.md
             case .compact: return Radius.md
-            case .welcome: return Radius.md // --shadow-window card: borderRadius 12
+            case .welcome: return Radius.md
+            case .preferences: return Radius.md
             }
         }
 
@@ -197,6 +219,7 @@ enum AppTheme {
             case .modal: return SwiftUI.Font.caption.weight(.medium)
             case .compact: return SwiftUI.Font.caption.weight(.medium)
             case .welcome: return Font.body
+            case .preferences: return Font.body
             }
         }
 
@@ -206,6 +229,7 @@ enum AppTheme {
             case .modal: return SwiftUI.Font.caption
             case .compact: return SwiftUI.Font.system(size: 9)
             case .welcome: return Font.caption
+            case .preferences: return Font.caption
             }
         }
 
@@ -215,6 +239,7 @@ enum AppTheme {
             case .modal: return 20
             case .compact: return 18
             case .welcome: return 24
+            case .preferences: return 20
             }
         }
 
@@ -224,6 +249,7 @@ enum AppTheme {
             case .modal: return 14
             case .compact: return 12
             case .welcome: return 16
+            case .preferences: return 14
             }
         }
 
@@ -233,6 +259,7 @@ enum AppTheme {
             case .modal: return 480       // Modal dialogs
             case .compact: return 217     // Shelf floating widget
             case .welcome: return 520     // Welcome/onboarding
+            case .preferences: return 600 // Preferences (wider, icon-led sections)
             }
         }
 
@@ -242,6 +269,7 @@ enum AppTheme {
             case .modal: return 600       // Modal dialogs
             case .compact: return 132     // Shelf widget
             case .welcome: return 540     // Welcome/onboarding window
+            case .preferences: return 520 // Preferences initial height (resizable)
             }
         }
     }
