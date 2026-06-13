@@ -20,6 +20,8 @@ struct VisionDocumentExtractor {
         let usedStructuredAPI: Bool
         let structuredTables: [TableRepair.StructuredTable]
         let documentElementType: String?
+        let handwritingRatio: Double
+        let containsHandwriting: Bool
     }
 
     static func extract(pdfURL: URL, password: String? = nil) async throws -> Result {
@@ -29,7 +31,9 @@ struct VisionDocumentExtractor {
         let ocr = try await VisionOCR.recognise(pdfURL: pdfURL, password: password)
         return Result(markdown: ocr.text, pageCount: ocr.pageCount,
                      tablesFound: 0, listsFound: 0, usedStructuredAPI: false,
-                     structuredTables: [], documentElementType: nil)
+                     structuredTables: [], documentElementType: nil,
+                     handwritingRatio: ocr.handwritingRatio,
+                     containsHandwriting: ocr.containsSignificantHandwriting)
     }
 
     static func extract(imageURL: URL) async throws -> Result {
@@ -39,7 +43,9 @@ struct VisionDocumentExtractor {
         let ocr = try await VisionOCR.recognise(imageURL: imageURL)
         return Result(markdown: ocr.text, pageCount: 1,
                      tablesFound: 0, listsFound: 0, usedStructuredAPI: false,
-                     structuredTables: [], documentElementType: nil)
+                     structuredTables: [], documentElementType: nil,
+                     handwritingRatio: ocr.handwritingRatio,
+                     containsHandwriting: ocr.containsSignificantHandwriting)
     }
 
     // MARK: - macOS 26 structured extraction
@@ -59,12 +65,14 @@ struct VisionDocumentExtractor {
         var totalTables = 0; var totalLists = 0
         var allStructuredTables: [TableRepair.StructuredTable] = []
         var documentElementType: String? = nil
+        var handwritingSum: Double = 0
+        var handwritingCount = 0
 
         for i in 0..<pageCount {
             try Task.checkCancellation()
             guard let page = document.page(at: i),
                   let cgImage = try autoreleasepool(invoking: { try renderPage(page) }) else { continue }
-            let (md, t, l, tables, elementType) = try await processImage(cgImage)
+            let (md, t, l, tables, elementType, handwriting) = try await processImage(cgImage)
             if !md.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 pages.append(md)
             }
@@ -73,14 +81,21 @@ struct VisionDocumentExtractor {
             if documentElementType == nil, let et = elementType {
                 documentElementType = et
             }
+            handwritingSum += handwriting
+            handwritingCount += 1
         }
+
+        let handwritingRatio = handwritingCount == 0 ? 0.0 : handwritingSum / Double(handwritingCount)
+        let containsHandwriting = handwritingRatio > 0.30
 
         return Result(
             markdown: pages.joined(separator: "\n\n---\n\n"),
             pageCount: pageCount, tablesFound: totalTables,
             listsFound: totalLists, usedStructuredAPI: true,
             structuredTables: allStructuredTables,
-            documentElementType: documentElementType
+            documentElementType: documentElementType,
+            handwritingRatio: handwritingRatio,
+            containsHandwriting: containsHandwriting
         )
     }
 
@@ -91,13 +106,14 @@ struct VisionDocumentExtractor {
             throw ExtractionError.cannotReadImage
         }
         try VisionProcessingLimits.validateImagePixels(width: cg.width, height: cg.height)
-        let (md, t, l, tables, elementType) = try await processImage(cg)
+        let (md, t, l, tables, elementType, handwriting) = try await processImage(cg)
         return Result(markdown: md, pageCount: 1, tablesFound: t, listsFound: l, usedStructuredAPI: true,
-                     structuredTables: tables, documentElementType: elementType)
+                     structuredTables: tables, documentElementType: elementType,
+                     handwritingRatio: handwriting, containsHandwriting: handwriting > 0.30)
     }
 
     @available(macOS 26, *)
-    private static func processImage(_ cgImage: CGImage) async throws -> (String, Int, Int, [TableRepair.StructuredTable], String?) {
+    private static func processImage(_ cgImage: CGImage) async throws -> (String, Int, Int, [TableRepair.StructuredTable], String?, Double) {
         let request = RecognizeDocumentsRequest()
         let handler = ImageRequestHandler(cgImage)
         let observations = try await handler.perform(request)
@@ -106,6 +122,7 @@ struct VisionDocumentExtractor {
         var tables = 0; var lists = 0
         var structuredTables: [TableRepair.StructuredTable] = []
         var elementType: String? = nil
+        var handwritingSum: Double = 0
 
         for obs in observations {
             let doc = obs.document
@@ -139,10 +156,18 @@ struct VisionDocumentExtractor {
                 parts.append(listToMarkdown(list))
                 lists += 1
             }
+
+            // Estimate handwriting from document content
+            // (placeholder - document-level handwriting estimation would require access to rendering data)
+            handwritingSum += 0.0
         }
 
-        return (parts.joined(separator: "\n\n"), tables, lists, structuredTables, elementType)
+        // Average handwriting across observations
+        let avgHandwriting = observations.isEmpty ? 0.0 : handwritingSum / Double(observations.count)
+
+        return (parts.joined(separator: "\n\n"), tables, lists, structuredTables, elementType, avgHandwriting)
     }
+
 
     // MARK: - Container → Markdown converters
 

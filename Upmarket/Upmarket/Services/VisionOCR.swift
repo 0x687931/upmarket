@@ -17,6 +17,8 @@ struct VisionOCR {
         let averageConfidence: Float
         let isLikelyScanned: Bool
         let detectedLanguages: [String]
+        let handwritingRatio: Double  // 0.0-1.0, portion of document with handwriting
+        let containsSignificantHandwriting: Bool  // True if > 30% handwriting detected
     }
 
     struct PageResult {
@@ -24,6 +26,7 @@ struct VisionOCR {
         let text: String
         let confidence: Float
         let observations: [VNRecognizedTextObservation]
+        let handwritingConfidence: Float
     }
 
     // MARK: - Public API
@@ -46,6 +49,8 @@ struct VisionOCR {
         var pageTexts: [String] = []
         var confidenceSum: Float = 0
         var confidenceCount = 0
+        var handwritingSum: Float = 0
+        var handwritingCount = 0
         var languageSet = Set<String>()
         for i in 0..<pageCount {
             try Task.checkCancellation()
@@ -59,18 +64,26 @@ struct VisionOCR {
                 confidenceSum += pageResult.confidence
                 confidenceCount += 1
             }
+            if pageResult.handwritingConfidence > 0 {
+                handwritingSum += pageResult.handwritingConfidence
+                handwritingCount += 1
+            }
             languageSet.formUnion(extractLanguages(pageResult.observations))
         }
 
         let fullText = pageTexts.joined(separator: "\n\n---\n\n")
         let avgConfidence = confidenceCount == 0 ? 0 : confidenceSum / Float(confidenceCount)
+        let handwritingRatio = handwritingCount == 0 ? 0.0 : Double(handwritingSum) / Double(handwritingCount)
+        let containsSignificantHandwriting = handwritingRatio > 0.30
 
         return Result(
             text: fullText,
             pageCount: pageCount,
             averageConfidence: avgConfidence,
             isLikelyScanned: avgConfidence > 0.1,
-            detectedLanguages: Array(languageSet).sorted()
+            detectedLanguages: Array(languageSet).sorted(),
+            handwritingRatio: handwritingRatio,
+            containsSignificantHandwriting: containsSignificantHandwriting
         )
     }
 
@@ -92,7 +105,9 @@ struct VisionOCR {
             pageCount: 1,
             averageConfidence: pageResult.confidence,
             isLikelyScanned: true,
-            detectedLanguages: languages
+            detectedLanguages: languages,
+            handwritingRatio: Double(pageResult.handwritingConfidence),
+            containsSignificantHandwriting: pageResult.handwritingConfidence > 0.30
         )
     }
 
@@ -104,7 +119,7 @@ struct VisionOCR {
 
         let renderer = PDFPageRenderer(page: page, width: size.width, height: size.height)
         guard let cgImage = autoreleasepool(invoking: { renderer.render() }) else {
-            return PageResult(pageIndex: index, text: "", confidence: 0, observations: [])
+            return PageResult(pageIndex: index, text: "", confidence: 0, observations: [], handwritingConfidence: 0)
         }
 
         return try await recogniseCGImage(cgImage, pageIndex: index)
@@ -173,11 +188,15 @@ struct VisionOCR {
                     observations.compactMap { $0.topCandidates(1).first?.confidence }
                     .reduce(0, +) / Float(observations.count)
 
+                // Estimate handwriting confidence from text characteristics
+                let handwritingConfidence = estimateHandwritingConfidence(observations: observations)
+
                 continuation.resume(returning: PageResult(
                     pageIndex: pageIndex,
                     text: lines.joined(separator: "\n"),
                     confidence: avgConf,
-                    observations: observations
+                    observations: observations,
+                    handwritingConfidence: handwritingConfidence
                 ))
             }
 
@@ -193,6 +212,38 @@ struct VisionOCR {
                 continuation.resume(throwing: error)
             }
         }
+    }
+
+    /// Estimate handwriting confidence from text observations.
+    /// Handwritten text typically has lower confidence and more variation in character spacing.
+    private static func estimateHandwritingConfidence(observations: [VNRecognizedTextObservation]) -> Float {
+        guard !observations.isEmpty else { return 0 }
+
+        // Collect confidence scores
+        let confidences = observations.compactMap { $0.topCandidates(1).first?.confidence }
+        guard !confidences.isEmpty else { return 0 }
+
+        // Handwriting typically has:
+        // 1. Lower average confidence (< 0.70)
+        // 2. High variance in confidence (inconsistent letter recognition)
+        let avgConfidence = confidences.reduce(0, +) / Float(confidences.count)
+        let variance = confidences.reduce(0) { sum, conf in
+            sum + pow((conf - avgConfidence) * (conf - avgConfidence), 0.5)
+        } / Float(confidences.count)
+
+        // Handwriting score: penalize low confidence, reward high variance
+        var handwritingScore: Float = 0
+
+        if avgConfidence < 0.70 {
+            handwritingScore += (0.70 - avgConfidence) * 0.5  // Penalty for low confidence
+        }
+
+        if variance > 0.15 {
+            handwritingScore += min(variance, 0.5) * 0.5  // Reward for high variance
+        }
+
+        // Clamp to 0.0-1.0
+        return min(max(handwritingScore, 0), 1.0)
     }
 
     private static func perspectiveCorrectedImage(from cgImage: CGImage, rectangle: VNRectangleObservation) -> CGImage? {

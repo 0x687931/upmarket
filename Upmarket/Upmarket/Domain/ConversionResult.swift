@@ -121,7 +121,7 @@ nonisolated struct ConversionOutput: Equatable, Sendable {
         title: String,
         pipeline: Pipeline,
         selectedPathway: ConversionPathway? = nil,
-        metadata: DocumentMetadata = .default,
+        metadata: DocumentMetadata? = nil,
         originalTables: [TableRepair.StructuredTable] = []
     ) {
         self.markdown = markdown
@@ -130,7 +130,7 @@ nonisolated struct ConversionOutput: Equatable, Sendable {
         self.title = title
         self.pipeline = pipeline
         self.selectedPathway = selectedPathway ?? ConversionPathway.defaultForPipeline(pipeline)
-        self.metadata = metadata
+        self.metadata = metadata ?? DocumentMetadata()
         self.originalTables = originalTables
     }
 }
