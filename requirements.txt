@@ -11,11 +11,14 @@ docling-parse==6.2.0
 docling-ibm-models==3.13.2
 markitdown==0.1.6
 
-# Fast PDF and Office fallbacks
+# Fast PDF and Office fallbacks (tier placement is the AppTier contract)
 pypdfium2==5.8.0
 mammoth==1.11.0
+lxml==6.1.1
 python-pptx==1.0.2
 openpyxl==3.1.5
+pandas==3.0.3
+xlrd==2.0.2
 
 # Model and ML runtime
 torch==2.12.0
@@ -33,3 +36,6 @@ ocrmac==1.0.1
 pydantic==2.13.4
 Pillow==12.2.0
 numpy==2.3.5
+
+# Note: HuggingFace benchmark tooling deps (webdataset, editdistance, pdfplumber) are
+# NOT app-runtime dependencies — scripts/datasets/* pip-install them on demand.

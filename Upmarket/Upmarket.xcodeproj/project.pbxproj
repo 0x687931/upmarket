@@ -45,6 +45,13 @@
 			remoteGlobalIDString = BB000006000000000000006B;
 			remoteInfo = UpmarketRuntimeHelper;
 		};
+		DD000020000000000000020D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 81A3B7232FCB0F91004A488D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BB000006000000000000006B;
+			remoteInfo = UpmarketRuntimeHelper;
+		};
 		EE000011000000000000011E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 81A3B7232FCB0F91004A488D /* Project object */;
@@ -149,6 +156,11 @@
 			path = UpmarketUITests;
 			sourceTree = "<group>";
 		};
+		990000000000000000000001 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
 		AA00000D00000000000000DA /* UpmarketQuickAction */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = UpmarketQuickAction;
@@ -230,6 +242,7 @@
 			isa = PBXGroup;
 			children = (
 				81A3B72D2FCB0F91004A488D /* Upmarket */,
+				990000000000000000000001 /* Shared */,
 				AA00000D00000000000000DA /* UpmarketQuickAction */,
 				BB000008000000000000008B /* UpmarketRuntimeHelper */,
 				DD000008000000000000008D /* UpmarketCLI */,
@@ -291,6 +304,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				81A3B72D2FCB0F91004A488D /* Upmarket */,
+				990000000000000000000001 /* Shared */,
 			);
 			name = Upmarket;
 			packageProductDependencies = (
@@ -358,6 +372,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				990000000000000000000001 /* Shared */,
 				AA00000D00000000000000DA /* UpmarketQuickAction */,
 			);
 			name = UpmarketQuickAction;
@@ -397,8 +412,10 @@
 			buildRules = (
 			);
 			dependencies = (
+				DD000021000000000000021D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
+				990000000000000000000001 /* Shared */,
 				DD000008000000000000008D /* UpmarketCLI */,
 			);
 			name = UpmarketCLI;
@@ -685,6 +702,11 @@
 			isa = PBXTargetDependency;
 			target = BB000006000000000000006B /* UpmarketRuntimeHelper */;
 			targetProxy = BB000005000000000000005B /* PBXContainerItemProxy */;
+		};
+		DD000021000000000000021D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BB000006000000000000006B /* UpmarketRuntimeHelper */;
+			targetProxy = DD000020000000000000020D /* PBXContainerItemProxy */;
 		};
 		EE000012000000000000012E /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;

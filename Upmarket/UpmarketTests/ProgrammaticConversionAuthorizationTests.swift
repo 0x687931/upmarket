@@ -1,87 +1,26 @@
 import XCTest
 @testable import Upmarket
 
+/// Authorization contract for programmatic (CLI/MCP) conversions: native is always
+/// allowed (Basic converts for free); only the AI capability is tier/availability gated.
+/// There is no per-conversion credit or purchase wall.
 @MainActor
 final class ProgrammaticConversionAuthorizationTests: XCTestCase {
 
-    func testAuthorizationRefreshesEntitlementsBeforeConsumingCredit() async throws {
-        var events: [String] = []
-        let authorizer = ProgrammaticConversionAuthorizer(
-            refreshEntitlements: {
-                events.append("refresh")
-            },
-            aiUnavailableReason: { _ in
-                events.append("ai")
-                return nil
-            },
-            consumeConversion: {
-                events.append("consume")
-                return true
-            }
-        )
-
-        try await authorizer.authorize(useAI: false)
-
-        XCTAssertEqual(events, ["refresh", "ai", "consume"])
+    func testNativeConversionIsAlwaysAuthorized() async throws {
+        // Basic tier does native conversion for free, so this must never throw.
+        try await ProgrammaticConversionAuthorization.authorize(useAI: false)
     }
 
-    func testAIUnavailableDoesNotConsumeCredit() async throws {
-        var consumed = false
-        let authorizer = ProgrammaticConversionAuthorizer(
-            refreshEntitlements: {},
-            aiUnavailableReason: { useAI in
-                useAI ? "Upmarket AI is not available" : nil
-            },
-            consumeConversion: {
-                consumed = true
-                return true
-            }
-        )
-
+    func testAIConversionEitherSucceedsOrReportsUnavailable() async {
+        // The only acceptable failure for AI is aiUnavailable (device/tier/model).
+        // purchaseRequired must NOT be thrown — there is no per-conversion purchase wall.
         do {
-            try await authorizer.authorize(useAI: true)
-            XCTFail("Expected AI authorization to fail")
-        } catch let error as ProgrammaticConversionAuthorizationError {
-            XCTAssertEqual(error, .aiUnavailable)
+            try await ProgrammaticConversionAuthorization.authorize(useAI: true)
+        } catch ProgrammaticConversionAuthorizationError.aiUnavailable {
+            // Expected when AI isn't available on this machine / tier.
+        } catch {
+            XCTFail("AI authorization should only fail with .aiUnavailable, got: \(error)")
         }
-
-        XCTAssertFalse(consumed)
-    }
-
-    func testPurchaseRequiredWhenNoCreditCanBeConsumed() async throws {
-        var consumeCount = 0
-        let authorizer = ProgrammaticConversionAuthorizer(
-            refreshEntitlements: {},
-            aiUnavailableReason: { _ in nil },
-            consumeConversion: {
-                consumeCount += 1
-                return false
-            }
-        )
-
-        do {
-            try await authorizer.authorize(useAI: false)
-            XCTFail("Expected purchase requirement")
-        } catch let error as ProgrammaticConversionAuthorizationError {
-            XCTAssertEqual(error, .purchaseRequired)
-        }
-
-        XCTAssertEqual(consumeCount, 1)
-    }
-
-    func testSuccessfulAuthorizationConsumesOneCredit() async throws {
-        var consumeCount = 0
-        let authorizer = ProgrammaticConversionAuthorizer(
-            refreshEntitlements: {},
-            aiUnavailableReason: { _ in nil },
-            consumeConversion: {
-                consumeCount += 1
-                return true
-            }
-        )
-
-        try await authorizer.authorize(useAI: true)
-
-        XCTAssertEqual(consumeCount, 1)
     }
 }

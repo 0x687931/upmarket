@@ -22,7 +22,12 @@ struct FoundationModelEnhancer {
 
     static var isAvailable: Bool {
         if #available(macOS 26, *) {
-            return _FMAvailability.check()
+            var sysinfo = utsname()
+            uname(&sysinfo)
+            let arch = withUnsafeBytes(of: &sysinfo.machine) {
+                $0.bindMemory(to: CChar.self).baseAddress.map { String(cString: $0) } ?? ""
+            }
+            return arch.hasPrefix("arm64")
         }
         return false
     }
@@ -38,7 +43,7 @@ struct FoundationModelEnhancer {
 
         if #available(macOS 26, *) {
             do {
-                return try await _FMImpl.enhance(markdown: markdown, documentType: documentType)
+                return try await enhanceWithFoundationModels(markdown: markdown, documentType: documentType)
             } catch {
                 AppLog.featureFlags.error("Foundation model enhancement failed: \(error.localizedDescription, privacy: .private)")
             }
@@ -57,21 +62,55 @@ struct FoundationModelEnhancer {
         }
         return nil
     }
-}
 
-// MARK: - macOS 26 availability helper (no FoundationModels import needed here)
+    // MARK: - Private Implementation
 
-@available(macOS 26, *)
-private enum _FMAvailability {
-    static func check() -> Bool {
-        // SystemLanguageModel is in FoundationModels — checked in _FMImpl
-        // Return true on macOS 26 hardware; actual model availability checked at call time
-        var sysinfo = utsname(); uname(&sysinfo)
-        return withUnsafeBytes(of: &sysinfo.machine) {
-            $0.bindMemory(to: CChar.self).baseAddress.map { String(cString: $0) } ?? ""
-        }.hasPrefix("arm64")
+    @available(macOS 26, *)
+    private static func enhanceWithFoundationModels(
+        markdown: String,
+        documentType: String
+    ) async throws -> DocumentEnhancement {
+        #if canImport(FoundationModels)
+        // Use the FoundationModelsImpl module to extract structured metadata and summaries.
+        do {
+            return try await FoundationModelsImpl.enhance(markdown: markdown, documentType: documentType)
+        } catch {
+            // If the model call fails (no models available, out of memory, etc),
+            // fall back to header-based title extraction
+            let logger = Logger(subsystem: "com.upmarket.app", category: "foundation-models")
+            logger.error("Enhancement failed: \(error.localizedDescription, privacy: .private)")
+            return DocumentEnhancement(
+                extractedTitle: titleFallback(from: markdown),
+                extractedAuthors: [],
+                sectionSummaries: [],
+                refinedMarkdown: markdown,
+                wasEnhanced: false
+            )
+        }
+        #else
+        // FoundationModels framework not available on this build
+        return DocumentEnhancement(
+            extractedTitle: titleFallback(from: markdown),
+            extractedAuthors: [],
+            sectionSummaries: [],
+            refinedMarkdown: markdown,
+            wasEnhanced: false
+        )
+        #endif
+    }
+
+    private struct Section { let heading: String; let content: String }
+
+    private static func extractSections(from markdown: String) -> [Section] {
+        var sections: [Section] = []
+        var heading = ""; var lines: [String] = []
+        for line in markdown.components(separatedBy: "\n") {
+            if line.hasPrefix("## ") {
+                if !lines.isEmpty { sections.append(Section(heading: heading, content: lines.joined(separator: "\n"))) }
+                heading = String(line.dropFirst(3)); lines = []
+            } else { lines.append(line) }
+        }
+        if !lines.isEmpty { sections.append(Section(heading: heading, content: lines.joined(separator: "\n"))) }
+        return sections
     }
 }
-
-// MARK: - macOS 26 implementation in separate file to isolate FoundationModels import
-// See: FoundationModelEnhancerImpl.swift

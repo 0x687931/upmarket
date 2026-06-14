@@ -55,9 +55,9 @@ final class ConversionQueue: ObservableObject {
 
     func diagnosticSnapshotForLastFailedJob() -> DiagnosticSnapshot {
         guard let context = lastFailedJobContext else {
-            return DiagnosticsService.shared.makeSnapshot()
+            return Diagnostics.makeSnapshot()
         }
-        return DiagnosticsService.shared.makeSnapshot(
+        return Diagnostics.makeSnapshot(
             correlationID: context.correlationID,
             lastConversionStage: context.stage,
             lastErrorCode: context.errorCode,
@@ -324,9 +324,6 @@ final class ConversionQueue: ObservableObject {
         if stage == .complete, let output = result.output {
             historyStore?.record(job: jobs[index], output: output)
             autoSaveConverted(output, sourceURL: jobs[index].sourceURL)
-            if StoreManager.shared.shouldShowTrialPaywallAfterConversion() {
-                PaywallWindowController.shared.show()
-            }
         }
         AppLog.conversion.info("Finished conversion correlationID=\(id.uuidString, privacy: .public) stage=\(stage.rawValue, privacy: .public)")
         continuations.removeValue(forKey: id)?.resume(returning: result)

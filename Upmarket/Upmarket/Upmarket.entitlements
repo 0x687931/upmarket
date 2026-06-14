@@ -14,15 +14,15 @@
     <key>com.apple.security.files.user-selected.read-write</key>
     <true/>
 
+    <!-- Background Assets: paid runtime/model downloads -->
+    <key>com.apple.developer.background-assets</key>
+    <true/>
+
     <!-- App Groups: needed for sharing data with extensions -->
     <key>com.apple.security.application-groups</key>
     <array>
         <string>group.com.upmarket.app</string>
     </array>
-
-    <!-- Background Assets: receive AI-model downloads scheduled by UpmarketBAExtension -->
-    <key>com.apple.developer.background-assets</key>
-    <true/>
 
     <!-- CloudKit: public feature availability flags only -->
     <key>com.apple.developer.icloud-container-identifiers</key>

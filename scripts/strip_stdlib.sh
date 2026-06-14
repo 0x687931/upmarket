@@ -17,6 +17,8 @@ fi
 echo "  Removing test suites..."
 find "$STDLIB" -type d -name "test" -exec rm -rf {} + 2>/dev/null || true
 find "$STDLIB" -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true
+# pyobjc ships its full test suite (~9MB) — pure dead weight at runtime.
+find "$STDLIB" -type d -name "PyObjCTest" -exec rm -rf {} + 2>/dev/null || true
 
 echo "  Removing unused encodings..."
 # Keep text basics, IDNA for HTTPS downloads, and CP437 for ZIP metadata.

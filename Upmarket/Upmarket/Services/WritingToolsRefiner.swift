@@ -1,5 +1,26 @@
 import Foundation
 
+// MARK: - Version-safe public API (always available)
+
+struct WritingToolsOutput {
+    let markdown: String
+    let wasRefined: Bool
+}
+
+enum WritingToolsService {
+    static func refineMarkdown(_ markdown: String, language: String) async -> WritingToolsOutput {
+        if #available(macOS 15.1, *) {
+            let input = WritingToolsRefiner.Input(markdown: markdown, language: language)
+            let result = await WritingToolsRefiner.refine(input)
+            return WritingToolsOutput(markdown: result.markdown, wasRefined: result.wasRefined)
+        } else {
+            return WritingToolsOutput(markdown: markdown, wasRefined: false)
+        }
+    }
+}
+
+// MARK: - macOS 15.1+ Implementation
+
 /// Refines structured Markdown using Apple Intelligence Writing Tools.
 /// Available on macOS 15.1+ with Apple Silicon.
 ///
@@ -61,13 +82,11 @@ struct WritingToolsRefiner {
         var processed = 0
 
         for chunk in chunks {
-            if let result = await refineChunk(chunk, language: input.language) {
-                refined.append(result)
+            let refinedChunk = await refineChunk(chunk, language: input.language) ?? chunk
+            if refinedChunk != chunk {
                 processed += 1
-            } else {
-                // Writing Tools failed for this chunk — use original
-                refined.append(chunk)
             }
+            refined.append(refinedChunk)
         }
 
         return Output(
@@ -100,39 +119,127 @@ struct WritingToolsRefiner {
         return chunks
     }
 
-    /// Send a single chunk to Writing Tools for refinement.
-    /// Returns nil if Writing Tools is unavailable or fails.
+    /// Refine a single chunk of text.
+    /// Implements sentence merging (broken across PDF lines) and whitespace cleanup.
+    /// Returns nil if refinement fails; otherwise returns the refined text.
     private static func refineChunk(_ text: String, language: String) async -> String? {
-        // Writing Tools API is accessed via UITextView/NSTextView integration.
-        // On macOS, we use the NSWritingToolsCoordinator introduced in macOS 15.1.
-        // For now this is a placeholder — the actual API requires a view context.
-        // TODO: Implement NSWritingToolsCoordinator integration once API is stable.
-        // See: https://developer.apple.com/documentation/appkit/nswritingtoolscoordinator
-        return nil
-    }
-}
-
-/// Fallback for older macOS — returns input unchanged.
-struct WritingToolsRefinerFallback {
-    static func refine(markdown: String) -> String { markdown }
-}
-
-/// Version-safe wrapper that picks the right implementation at runtime.
-struct WritingToolsRefinerAdapter {
-
-    struct Output {
-        let markdown: String
-        let wasRefined: Bool
+        return await Task.detached(priority: .userInitiated) {
+            refineChunkSync(text, language: language)
+        }.value
     }
 
-    static func refine(markdown: String, language: String) async -> Output {
-        if #available(macOS 15.1, *) {
-            let result = await WritingToolsRefiner.refine(
-                WritingToolsRefiner.Input(markdown: markdown, language: language)
-            )
-            return Output(markdown: result.markdown, wasRefined: result.wasRefined)
-        } else {
-            return Output(markdown: markdown, wasRefined: false)
+    /// Synchronous refinement: merge broken sentences and clean whitespace.
+    /// PDF extraction often splits sentences across line breaks. This detects sentence
+    /// boundaries and merges lines that should be together.
+    private nonisolated static func refineChunkSync(_ text: String, language: String) -> String? {
+        // Split into lines for processing
+        let lines = text.components(separatedBy: .newlines)
+        var mergedLines: [String] = []
+        var currentParagraph = ""
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+            // Empty line = paragraph boundary
+            if trimmed.isEmpty {
+                if !currentParagraph.isEmpty {
+                    mergedLines.append(currentParagraph)
+                    currentParagraph = ""
+                }
+                mergedLines.append("")
+                continue
+            }
+
+            if isMarkdownTableRow(trimmed) {
+                if !currentParagraph.isEmpty {
+                    mergedLines.append(currentParagraph)
+                    currentParagraph = ""
+                }
+                mergedLines.append(trimmed)
+                continue
+            }
+
+            // Check if this line looks like it was broken mid-sentence
+            // Heuristic: if previous line didn't end with sentence terminator and
+            // current line doesn't start with capital or special marker, merge
+            if !currentParagraph.isEmpty && shouldMergeLine(trimmed, into: currentParagraph) {
+                currentParagraph += " " + trimmed
+            } else {
+                // New sentence or continuation of paragraph
+                if !currentParagraph.isEmpty && endsWithSentenceTerminator(currentParagraph) {
+                    mergedLines.append(currentParagraph)
+                    currentParagraph = trimmed
+                } else if !currentParagraph.isEmpty {
+                    currentParagraph += " " + trimmed
+                } else {
+                    currentParagraph = trimmed
+                }
+            }
         }
+
+        // Flush remaining paragraph
+        if !currentParagraph.isEmpty {
+            mergedLines.append(currentParagraph)
+        }
+
+        // Filter out excessive empty lines (more than 2 consecutive newlines)
+        var result: [String] = []
+        var consecutiveEmpty = 0
+        for line in mergedLines {
+            if line.isEmpty {
+                consecutiveEmpty += 1
+                if consecutiveEmpty <= 1 {
+                    result.append(line)
+                }
+            } else {
+                consecutiveEmpty = 0
+                result.append(line)
+            }
+        }
+
+        let refined = result.joined(separator: "\n")
+        return refined.isEmpty ? nil : refined
+    }
+
+    /// Check if a line should be merged with the current paragraph.
+    /// Returns true if the line appears to be a continuation of a broken sentence.
+    nonisolated static func shouldMergeLine(_ line: String, into paragraph: String) -> Bool {
+        guard !line.isEmpty && !paragraph.isEmpty else { return false }
+
+        if isMarkdownTableRow(line) || isMarkdownTableRow(paragraph) {
+            return false
+        }
+
+        // Don't merge if current paragraph ends with a sentence terminator
+        if endsWithSentenceTerminator(paragraph) {
+            return false
+        }
+
+        // Don't merge if line starts with a heading, list marker, or code fence
+        let startsWithSpecial = line.hasPrefix("#") || line.hasPrefix("-") ||
+                                line.hasPrefix("*") || line.hasPrefix(">") ||
+                                line.hasPrefix("`") || line.hasPrefix("|")
+        if startsWithSpecial {
+            return false
+        }
+
+        // Don't merge if line starts with all caps (likely a new section)
+        if line.allSatisfy({ $0.isUppercase || !$0.isLetter }) {
+            return false
+        }
+
+        // Merge if line looks like a sentence continuation
+        return true
+    }
+
+    nonisolated static func isMarkdownTableRow(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        return trimmed.hasPrefix("|") && trimmed.dropFirst().contains("|")
+    }
+
+    /// Check if text ends with a sentence terminator (., !, ?, etc).
+    private nonisolated static func endsWithSentenceTerminator(_ text: String) -> Bool {
+        guard let lastChar = text.last else { return false }
+        return lastChar == "." || lastChar == "!" || lastChar == "?" || lastChar == ":"
     }
 }

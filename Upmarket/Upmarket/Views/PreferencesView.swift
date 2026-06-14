@@ -588,6 +588,32 @@ struct PreferencesView: View {
 					.foregroundStyle(.secondary)
 			}
 
+			// Command-line tool is a Pro/Max feature. The sandboxed app can't symlink into
+			// /usr/local/bin itself, so we surface the one-time install command to copy.
+			if store.tier >= .pro {
+				PrefSection(icon: "terminal.fill", color: AppTheme.Colour.sectionBlue, title: "Command-Line Tool") {
+					let cmd = "sudo ln -sf \"\(Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/upmarket-cli").path)\" /usr/local/bin/upmarket-cli"
+					VStack(alignment: .leading, spacing: 8) {
+						Text("Install upmarket-cli to convert from Terminal. Run once:")
+							.font(.system(size: 12))
+							.foregroundStyle(.secondary)
+						HStack(alignment: .top, spacing: 8) {
+							Text(cmd)
+								.font(.system(size: 11, design: .monospaced))
+								.textSelection(.enabled)
+								.lineLimit(3)
+							Spacer()
+							Button("Copy") { FileAccessService.shared.copyText(cmd) }
+							.controlSize(.small)
+						}
+					}
+					.padding(14)
+					.background(Color(nsColor: .controlBackgroundColor))
+					.clipShape(RoundedRectangle(cornerRadius: 10))
+					.overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.Colour.separator, lineWidth: 0.5))
+				}
+			}
+
 			#if DEBUG
 			PrefSection(icon: "hammer.fill", color: Color.red, title: "Debug Tier Override") {
 				VStack(spacing: 8) {

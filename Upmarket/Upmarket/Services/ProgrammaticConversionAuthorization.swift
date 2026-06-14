@@ -6,44 +6,21 @@ enum ProgrammaticConversionAuthorizationError: Error, Equatable {
 }
 
 @MainActor
-struct ProgrammaticConversionAuthorizer {
-    typealias RefreshEntitlements = () async -> Void
-    typealias AIUnavailableReason = (_ useAI: Bool) async -> String?
-    typealias ConsumeConversion = () -> Bool
-
-    let refreshEntitlements: RefreshEntitlements
-    let aiUnavailableReason: AIUnavailableReason
-    let consumeConversion: ConsumeConversion
-
-    func authorize(useAI: Bool) async throws {
-        await refreshEntitlements()
-
-        if await aiUnavailableReason(useAI) != nil {
-            throw ProgrammaticConversionAuthorizationError.aiUnavailable
-        }
-
-        guard consumeConversion() else {
-            throw ProgrammaticConversionAuthorizationError.purchaseRequired
-        }
-    }
-}
-
-@MainActor
 enum ProgrammaticConversionAuthorization {
     static func authorize(useAI: Bool) async throws {
         let store = StoreManager.shared
-        let authorizer = ProgrammaticConversionAuthorizer(
-            refreshEntitlements: {
-                await store.refreshEntitlementForProgrammaticConversion()
-            },
-            aiUnavailableReason: { useAI in
-                guard useAI else { return nil }
-                return await ModelManager.shared.gateAfterChecking(tier: store.tier).unavailableReason(for: .ai)
-            },
-            consumeConversion: {
-                store.consumeConversion()
+
+        await store.refreshEntitlementForProgrammaticConversion()
+
+        // Native (Basic) conversion is always permitted. Only the AI capability is
+        // tier-gated here, matching how the app's UI gates the AI toggle — the same
+        // AppTierGate used everywhere. Enhanced is auto-selected only when available,
+        // so it needs no explicit guard.
+        if useAI {
+            let gate = await ModelManager.shared.gateAfterChecking(tier: store.tier)
+            if gate.unavailableReason(for: .ai) != nil {
+                throw ProgrammaticConversionAuthorizationError.aiUnavailable
             }
-        )
-        try await authorizer.authorize(useAI: useAI)
+        }
     }
 }

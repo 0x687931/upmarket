@@ -33,10 +33,14 @@ AI_ONLY_PACKAGES = {
     "mlx-vlm",
 }
 BASIC_ALLOWED_PACKAGES = {
-    "ocrmac",
     "pydantic",
     "pillow",
     "numpy",
+    # Tier-1 (zero-download) Basic conversion — see converter.py / requirements-basic.txt
+    "markitdown",
+    "mammoth",
+    "lxml",
+    "pypdfium2",
 }
 
 

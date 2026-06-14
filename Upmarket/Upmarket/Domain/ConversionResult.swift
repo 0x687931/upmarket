@@ -108,6 +108,8 @@ nonisolated struct ConversionOutput: Equatable, Sendable {
     let title: String
     let pipeline: Pipeline
     let selectedPathway: ConversionPathway
+    let metadata: DocumentMetadata
+    let originalTables: [TableRepair.StructuredTable]
 
     var usedAI: Bool { pipeline == .ai }
     var provenanceLabel: String { selectedPathway.displayPipeline.displayName }
@@ -118,7 +120,9 @@ nonisolated struct ConversionOutput: Equatable, Sendable {
         format: String,
         title: String,
         pipeline: Pipeline,
-        selectedPathway: ConversionPathway? = nil
+        selectedPathway: ConversionPathway? = nil,
+        metadata: DocumentMetadata? = nil,
+        originalTables: [TableRepair.StructuredTable] = []
     ) {
         self.markdown = markdown
         self.pages = pages
@@ -126,5 +130,7 @@ nonisolated struct ConversionOutput: Equatable, Sendable {
         self.title = title
         self.pipeline = pipeline
         self.selectedPathway = selectedPathway ?? ConversionPathway.defaultForPipeline(pipeline)
+        self.metadata = metadata ?? DocumentMetadata()
+        self.originalTables = originalTables
     }
 }

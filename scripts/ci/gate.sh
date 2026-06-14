@@ -138,6 +138,7 @@ policy_gate() {
   run_step "Validate release regression guards" scripts/ci/validate_release_regression_guards.py
   run_step "Validate upstream watch workflow" scripts/ci/validate_upstream_watch_workflow.py
   run_step "Verify source entitlements" scripts/ci/verify_entitlements.sh
+  run_step "Validate HuggingFace corpus configuration" scripts/ci/validate_hf_corpus.py
 }
 
 build_gate() {
@@ -165,6 +166,16 @@ corpus_and_model_gate() {
   run_step "Repair and validate local model manifests" scripts/ci/validate_models.py --repair
   run_step "Validate model fault states" scripts/ci/test_model_faults.py
   run_step "Validate AI runtime test doubles" scripts/ci/test_ai_runtime_doubles.py
+  hf_dataset_gate
+}
+
+hf_dataset_gate() {
+  # HuggingFace datasets are optional — skip gracefully if not downloaded
+  if [ ! -d "tests/datasets/huggingface/pdfa-eng-wds" ]; then
+    echo "⚠️  HuggingFace datasets not downloaded — skipping (run scripts/datasets/download_hf_datasets.sh)"
+    return 0
+  fi
+  run_step "Benchmark HuggingFace datasets" bash scripts/datasets/benchmark_hf.sh --dataset all --fail-below 75
 }
 
 quick_gate() {

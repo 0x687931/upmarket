@@ -4,17 +4,23 @@
 # Size target: ~50MB
 #
 # Includes:
-# - Native macOS OCR via Vision framework (ocrmac)
+# - Tier-1 conversion: MarkItDown (office/markup) + pypdfium2 (native PDF text)
 # - Image processing (Pillow)
 # - Basic data structures (numpy, pydantic)
 #
 # Does NOT include:
-# - Docling (requires Pro download)
+# - Docling (requires Pro download — enhanced PDF layout/tables)
 # - ML frameworks (torch, mlx, etc. - Max only)
-# - Office format handlers (Pro only)
+# - ocrmac / pyobjc: native OCR, Vision, and Speech run in Swift against the system
+#   frameworks (no Python bindings). ocrmac is Docling's optional OCR backend → Pro.
 
-# Native macOS OCR (Apple Vision framework integration)
-ocrmac==1.0.1
+# Tier-1 (zero-download) Basic conversion: MarkItDown + mammoth/lxml handle DOCX, HTML,
+# CSV; pypdfium2 backs native PDF text. Spreadsheets/presentations/ebooks (pandas,
+# openpyxl, python-pptx, xlrd) are Pro — see the AppTier contract / converter.py.
+markitdown==0.1.6
+mammoth==1.11.0
+lxml==6.1.1
+pypdfium2==5.8.0
 
 # Utilities
 pydantic==2.13.4

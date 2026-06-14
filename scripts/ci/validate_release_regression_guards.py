@@ -61,7 +61,7 @@ def main() -> int:
         errors,
     )
 
-    vision = (ROOT / "Upmarket" / "Upmarket" / "Services" / "VisionOCR.swift").read_text(encoding="utf-8")
+    vision = (ROOT / "Upmarket" / "Shared" / "VisionOCR.swift").read_text(encoding="utf-8")
     require(
         "VisionProcessingLimits.renderSize(for: bounds, dpi: 150)" in vision,
         "VisionOCR must cap PDF render dimensions through VisionProcessingLimits before OCR",
@@ -106,7 +106,7 @@ def main() -> int:
         errors,
     )
     require_text(
-        "Upmarket/Upmarket/Domain/ToolFormatCapabilityMatrix.swift",
+        "Upmarket/Shared/ToolFormatCapabilityMatrix.swift",
         [
             "case markItDown",
             ".mp3, .m4a, .wav",
@@ -150,37 +150,6 @@ def main() -> int:
         errors,
     )
     require_text(
-        "Upmarket/Upmarket/Services/ConversionQueue.swift",
-        [
-            "PaywallWindowController.shared.show()",
-            "shouldShowTrialPaywallAfterConversion()",
-        ],
-        "post-conversion paywall trigger regression guard",
-        errors,
-    )
-    require_text(
-        "Upmarket/UpmarketTests/StoreAccountingServiceTests.swift",
-        [
-            "testInitialStateDiscardsLegacyLocalCredits",
-            "testDoesNotConsumeEditableFreeTrialOrPackCreditState",
-            "testVerifiedPackTransactionsDoNotGrantBetaConversionCredits",
-            "testTrialPaywallPromptWhenUnpaidAndNoCreditsRemaining",
-            "testTrialPaywallPromptSuppressedWhenFreeDocsOrPackCreditsRemain",
-        ],
-        "local conversion-credit authority regression tests",
-        errors,
-    )
-    require_text(
-        "Upmarket/UpmarketTests/ProgrammaticConversionAuthorizationTests.swift",
-        [
-            "testAuthorizationRefreshesEntitlementsBeforeConsumingCredit",
-            "testAIUnavailableDoesNotConsumeCredit",
-            "testSuccessfulAuthorizationConsumesOneCredit",
-        ],
-        "programmatic authorization regression tests",
-        errors,
-    )
-    require_text(
         "docs/release/corpus_expected_status.json",
         [
             '"degraded_output": 23',
@@ -201,6 +170,15 @@ def main() -> int:
             "is_expected_blocked_error",
         ],
         "corpus pathway comparison failure accounting",
+        errors,
+    )
+    require_text(
+        "Upmarket/UpmarketTests/ProgrammaticConversionAuthorizationTests.swift",
+        [
+            "testNativeConversionIsAlwaysAuthorized",
+            "testAIConversionEitherSucceedsOrReportsUnavailable",
+        ],
+        "programmatic authorization regression tests",
         errors,
     )
     require_text(

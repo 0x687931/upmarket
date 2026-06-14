@@ -1,1899 +1,764 @@
 {
-  "version": 1,
-  "description": "Upmarket conversion quality test corpus",
+  "version": 2,
+  "description": "Upmarket CLI evaluation corpus \u2014 document + ground-truth pairs only",
+  "pair_count": 106,
+  "by_format": {
+    "asciidoc": 3,
+    "csv": 9,
+    "docx": 25,
+    "epub": 1,
+    "html": 30,
+    "md": 13,
+    "nxml": 3,
+    "pptx": 6,
+    "tex": 2,
+    "vtt": 4,
+    "xlsm": 1,
+    "xlsx": 7,
+    "xml": 2
+  },
   "documents": [
     {
-      "id": "docling_2305.03393v1-pg9-img",
-      "file": "tests/data/2305.03393v1-pg9-img.png",
-      "ground_truth": null,
-      "category": "image",
-      "format": "png",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_2305.03393v1-table_crop",
-      "file": "tests/data/2305.03393v1-table_crop.png",
-      "ground_truth": null,
-      "category": "image",
-      "format": "png",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_test_01",
-      "file": "tests/data/asciidoc/test_01.asciidoc",
-      "ground_truth": null,
-      "category": "asciidoc",
+      "id": "docling/test_01.asciidoc",
+      "document": "tests/corpus/sources/docling/documents/asciidoc/test_01.asciidoc",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/test_01.asciidoc.md",
       "format": "asciidoc",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_test_02",
-      "file": "tests/data/asciidoc/test_02.asciidoc",
-      "ground_truth": null,
-      "category": "asciidoc",
+      "id": "docling/test_02.asciidoc",
+      "document": "tests/corpus/sources/docling/documents/asciidoc/test_02.asciidoc",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/test_02.asciidoc.md",
       "format": "asciidoc",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_test_03",
-      "file": "tests/data/asciidoc/test_03.asciidoc",
-      "ground_truth": null,
-      "category": "asciidoc",
+      "id": "docling/test_03.asciidoc",
+      "document": "tests/corpus/sources/docling/documents/asciidoc/test_03.asciidoc",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/test_03.asciidoc.md",
       "format": "asciidoc",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_sample_10s",
-      "file": "tests/data/audio/sample_10s.mp3",
-      "ground_truth": null,
-      "category": "audio",
-      "format": "mp3",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_sample_10s_audio-flac",
-      "file": "tests/data/audio/sample_10s_audio-flac.flac",
-      "ground_truth": null,
-      "category": "audio",
-      "format": "flac",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_sample_10s_audio-m4a",
-      "file": "tests/data/audio/sample_10s_audio-m4a.m4a",
-      "ground_truth": null,
-      "category": "audio",
-      "format": "m4a",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_sample_10s_audio-mp3",
-      "file": "tests/data/audio/sample_10s_audio-mp3.mp3",
-      "ground_truth": null,
-      "category": "audio",
-      "format": "mp3",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_sample_10s_audio-mp4",
-      "file": "tests/data/audio/sample_10s_audio-mp4.m4a",
-      "ground_truth": null,
-      "category": "audio",
-      "format": "m4a",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_sample_10s_audio-mpeg",
-      "file": "tests/data/audio/sample_10s_audio-mpeg.mp3",
-      "ground_truth": null,
-      "category": "audio",
-      "format": "mp3",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_sample_10s_audio-wav",
-      "file": "tests/data/audio/sample_10s_audio-wav.wav",
-      "ground_truth": null,
-      "category": "audio",
-      "format": "wav",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_sample_10s_audio-x-flac",
-      "file": "tests/data/audio/sample_10s_audio-x-flac.flac",
-      "ground_truth": null,
-      "category": "audio",
-      "format": "flac",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_sample_10s_audio-x-wav",
-      "file": "tests/data/audio/sample_10s_audio-x-wav.wav",
-      "ground_truth": null,
-      "category": "audio",
-      "format": "wav",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_sample_10s_video-avi",
-      "file": "tests/data/audio/sample_10s_video-avi.avi",
-      "ground_truth": null,
-      "category": "video",
-      "format": "avi",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_sample_10s_video-mp4",
-      "file": "tests/data/audio/sample_10s_video-mp4.mp4",
-      "ground_truth": null,
-      "category": "video",
-      "format": "mp4",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_sample_10s_video-quicktime",
-      "file": "tests/data/audio/sample_10s_video-quicktime.mov",
-      "ground_truth": null,
-      "category": "video",
-      "format": "mov",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_sample_10s_video-x-msvideo",
-      "file": "tests/data/audio/sample_10s_video-x-msvideo.avi",
-      "ground_truth": null,
-      "category": "video",
-      "format": "avi",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_silent_1s",
-      "file": "tests/data/audio/silent_1s.wav",
-      "ground_truth": null,
-      "category": "audio",
-      "format": "wav",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_csv-comma-in-cell",
-      "file": "tests/data/csv/csv-comma-in-cell.csv",
-      "ground_truth": null,
-      "category": "csv",
+      "id": "docling/csv-comma-in-cell.csv",
+      "document": "tests/corpus/sources/docling/documents/csv/csv-comma-in-cell.csv",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/csv-comma-in-cell.csv.md",
       "format": "csv",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_csv-comma",
-      "file": "tests/data/csv/csv-comma.csv",
-      "ground_truth": null,
-      "category": "csv",
+      "id": "docling/csv-comma.csv",
+      "document": "tests/corpus/sources/docling/documents/csv/csv-comma.csv",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/csv-comma.csv.md",
       "format": "csv",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_csv-inconsistent-header",
-      "file": "tests/data/csv/csv-inconsistent-header.csv",
-      "ground_truth": null,
-      "category": "csv",
+      "id": "docling/csv-inconsistent-header.csv",
+      "document": "tests/corpus/sources/docling/documents/csv/csv-inconsistent-header.csv",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/csv-inconsistent-header.csv.md",
       "format": "csv",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_csv-pipe",
-      "file": "tests/data/csv/csv-pipe.csv",
-      "ground_truth": null,
-      "category": "csv",
+      "id": "docling/csv-pipe.csv",
+      "document": "tests/corpus/sources/docling/documents/csv/csv-pipe.csv",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/csv-pipe.csv.md",
       "format": "csv",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_csv-semicolon",
-      "file": "tests/data/csv/csv-semicolon.csv",
-      "ground_truth": null,
-      "category": "csv",
+      "id": "docling/csv-semicolon.csv",
+      "document": "tests/corpus/sources/docling/documents/csv/csv-semicolon.csv",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/csv-semicolon.csv.md",
       "format": "csv",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_csv-single-column",
-      "file": "tests/data/csv/csv-single-column.csv",
-      "ground_truth": null,
-      "category": "csv",
+      "id": "docling/csv-single-column.csv",
+      "document": "tests/corpus/sources/docling/documents/csv/csv-single-column.csv",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/csv-single-column.csv.md",
       "format": "csv",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_csv-tab",
-      "file": "tests/data/csv/csv-tab.csv",
-      "ground_truth": null,
-      "category": "csv",
+      "id": "docling/csv-tab.csv",
+      "document": "tests/corpus/sources/docling/documents/csv/csv-tab.csv",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/csv-tab.csv.md",
       "format": "csv",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_csv-too-few-columns",
-      "file": "tests/data/csv/csv-too-few-columns.csv",
-      "ground_truth": null,
-      "category": "csv",
+      "id": "docling/csv-too-few-columns.csv",
+      "document": "tests/corpus/sources/docling/documents/csv/csv-too-few-columns.csv",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/csv-too-few-columns.csv.md",
       "format": "csv",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_csv-too-many-columns",
-      "file": "tests/data/csv/csv-too-many-columns.csv",
-      "ground_truth": null,
-      "category": "csv",
+      "id": "docling/csv-too-many-columns.csv",
+      "document": "tests/corpus/sources/docling/documents/csv/csv-too-many-columns.csv",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/csv-too-many-columns.csv.md",
       "format": "csv",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_docx_checkboxes",
-      "file": "tests/data/docx/docx_checkboxes.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/docx_checkboxes.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/docx_checkboxes.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/docx_checkboxes.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_docx_external_image",
-      "file": "tests/data/docx/docx_external_image.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/docx_external_image.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/docx_external_image.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/docx_external_image.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_docx_grouped_images",
-      "file": "tests/data/docx/docx_grouped_images.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/docx_grouped_images.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/docx_grouped_images.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/docx_grouped_images.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_docx_rich_cells",
-      "file": "tests/data/docx/docx_rich_cells.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/docx_lists.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/docx_lists.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/docx_lists.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_docx_vml_images",
-      "file": "tests/data/docx/docx_vml_images.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/docx_rich_cells.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/docx_rich_cells.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/docx_rich_cells.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_drawingml",
-      "file": "tests/data/docx/drawingml.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/docx_vml_images.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/docx_vml_images.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/docx_vml_images.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_equations",
-      "file": "tests/data/docx/equations.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/drawingml.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/drawingml.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/drawingml.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_list_after_num_headers",
-      "file": "tests/data/docx/list_after_num_headers.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/equations.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/equations.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/equations.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_lorem_ipsum",
-      "file": "tests/data/docx/lorem_ipsum.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/list_after_num_headers.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/list_after_num_headers.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/list_after_num_headers.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_omml_frac_superscript",
-      "file": "tests/data/docx/omml_frac_superscript.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/lorem_ipsum.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/lorem_ipsum.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/lorem_ipsum.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_omml_func_log",
-      "file": "tests/data/docx/omml_func_log.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/omml_frac_superscript.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/omml_frac_superscript.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/omml_frac_superscript.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_omml_multi_equation_paragraph",
-      "file": "tests/data/docx/omml_multi_equation_paragraph.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/omml_func_log.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/omml_func_log.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/omml_func_log.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_omml_text_escapes_in_math",
-      "file": "tests/data/docx/omml_text_escapes_in_math.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/omml_multi_equation_paragraph.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/omml_multi_equation_paragraph.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/omml_multi_equation_paragraph.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_table_with_equations",
-      "file": "tests/data/docx/table_with_equations.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/omml_text_escapes_in_math.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/omml_text_escapes_in_math.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/omml_text_escapes_in_math.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_tablecell",
-      "file": "tests/data/docx/tablecell.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/table_with_equations.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/table_with_equations.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/table_with_equations.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_test_emf_docx",
-      "file": "tests/data/docx/test_emf_docx.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/tablecell.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/tablecell.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/tablecell.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_textbox",
-      "file": "tests/data/docx/textbox.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/test_emf_docx.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/test_emf_docx.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/test_emf_docx.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_unit_test_formatting",
-      "file": "tests/data/docx/unit_test_formatting.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/textbox.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/textbox.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/textbox.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_unit_test_headers",
-      "file": "tests/data/docx/unit_test_headers.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/unit_test_formatting.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/unit_test_formatting.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/unit_test_formatting.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_unit_test_headers_numbered",
-      "file": "tests/data/docx/unit_test_headers_numbered.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/unit_test_headers.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/unit_test_headers.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/unit_test_headers.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_unit_test_lists",
-      "file": "tests/data/docx/unit_test_lists.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/unit_test_headers_numbered.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/unit_test_headers_numbered.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/unit_test_headers_numbered.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_word_comments",
-      "file": "tests/data/docx/word_comments.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/word_comments.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/word_comments.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/word_comments.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_word_image_anchors",
-      "file": "tests/data/docx/word_image_anchors.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/word_image_anchors.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/word_image_anchors.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/word_image_anchors.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_word_sample",
-      "file": "tests/data/docx/word_sample.docx",
-      "ground_truth": "tests/data/groundtruth/docling_v2/word_sample.md",
-      "category": "docx",
+      "id": "docling/word_sample.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/word_sample.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/word_sample.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_word_tables",
-      "file": "tests/data/docx/word_tables.docx",
-      "ground_truth": null,
-      "category": "docx",
+      "id": "docling/word_tables.docx",
+      "document": "tests/corpus/sources/docling/documents/docx/word_tables.docx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/word_tables.docx.md",
       "format": "docx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_example_01",
-      "file": "tests/data/html/example_01.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/epub_purvis_poetry.epub",
+      "document": "tests/corpus/sources/docling/documents/epub/epub_purvis_poetry.epub",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/epub_purvis_poetry.epub.md",
+      "format": "epub",
+      "source": "docling-project/docling (MIT)"
+    },
+    {
+      "id": "docling/example_01.html",
+      "document": "tests/corpus/sources/docling/documents/html/example_01.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/example_01.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_example_02",
-      "file": "tests/data/html/example_02.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/example_02.html",
+      "document": "tests/corpus/sources/docling/documents/html/example_02.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/example_02.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_example_03",
-      "file": "tests/data/html/example_03.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/example_03.html",
+      "document": "tests/corpus/sources/docling/documents/html/example_03.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/example_03.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_example_04",
-      "file": "tests/data/html/example_04.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/example_04.html",
+      "document": "tests/corpus/sources/docling/documents/html/example_04.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/example_04.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_example_05",
-      "file": "tests/data/html/example_05.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/example_05.html",
+      "document": "tests/corpus/sources/docling/documents/html/example_05.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/example_05.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_example_06",
-      "file": "tests/data/html/example_06.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/example_06.html",
+      "document": "tests/corpus/sources/docling/documents/html/example_06.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/example_06.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_example_07",
-      "file": "tests/data/html/example_07.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/example_07.html",
+      "document": "tests/corpus/sources/docling/documents/html/example_07.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/example_07.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_example_08",
-      "file": "tests/data/html/example_08.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/example_08.html",
+      "document": "tests/corpus/sources/docling/documents/html/example_08.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/example_08.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_example_image_01",
-      "file": "tests/data/html/example_image_01.png",
-      "ground_truth": null,
-      "category": "image",
-      "format": "png",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_formatting",
-      "file": "tests/data/html/formatting.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/formatting.html",
+      "document": "tests/corpus/sources/docling/documents/html/formatting.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/formatting.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_html_code_snippets",
-      "file": "tests/data/html/html_code_snippets.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/html_code_snippets.html",
+      "document": "tests/corpus/sources/docling/documents/html/html_code_snippets.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/html_code_snippets.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_html_heading_in_p",
-      "file": "tests/data/html/html_heading_in_p.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/html_heading_in_p.html",
+      "document": "tests/corpus/sources/docling/documents/html/html_heading_in_p.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/html_heading_in_p.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_html_inline_group_in_table_cell",
-      "file": "tests/data/html/html_inline_group_in_table_cell.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/html_inline_group_in_table_cell.html",
+      "document": "tests/corpus/sources/docling/documents/html/html_inline_group_in_table_cell.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/html_inline_group_in_table_cell.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_html_rich_table_cells",
-      "file": "tests/data/html/html_rich_table_cells.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/html_rich_table_cells.html",
+      "document": "tests/corpus/sources/docling/documents/html/html_rich_table_cells.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/html_rich_table_cells.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_hyperlink_01",
-      "file": "tests/data/html/hyperlink_01.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/hyperlink_01.html",
+      "document": "tests/corpus/sources/docling/documents/html/hyperlink_01.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/hyperlink_01.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_hyperlink_02",
-      "file": "tests/data/html/hyperlink_02.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/hyperlink_02.html",
+      "document": "tests/corpus/sources/docling/documents/html/hyperlink_02.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/hyperlink_02.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_hyperlink_03",
-      "file": "tests/data/html/hyperlink_03.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/hyperlink_03.html",
+      "document": "tests/corpus/sources/docling/documents/html/hyperlink_03.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/hyperlink_03.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_hyperlink_04",
-      "file": "tests/data/html/hyperlink_04.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/hyperlink_04.html",
+      "document": "tests/corpus/sources/docling/documents/html/hyperlink_04.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/hyperlink_04.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_hyperlink_05",
-      "file": "tests/data/html/hyperlink_05.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/hyperlink_05.html",
+      "document": "tests/corpus/sources/docling/documents/html/hyperlink_05.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/hyperlink_05.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_hyperlink_06",
-      "file": "tests/data/html/hyperlink_06.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/hyperlink_06.html",
+      "document": "tests/corpus/sources/docling/documents/html/hyperlink_06.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/hyperlink_06.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_kvp_data_example",
-      "file": "tests/data/html/kvp_data_example.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/kvp_data_example.html",
+      "document": "tests/corpus/sources/docling/documents/html/kvp_data_example.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/kvp_data_example.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_table_01",
-      "file": "tests/data/html/table_01.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/table_01.html",
+      "document": "tests/corpus/sources/docling/documents/html/table_01.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/table_01.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_table_02",
-      "file": "tests/data/html/table_02.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/table_02.html",
+      "document": "tests/corpus/sources/docling/documents/html/table_02.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/table_02.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_table_03",
-      "file": "tests/data/html/table_03.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/table_03.html",
+      "document": "tests/corpus/sources/docling/documents/html/table_03.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/table_03.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_table_04",
-      "file": "tests/data/html/table_04.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/table_04.html",
+      "document": "tests/corpus/sources/docling/documents/html/table_04.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/table_04.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_table_05",
-      "file": "tests/data/html/table_05.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/table_05.html",
+      "document": "tests/corpus/sources/docling/documents/html/table_05.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/table_05.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_table_06",
-      "file": "tests/data/html/table_06.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/table_06.html",
+      "document": "tests/corpus/sources/docling/documents/html/table_06.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/table_06.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_table_with_heading_01",
-      "file": "tests/data/html/table_with_heading_01.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/table_with_heading_01.html",
+      "document": "tests/corpus/sources/docling/documents/html/table_with_heading_01.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/table_with_heading_01.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_table_with_heading_02",
-      "file": "tests/data/html/table_with_heading_02.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/table_with_heading_02.html",
+      "document": "tests/corpus/sources/docling/documents/html/table_with_heading_02.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/table_with_heading_02.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_unit_test_01",
-      "file": "tests/data/html/unit_test_01.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/unit_test_01.html",
+      "document": "tests/corpus/sources/docling/documents/html/unit_test_01.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/unit_test_01.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_wiki_duck",
-      "file": "tests/data/html/wiki_duck.html",
-      "ground_truth": null,
-      "category": "html",
+      "id": "docling/wiki_duck.html",
+      "document": "tests/corpus/sources/docling/documents/html/wiki_duck.html",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/wiki_duck.html.md",
       "format": "html",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_elife-56337",
-      "file": "tests/data/jats/elife-56337.xml",
-      "ground_truth": null,
-      "category": "xml",
-      "format": "xml",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/elife-56337.nxml",
+      "document": "tests/corpus/sources/docling/documents/nxml/elife-56337.nxml",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/elife-56337.nxml.md",
+      "format": "nxml",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_ModalNet-19",
-      "file": "tests/data/latex/1706.03762/Figures/ModalNet-19.png",
-      "ground_truth": null,
-      "category": "image",
-      "format": "png",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/pntd.0008301.nxml",
+      "document": "tests/corpus/sources/docling/documents/nxml/pntd.0008301.nxml",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/pntd.0008301.nxml.md",
+      "format": "nxml",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_ModalNet-20",
-      "file": "tests/data/latex/1706.03762/Figures/ModalNet-20.png",
-      "ground_truth": null,
-      "category": "image",
-      "format": "png",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/pone.0234687.nxml",
+      "document": "tests/corpus/sources/docling/documents/nxml/pone.0234687.nxml",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/pone.0234687.nxml.md",
+      "format": "nxml",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_ModalNet-21",
-      "file": "tests/data/latex/1706.03762/Figures/ModalNet-21.png",
-      "ground_truth": null,
-      "category": "image",
-      "format": "png",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/example_01.tex",
+      "document": "tests/corpus/sources/docling/documents/tex/example_01.tex",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/example_01.tex.md",
+      "format": "tex",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_ModalNet-22",
-      "file": "tests/data/latex/1706.03762/Figures/ModalNet-22.png",
-      "ground_truth": null,
-      "category": "image",
-      "format": "png",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/example_02.tex",
+      "document": "tests/corpus/sources/docling/documents/tex/example_02.tex",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/example_02.tex.md",
+      "format": "tex",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_ModalNet-23",
-      "file": "tests/data/latex/1706.03762/Figures/ModalNet-23.png",
-      "ground_truth": null,
-      "category": "image",
-      "format": "png",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/blocks.md",
+      "document": "tests/corpus/sources/docling/documents/md/blocks.md",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/blocks.md.md",
+      "format": "md",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_ModalNet-32",
-      "file": "tests/data/latex/1706.03762/Figures/ModalNet-32.png",
-      "ground_truth": null,
-      "category": "image",
-      "format": "png",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/duck.md",
+      "document": "tests/corpus/sources/docling/documents/md/duck.md",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/duck.md.md",
+      "format": "md",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_anaphora_resolution2_new",
-      "file": "tests/data/latex/1706.03762/vis/anaphora_resolution2_new.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/ending_with_table.md",
+      "document": "tests/corpus/sources/docling/documents/md/ending_with_table.md",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/ending_with_table.md.md",
+      "format": "md",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_anaphora_resolution_new",
-      "file": "tests/data/latex/1706.03762/vis/anaphora_resolution_new.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/escaped_characters.md",
+      "document": "tests/corpus/sources/docling/documents/md/escaped_characters.md",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/escaped_characters.md.md",
+      "format": "md",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_attending_to_head2_new",
-      "file": "tests/data/latex/1706.03762/vis/attending_to_head2_new.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/inline_and_formatting.md",
+      "document": "tests/corpus/sources/docling/documents/md/inline_and_formatting.md",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/inline_and_formatting.md.md",
+      "format": "md",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_attending_to_head_new",
-      "file": "tests/data/latex/1706.03762/vis/attending_to_head_new.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/mixed.md",
+      "document": "tests/corpus/sources/docling/documents/md/mixed.md",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/mixed.md.md",
+      "format": "md",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_making_more_difficult5_new",
-      "file": "tests/data/latex/1706.03762/vis/making_more_difficult5_new.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/mixed_without_h1.md",
+      "document": "tests/corpus/sources/docling/documents/md/mixed_without_h1.md",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/mixed_without_h1.md.md",
+      "format": "md",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_making_more_difficult_new",
-      "file": "tests/data/latex/1706.03762/vis/making_more_difficult_new.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/nested.md",
+      "document": "tests/corpus/sources/docling/documents/md/nested.md",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/nested.md.md",
+      "format": "md",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_HTMLvOTSLv7",
-      "file": "tests/data/latex/2305.03393/figs/HTMLvOTSLv7.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/signature_stamp_01.md",
+      "document": "tests/corpus/sources/docling/documents/md/signature_stamp_01.md",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/signature_stamp_01.md.md",
+      "format": "md",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_html_freq_v4",
-      "file": "tests/data/latex/2305.03393/figs/html_freq_v4.png",
-      "ground_truth": null,
-      "category": "image",
-      "format": "png",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/wiki.md",
+      "document": "tests/corpus/sources/docling/documents/md/wiki.md",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/wiki.md.md",
+      "format": "md",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_html_v_otsl_intro_v2",
-      "file": "tests/data/latex/2305.03393/figs/html_v_otsl_intro_v2.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/deepseek_example.md",
+      "document": "tests/corpus/sources/docling/documents/md/deepseek_example.md",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/deepseek_example.md.md",
+      "format": "md",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_otsl_proof_v3",
-      "file": "tests/data/latex/2305.03393/figs/otsl_proof_v3.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/deepseek_simple.md",
+      "document": "tests/corpus/sources/docling/documents/md/deepseek_simple.md",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/deepseek_simple.md.md",
+      "format": "md",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_otsl_vs_html_ex3_v2",
-      "file": "tests/data/latex/2305.03393/figs/otsl_vs_html_ex3_v2.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/deepseek_title.md",
+      "document": "tests/corpus/sources/docling/documents/md/deepseek_title.md",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/deepseek_title.md.md",
+      "format": "md",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_tablemodel_overview_otsl",
-      "file": "tests/data/latex/2305.03393/figs/tablemodel_overview_otsl.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_llncsdoc",
-      "file": "tests/data/latex/2305.03393/llncsdoc.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_230927_bars",
-      "file": "tests/data/latex/2310.06825/images/230927_bars.png",
-      "ground_truth": null,
-      "category": "image",
-      "format": "png",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_230927_effective_sizes",
-      "file": "tests/data/latex/2310.06825/images/230927_effective_sizes.png",
-      "ground_truth": null,
-      "category": "image",
-      "format": "png",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_chunking",
-      "file": "tests/data/latex/2310.06825/images/chunking.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_llama_vs_mistral_example",
-      "file": "tests/data/latex/2310.06825/images/llama_vs_mistral_example.png",
-      "ground_truth": null,
-      "category": "image",
-      "format": "png",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_rolling_buffer",
-      "file": "tests/data/latex/2310.06825/images/rolling_buffer.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_swa",
-      "file": "tests/data/latex/2310.06825/images/swa.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_basic_arch",
-      "file": "tests/data/latex/2412.19437/figures/basic_arch.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_dsv3_performance",
-      "file": "tests/data/latex/2412.19437/figures/dsv3_performance.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_dualpipe",
-      "file": "tests/data/latex/2412.19437/figures/dualpipe.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_fp8-128accumulatorv4",
-      "file": "tests/data/latex/2412.19437/figures/fp8-128accumulatorv4.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_fp8-frameworkv3",
-      "file": "tests/data/latex/2412.19437/figures/fp8-frameworkv3.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_fp8-v.s.-bf16",
-      "file": "tests/data/latex/2412.19437/figures/fp8-v.s.-bf16.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_needle_in_a_haystack",
-      "file": "tests/data/latex/2412.19437/figures/needle_in_a_haystack.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_nextn",
-      "file": "tests/data/latex/2412.19437/figures/nextn.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_overlap",
-      "file": "tests/data/latex/2412.19437/figures/overlap.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_relative_expert_load_multi",
-      "file": "tests/data/latex/2412.19437/figures/relative_expert_load_multi.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_relative_expert_load_multi_1-6",
-      "file": "tests/data/latex/2412.19437/figures/relative_expert_load_multi_1-6.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_relative_expert_load_multi_13-18",
-      "file": "tests/data/latex/2412.19437/figures/relative_expert_load_multi_13-18.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_relative_expert_load_multi_19-24",
-      "file": "tests/data/latex/2412.19437/figures/relative_expert_load_multi_19-24.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_relative_expert_load_multi_25-26",
-      "file": "tests/data/latex/2412.19437/figures/relative_expert_load_multi_25-26.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_relative_expert_load_multi_7-12",
-      "file": "tests/data/latex/2412.19437/figures/relative_expert_load_multi_7-12.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_DeepSeek",
-      "file": "tests/data/latex/2412.19437/logo/DeepSeek.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_138-bpt_scatter_examples_3x3",
-      "file": "tests/data/latex/2501.00089/138-bpt_scatter_examples_3x3.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_157-bpt_scatter_examples_3x3",
-      "file": "tests/data/latex/2501.00089/157-bpt_scatter_examples_3x3.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_17-bpt_scatter_examples_3x3",
-      "file": "tests/data/latex/2501.00089/17-bpt_scatter_examples_3x3.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_322-bpt_scatter_examples_3x3",
-      "file": "tests/data/latex/2501.00089/322-bpt_scatter_examples_3x3.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_SFNet_ResNet18-TopK",
-      "file": "tests/data/latex/2501.00089/SFNet_ResNet18-TopK.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_latex_equations",
-      "file": "tests/data/latex/2501.00089/equations.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_pca-comparison",
-      "file": "tests/data/latex/2501.00089/pca-comparison.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_BQSC-1003",
-      "file": "tests/data/latex/arXiv-2501.01300v2/BQSC-1003.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_D-BQSC-0004-1003",
-      "file": "tests/data/latex/arXiv-2501.01300v2/D-BQSC-0004-1003.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_P_B",
-      "file": "tests/data/latex/arXiv-2501.01300v2/P_B.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_P_M",
-      "file": "tests/data/latex/arXiv-2501.01300v2/P_M.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_P_q",
-      "file": "tests/data/latex/arXiv-2501.01300v2/P_q.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_m_q",
-      "file": "tests/data/latex/arXiv-2501.01300v2/m_q.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_2203.01017v2",
-      "file": "tests/data/pdf/2203.01017v2.pdf",
-      "ground_truth": "tests/data/groundtruth/docling_v2/2203.01017v2.md",
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_2206.01062",
-      "file": "tests/data/pdf/2206.01062.pdf",
-      "ground_truth": "tests/data/groundtruth/docling_v2/2206.01062.md",
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_2305.03393v1-pg9",
-      "file": "tests/data/pdf/2305.03393v1-pg9.pdf",
-      "ground_truth": "tests/data/groundtruth/docling_v2/2305.03393v1-pg9.md",
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_2305.03393v1",
-      "file": "tests/data/pdf/2305.03393v1.pdf",
-      "ground_truth": "tests/data/groundtruth/docling_v2/2305.03393v1.md",
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_amt_handbook_sample",
-      "file": "tests/data/pdf/amt_handbook_sample.pdf",
-      "ground_truth": "tests/data/groundtruth/docling_v2/amt_handbook_sample.md",
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_code_and_formula",
-      "file": "tests/data/pdf/code_and_formula.pdf",
-      "ground_truth": "tests/data/groundtruth/docling_v2/code_and_formula.md",
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_multi_page",
-      "file": "tests/data/pdf/multi_page.pdf",
-      "ground_truth": "tests/data/groundtruth/docling_v2/multi_page.md",
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_normal_4pages",
-      "file": "tests/data/pdf/normal_4pages.pdf",
-      "ground_truth": "tests/data/groundtruth/docling_v2/normal_4pages.md",
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_picture_classification",
-      "file": "tests/data/pdf/picture_classification.pdf",
-      "ground_truth": "tests/data/groundtruth/docling_v2/picture_classification.md",
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_redp5110_sampled",
-      "file": "tests/data/pdf/redp5110_sampled.pdf",
-      "ground_truth": "tests/data/groundtruth/docling_v2/redp5110_sampled.md",
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_right_to_left_01",
-      "file": "tests/data/pdf/right_to_left_01.pdf",
-      "ground_truth": "tests/data/groundtruth/docling_v2/right_to_left_01.md",
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_right_to_left_02",
-      "file": "tests/data/pdf/right_to_left_02.pdf",
-      "ground_truth": "tests/data/groundtruth/docling_v2/right_to_left_02.md",
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_right_to_left_03",
-      "file": "tests/data/pdf/right_to_left_03.pdf",
-      "ground_truth": "tests/data/groundtruth/docling_v2/right_to_left_03.md",
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_skipped_1page",
-      "file": "tests/data/pdf/skipped_1page.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_skipped_2pages",
-      "file": "tests/data/pdf/skipped_2pages.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_2206.01062_pg3",
-      "file": "tests/data/pdf_password/2206.01062_pg3.pdf",
-      "ground_truth": null,
-      "category": "pdf",
-      "format": "pdf",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_powerpoint_bad_text",
-      "file": "tests/data/pptx/powerpoint_bad_text.pptx",
-      "ground_truth": null,
-      "category": "pptx",
+      "id": "docling/powerpoint_bad_text.pptx",
+      "document": "tests/corpus/sources/docling/documents/pptx/powerpoint_bad_text.pptx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/powerpoint_bad_text.pptx.md",
       "format": "pptx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_powerpoint_issue_2663",
-      "file": "tests/data/pptx/powerpoint_issue_2663.pptx",
-      "ground_truth": null,
-      "category": "pptx",
+      "id": "docling/powerpoint_issue_2663.pptx",
+      "document": "tests/corpus/sources/docling/documents/pptx/powerpoint_issue_2663.pptx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/powerpoint_issue_2663.pptx.md",
       "format": "pptx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_powerpoint_malformed_pictures",
-      "file": "tests/data/pptx/powerpoint_malformed_pictures.pptx",
-      "ground_truth": null,
-      "category": "pptx",
+      "id": "docling/powerpoint_malformed_pictures.pptx",
+      "document": "tests/corpus/sources/docling/documents/pptx/powerpoint_malformed_pictures.pptx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/powerpoint_malformed_pictures.pptx.md",
       "format": "pptx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_powerpoint_sample",
-      "file": "tests/data/pptx/powerpoint_sample.pptx",
-      "ground_truth": null,
-      "category": "pptx",
+      "id": "docling/powerpoint_sample.pptx",
+      "document": "tests/corpus/sources/docling/documents/pptx/powerpoint_sample.pptx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/powerpoint_sample.pptx.md",
       "format": "pptx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_powerpoint_unrecognized_shape",
-      "file": "tests/data/pptx/powerpoint_unrecognized_shape.pptx",
-      "ground_truth": null,
-      "category": "pptx",
+      "id": "docling/powerpoint_unrecognized_shape.pptx",
+      "document": "tests/corpus/sources/docling/documents/pptx/powerpoint_unrecognized_shape.pptx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/powerpoint_unrecognized_shape.pptx.md",
       "format": "pptx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_powerpoint_with_image",
-      "file": "tests/data/pptx/powerpoint_with_image.pptx",
-      "ground_truth": null,
-      "category": "pptx",
+      "id": "docling/powerpoint_with_image.pptx",
+      "document": "tests/corpus/sources/docling/documents/pptx/powerpoint_with_image.pptx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/powerpoint_with_image.pptx.md",
       "format": "pptx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_2206.01062_tiff",
-      "file": "tests/data/tiff/2206.01062.tif",
-      "ground_truth": "tests/data/groundtruth/docling_v2/2206.01062.md",
-      "category": "image",
-      "format": "tif",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_ipa20110039701",
-      "file": "tests/data/uspto/ipa20110039701.xml",
-      "ground_truth": null,
-      "category": "xml",
-      "format": "xml",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_ipa20180000016",
-      "file": "tests/data/uspto/ipa20180000016.xml",
-      "ground_truth": "tests/data/groundtruth/docling_v2/ipa20180000016.md",
-      "category": "xml",
-      "format": "xml",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_ipa20200022300",
-      "file": "tests/data/uspto/ipa20200022300.xml",
-      "ground_truth": "tests/data/groundtruth/docling_v2/ipa20200022300.md",
-      "category": "xml",
-      "format": "xml",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_ipg07997973",
-      "file": "tests/data/uspto/ipg07997973.xml",
-      "ground_truth": null,
-      "category": "xml",
-      "format": "xml",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_ipg08672134",
-      "file": "tests/data/uspto/ipg08672134.xml",
-      "ground_truth": null,
-      "category": "xml",
-      "format": "xml",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_ipgD0701016",
-      "file": "tests/data/uspto/ipgD0701016.xml",
-      "ground_truth": null,
-      "category": "xml",
-      "format": "xml",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_pa20010031492",
-      "file": "tests/data/uspto/pa20010031492.xml",
-      "ground_truth": "tests/data/groundtruth/docling_v2/pa20010031492.md",
-      "category": "xml",
-      "format": "xml",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_pg06442728",
-      "file": "tests/data/uspto/pg06442728.xml",
-      "ground_truth": "tests/data/groundtruth/docling_v2/pg06442728.md",
-      "category": "xml",
-      "format": "xml",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_tables_ipa20180000016",
-      "file": "tests/data/uspto/tables_ipa20180000016.xml",
-      "ground_truth": null,
-      "category": "xml",
-      "format": "xml",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_webp-test",
-      "file": "tests/data/webp/webp-test.webp",
-      "ground_truth": null,
-      "category": "image",
-      "format": "webp",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
-    },
-    {
-      "id": "docling_webvtt_example_01",
-      "file": "tests/data/webvtt/webvtt_example_01.vtt",
-      "ground_truth": null,
-      "category": "webvtt",
+      "id": "docling/webvtt_example_01.vtt",
+      "document": "tests/corpus/sources/docling/documents/vtt/webvtt_example_01.vtt",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/webvtt_example_01.vtt.md",
       "format": "vtt",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_webvtt_example_02",
-      "file": "tests/data/webvtt/webvtt_example_02.vtt",
-      "ground_truth": null,
-      "category": "webvtt",
+      "id": "docling/webvtt_example_02.vtt",
+      "document": "tests/corpus/sources/docling/documents/vtt/webvtt_example_02.vtt",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/webvtt_example_02.vtt.md",
       "format": "vtt",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_webvtt_example_03",
-      "file": "tests/data/webvtt/webvtt_example_03.vtt",
-      "ground_truth": null,
-      "category": "webvtt",
+      "id": "docling/webvtt_example_03.vtt",
+      "document": "tests/corpus/sources/docling/documents/vtt/webvtt_example_03.vtt",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/webvtt_example_03.vtt.md",
       "format": "vtt",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_webvtt_example_04",
-      "file": "tests/data/webvtt/webvtt_example_04.vtt",
-      "ground_truth": null,
-      "category": "webvtt",
+      "id": "docling/webvtt_example_04.vtt",
+      "document": "tests/corpus/sources/docling/documents/vtt/webvtt_example_04.vtt",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/webvtt_example_04.vtt.md",
       "format": "vtt",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_grve_10q_htm",
-      "file": "tests/data/xbrl/grve_10q_htm.xml",
-      "ground_truth": null,
-      "category": "xml",
+      "id": "docling/grve_10q_htm.xml",
+      "document": "tests/corpus/sources/docling/documents/xml/grve_10q_htm.xml",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/grve_10q_htm.xml.md",
       "format": "xml",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_mlac-20251231",
-      "file": "tests/data/xbrl/mlac-20251231.xml",
-      "ground_truth": null,
-      "category": "xml",
+      "id": "docling/mlac-20251231.xml",
+      "document": "tests/corpus/sources/docling/documents/xml/mlac-20251231.xml",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/mlac-20251231.xml.md",
       "format": "xml",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_xlsx_01",
-      "file": "tests/data/xlsx/xlsx_01.xlsx",
-      "ground_truth": null,
-      "category": "xlsx",
+      "id": "docling/xlsx_01.xlsx",
+      "document": "tests/corpus/sources/docling/documents/xlsx/xlsx_01.xlsx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/xlsx_01.xlsx.md",
       "format": "xlsx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_xlsx_03_chartsheet",
-      "file": "tests/data/xlsx/xlsx_03_chartsheet.xlsx",
-      "ground_truth": null,
-      "category": "xlsx",
-      "format": "xlsx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "id": "docling/xlsx_02_sample_sales_data.xlsm",
+      "document": "tests/corpus/sources/docling/documents/xlsm/xlsx_02_sample_sales_data.xlsm",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/xlsx_02_sample_sales_data.xlsm.md",
+      "format": "xlsm",
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_xlsx_04_inflated",
-      "file": "tests/data/xlsx/xlsx_04_inflated.xlsx",
-      "ground_truth": null,
-      "category": "xlsx",
+      "id": "docling/xlsx_03_chartsheet.xlsx",
+      "document": "tests/corpus/sources/docling/documents/xlsx/xlsx_03_chartsheet.xlsx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/xlsx_03_chartsheet.xlsx.md",
       "format": "xlsx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_xlsx_05_table_with_title",
-      "file": "tests/data/xlsx/xlsx_05_table_with_title.xlsx",
-      "ground_truth": null,
-      "category": "xlsx",
+      "id": "docling/xlsx_04_inflated.xlsx",
+      "document": "tests/corpus/sources/docling/documents/xlsx/xlsx_04_inflated.xlsx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/xlsx_04_inflated.xlsx.md",
       "format": "xlsx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_xlsx_06_edge_cases_",
-      "file": "tests/data/xlsx/xlsx_06_edge_cases_.xlsx",
-      "ground_truth": null,
-      "category": "xlsx",
+      "id": "docling/xlsx_05_table_with_title.xlsx",
+      "document": "tests/corpus/sources/docling/documents/xlsx/xlsx_05_table_with_title.xlsx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/xlsx_05_table_with_title.xlsx.md",
       "format": "xlsx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_xlsx_07_gap_tolerance_",
-      "file": "tests/data/xlsx/xlsx_07_gap_tolerance_.xlsx",
-      "ground_truth": null,
-      "category": "xlsx",
+      "id": "docling/xlsx_06_edge_cases_.xlsx",
+      "document": "tests/corpus/sources/docling/documents/xlsx/xlsx_06_edge_cases_.xlsx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/xlsx_06_edge_cases_.xlsx.md",
       "format": "xlsx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
     },
     {
-      "id": "docling_xlsx_08_one_cell_anchor",
-      "file": "tests/data/xlsx/xlsx_08_one_cell_anchor.xlsx",
-      "ground_truth": null,
-      "category": "xlsx",
+      "id": "docling/xlsx_07_gap_tolerance_.xlsx",
+      "document": "tests/corpus/sources/docling/documents/xlsx/xlsx_07_gap_tolerance_.xlsx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/xlsx_07_gap_tolerance_.xlsx.md",
       "format": "xlsx",
-      "source": "docling-project/docling (MIT)",
-      "license": "MIT",
-      "expected_features": {}
+      "source": "docling-project/docling (MIT)"
+    },
+    {
+      "id": "docling/xlsx_08_one_cell_anchor.xlsx",
+      "document": "tests/corpus/sources/docling/documents/xlsx/xlsx_08_one_cell_anchor.xlsx",
+      "ground_truth": "tests/corpus/sources/docling/groundtruth/xlsx_08_one_cell_anchor.xlsx.md",
+      "format": "xlsx",
+      "source": "docling-project/docling (MIT)"
     }
-  ],
-  "categories": {
-    "pdf_digital/academic": "Clean digital PDFs from academic sources",
-    "pdf_digital/business": "Business documents: reports, contracts, invoices",
-    "pdf_digital/technical": "Technical manuals, datasheets, specifications",
-    "pdf_digital/multicolumn": "Multi-column newspaper/magazine style layouts",
-    "pdf_scanned/clean": "High quality scans, good OCR target",
-    "pdf_scanned/degraded": "Low quality scans, noise, skew",
-    "pdf_scanned/handwritten": "Handwritten notes and forms",
-    "office/docx": "Microsoft Word documents",
-    "office/pptx": "PowerPoint presentations",
-    "office/xlsx": "Excel spreadsheets",
-    "web/html": "HTML web pages",
-    "web/epub": "EPUB ebooks",
-    "data/csv": "CSV data files",
-    "data/json": "JSON documents",
-    "data/xml": "XML documents",
-    "audio/clean": "Clear speech audio for transcription",
-    "audio/noisy": "Noisy audio, accents, challenging transcription",
-    "edge_cases/encrypted": "Password-protected PDFs",
-    "edge_cases/multilingual": "Documents with mixed languages",
-    "edge_cases/tables_complex": "Complex tables with merged cells",
-    "edge_cases/math": "Mathematical equations and formulas",
-    "edge_cases/rtl": "Right-to-left text (Arabic, Hebrew)"
-  },
-  "scoring": {
-    "pass_threshold": 0.85,
-    "weights": {
-      "heading_recall": 0.3,
-      "table_accuracy": 0.25,
-      "content_completeness": 0.3,
-      "markdown_valid": 0.1,
-      "artifact_free": 0.05
-    }
-  },
-  "sources": {
-    "docling": {
-      "repo": "https://github.com/docling-project/docling",
-      "path": "tests/data",
-      "license": "MIT",
-      "ground_truth_format": "markdown (.md)",
-      "notes": "Official Docling test corpus \u2014 MIT licensed, ground truth included"
-    }
-  }
+  ]
 }

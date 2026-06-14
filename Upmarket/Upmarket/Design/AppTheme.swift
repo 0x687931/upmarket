@@ -13,6 +13,7 @@ enum AppTheme {
     }
 
     enum Radius {
+        static let xs: CGFloat = 4
         static let sm: CGFloat = 8
         static let md: CGFloat = 12
         static let lg: CGFloat = 16
@@ -67,10 +68,10 @@ enum AppTheme {
         static let separator = Color.primary.opacity(0.10)
         static let borderActive = Color.accentColor
 
-        static let success = Color(red: 0.204, green: 0.780, blue: 0.349) // systemGreen #34C759
-        static let warning = Color(red: 1.0, green: 0.584, blue: 0.0) // systemOrange #FF9500
-        static let error = Color(red: 1.0, green: 0.231, blue: 0.188) // systemRed #FF3B30
-        static let info = Color.accentColor
+        static let success = Color(red: 0.204, green: 0.780, blue: 0.349) // #34C759
+        static let warning = Color(red: 1.0,   green: 0.624, blue: 0.039) // #FF9F0A
+        static let error   = Color(red: 1.0,   green: 0.216, blue: 0.373) // #FF375F
+        static let info    = Color(red: 0.369, green: 0.361, blue: 0.902) // #5E5CE6
 
         static let iconBoxFill = Color.blue.opacity(0.12)
         static let iconGlyphTint = Color(red: 0.184, green: 0.498, blue: 1.0) // #2F7FFF — file-icon glyph

@@ -1,5 +1,6 @@
 import Foundation
 import OSLog
+import PDFKit
 
 struct ConversionRunner {
     typealias ProgressHandler = (ConversionProgress) -> Void
@@ -81,7 +82,7 @@ struct ConversionRunner {
     }
 
     func run(_ job: ConversionJob, progress: ProgressHandler? = nil) async -> ConversionResult {
-        let fileSizeBytes = await FileSizeReader.shared.readSize(job.sourceURL)
+        let fileSizeBytes = await FileSystemMetrics.shared.readFileSize(job.sourceURL)
         AppLog.conversion.info("Starting conversion correlationID=\(job.correlationID, privacy: .public) ext=\(job.ext, privacy: .public) bytes=\(fileSizeBytes, privacy: .public)")
         guard !Task.isCancelled else { return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.") }
 
@@ -248,7 +249,21 @@ struct ConversionRunner {
                     workspaceURL: workspaceURL, classifierEvidence: evidence,
                     secondary: .advanced(useAI: false), progress: progress
                 )
-            case .ai, .speech, .metadata:
+            case .ai:
+                // AI pathway: use advanced Docling with AI models if available
+                guard supportsAdvancedRuntime, supportsAI, modelsReady() else {
+                    // Fallback to basic PDF if AI/models unavailable
+                    return await runPDFKitConversion(
+                        fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
+                    )
+                }
+                return await runQualitySelectedPDFConversion(
+                    fileURL: tempURL, title: title, password: job.password,
+                    workspaceURL: workspaceURL, classifierEvidence: evidence,
+                    secondary: .advanced(useAI: true), progress: progress
+                )
+            case .speech, .metadata:
+                // Speech and metadata extraction use native APIs
                 return await runPDFKitConversion(
                     fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
                 )
@@ -333,20 +348,124 @@ struct ConversionRunner {
         let signpost = AppSignpost.conversion.beginInterval("nativeExtract")
         defer { AppSignpost.conversion.endInterval("nativeExtract", signpost) }
 
+        // Check if PDF needs chunking for structured extraction (page limit ~20-30)
+        if DocumentChunker.needsChunking(fileURL) {
+            AppLog.conversion.info("Large PDF detected; will process in chunks for structured extraction")
+            return await runChunkedVisionExtraction(fileURL: fileURL, title: title, password: password)
+        }
+
         do {
             let result = try await VisionDocumentExtractor.extract(pdfURL: fileURL, password: password)
+
+            // Check if significant handwriting detected and suggest AI routing
+            var metadata = DocumentMetadata.visionDocuments(
+                elementType: result.documentElementType
+            )
+            metadata = DocumentMetadata(
+                elementType: metadata.elementType,
+                language: metadata.language,
+                extractionMethod: "vision",
+                extractionConfidence: 0.85,
+                containsHandwriting: result.containsHandwriting,
+                handwritingRatio: result.handwritingRatio
+            )
+
+            // If significant handwriting detected and AI available, flag for potential re-routing
+            if result.containsHandwriting && supportsAI && modelsReady() {
+                AppLog.conversion.info("Significant handwriting detected; AI pathway may improve quality")
+            }
+
             return .success(ConversionOutput(
                 markdown: result.markdown,
                 pages: result.pageCount,
                 format: "PDF",
                 title: title,
                 pipeline: .fast,
-                selectedPathway: .visionOCR
+                selectedPathway: .visionOCR,
+                metadata: metadata,
+                originalTables: result.structuredTables
             ))
         } catch VisionDocumentExtractor.ExtractionError.passwordRequired {
             return .failure(ConversionError.passwordRequired.errorDescription ?? "This PDF is password-protected.")
         } catch {
             return await runPDFKitConversion(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
+        }
+    }
+
+    /// Process large PDFs by chunking into Vision-safe pieces.
+    private func runChunkedVisionExtraction(fileURL: URL, title: String, password: String?) async -> ConversionResult {
+        do {
+            let chunks = try DocumentChunker.chunk(pdfURL: fileURL, password: password)
+            let metadata = DocumentChunker.analyzeChunking(pageCount: chunks.last?.endPageIndex ?? 0)
+
+            AppLog.conversion.info("Processing large PDF in \(metadata.chunkCount, privacy: .public) chunk(s)")
+
+            var allMarkdowns: [String] = []
+            var allTables: [TableRepair.StructuredTable] = []
+            var totalPages = 0
+
+            for chunk in chunks {
+                if Task.isCancelled {
+                    return .failure(ConversionError.cancelled.errorDescription ?? "Conversion cancelled.")
+                }
+
+                // Extract chunk using Vision
+                let chunkMarkdown = try await extractChunk(chunk, password: password)
+                allMarkdowns.append(chunkMarkdown.markdown)
+                allTables.append(contentsOf: chunkMarkdown.tables)
+                totalPages += chunk.pageCount
+            }
+
+            let combined = allMarkdowns.joined(separator: "\n\n---\n\n")
+
+            return .success(ConversionOutput(
+                markdown: combined,
+                pages: totalPages,
+                format: "PDF",
+                title: title,
+                pipeline: .fast,
+                selectedPathway: .visionOCR,
+                metadata: DocumentMetadata(
+                    elementType: nil,
+                    language: nil,
+                    extractionMethod: "vision-chunked",
+                    extractionConfidence: 0.80
+                ),
+                originalTables: allTables
+            ))
+        } catch DocumentChunker.ChunkingError.passwordRequired {
+            return .failure(ConversionError.passwordRequired.errorDescription ?? "This PDF is password-protected.")
+        } catch {
+            AppLog.conversion.error("Chunk processing failed: \(error.localizedDescription, privacy: .private)")
+            // Fallback to basic extraction if chunking fails
+            return .failure("Unable to process this large document safely. Please try with a smaller file or use a simpler conversion mode.")
+        }
+    }
+
+    /// Extract a single chunk of a PDF.
+    private func extractChunk(_ chunk: DocumentChunker.Chunk, password: String?) async throws -> (markdown: String, tables: [TableRepair.StructuredTable]) {
+        // Create temporary PDF with just this chunk's pages
+        let tempPDF = PDFDocument()
+        for page in chunk.pages {
+            tempPDF.insert(page, at: tempPDF.pageCount)
+        }
+
+        // Save to temporary file
+        let tempDir = try AppWorkspace.create(prefix: "chunk")
+        defer { try? AppWorkspace.remove(tempDir) }
+
+        let tempURL = tempDir.appendingPathComponent("chunk.pdf")
+        guard tempPDF.write(to: tempURL) else {
+            throw ConversionError.failed("Could not save PDF chunk to temporary file")
+        }
+
+        // Extract using Vision on macOS 26+ or VisionOCR as fallback
+        if #available(macOS 26, *) {
+            let result = try await VisionDocumentExtractor.extract(pdfURL: tempURL, password: password)
+            return (markdown: result.markdown, tables: result.structuredTables)
+        } else {
+            let result = try await VisionOCR.recognise(pdfURL: tempURL, password: password)
+            return (markdown: result.text, tables: [])
         }
     }
 
@@ -386,7 +505,8 @@ struct ConversionRunner {
                 format: "PDF",
                 title: title,
                 pipeline: .fast,
-                selectedPathway: .pdfKit
+                selectedPathway: .pdfKit,
+                metadata: DocumentMetadata.pdfkit()
             ))
         } catch PDFConverter.ConversionError.passwordRequired {
             return .failure(ConversionError.passwordRequired.errorDescription ?? "This PDF is password-protected.")

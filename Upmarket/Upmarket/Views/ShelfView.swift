@@ -31,7 +31,10 @@ enum ShelfLayout {
     static let activeCardWidth: CGFloat = 96
     static let passiveCardWidth: CGFloat = 72
     static let cardHeight: CGFloat = 104
-    static let cardCornerRadius: CGFloat = 10
+    // Concentric corner scale, all `.continuous` to match the app-wide design system:
+    // panel (outer) > card (inner) > action button. See AppTheme.Radius.
+    static let panelCornerRadius: CGFloat = AppTheme.Radius.md   // 12 — outer shelf container
+    static let cardCornerRadius: CGFloat = AppTheme.Radius.sm    // 8 — nested file cards
     static let cardPaddingVertical: CGFloat = 10
     static let cardPaddingHorizontal: CGFloat = 8
 
@@ -47,7 +50,7 @@ enum ShelfLayout {
     // Action buttons
     static let actionButtonSize: CGFloat = 18
     static let actionButtonIconSize: CGFloat = 9
-    static let actionButtonCornerRadius: CGFloat = 4
+    static let actionButtonCornerRadius: CGFloat = AppTheme.Radius.xs  // 4 — innermost controls
 
     // Overflow stack
     static let overflowCardWidth: CGFloat = 56
@@ -162,9 +165,9 @@ struct ShelfView: View {
         }
         .frame(width: totalWidth, height: totalHeight)
         .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: ShelfLayout.panelCornerRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: ShelfLayout.panelCornerRadius, style: .continuous)
                 .stroke(Color.white.opacity(0.3), lineWidth: 0.5)
         )
         .shadow(
@@ -217,7 +220,7 @@ struct ShelfView: View {
             }
         }
         .frame(width: 56, height: 56)
-        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: ShelfLayout.panelCornerRadius, style: .continuous))
         .onTapGesture {
             withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
                 displayMode = hasQueueItems ? .queue : .peek
@@ -297,7 +300,8 @@ struct ShelfView: View {
             }
             return
         }
-        guard consumeConversionOrShowPaywall() else {
+        guard store.consumeTrialConversion() else {
+            PaywallWindowController.shared.show()
             if let cleanupDirectory {
                 try? FileManager.default.removeItem(at: cleanupDirectory)
             }
@@ -314,13 +318,6 @@ struct ShelfView: View {
         try? FileManager.default.removeItem(at: directory)
     }
 
-    private func consumeConversionOrShowPaywall() -> Bool {
-        guard store.consumeConversion() else {
-            PaywallWindowController.shared.show()
-            return false
-        }
-        return true
-    }
 
 }
 
@@ -452,7 +449,7 @@ struct PeekRow: View {
                     .frame(maxWidth: 96, alignment: .leading)
                 Text(job.stageLabel)
                     .font(.system(size: 11))
-                    .foregroundStyle(job.stage == .failed ? AppTheme.Colour.sectionRed : .secondary)
+                    .foregroundStyle(job.stage == .failed ? AppTheme.Status.failed : .secondary)
             }
         }
         .padding(.horizontal, ShelfLayout.panelHorizontalPadding)
@@ -461,9 +458,9 @@ struct PeekRow: View {
     private func statusColor(_ job: ConversionJob) -> Color {
         switch job.stage {
         case .complete:
-            return AppTheme.Colour.sectionGreen
+            return AppTheme.Status.complete
         case .failed:
-            return AppTheme.Colour.sectionRed
+            return AppTheme.Status.failed
         case .cancelled:
             return .secondary
         default:
@@ -519,9 +516,9 @@ struct ShelfCard: View {
             }
             .overlay(alignment: .bottomTrailing) {
                 if job.stage == .complete {
-                    StatusBadge(color: AppTheme.Colour.sectionGreen, icon: "checkmark")
+                    StatusBadge(color: AppTheme.Status.complete, icon: "checkmark")
                 } else if job.stage == .failed {
-                    StatusBadge(color: AppTheme.Colour.sectionRed, icon: "xmark")
+                    StatusBadge(color: AppTheme.Status.failed, icon: "xmark")
                 }
             }
 
@@ -553,17 +550,17 @@ struct ShelfCard: View {
         .padding(.horizontal, ShelfLayout.cardPaddingHorizontal)
         .frame(width: job.isRunning ? ShelfLayout.activeCardWidth : ShelfLayout.passiveCardWidth, height: ShelfLayout.cardHeight)
         .background(Color.white.opacity(0.5))
-        .clipShape(RoundedRectangle(cornerRadius: ShelfLayout.cardCornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: ShelfLayout.cardCornerRadius).stroke(AppTheme.Colour.separator, lineWidth: 0.5))
+        .clipShape(RoundedRectangle(cornerRadius: ShelfLayout.cardCornerRadius, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: ShelfLayout.cardCornerRadius, style: .continuous).stroke(AppTheme.Colour.separator, lineWidth: 0.5))
         .animation(.spring(response: 0.3, dampingFraction: 0.75), value: job.isRunning)
     }
 
     private func ringColor() -> Color {
         switch job.stage {
         case .failed:
-            return AppTheme.Colour.sectionRed
+            return AppTheme.Status.failed
         case .complete:
-            return AppTheme.Colour.sectionGreen
+            return AppTheme.Status.complete
         case .cancelled:
             return .secondary
         default:
@@ -635,10 +632,10 @@ struct ShelfActionButton: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: ShelfLayout.actionButtonIconSize))
-                .foregroundStyle(danger ? AppTheme.Colour.sectionRed : .secondary)
+                .foregroundStyle(danger ? AppTheme.Status.failed : .secondary)
                 .frame(width: ShelfLayout.actionButtonSize, height: ShelfLayout.actionButtonSize)
                 .background(Color.white.opacity(0.6))
-                .clipShape(RoundedRectangle(cornerRadius: ShelfLayout.actionButtonCornerRadius))
+                .clipShape(RoundedRectangle(cornerRadius: ShelfLayout.actionButtonCornerRadius, style: .continuous))
         }
         .buttonStyle(.plain)
         .help(label)
@@ -653,10 +650,10 @@ struct OverflowStack: View {
     var body: some View {
         ZStack {
             ForEach(0..<min(3, count), id: \.self) { i in
-                RoundedRectangle(cornerRadius: ShelfLayout.cardCornerRadius)
+                RoundedRectangle(cornerRadius: ShelfLayout.cardCornerRadius, style: .continuous)
                     .fill(Color.white.opacity(0.55))
                     .frame(width: 38, height: 48)
-                    .overlay(RoundedRectangle(cornerRadius: ShelfLayout.cardCornerRadius).stroke(AppTheme.Colour.separator, lineWidth: 0.5))
+                    .overlay(RoundedRectangle(cornerRadius: ShelfLayout.cardCornerRadius, style: .continuous).stroke(AppTheme.Colour.separator, lineWidth: 0.5))
                     .offset(x: CGFloat(i) * 3, y: CGFloat(-i) * 2)
             }
             Text("+\(count)")

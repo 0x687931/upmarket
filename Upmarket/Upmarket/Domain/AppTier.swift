@@ -5,11 +5,19 @@ import Foundation
 /// The user's license tier. Basic is the default — no purchase required.
 /// All feature gating derives from this type.
 enum AppTier: Int, Comparable, Equatable, Sendable {
-    case basic = 0  // default — native Apple API conversion, no purchase
-    case pro   = 1  // $9.99  — enhanced Docling conversion (layout + table OCR)
-    case max   = 2  // $14.99 — AI/VLM conversion (Granite Docling MLX)
+    case basic = 0  // A$4.99 — everyday documents (native + MarkItDown core)
+    case pro   = 1  // A$14.99 — spreadsheets, audio, complex PDF, batch, CLI/MCP
+    case max   = 2  // A$49.99 — AI/VLM reconstruction (Granite Docling MLX)
 
     static func < (lhs: AppTier, rhs: AppTier) -> Bool { lhs.rawValue < rhs.rawValue }
+
+    // StoreKit non-consumable product identifiers — the single source of truth.
+    // Store.storekit and App Store Connect must match (enforced by AppTierContractTests).
+    // There is no free tier product: the app is free to download with a 5-conversion
+    // trial (tracked in StoreManager), after which a tier must be purchased.
+    static let basicProductID = "com.upmarket.app.basic"
+    static let proProductID   = "com.upmarket.app.pro"
+    static let maxProductID   = "com.upmarket.app.max"
 
     var displayName: String {
         switch self {
@@ -21,18 +29,30 @@ enum AppTier: Int, Comparable, Equatable, Sendable {
 
     var price: String {
         switch self {
-        case .basic: return "Free"
-        case .pro:   return "$9.99"
-        case .max:   return "$14.99"
+        case .basic: return "A$4.99"
+        case .pro:   return "A$14.99"
+        case .max:   return "A$49.99"
         }
     }
 
-    /// StoreKit non-consumable product identifier. Nil for Basic (no purchase needed).
-    var productID: String? {
+    /// StoreKit non-consumable product identifier. Every tier is purchasable.
+    var productID: String {
         switch self {
-        case .basic: return nil
-        case .pro:   return "com.upmarket.app.pro"
-        case .max:   return "com.upmarket.app.max"
+        case .basic: return Self.basicProductID
+        case .pro:   return Self.proProductID
+        case .max:   return Self.maxProductID
+        }
+    }
+
+    /// Document-type → minimum tier (the upgrade-funnel contract). PDF is `basic` at the
+    /// format level; PDF *complexity* (scanned=basic, complex layout=pro, AI=max) is
+    /// layered on by ConversionCapability. Enforced by AppTierContractTests.
+    static func requiredTier(for format: ConversionFormat) -> AppTier {
+        switch format {
+        case .xlsx, .pptx, .epub, .mp3, .m4a, .wav, .aiff:
+            return .pro          // spreadsheets, presentations, ebooks, audio
+        default:
+            return .basic        // documents, images, digital/scanned PDF
         }
     }
 }

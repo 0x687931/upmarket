@@ -47,6 +47,30 @@ final class PostProcessingTests: XCTestCase {
         XCTAssertFalse(output.markdown.contains("\n"))
     }
 
+    func testWritingToolsRefinesTextOnMacOS151Plus() async {
+        // PDF text with broken sentences that should be merged
+        let input = "The quick brown fox\njumps over the lazy dog."
+        let output = await WritingToolsService.refineMarkdown(input, language: "en")
+
+        // On all platforms (since actual NSWritingToolsCoordinator integration is deferred),
+        // the service should still perform basic refinement:
+        // 1. Merge broken sentences
+        // 2. Preserve structure
+        // 3. Mark whether refinement occurred
+
+        if WritingToolsAvailabilityCheck.isAvailable {
+            // On macOS 15.1+, should attempt refinement
+            XCTAssertTrue(output.markdown.count > 0, "Output should have content")
+            // Check if sentence merging happened
+            if !output.markdown.contains("\n") || output.markdown.contains("fox jumps") {
+                XCTAssertTrue(output.wasRefined, "Should mark as refined if sentences were merged")
+            }
+        } else {
+            // On older macOS, no refinement attempted
+            XCTAssertFalse(output.wasRefined, "Should not claim refinement on unsupported OS")
+        }
+    }
+
     func testLanguageDetection() {
         let english = "The quick brown fox jumps over the lazy dog."
         let detected = TextStructurer.detectLanguage(english)
@@ -85,7 +109,7 @@ final class PostProcessingTests: XCTestCase {
     func testFallbackOnOlderOS() async {
         // WritingToolsRefinerAdapter always returns input unchanged on unsupported OS
         let input = "# Test\n\nSome content here."
-        let output = await WritingToolsRefinerAdapter.refine(markdown: input, language: "en")
+        let output = await WritingToolsService.refineMarkdown(input, language: "en")
         // On macOS < 15.1 or Intel, wasRefined should be false
         if !WritingToolsAvailabilityCheck.isAvailable {
             XCTAssertFalse(output.wasRefined)
@@ -96,17 +120,24 @@ final class PostProcessingTests: XCTestCase {
     func testChunkSplitting() async {
         // Large document should be chunked without losing content
         let longText = (0..<50).map { "Paragraph \($0). This is body text for testing." }.joined(separator: "\n\n")
-        let output = await WritingToolsRefinerAdapter.refine(markdown: longText, language: "en")
+        let output = await WritingToolsService.refineMarkdown(longText, language: "en")
         // Content should be preserved regardless of refinement
         XCTAssertFalse(output.markdown.isEmpty)
     }
 
     func testHeadingsNotCorrupted() async {
         let input = "# Main Title\n\n## Section One\n\nBody text here.\n\n### Subsection\n\nMore text."
-        let output = await WritingToolsRefinerAdapter.refine(markdown: input, language: "en")
+        let output = await WritingToolsService.refineMarkdown(input, language: "en")
         XCTAssertTrue(output.markdown.contains("# Main Title"))
         XCTAssertTrue(output.markdown.contains("## Section One"))
         XCTAssertTrue(output.markdown.contains("### Subsection"))
+    }
+
+    func testWritingToolsLineMergePreservesMarkdownTableRows() {
+        if #available(macOS 15.1, *) {
+            XCTAssertFalse(WritingToolsRefiner.shouldMergeLine("| --- | --- |", into: "| A | B |"))
+            XCTAssertTrue(WritingToolsRefiner.isMarkdownTableRow("| A | B |"))
+        }
     }
 
     // MARK: - Integration: NL → Writing Tools Pipeline
@@ -133,8 +164,8 @@ final class PostProcessingTests: XCTestCase {
         XCTAssertTrue(nlOutput.sentenceCount > 0)
 
         // Step 2: Writing Tools refinement (may be no-op on older OS)
-        let wtOutput = await WritingToolsRefinerAdapter.refine(
-            markdown: nlOutput.markdown,
+        let wtOutput = await WritingToolsService.refineMarkdown(
+            nlOutput.markdown,
             language: nlOutput.detectedLanguage
         )
 

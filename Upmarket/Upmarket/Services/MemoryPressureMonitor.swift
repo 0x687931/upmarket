@@ -27,6 +27,11 @@ final class MemoryPressureMonitor {
         self.source = source
     }
 
+    func stop() {
+        source?.cancel()
+        source = nil
+    }
+
     private func handle(_ event: DispatchSource.MemoryPressureEvent) {
         if event.contains(.critical) {
             AppLog.diagnostics.error("Critical memory pressure signal received")
