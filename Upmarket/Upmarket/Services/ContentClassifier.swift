@@ -101,9 +101,22 @@ enum ContentClassifier {
             )
         }
 
-        // Structured documents (DOCX, PPTX, XLSX, HTML, etc.) — Enhanced only
+        // HTML converts entirely in-process via the native walker — no Enhanced runtime,
+        // so it stays available in the Basic tier with nothing to download.
+        if format == .html {
+            return Classification(
+                kind: .structuredDocument,
+                requiredTier: .native,
+                hasExtractableText: true,
+                frameCount: 1,
+                pdfEvidence: nil,
+                recommendedPathway: .nativeHTML
+            )
+        }
+
+        // Structured documents (DOCX, PPTX, XLSX, etc.) — Enhanced only
         let structuredFormats: Set<ConversionFormat> = [
-            .docx, .pptx, .xlsx, .html, .md, .txt, .asciidoc, .epub,
+            .docx, .pptx, .xlsx, .md, .txt, .asciidoc, .epub,
             .csv, .json, .xml, .zip, .webvtt
         ]
         if let format, structuredFormats.contains(format) {

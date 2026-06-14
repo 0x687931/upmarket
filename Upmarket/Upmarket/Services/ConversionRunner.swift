@@ -214,7 +214,19 @@ struct ConversionRunner {
             return NativeMetadataExtractor.imageMetadata(url: tempURL, title: title)
 
         case .structuredDocument:
-            // DOCX/PPTX/HTML etc. — Enhanced pathway, PDFKit fallback
+            // HTML converts in-process; everything else is the Enhanced (Python) pathway.
+            let ext = job.sourceURL.pathExtension.lowercased()
+            if ext == "html" || ext == "htm" {
+                let native = runNativeHTMLConversion(fileURL: tempURL, title: title)
+                if case .success = native { return native }
+                // Native parse failed — fall back to Python only if the runtime is present,
+                // otherwise surface the native failure rather than a misleading capability error.
+                guard supportsAdvancedRuntime else { return native }
+                return await runPythonConversion(
+                    fileURL: tempURL, title: title, useAI: false,
+                    password: job.password, workspaceURL: workspaceURL, progress: progress
+                )
+            }
             guard supportsAdvancedRuntime else {
                 return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
             }
@@ -262,8 +274,9 @@ struct ConversionRunner {
                     workspaceURL: workspaceURL, classifierEvidence: evidence,
                     secondary: .advanced(useAI: true), progress: progress
                 )
-            case .speech, .metadata:
-                // Speech and metadata extraction use native APIs
+            case .speech, .metadata, .nativeHTML:
+                // Not reachable for digital documents (nativeHTML routes via .structuredDocument);
+                // PDFKit is the safe native default for any PDF/image that lands here.
                 return await runPDFKitConversion(
                     fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
                 )
@@ -530,6 +543,31 @@ struct ConversionRunner {
                 progress: nil
             )
         }
+    }
+
+    /// In-process HTML → Markdown conversion. No Python, no network, no download — runs in
+    /// the Basic tier. Returns `.failure` on unreadable/unparseable input so the caller can
+    /// fall back to the Enhanced runtime when it is available.
+    private func runNativeHTMLConversion(fileURL: URL, title: String) -> ConversionResult {
+        let signpost = AppSignpost.conversion.beginInterval("nativeExtract")
+        defer { AppSignpost.conversion.endInterval("nativeExtract", signpost) }
+
+        guard let data = try? Data(contentsOf: fileURL) else {
+            return .failure(ConversionError.inaccessible.errorDescription ?? "Upmarket couldn't access this file.")
+        }
+        guard let markdown = try? NativeHTMLConverter.convert(data: data),
+              !markdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return .failure(ConversionError.inaccessible.errorDescription ?? "Upmarket couldn't read this HTML file.")
+        }
+        return .success(ConversionOutput(
+            markdown: markdown,
+            pages: 1,
+            format: "HTML",
+            title: title,
+            pipeline: .fast,
+            selectedPathway: .nativeHTML,
+            metadata: DocumentMetadata.nativeHTML()
+        ))
     }
 
     enum PDFSecondaryCandidate {
