@@ -33,7 +33,6 @@ AI_ONLY_PACKAGES = {
     "mlx-vlm",
 }
 BASIC_ALLOWED_PACKAGES = {
-    "ocrmac",
     "pydantic",
     "pillow",
     "numpy",
