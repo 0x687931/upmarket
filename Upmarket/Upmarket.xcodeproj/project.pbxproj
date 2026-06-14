@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		81AAFF0A2FDF0512006AEB11 /* SwiftOfficeMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = 81AAFF092FDF0512006AEB11 /* SwiftOfficeMarkdown */; };
-		81E090C22FCB12E400FC901A /* Python.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 81E090C02FCB12E400FC901A /* Python.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		AA00000F00000000000000FA /* UpmarketQuickAction.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = AA000003000000000000003A /* UpmarketQuickAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		BB000001000000000000001B /* UpmarketRuntimeHelper in Embed Runtime Helper */ = {isa = PBXBuildFile; fileRef = BB000002000000000000002B /* UpmarketRuntimeHelper */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		BB000003000000000000003B /* PythonKit in Frameworks */ = {isa = PBXBuildFile; productRef = 81A3B75C2FCB1073004A488D /* PythonKit */; };
@@ -70,17 +69,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		81E090C32FCB12E400FC901A /* Embed Frameworks */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-				81E090C22FCB12E400FC901A /* Python.xcframework in Embed Frameworks */,
-			);
-			name = "Embed Frameworks";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		AA00000E00000000000000EA /* Embed App Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -289,8 +277,6 @@
 				81A3B7282FCB0F91004A488D /* Frameworks */,
 				81A3B7292FCB0F91004A488D /* Resources */,
 				CC000003000000000000003C /* Stamp Build Metadata */,
-				81E090C32FCB12E400FC901A /* Embed Frameworks */,
-				CC000001000000000000001C /* Sync Python Bridge */,
 				AA00000E00000000000000EA /* Embed App Extensions */,
 				BB000007000000000000007B /* Embed Runtime Helper */,
 				EE000017000000000000017E /* Embed Command Tools */,
@@ -550,34 +536,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		CC000001000000000000001C /* Sync Python Bridge */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"$(SRCROOT)/../scripts/ci/sync_and_verify_python_bridge.sh",
-				"$(SRCROOT)/../scripts/ci/sync_python_bridge.sh",
-				"$(SRCROOT)/../UpmarketPython/docling_bridge",
-				"$(SRCROOT)/../UpmarketPython/models",
-			);
-			name = "Sync Python Bridge";
-			outputPaths = (
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge",
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge/__init__.py",
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge/analyser.py",
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge/converter.py",
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge/postprocessor.py",
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge/security.py",
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/upmarket_models",
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/upmarket_models/__init__.py",
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/upmarket_models/model_manager.py",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "cd \"$SRCROOT/..\"\nSITE=\"$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH/Python.framework/Versions/3.12/lib/python3.12/site-packages\"\nscripts/ci/sync_and_verify_python_bridge.sh \"$SITE\"\n";
-		};
 		CC000002000000000000002C /* Validate App Package */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;

@@ -649,6 +649,15 @@ final class PythonBridgeTests: XCTestCase {
         guard FileManager.default.isExecutableFile(atPath: helper.path) else {
             throw XCTSkip("App-packaged runtime helper is not embedded in the test host")
         }
+        // The app no longer embeds a Python runtime — it ships native (Basic) and the
+        // Python runtime is a Pro download. Without a packaged framework the helper cannot
+        // import Python, so tests that need a *packaged* runtime skip here (they only run
+        // when a runtime is actually present, e.g. a staged dev framework or a download).
+        let packagedFramework = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Frameworks/Python.framework")
+        guard FileManager.default.fileExists(atPath: packagedFramework.path) else {
+            throw XCTSkip("App-packaged Python runtime is not present (Basic ships native; Python is a Pro download)")
+        }
         XCTAssertTrue(helper.path.contains(".app/Contents/MacOS/UpmarketRuntimeHelper"))
         XCTAssertFalse(helper.path.hasSuffix("/Build/Products/Debug/UpmarketRuntimeHelper"))
         return helper
