@@ -1,0 +1,1302 @@
+[
+  {
+    "id": "hf-idl-000000",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000000.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000001",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000001.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000002",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000002.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000003",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000003.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000004",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000004.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000005",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000005.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000006",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000006.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000007",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000007.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000008",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000008.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000009",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000009.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000010",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000010.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000011",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000011.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000012",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000012.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000013",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000013.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000014",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000014.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000015",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000015.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000016",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000016.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000017",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000017.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000018",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000018.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000019",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000019.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000020",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000020.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000021",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000021.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000022",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000022.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000023",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000023.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000024",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000024.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000025",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000025.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000026",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000026.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000027",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000027.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000028",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000028.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000029",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000029.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000030",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000030.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000031",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000031.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000032",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000032.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000033",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000033.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000034",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000034.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000035",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000035.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000036",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000036.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000037",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000037.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000038",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000038.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000039",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000039.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000040",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000040.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000041",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000041.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000042",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000042.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000043",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000043.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000044",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000044.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000045",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000045.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000046",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000046.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000047",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000047.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000048",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000048.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000049",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000049.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000050",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000050.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000051",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000051.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000052",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000052.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000053",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000053.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000054",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000054.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000055",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000055.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000056",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000056.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000057",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000057.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000058",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000058.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000059",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000059.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000060",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000060.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000061",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000061.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000062",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000062.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000063",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000063.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000064",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000064.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000065",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000065.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000066",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000066.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000067",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000067.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000068",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000068.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000069",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000069.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000070",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000070.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000071",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000071.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000072",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000072.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000073",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000073.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000074",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000074.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000075",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000075.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000076",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000076.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000077",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000077.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000078",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000078.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000079",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000079.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000080",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000080.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000081",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000081.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000082",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000082.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000083",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000083.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000084",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000084.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000085",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000085.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000086",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000086.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000087",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000087.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000088",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000088.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000089",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000089.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000090",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000090.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000091",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000091.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000092",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000092.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000093",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000093.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000094",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000094.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000095",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000095.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000096",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000096.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000097",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000097.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000098",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000098.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  },
+  {
+    "id": "hf-idl-000099",
+    "file": "tests/datasets/idl-wds-extracted/hf-idl-000099.tiff",
+    "ground_truth": null,
+    "category": "image",
+    "format": "TIFF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "scanned-or-unknown"
+  }
+]

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "description": "Pass/fail thresholds for HuggingFace dataset benchmarks. Run: python3 scripts/ci/bootstrap_hf_baseline.py",
+  "thresholds": {
+    "pdfa": {
+      "overall_percent": 80,
+      "char_error_rate_max": 0.05,
+      "heading_recall_percent": 70
+    },
+    "idl": {
+      "overall_percent": 65,
+      "artifact_penalty_max": 3
+    },
+    "docvqa": {
+      "qa_hit_rate": 0.60,
+      "exact_match": 0.40
+    }
+  }
+}

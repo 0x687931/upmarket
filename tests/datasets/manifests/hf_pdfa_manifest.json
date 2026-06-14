@@ -1,0 +1,1302 @@
+[
+  {
+    "id": "hf-pdfa-000000",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000000.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000000.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000001",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000001.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000001.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000002",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000002.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000002.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000003",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000003.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000003.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000004",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000004.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000004.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000005",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000005.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000005.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000006",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000006.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000006.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000007",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000007.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000007.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000008",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000008.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000008.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000009",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000009.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000009.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000010",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000010.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000010.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000011",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000011.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000011.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000012",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000012.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000012.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000013",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000013.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000013.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000014",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000014.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000014.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000015",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000015.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000015.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000016",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000016.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000016.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000017",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000017.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000017.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000018",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000018.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000018.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000019",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000019.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000019.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000020",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000020.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000020.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000021",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000021.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000021.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000022",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000022.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000022.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000023",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000023.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000023.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000024",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000024.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000024.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000025",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000025.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000025.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000026",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000026.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000026.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000027",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000027.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000027.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000028",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000028.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000028.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000029",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000029.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000029.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000030",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000030.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000030.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000031",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000031.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000031.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000032",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000032.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000032.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000033",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000033.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000033.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000034",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000034.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000034.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000035",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000035.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000035.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000036",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000036.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000036.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000037",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000037.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000037.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000038",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000038.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000038.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000039",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000039.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000039.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000040",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000040.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000040.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000041",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000041.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000041.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000042",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000042.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000042.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000043",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000043.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000043.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000044",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000044.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000044.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000045",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000045.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000045.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000046",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000046.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000046.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000047",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000047.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000047.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000048",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000048.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000048.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000049",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000049.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000049.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000050",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000050.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000050.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000051",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000051.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000051.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000052",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000052.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000052.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000053",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000053.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000053.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000054",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000054.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000054.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000055",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000055.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000055.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000056",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000056.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000056.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000057",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000057.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000057.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000058",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000058.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000058.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000059",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000059.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000059.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000060",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000060.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000060.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000061",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000061.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000061.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000062",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000062.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000062.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000063",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000063.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000063.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000064",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000064.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000064.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000065",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000065.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000065.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000066",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000066.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000066.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000067",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000067.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000067.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000068",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000068.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000068.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000069",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000069.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000069.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000070",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000070.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000070.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000071",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000071.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000071.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000072",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000072.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000072.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000073",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000073.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000073.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000074",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000074.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000074.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000075",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000075.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000075.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000076",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000076.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000076.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000077",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000077.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000077.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000078",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000078.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000078.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000079",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000079.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000079.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000080",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000080.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000080.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000081",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000081.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000081.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000082",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000082.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000082.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000083",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000083.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000083.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000084",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000084.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000084.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000085",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000085.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000085.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000086",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000086.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000086.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000087",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000087.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000087.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000088",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000088.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000088.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000089",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000089.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000089.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000090",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000090.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000090.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000091",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000091.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000091.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000092",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000092.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000092.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000093",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000093.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000093.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000094",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000094.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000094.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000095",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000095.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000095.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000096",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000096.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000096.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000097",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000097.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000097.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000098",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000098.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000098.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  },
+  {
+    "id": "hf-pdfa-000099",
+    "file": "tests/datasets/pdfa-wds-extracted/hf-pdfa-000099.pdf",
+    "ground_truth": "tests/datasets/pdfa-eng-wds-extracted/hf-pdfa-000099.expected.txt",
+    "category": "pdf",
+    "format": "PDF",
+    "expected_features": {
+      "headings": 0,
+      "tables": 0,
+      "estimated_words": 0
+    },
+    "bucket": "digital-complex"
+  }
+]
