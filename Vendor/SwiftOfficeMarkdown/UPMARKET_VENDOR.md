@@ -9,13 +9,20 @@ local Swift package (same pattern as `Vendor/PythonKit`).
 
 ## Why it's here
 
-A Python-free Office → Markdown engine used **inside the Enhanced (Pro) path**
-as a fallback: when the Docling/MarkItDown runtime path fails (e.g. a helper
-crash), `ConversionRunner` falls back to this engine so the user still gets
-Markdown for `.docx/.xlsx/.pptx` and legacy `.doc/.xls/.xlsb/.ppt`. It does
-**not** change tier gating — the tier contract (`AppTier.requiredTier(for:)`)
-still gates Office formats above Basic. Entry point:
+A Python-free Office → Markdown engine. It removes Python from the **Basic
+tier**: Word documents (`.docx`) are a Basic-tier format per the tier contract
+(`AppTier.requiredTier(for:)`), so `ConversionRunner` converts them **natively
+and in-process — no CPython runtime** — as the *primary* path at every tier
+(the schema-driven engine is high fidelity, so there's no reason to prefer
+Docling for `.docx`).
+
+Spreadsheets/presentations (`.xlsx/.pptx`) stay **Pro** per the same contract:
+they convert via the Enhanced (Docling) path with this engine as a Python-free
+fallback if the runtime path fails. Entry point:
 `OfficeToMarkdown.convert(fileURL:)`.
+
+Routing lives in `ConversionRunner.extract()` (`.structuredDocument`) and the
+tier floor in `ContentClassifier`.
 
 ## What was trimmed from upstream
 

@@ -174,9 +174,12 @@ final class ContentClassifierTests: XCTestCase {
 
         let classification = try XCTUnwrap(result)
         XCTAssertEqual(classification.kind, .structuredDocument,
-            "DOCX must classify as structured document → Enhanced pathway")
-        XCTAssertEqual(classification.requiredTier, .enhanced)
-        XCTAssertEqual(classification.recommendedPathway, .enhanced)
+            "DOCX must classify as a structured document")
+        // DOCX is a Basic-tier format (AppTier.requiredTier(for: .docx) == .basic) and has a
+        // native in-process engine, so it must route to the native capability — no Enhanced
+        // runtime — even when the runtime is available.
+        XCTAssertEqual(classification.requiredTier, .native)
+        XCTAssertEqual(classification.recommendedPathway, .nativeOffice)
     }
 
     func testHTMLClassifiedAsNativeRegardlessOfRuntime() async throws {

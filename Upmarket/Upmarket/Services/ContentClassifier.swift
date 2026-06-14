@@ -114,19 +114,27 @@ enum ContentClassifier {
             )
         }
 
-        // Structured documents (DOCX, PPTX, XLSX, etc.) — Enhanced only
+        // Structured documents (DOCX, PPTX, XLSX, etc.).
+        //
+        // `AppTier.requiredTier(for:)` is the floor: formats it places at Basic must
+        // convert without the Enhanced runtime. Where Upmarket has an in-process engine
+        // for such a format, it routes to the native capability (Basic, no Python);
+        // otherwise it needs the advanced runtime (e.g. XLSX/PPTX/EPUB are Pro, and ZIP/
+        // JSON/XML have no native engine yet, so they require Enhanced).
         let structuredFormats: Set<ConversionFormat> = [
             .docx, .pptx, .xlsx, .md, .txt, .asciidoc, .epub,
             .csv, .json, .xml, .zip, .webvtt
         ]
         if let format, structuredFormats.contains(format) {
+            let nativePathway = Self.nativeStructuredPathway(for: format)
+            let servedNatively = nativePathway != nil && AppTier.requiredTier(for: format) == .basic
             return Classification(
                 kind: .structuredDocument,
-                requiredTier: supportsAdvancedRuntime ? .enhanced : .native,
+                requiredTier: servedNatively ? .native : .enhanced,
                 hasExtractableText: true,
                 frameCount: 1,
                 pdfEvidence: nil,
-                recommendedPathway: .enhanced
+                recommendedPathway: servedNatively ? (nativePathway ?? .enhanced) : .enhanced
             )
         }
 
@@ -149,6 +157,20 @@ enum ContentClassifier {
 
         // Unknown format
         return nil
+    }
+
+    /// The in-process pathway for a structured format Upmarket can convert without the
+    /// advanced runtime, or `nil` if it has no native engine yet. HTML is handled by its
+    /// own earlier branch and is intentionally excluded here.
+    private static func nativeStructuredPathway(for format: ConversionFormat) -> ConversionPathway? {
+        switch format {
+        case .docx:
+            return .nativeOffice
+        case .txt, .md, .csv:
+            return .nativeText
+        default:
+            return nil
+        }
     }
 
     // MARK: - PDF classification
