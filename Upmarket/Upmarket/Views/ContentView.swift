@@ -406,32 +406,18 @@ struct FileRowView: View {
 
             Spacer()
 
-            // Primary action button (always visible) + secondary on hover
-            HStack(spacing: 6) {
-                // Primary action — always visible
-                switch job.stage {
-                case .complete:
-                    ActionButton(icon: "doc.on.doc", label: "Copy", action: copyOutput)
-                case .failed:
-                    ActionButton(icon: "arrow.clockwise", label: "Retry", action: retryJob)
-                default: // converting/queued
-                    ActionButton(icon: "stop.fill", label: "Stop", action: cancelJob, danger: true)
-                }
-
-                // Secondary actions — visible on hover only
+            // Right slot: resting status indicator ↔ hover action buttons.
+            // Same trailing slot — the 32pt file icon governs row height, so the
+            // 20pt indicator and 28pt buttons swap without resizing the row.
+            ZStack(alignment: .trailing) {
                 if hover {
-                    switch job.stage {
-                    case .complete:
-                        ActionButton(icon: "folder", label: "Reveal", action: revealInFinder)
-                        ActionButton(icon: "trash", label: "Delete", action: removeJob, danger: true)
-                    case .failed:
-                        ActionButton(icon: "trash", label: "Delete", action: removeJob, danger: true)
-                    default:
-                        EmptyView()
-                    }
+                    actionButtons
+                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                } else {
+                    statusIndicator
+                        .transition(.opacity)
                 }
             }
-            .transition(.opacity.combined(with: .scale(scale: 0.9)))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -467,8 +453,36 @@ struct FileRowView: View {
                     .foregroundStyle(.white)
             }
             .accessibilityLabel("Conversion failed")
+        case .cancelled:
+            ZStack {
+                Circle()
+                    .fill(Color.secondary)
+                    .frame(width: 20, height: 20)
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            .accessibilityLabel("Conversion cancelled")
         default:
             PulseRingView(size: 20, color: .accentColor)
+                .accessibilityLabel("Converting")
+        }
+    }
+
+    @ViewBuilder
+    private var actionButtons: some View {
+        HStack(spacing: 6) {
+            switch job.stage {
+            case .complete:
+                ActionButton(icon: "doc.on.doc", label: "Copy", action: copyOutput)
+                ActionButton(icon: "folder", label: "Reveal", action: revealInFinder)
+                ActionButton(icon: "trash", label: "Delete", action: removeJob, danger: true)
+            case .failed, .cancelled:
+                ActionButton(icon: "arrow.clockwise", label: "Retry", action: retryJob)
+                ActionButton(icon: "trash", label: "Delete", action: removeJob, danger: true)
+            default: // running/queued
+                ActionButton(icon: "stop.fill", label: "Stop", action: cancelJob, danger: true)
+            }
         }
     }
 
