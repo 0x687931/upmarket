@@ -179,6 +179,27 @@ final class ContentClassifierTests: XCTestCase {
         XCTAssertEqual(classification.recommendedPathway, .enhanced)
     }
 
+    func testHTMLClassifiedAsNativeRegardlessOfRuntime() async throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("classifier-\(UUID().uuidString).html")
+        try "<html><body><h1>Hi</h1><p>Body</p></body></html>".write(to: url, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        // HTML converts in-process: it must route native even when the advanced runtime is
+        // absent, so it stays available in the Basic tier with nothing to download.
+        for runtimeAvailable in [true, false] {
+            let result = await ContentClassifier.classify(
+                fileURL: url,
+                supportsAdvancedRuntime: runtimeAvailable,
+                supportsAI: false
+            )
+            let classification = try XCTUnwrap(result)
+            XCTAssertEqual(classification.requiredTier, .native,
+                "HTML must never require the Enhanced runtime (runtimeAvailable=\(runtimeAvailable))")
+            XCTAssertEqual(classification.recommendedPathway, .nativeHTML)
+        }
+    }
+
     // MARK: - Entitlement tier mapping
 
     func testScannedDocumentWithNoAISupportReturnsBasicTier() async throws {

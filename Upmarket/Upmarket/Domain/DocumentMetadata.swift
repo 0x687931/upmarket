@@ -77,6 +77,15 @@ struct DocumentMetadata: Codable, Equatable, Sendable {
         )
     }
 
+    /// Metadata for the in-process native HTML converter
+    static func nativeHTML(language: String? = nil) -> DocumentMetadata {
+        DocumentMetadata(
+            language: language,
+            extractionMethod: "native-html",
+            extractionConfidence: 0.9
+        )
+    }
+
     /// Metadata for Docling extraction
     static func docling(language: String? = nil) -> DocumentMetadata {
         DocumentMetadata(

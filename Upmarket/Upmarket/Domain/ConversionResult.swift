@@ -58,6 +58,7 @@ enum ConversionPathway: String, Codable, Equatable, Sendable {
     case metadata = "metadata"
     case enhanced = "enhanced"
     case ai = "ai"
+    case nativeHTML = "nativeHTML"
 
     var displayPipeline: Pipeline {
         switch self {
@@ -65,7 +66,7 @@ enum ConversionPathway: String, Codable, Equatable, Sendable {
             return .ai
         case .enhanced:
             return .enhanced
-        case .pdfKit, .visionOCR, .speech, .metadata:
+        case .pdfKit, .visionOCR, .speech, .metadata, .nativeHTML:
             return .fast
         }
     }
