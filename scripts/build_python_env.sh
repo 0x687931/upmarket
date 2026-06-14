@@ -92,6 +92,10 @@ echo "==> Removing magika (AI file-type detector) + onnxruntime; patching markit
 # extension — so remove it and stub markitdown's call. See markitdown#1234.
 rm -rf "$STAGING_SITE"/magika "$STAGING_SITE"/magika-*.dist-info
 rm -rf "$STAGING_SITE"/onnxruntime "$STAGING_SITE"/onnxruntime-*.dist-info
+# The magika wheel installs a 27MB compiled Mach-O CLI at bin/magika that survives the
+# package removal — pure dead weight, and an unsigned executable that would fail
+# notarization. Drop it plus onnxruntime's leftover console script.
+rm -f "$STAGING_SITE"/bin/magika "$STAGING_SITE"/bin/onnxruntime_test
 "$BUILD_VENV/bin/python" - "$STAGING_SITE/markitdown/_markitdown.py" <<'PYEOF'
 import sys, pathlib
 p = pathlib.Path(sys.argv[1])
