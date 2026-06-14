@@ -24,6 +24,14 @@ fallback if the runtime path fails. Entry point:
 Routing lives in `ConversionRunner.extract()` (`.structuredDocument`) and the
 tier floor in `ContentClassifier`.
 
+Because Basic is native, the app **no longer embeds a Python runtime** — the
+~104 MB `Python.framework` was removed from the Upmarket target's Frameworks/
+Embed phases (release app ~21 MB vs ~125 MB before). Pro/Max download a
+self-contained runtime via Background Assets. A re-embed guard in
+`scripts/ci/verify_release_app.sh` fails the runtime gate if it comes back. For
+local Pro testing, stage the source runtime with
+`scripts/dev/stage_python_runtime.sh`.
+
 ## What was trimmed from upstream
 
 To keep the app lean and avoid shipping non-runtime material, this vendored copy

@@ -1,7 +1,24 @@
 # Plan: remove the bundled Basic-tier Python runtime
 
-**Status:** planned (not started). **Owner:** Andrew + Claude. **Branch:** new, off
-`vendor-office-markdown` once that lands.
+**Status: DONE** on `vendor-office-markdown`. The embed was removed in Xcode (Frameworks +
+Sync Python Bridge phases), the release app is ~21 MB, and the supporting script/doc/test
+work below has landed. Remaining: run `gate.sh runtime` on a machine with the Python build
+toolchain (needs `build_python_env.sh`) to validate the reworked runtime gate end-to-end.
+
+## What landed
+- **Embed removed** (Xcode): `Python.xcframework` dropped from the Upmarket target's
+  Frameworks + Embed phases; the "Sync Python Bridge" build phase deleted.
+- **Re-embed guard:** `scripts/ci/verify_release_app.sh` now fails if the app contains
+  `Contents/Frameworks/Python.framework`, and its runtime checks target the source xcframework.
+- **Bridge sync+verify** restored as a `gate.sh runtime` step (`sync_and_verify_python_bridge.sh`).
+- **Dev staging:** `scripts/dev/stage_python_runtime.sh` symlinks the source runtime into the
+  helper's App Support path for local Pro testing (refuses to clobber a real download).
+- **Tests:** packaged-runtime `PythonBridgeTests` skip (not fail) when no runtime is embedded.
+- **Docs:** `Vendor/SwiftOfficeMarkdown/UPMARKET_VENDOR.md` updated.
+
+---
+
+_Original plan (for reference):_
 
 ## Why
 
