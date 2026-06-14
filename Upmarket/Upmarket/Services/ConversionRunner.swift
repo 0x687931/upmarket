@@ -1,6 +1,7 @@
 import Foundation
 import OSLog
 import PDFKit
+import SwiftOfficeMarkdown
 
 struct ConversionRunner {
     typealias ProgressHandler = (ConversionProgress) -> Void
@@ -227,6 +228,20 @@ struct ConversionRunner {
                     password: job.password, workspaceURL: workspaceURL, progress: progress
                 )
             }
+            if supportsAdvancedRuntime, Self.nativeOfficeExtensions.contains(ext) {
+                // Office stays on the Enhanced (Pro) path — the tier contract
+                // gates Office formats above Basic, so this branch is only
+                // reached once the capability gate has cleared the runtime.
+                // Prefer the richer Enhanced output; the native engine is a
+                // Python-free fallback when the runtime path fails (e.g. a
+                // helper crash), so the user still gets Markdown.
+                let enhanced = await runPythonConversion(
+                    fileURL: tempURL, title: title, useAI: false,
+                    password: job.password, workspaceURL: workspaceURL, progress: progress
+                )
+                if case .success = enhanced { return enhanced }
+                return runNativeOfficeConversion(fileURL: tempURL, title: title)
+            }
             guard supportsAdvancedRuntime else {
                 return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
             }
@@ -274,9 +289,9 @@ struct ConversionRunner {
                     workspaceURL: workspaceURL, classifierEvidence: evidence,
                     secondary: .advanced(useAI: true), progress: progress
                 )
-            case .speech, .metadata, .nativeHTML:
-                // Not reachable for digital documents (nativeHTML routes via .structuredDocument);
-                // PDFKit is the safe native default for any PDF/image that lands here.
+            case .speech, .metadata, .nativeHTML, .nativeOffice:
+                // Not reachable for digital documents (nativeHTML/nativeOffice route
+                // via .structuredDocument); PDFKit is the safe native default here.
                 return await runPDFKitConversion(
                     fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
                 )
@@ -567,6 +582,33 @@ struct ConversionRunner {
             pipeline: .fast,
             selectedPathway: .nativeHTML,
             metadata: DocumentMetadata.nativeHTML()
+        ))
+    }
+
+    /// Office documents (OOXML `.docx/.xlsx/.pptx` + variants, and legacy binary
+    /// `.doc/.xls/.xlsb/.ppt`) converted in-process — no Python runtime needed.
+    static let nativeOfficeExtensions: Set<String> = [
+        "docx", "docm", "dotx", "dotm",
+        "xlsx", "xlsm", "xltx", "xltm", "xlsb",
+        "pptx", "pptm", "potx", "potm", "ppsx", "ppsm",
+        "doc", "xls", "ppt",
+    ]
+
+    private func runNativeOfficeConversion(fileURL: URL, title: String) -> ConversionResult {
+        let signpost = AppSignpost.conversion.beginInterval("nativeExtract")
+        defer { AppSignpost.conversion.endInterval("nativeExtract", signpost) }
+
+        guard let markdown = try? OfficeToMarkdown.convert(fileURL: fileURL),
+              !markdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return .failure(ConversionError.inaccessible.errorDescription ?? "Upmarket couldn't read this document.")
+        }
+        return .success(ConversionOutput(
+            markdown: markdown,
+            pages: 0,
+            format: fileURL.pathExtension.uppercased(),
+            title: title,
+            pipeline: .fast,
+            selectedPathway: .nativeOffice
         ))
     }
 

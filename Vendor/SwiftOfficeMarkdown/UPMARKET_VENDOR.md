@@ -9,9 +9,13 @@ local Swift package (same pattern as `Vendor/PythonKit`).
 
 ## Why it's here
 
-Replaces the Python (markitdown) path for Office formats so the **basic tier
-converts `.docx/.xlsx/.pptx` and legacy `.doc/.xls/.xlsb/.ppt` natively** — no
-CPython runtime required. Entry point: `OfficeToMarkdown.convert(fileURL:)`.
+A Python-free Office → Markdown engine used **inside the Enhanced (Pro) path**
+as a fallback: when the Docling/MarkItDown runtime path fails (e.g. a helper
+crash), `ConversionRunner` falls back to this engine so the user still gets
+Markdown for `.docx/.xlsx/.pptx` and legacy `.doc/.xls/.xlsb/.ppt`. It does
+**not** change tier gating — the tier contract (`AppTier.requiredTier(for:)`)
+still gates Office formats above Basic. Entry point:
+`OfficeToMarkdown.convert(fileURL:)`.
 
 ## What was trimmed from upstream
 
