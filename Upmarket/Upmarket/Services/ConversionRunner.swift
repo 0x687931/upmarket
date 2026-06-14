@@ -395,7 +395,7 @@ struct ConversionRunner {
     /// Process large PDFs by chunking into Vision-safe pieces.
     private func runChunkedVisionExtraction(fileURL: URL, title: String, password: String?) async -> ConversionResult {
         do {
-            let chunks = try DocumentChunker.chunk(pdfURL: fileURL)
+            let chunks = try DocumentChunker.chunk(pdfURL: fileURL, password: password)
             let metadata = DocumentChunker.analyzeChunking(pageCount: chunks.last?.endPageIndex ?? 0)
 
             AppLog.conversion.info("Processing large PDF in \(metadata.chunkCount, privacy: .public) chunk(s)")
@@ -433,6 +433,8 @@ struct ConversionRunner {
                 ),
                 originalTables: allTables
             ))
+        } catch DocumentChunker.ChunkingError.passwordRequired {
+            return .failure(ConversionError.passwordRequired.errorDescription ?? "This PDF is password-protected.")
         } catch {
             AppLog.conversion.error("Chunk processing failed: \(error.localizedDescription, privacy: .private)")
             // Fallback to basic extraction if chunking fails

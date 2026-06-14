@@ -50,12 +50,13 @@ struct VisionOCR {
         var confidenceSum: Float = 0
         var confidenceCount = 0
         var handwritingSum: Float = 0
-        var handwritingCount = 0
+        var pageResults: [PageResult] = []
         var languageSet = Set<String>()
         for i in 0..<pageCount {
             try Task.checkCancellation()
             guard let page = document.page(at: i) else { continue }
             let pageResult = try await recognisePage(page: page, index: i)
+            pageResults.append(pageResult)
             let text = pageResult.text.trimmingCharacters(in: .whitespacesAndNewlines)
             if !text.isEmpty {
                 pageTexts.append(text)
@@ -64,16 +65,13 @@ struct VisionOCR {
                 confidenceSum += pageResult.confidence
                 confidenceCount += 1
             }
-            if pageResult.handwritingConfidence > 0 {
-                handwritingSum += pageResult.handwritingConfidence
-                handwritingCount += 1
-            }
+            handwritingSum += pageResult.handwritingConfidence
             languageSet.formUnion(extractLanguages(pageResult.observations))
         }
 
         let fullText = pageTexts.joined(separator: "\n\n---\n\n")
         let avgConfidence = confidenceCount == 0 ? 0 : confidenceSum / Float(confidenceCount)
-        let handwritingRatio = handwritingCount == 0 ? 0.0 : Double(handwritingSum) / Double(handwritingCount)
+        let handwritingRatio = handwritingRatio(from: pageResults, handwritingSum: handwritingSum)
         let containsSignificantHandwriting = handwritingRatio > 0.30
 
         return Result(
@@ -106,7 +104,7 @@ struct VisionOCR {
             averageConfidence: pageResult.confidence,
             isLikelyScanned: true,
             detectedLanguages: languages,
-            handwritingRatio: Double(pageResult.handwritingConfidence),
+            handwritingRatio: handwritingRatio(from: [pageResult], handwritingSum: pageResult.handwritingConfidence),
             containsSignificantHandwriting: pageResult.handwritingConfidence > 0.30
         )
     }
@@ -298,6 +296,11 @@ struct VisionOCR {
         return recognizer.languageHypotheses(withMaximum: 3)
             .filter { $0.value > 0.1 }
             .map { $0.key.rawValue }
+    }
+
+    static func handwritingRatio(from pageResults: [PageResult], handwritingSum: Float) -> Double {
+        guard !pageResults.isEmpty else { return 0.0 }
+        return Double(handwritingSum) / Double(pageResults.count)
     }
 
     // MARK: - Errors

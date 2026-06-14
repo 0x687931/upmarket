@@ -26,9 +26,19 @@ struct TableRepair {
         originalTables: [StructuredTable],
         outputMarkdown: String
     ) -> [StructuredTable] {
-        let tableCount = countMarkdownTables(in: outputMarkdown)
-        let missing = originalTables.dropFirst(tableCount)
-        return Array(missing)
+        var remainingOutputTables = extractMarkdownTableSignatures(from: outputMarkdown)
+        var missing: [StructuredTable] = []
+
+        for table in originalTables {
+            let signature = tableSignature(for: table)
+            if let index = remainingOutputTables.firstIndex(of: signature) {
+                remainingOutputTables.remove(at: index)
+            } else {
+                missing.append(table)
+            }
+        }
+
+        return missing
     }
 
     /// Repair markdown by inserting missing tables at appropriate positions.
@@ -96,6 +106,29 @@ struct TableRepair {
         return tables
     }
 
+    private static func extractMarkdownTableSignatures(from markdown: String) -> [String] {
+        extractMarkdownTables(from: markdown).map(normalizeMarkdownTable)
+    }
+
+    private static func tableSignature(for table: StructuredTable) -> String {
+        normalizeMarkdownTable(tableToMarkdown(table))
+    }
+
+    private static func normalizeMarkdownTable(_ markdown: String) -> String {
+        markdown
+            .components(separatedBy: .newlines)
+            .map { line in
+                line
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .replacingOccurrences(of: " | ", with: "|")
+                    .replacingOccurrences(of: "| ", with: "|")
+                    .replacingOccurrences(of: " |", with: "|")
+                    .lowercased()
+            }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n")
+    }
+
     /// Convert structured table to markdown format.
     static func tableToMarkdown(_ table: StructuredTable) -> String {
         var lines: [String] = []
@@ -114,28 +147,6 @@ struct TableRepair {
         }
 
         return lines.joined(separator: "\n")
-    }
-
-    /// Count markdown tables in text.
-    private static func countMarkdownTables(in markdown: String) -> Int {
-        let lines = markdown.components(separatedBy: .newlines)
-        var count = 0
-        var inTable = false
-
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-
-            if trimmed.hasPrefix("|") && trimmed.hasSuffix("|") {
-                if !inTable {
-                    count += 1
-                    inTable = true
-                }
-            } else if inTable {
-                inTable = false
-            }
-        }
-
-        return count
     }
 
     /// Validate table structure integrity.

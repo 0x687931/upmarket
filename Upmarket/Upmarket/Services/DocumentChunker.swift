@@ -10,6 +10,7 @@ struct DocumentChunker {
         case cannotOpenPDF
         case emptyPDF
         case invalidPageRange
+        case passwordRequired
 
         var errorDescription: String? {
             switch self {
@@ -19,6 +20,8 @@ struct DocumentChunker {
                 return "PDF has no pages."
             case .invalidPageRange:
                 return "Invalid page range for chunking."
+            case .passwordRequired:
+                return "This PDF is password-protected."
             }
         }
     }
@@ -63,10 +66,17 @@ struct DocumentChunker {
     /// - Throws: ChunkingError if PDF cannot be opened or is empty
     static func chunk(
         pdfURL: URL,
+        password: String? = nil,
         maxPages: Int = defaultChunkSize
     ) throws -> [Chunk] {
         guard let document = PDFDocument(url: pdfURL) else {
             throw ChunkingError.cannotOpenPDF
+        }
+
+        if document.isLocked {
+            guard let password, document.unlock(withPassword: password) else {
+                throw ChunkingError.passwordRequired
+            }
         }
 
         let pageCount = document.pageCount
