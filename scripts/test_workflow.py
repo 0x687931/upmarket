@@ -17,10 +17,10 @@ Usage:
 
 import argparse
 import json
-import subprocess
+import os
 import sys
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Optional
 
@@ -28,6 +28,12 @@ ROOT = Path(__file__).parent.parent
 CORPUS_TEST_DIR = ROOT / "tests" / "corpus_test"
 REPORTS_DIR = ROOT / "reports"
 REPORTS_DIR.mkdir(exist_ok=True)
+
+# Add UpmarketPython to path for direct Python conversion
+sys.path.insert(0, str(ROOT / "UpmarketPython"))
+
+# Configure security module to allow corpus directory for testing
+os.environ["UPMARKET_ALLOWED_INPUT_ROOTS"] = str(CORPUS_TEST_DIR)
 
 
 @dataclass
@@ -79,34 +85,27 @@ def test_document(doc_path: Path, corpus_name: str) -> WorkflowTestResult:
     )
 
     try:
-        # Convert via CLI
+        # Convert using docling_bridge
+        from docling_bridge.converter import convert
+
         start = time.time()
-        output_path = doc_path.parent / f"{doc_path.stem}_output.md"
-
-        cmd = [
-            "upmarket-cli", "convert",
-            str(doc_path),
-            "-o", str(output_path),
-            "--format", "markdown"
-        ]
-
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        output = convert(str(doc_path))
         result.extraction_time_seconds = time.time() - start
 
-        if proc.returncode != 0:
-            result.error_message = f"CLI failed: {proc.stderr}"
+        if output is None or not output.get("success", False):
+            result.error_message = output.get("error", "Conversion failed") if output else "No output generated"
             return result
 
-        if not output_path.exists():
-            result.error_message = "No output generated"
-            return result
+        # Extract markdown
+        markdown = output.get("markdown", "")
+        result.output_words = len(markdown.split()) if markdown else 0
 
-        # Parse output
-        markdown = output_path.read_text(encoding='utf-8', errors='ignore')
-        result.output_words = len(markdown.split())
-
-        # Analyze workflow features in output
-        # (In real implementation, we'd parse ConversionOutput JSON if available)
+        # Extract metadata if available
+        metadata = output.get("metadata", {})
+        if metadata:
+            result.metadata_extracted = True
+            result.extraction_method = metadata.get("extraction_method", "unknown")
+            result.language_detected = metadata.get("language", None)
 
         # Check for tables (preservation/repair)
         table_lines = [l for l in markdown.splitlines() if l.strip().startswith("|")]
@@ -118,18 +117,10 @@ def test_document(doc_path: Path, corpus_name: str) -> WorkflowTestResult:
         lists = sum(1 for l in markdown.splitlines() if l.strip().startswith("- "))
         result.structure_validation_passed = (headings > 0 or lists > 0 or result.tables_found > 0)
 
-        # Metadata tracking (would be in ConversionOutput in real impl)
-        result.metadata_extracted = True
-        result.extraction_method = "unknown"  # Would parse from ConversionOutput
-
         result.success = True
 
-        # Cleanup
-        if output_path.exists():
-            output_path.unlink()
-
-    except subprocess.TimeoutExpired:
-        result.error_message = "Conversion timeout (>5 min)"
+    except ImportError as e:
+        result.error_message = f"Import error: {str(e)}"
     except Exception as e:
         result.error_message = str(e)
 
