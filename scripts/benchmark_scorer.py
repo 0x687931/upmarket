@@ -95,9 +95,30 @@ class DocScore:
         return sum(score * weight for score, weight in w)
 
 
+def manifest_format(meta: dict) -> str:
+    """Grouping key for a manifest document.
+
+    The Document+GroundTruth corpus keys documents by `format`; older manifests
+    used `category`. Prefer `format`, fall back to `category` for compatibility.
+    """
+    return meta.get("format") or meta.get("category", "unknown")
+
+
+def resolve_corpus_path(corpus_dir: Path, rel: str) -> Path:
+    """Resolve a manifest path. Current manifests store repo-root-relative paths
+    (e.g. tests/corpus/sources/...); older ones were relative to the corpus dir."""
+    candidate = Path(rel)
+    if candidate.is_absolute():
+        return candidate
+    repo_relative = Path.cwd() / candidate
+    if repo_relative.exists():
+        return repo_relative
+    return corpus_dir / candidate
+
+
 def score_document(output_md: str, meta: dict, ground_truth_md: str | None = None) -> DocScore:
     doc_id = meta.get("id", "unknown")
-    category = meta.get("category", "unknown")
+    category = manifest_format(meta)
     score = DocScore(doc_id=doc_id, category=category)
 
     # If ground truth is available, use it as the source of truth
@@ -578,7 +599,7 @@ def run_benchmark(
             docs = [d for d in docs if d.get("format") in valid_formats]
 
     if category_filter:
-        docs = [d for d in docs if d.get("category", "").startswith(category_filter)]
+        docs = [d for d in docs if manifest_format(d).startswith(category_filter)]
     if bucket_filter:
         docs = [d for d in docs if d.get("bucket") == bucket_filter]
 
@@ -599,11 +620,10 @@ def run_benchmark(
 
     for doc_meta in docs:
         doc_id = doc_meta["id"]
-        category = doc_meta.get("category", "unknown")
-        # Try path relative to corpus_dir first, then relative to corpus_dir parent
-        file_path = corpus_dir / doc_meta["file"]
-        if not file_path.exists():
-            file_path = corpus_dir / "docling" / "docling" / doc_meta["file"]
+        category = manifest_format(doc_meta)
+        # Manifest stores the source under `document` (older manifests used `file`).
+        doc_rel = doc_meta.get("document") or doc_meta.get("file", "")
+        file_path = resolve_corpus_path(corpus_dir, doc_rel)
         if not file_path.exists():
             print(f"  SKIP {doc_id} — file not found")
             continue
@@ -614,9 +634,7 @@ def run_benchmark(
         ground_truth_md = None
         gt_key = doc_meta.get("ground_truth")
         if gt_key:
-            gt_path = corpus_dir / gt_key
-            if not gt_path.exists():
-                gt_path = corpus_dir / "docling" / "docling" / gt_key
+            gt_path = resolve_corpus_path(corpus_dir, gt_key)
             if gt_path.exists():
                 ground_truth_md = gt_path.read_text(encoding="utf-8", errors="replace")
 
@@ -649,7 +667,7 @@ def run_benchmark(
                     signal.alarm(0)
 
             score = score_document(markdown, doc_meta, ground_truth_md)
-            score.file = doc_meta.get("file", "")
+            score.file = doc_meta.get("document", doc_meta.get("file", ""))
             score.bucket = doc_meta.get("bucket")
             score.elapsed_runs_seconds = elapsed_runs
             score.elapsed_seconds = sum(elapsed_runs) / len(elapsed_runs)
@@ -658,7 +676,7 @@ def run_benchmark(
             status = "✓" if score.overall >= 0.8 else "⚠" if score.overall >= 0.6 else "✗"
             print(f"[{gt_indicator}] {status}  {score.overall*100:.0f}%  ({score.elapsed_seconds:.3f}s avg)")
         except TimeoutError as exc:
-            score = DocScore(doc_id=doc_id, category=category, file=doc_meta.get("file", ""), error=str(exc) or "Timed out")
+            score = DocScore(doc_id=doc_id, category=category, file=doc_meta.get("document", doc_meta.get("file", "")), error=str(exc) or "Timed out")
             score.bucket = doc_meta.get("bucket")
             scores.append(score)
             print(f"[  ] ✗  TIMEOUT ({score.error})")
@@ -668,7 +686,7 @@ def run_benchmark(
             score = DocScore(
                 doc_id=doc_id,
                 category=category,
-                file=doc_meta.get("file", ""),
+                file=doc_meta.get("document", doc_meta.get("file", "")),
                 error=None if expected_blocked else message,
                 expected_blocked=expected_blocked,
                 blocked_reason=reason,
