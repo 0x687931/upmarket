@@ -30,7 +30,10 @@ def validate_baseline(baseline: dict, manifest: dict) -> list[str]:
     if expected_count != len(docs):
         errors.append(f"baseline document_count={expected_count} but manifest has {len(docs)} document(s)")
 
-    actual_categories = Counter(doc.get("category", "unknown") for doc in docs)
+    # The manifest groups documents by `format` (asciidoc, docx, html, …); the baseline's
+    # corpus.categories mirrors that distribution. (Earlier manifests used a `category`
+    # field that no longer exists after the Document+GroundTruth corpus restructuring.)
+    actual_categories = Counter(doc.get("format", "unknown") for doc in docs)
     expected_categories = baseline.get("corpus", {}).get("categories", {})
     if dict(sorted(actual_categories.items())) != dict(sorted(expected_categories.items())):
         errors.append(f"baseline categories do not match manifest: expected={expected_categories} actual={dict(sorted(actual_categories.items()))}")

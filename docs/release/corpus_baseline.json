@@ -3,42 +3,34 @@
   "source": "docs/BENCHMARK_RESULTS.md",
   "corpus": {
     "manifest": "tests/corpus/manifest.json",
-    "document_count": 185,
+    "document_count": 106,
     "categories": {
       "asciidoc": 3,
-      "audio": 10,
       "csv": 9,
       "docx": 25,
+      "epub": 1,
       "html": 30,
-      "image": 15,
-      "pdf": 60,
+      "md": 13,
+      "nxml": 3,
       "pptx": 6,
-      "video": 4,
-      "webvtt": 4,
+      "tex": 2,
+      "vtt": 4,
+      "xlsm": 1,
       "xlsx": 7,
-      "xml": 12
+      "xml": 2
     }
   },
   "pipelines": {
     "fast": {
       "minimum_overall_percent": 76.3,
       "maximum_failed_documents": 15,
-      "maximum_category_failed_documents": {
-        "audio": 10,
-        "pdf": 1,
-        "video": 4
-      },
+      "maximum_category_failed_documents": {},
       "minimum_category_percent": {
         "asciidoc": 90,
-        "audio": 0,
         "csv": 86.7,
         "docx": 91.7,
         "html": 87.8,
-        "image": 61.3,
-        "pdf": 80.1,
         "pptx": 94.2,
-        "video": 0,
-        "webvtt": 95,
         "xlsx": 85.7,
         "xml": 72.1
       }
@@ -50,10 +42,7 @@
         "csv": 90,
         "docx": 93,
         "html": 87,
-        "image": 73,
-        "pdf": 84,
         "pptx": 84,
-        "webvtt": 95,
         "xlsx": 90,
         "xml": 90
       }
