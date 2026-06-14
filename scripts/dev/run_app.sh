@@ -121,8 +121,11 @@ sign_for_launch() {
   codesign_if_present "$APP_PATH/Contents/MacOS/Upmarket.debug.dylib"
   codesign_if_present "$APP_PATH/Contents/MacOS/__preview.dylib"
   codesign_if_present "$APP_PATH/Contents/MacOS/UpmarketRuntimeHelper" --entitlements "$entitlements_dir/Inherited.entitlements"
-  codesign_if_present "$APP_PATH/Contents/MacOS/upmarket-cli" --entitlements "$entitlements_dir/Tool.entitlements"
-  codesign_if_present "$APP_PATH/Contents/MacOS/upmarket-mcp" --entitlements "$entitlements_dir/Tool.entitlements"
+  # Sign each tool with its real project entitlements so the local launch matches the
+  # shipping build: the CLI is unsandboxed (reads arbitrary input paths, hands off to the
+  # app via the App Group container); the MCP is sandboxed with the App Group.
+  codesign_if_present "$APP_PATH/Contents/MacOS/upmarket-cli" --entitlements "$ROOT/Upmarket/UpmarketCLI/UpmarketCLI.entitlements"
+  codesign_if_present "$APP_PATH/Contents/MacOS/upmarket-mcp" --entitlements "$ROOT/Upmarket/UpmarketMCP/UpmarketMCP.entitlements"
   codesign_if_present "$APP_PATH/Contents/PlugIns/UpmarketQuickAction.appex" --deep --entitlements "$entitlements_dir/UpmarketQuickAction.entitlements"
 
   /usr/bin/codesign --force --sign - --entitlements "$entitlements_dir/Upmarket.entitlements" "$APP_PATH"

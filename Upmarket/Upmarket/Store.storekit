@@ -2,53 +2,37 @@
   "identifier" : "com.upmarket.app.storekit",
   "nonConsumableProducts" : [
     {
-      "displayPrice" : "4.99",
-      "familySharable" : false,
-      "internalID" : "com.upmarket.app.basic",
-      "localizations" : [
-        {
-          "description" : "Convert everyday documents — PDF, Word, PowerPoint, HTML — to clean Markdown. All processing happens on your Mac.",
-          "displayName" : "Upmarket",
-          "locale" : "en_US"
-        }
-      ],
-      "productID" : "com.upmarket.app.basic",
-      "referenceName" : "Basic",
-      "type" : "NonConsumable"
-    },
-    {
       "displayPrice" : "9.99",
       "familySharable" : false,
       "internalID" : "com.upmarket.app.pro",
       "localizations" : [
         {
-          "description" : "Everything in Upmarket, plus Upmarket AI for complex documents — scanned PDFs, dense layouts, figures, and research papers.",
-          "displayName" : "Upmarket + AI",
+          "description" : "Enhanced conversion with layout analysis and table extraction. Everything runs on your Mac.",
+          "displayName" : "Upmarket Pro",
           "locale" : "en_US"
         }
       ],
       "productID" : "com.upmarket.app.pro",
       "referenceName" : "Pro",
       "type" : "NonConsumable"
-    }
-  ],
-  "products" : [
+    },
     {
-      "displayPrice" : "0.99",
+      "displayPrice" : "14.99",
       "familySharable" : false,
-      "internalID" : "com.upmarket.app.doc_pack",
+      "internalID" : "com.upmarket.app.max",
       "localizations" : [
         {
-          "description" : "5 document conversions. Perfect if you convert occasionally.",
-          "displayName" : "5 Documents",
+          "description" : "AI-powered conversion for scanned pages and complex documents. Everything runs on your Mac.",
+          "displayName" : "Upmarket Max",
           "locale" : "en_US"
         }
       ],
-      "productID" : "com.upmarket.app.doc_pack",
-      "referenceName" : "Doc Pack",
-      "type" : "Consumable"
+      "productID" : "com.upmarket.app.max",
+      "referenceName" : "Max",
+      "type" : "NonConsumable"
     }
   ],
+  "products" : [],
   "subscriptionGroups" : [],
   "version" : {
     "major" : 3,

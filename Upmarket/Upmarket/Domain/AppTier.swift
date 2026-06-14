@@ -11,6 +11,12 @@ enum AppTier: Int, Comparable, Equatable, Sendable {
 
     static func < (lhs: AppTier, rhs: AppTier) -> Bool { lhs.rawValue < rhs.rawValue }
 
+    // StoreKit non-consumable product identifiers. These are the single source of
+    // truth — Store.storekit and App Store Connect must match (enforced by
+    // AppTierContractTests). Basic is free and has no product.
+    static let proProductID = "com.upmarket.app.pro"
+    static let maxProductID = "com.upmarket.app.max"
+
     var displayName: String {
         switch self {
         case .basic: return "Upmarket Basic"

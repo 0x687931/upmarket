@@ -38,31 +38,12 @@ struct ConvertDocumentIntent: AppIntent {
     )
     static var openAppWhenRun = false  // runs silently in background
 
+    // Note: IntentFile `supportedContentTypes` requires macOS 15; the deployment target
+    // is 13.3, so input types are enforced at perform time via validateReadableInput
+    // (→ SupportedInputPolicy.supports), the single source of truth.
     @Parameter(
         title: "Document",
-        description: "The file to convert",
-        supportedTypeIdentifiers: [
-            "com.adobe.pdf",
-            "public.html",
-            "public.plain-text",
-            "public.png",
-            "public.jpeg",
-            "com.compuserve.gif",
-            "public.tiff",
-            "org.openxmlformats.wordprocessingml.document",
-            "org.openxmlformats.presentationml.presentation",
-            "org.openxmlformats.spreadsheetml.sheet",
-            "org.idpf.epub-container",
-            "public.comma-separated-values-text",
-            "public.json",
-            "public.xml",
-            "public.zip-archive",
-            "public.mp3",
-            "com.apple.m4a-audio",
-            "com.microsoft.waveform-audio",
-            "public.aiff-audio",
-            "org.xiph.ogg-audio",
-        ]
+        description: "The file to convert"
     )
     var document: IntentFile
 
@@ -110,28 +91,7 @@ struct ConvertAndSaveIntent: AppIntent {
     )
     static var openAppWhenRun = false
 
-    @Parameter(title: "Document", supportedTypeIdentifiers: [
-        "com.adobe.pdf",
-        "public.html",
-        "public.plain-text",
-        "public.png",
-        "public.jpeg",
-        "com.compuserve.gif",
-        "public.tiff",
-        "org.openxmlformats.wordprocessingml.document",
-        "org.openxmlformats.presentationml.presentation",
-        "org.openxmlformats.spreadsheetml.sheet",
-        "org.idpf.epub-container",
-        "public.comma-separated-values-text",
-        "public.json",
-        "public.xml",
-        "public.zip-archive",
-        "public.mp3",
-        "com.apple.m4a-audio",
-        "com.microsoft.waveform-audio",
-        "public.aiff-audio",
-        "org.xiph.ogg-audio",
-    ])
+    @Parameter(title: "Document")
     var document: IntentFile
 
     @Parameter(title: "Use AI", default: false)

@@ -1,9 +1,14 @@
 import Darwin
 import Foundation
+import PDFKit
 
-private let appGroupID = "group.com.upmarket.app"
+// upmarket-cli — standalone document → Markdown converter. Runs the same Apple-native
+// engines as the app in-process (PDFKit / Vision via the shared VisionDocumentExtractor,
+// classification via the shared NativeDocumentClassifier) and shells the bundled
+// UpmarketRuntimeHelper for the Docling/Docling-AI paths. All routing/validation logic is
+// shared with the app via Upmarket/Shared/.
+
 private let maxInputBytes: Int64 = 500 * 1024 * 1024
-private let responseTimeout: TimeInterval = 2 * 60 * 60
 
 private enum ExitCode: Int32 {
     case success = 0
@@ -13,341 +18,578 @@ private enum ExitCode: Int32 {
     case aiUnavailable = 4
     case conversionFailed = 5
     case outputWriteFailed = 6
+
+    /// Failures that mean "this engine couldn't run" rather than "this input is bad" —
+    /// safe to retry with basic conversion. Input errors (password, unsupported) are not.
+    var allowsBasicFallback: Bool { self == .aiUnavailable || self == .conversionFailed }
+}
+
+/// What the user asked for. `auto` lets the Apple classifier pick.
+private enum Engine {
+    case auto       // --auto (default): classify the document, pick the best route
+    case native     // --basic / --native: in-process Apple (PDFKit / Vision)
+    case complex    // --pro   / --complex: Docling Enhanced (layout + tables)
+    case ai         // --max   / --ai:     Docling AI (Granite VLM)
+}
+
+/// The concrete engine actually executed for a document.
+private enum Pathway: String {
+    case pdfkit          = "native-pdfkit"
+    case vision          = "native-vision"
+    case text            = "native-text"
+    case doclingEnhanced = "docling"
+    case doclingAI       = "docling-ai"
 }
 
 private enum OutputFormat: String {
-    case markdown
-    case frontmatter
-    case json
+    case markdown, frontmatter, json
+    var fileExtension: String { self == .json ? "json" : "md" }
 }
+
+private let imageExtensions: Set<String> = ["png", "jpg", "jpeg", "gif", "tiff", "tif", "webp", "bmp", "heic", "heif"]
 
 private struct Options {
-    let inputURL: URL
-    let outputURL: URL
-    let useAI: Bool
+    let inputURLs: [URL]
+    let outputURL: URL?
+    let engine: Engine
     let outputFormat: OutputFormat
     let force: Bool
+    let debug: Bool
 }
 
-private struct CLIConversionRequest: Codable {
-    let version: Int
-    let inputFile: String
-    let sourceDisplayName: String
-    let useAI: Bool
-    let outputMode: String
-}
-
-private enum CLIConversionStatus: String, Codable {
-    case success
-    case inputRejected
-    case purchaseRequired
-    case aiUnavailable
-    case conversionFailed
-}
-
-private struct CLIConversionResponse: Codable {
-    let version: Int
-    let status: CLIConversionStatus
-    let message: String?
-    let output: String?
-    let outputFile: String?
-    let fileExtension: String?
-}
-
-private enum HandoffPaths {
-    static func rootURL(fileManager: FileManager = .default) -> URL? {
-        if let container = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
-            return container
-        }
-        return fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
-            .appendingPathComponent("Upmarket/AppGroupFallback", isDirectory: true)
-    }
-
-    static func handoffDirectory(id: String, root: URL) -> URL {
-        root
-            .appendingPathComponent("CLIHandoffs", isDirectory: true)
-            .appendingPathComponent(id, isDirectory: true)
-    }
-
-    static func mcpInputDirectory(root: URL) -> URL {
-        root
-            .appendingPathComponent("MCP", isDirectory: true)
-            .appendingPathComponent("Inputs", isDirectory: true)
-    }
-
-    static func mcpOutputDirectory(root: URL) -> URL {
-        root
-            .appendingPathComponent("MCP", isDirectory: true)
-            .appendingPathComponent("Outputs", isDirectory: true)
-    }
+private struct ConvertedDocument {
+    var markdown: String
+    let pages: Int
+    let format: String
+    let title: String
+    var pipeline: String
+    var tables: [TableRepair.StructuredTable] = []
 }
 
 @main
 private enum UpmarketCLI {
-    static func main() {
+    static func main() async {
         do {
             let options = try parse(arguments: Array(CommandLine.arguments.dropFirst()))
-            try run(options)
+            try await run(options)
             exit(ExitCode.success.rawValue)
         } catch let error as CommandError {
-            if !error.message.isEmpty {
-                fputs("\(error.message)\n", stderr)
-            }
+            if !error.message.isEmpty { fputs("\(error.message)\n", stderr) }
             exit(error.exitCode.rawValue)
         } catch {
-            fputs("Upmarket could not complete this conversion.\n", stderr)
+            fputs("Upmarket could not complete this conversion: \(error.localizedDescription)\n", stderr)
             exit(ExitCode.conversionFailed.rawValue)
         }
     }
 
-    private static func run(_ options: Options) throws {
-        guard let root = HandoffPaths.rootURL() else {
-            throw CommandError(.conversionFailed, "Upmarket could not create a conversion request.")
-        }
-        try validateInput(options.inputURL, authorizedRoot: HandoffPaths.mcpInputDirectory(root: root))
-        try validateOutputDestination(
-            options.outputURL,
-            force: options.force,
-            authorizedRoot: HandoffPaths.mcpOutputDirectory(root: root)
-        )
-
-        let id = UUID().uuidString
-        let directory = HandoffPaths.handoffDirectory(id: id, root: root)
-        let inputName = handoffInputName(for: options.inputURL)
-        let copiedInput = directory.appendingPathComponent(inputName, isDirectory: false)
-        let requestURL = directory.appendingPathComponent("request.json")
-        let responseURL = directory.appendingPathComponent("response.json")
-
-        do {
-            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            try FileManager.default.copyItem(at: options.inputURL, to: copiedInput)
-            let request = CLIConversionRequest(
-                version: 1,
-                inputFile: inputName,
-                sourceDisplayName: options.inputURL.lastPathComponent,
-                useAI: options.useAI,
-                outputMode: options.outputFormat.rawValue
-            )
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            try encoder.encode(request).write(to: requestURL, options: .atomic)
-        } catch {
-            try? FileManager.default.removeItem(at: directory)
-            throw CommandError(.inputRejected, "This file cannot be converted safely.")
-        }
-
-        try openApp(handoffID: id)
-        let response = try waitForResponse(at: responseURL)
-        defer { try? FileManager.default.removeItem(at: directory) }
-
-        switch response.status {
-        case .success:
-            guard let outputFile = response.outputFile,
-                  isSafeRelativeFileName(outputFile) else {
-                throw CommandError(.conversionFailed, "Upmarket returned an unreadable conversion result.")
-            }
-            let handoffOutputURL = directory.appendingPathComponent(outputFile, isDirectory: false)
-            try copyOutput(from: handoffOutputURL, to: options.outputURL, force: options.force)
-        case .inputRejected:
-            throw CommandError(.inputRejected, response.message ?? "This file cannot be converted safely.")
-        case .purchaseRequired:
-            throw CommandError(.purchaseRequired, response.message ?? "Open Upmarket to unlock more conversions.")
-        case .aiUnavailable:
-            throw CommandError(.aiUnavailable, response.message ?? "Upmarket AI is not available for this conversion.")
-        case .conversionFailed:
-            throw CommandError(.conversionFailed, response.message ?? "Upmarket could not convert this document.")
-        }
-    }
+    // MARK: - Argument parsing
 
     private static func parse(arguments: [String]) throws -> Options {
-        guard !arguments.isEmpty else {
-            printUsage()
-            throw CommandError(.usage, "")
-        }
-        if arguments == ["--help"] || arguments == ["-h"] {
-            printUsage()
-            throw CommandError(.success, "")
-        }
-        guard arguments.first == "convert" else {
-            printUsage()
-            throw CommandError(.usage, "Unknown command.")
-        }
+        guard !arguments.isEmpty else { printUsage(); throw CommandError(.usage, "") }
+        if isHelp(arguments) { printUsage(); throw CommandError(.success, "") }
 
-        var input: String?
+        var remaining = arguments
+        if remaining.first == "convert" { remaining.removeFirst() }
+
+        var inputs: [String] = []
         var output: String?
-        var useAI = false
+        var engine: Engine = .auto
         var force = false
+        var debug = false
         var format: OutputFormat = .markdown
 
-        var index = 1
-        while index < arguments.count {
-            let argument = arguments[index]
+        var index = 0
+        while index < remaining.count {
+            let argument = remaining[index]
             switch argument {
-            case "--ai":
-                useAI = true
-                index += 1
-            case "--force":
-                force = true
-                index += 1
+            case "-h", "--help": printUsage(); throw CommandError(.success, "")
+            case "--auto":                       engine = .auto;    index += 1
+            case "--basic", "--native":          engine = .native;  index += 1
+            case "--pro", "--complex":           engine = .complex; index += 1
+            case "--max", "--ai":                engine = .ai;      index += 1
+            case "--debug", "-v", "--verbose":   debug = true;      index += 1
+            case "--force":                      force = true;      index += 1
             case "-o", "--output":
-                guard index + 1 < arguments.count else {
-                    throw CommandError(.usage, "Missing output file.")
-                }
-                output = arguments[index + 1]
-                index += 2
+                guard index + 1 < remaining.count else { throw CommandError(.usage, "Missing output file.") }
+                output = remaining[index + 1]; index += 2
             case "--format":
-                guard index + 1 < arguments.count,
-                      let parsed = OutputFormat(rawValue: arguments[index + 1]) else {
+                guard index + 1 < remaining.count, let parsed = OutputFormat(rawValue: remaining[index + 1]) else {
                     throw CommandError(.usage, "Output format must be markdown, frontmatter, or json.")
                 }
-                format = parsed
-                index += 2
+                format = parsed; index += 2
             default:
-                guard !argument.hasPrefix("-"), input == nil else {
-                    throw CommandError(.usage, "Unknown option.")
-                }
-                input = argument
-                index += 1
+                guard !argument.hasPrefix("-") else { throw CommandError(.usage, "Unknown option: \(argument)") }
+                inputs.append(argument); index += 1
             }
         }
 
-        guard let input, let output else {
-            printUsage()
-            throw CommandError(.usage, "Input and output files are required.")
-        }
+        guard !inputs.isEmpty else { printUsage(); throw CommandError(.usage, "At least one input file is required.") }
+        if output != nil && inputs.count > 1 { throw CommandError(.usage, "--output can only be used with a single input file.") }
 
         return Options(
-            inputURL: URL(fileURLWithPath: input).standardizedFileURL,
-            outputURL: URL(fileURLWithPath: output).standardizedFileURL,
-            useAI: useAI,
+            inputURLs: inputs.map { URL(fileURLWithPath: $0).standardizedFileURL },
+            outputURL: output.map { URL(fileURLWithPath: $0).standardizedFileURL },
+            engine: engine,
             outputFormat: format,
-            force: force
+            force: force,
+            debug: debug
         )
     }
 
-    private static func validateInput(_ url: URL, authorizedRoot: URL) throws {
-        guard isDescendant(url, of: authorizedRoot),
-              SupportedInputPolicy.supports(url),
-              (try? url.checkResourceIsReachable()) == true,
-              let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isReadableKey, .fileSizeKey]),
-              values.isRegularFile != false,
-              values.isReadable != false,
-              let fileSize = values.fileSize,
-              Int64(fileSize) <= maxInputBytes else {
-            throw CommandError(.inputRejected, "This file cannot be converted safely.")
+    private static func isHelp(_ a: [String]) -> Bool {
+        a == ["--help"] || a == ["-h"] || a == ["convert", "--help"] || a == ["convert", "-h"]
+    }
+
+    // MARK: - Conversion driver
+
+    private static func run(_ options: Options) async throws {
+        for inputURL in options.inputURLs {
+            let outURL = outputURL(for: inputURL, explicit: options.outputURL, format: options.outputFormat)
+            try validateInput(inputURL)
+            try validateOutputDestination(outURL, force: options.force)
+
+            let pathway = try await resolvePathway(for: inputURL, engine: options.engine, debug: options.debug)
+            debugLog("file=\(inputURL.lastPathComponent) engine=\(pathway.rawValue)", options.debug)
+
+            let start = Date()
+            var document: ConvertedDocument
+            do {
+                document = try await execute(pathway: pathway, inputURL: inputURL, debug: options.debug)
+            } catch let error as CommandError
+                where (pathway == .doclingEnhanced || pathway == .doclingAI) && error.exitCode.allowsBasicFallback {
+                // Never stop a conversion just because a paid runtime is missing. If the
+                // Docling/AI runtime isn't installed (or the helper fails for a non-input
+                // reason), fall back to basic (native) conversion. This applies to explicit
+                // --pro/--max too. Genuine input errors (password, unsupported) are not
+                // caught here and still surface.
+                let tier = (pathway == .doclingAI) ? "AI" : "Enhanced"
+                guard let fallback = nativeFallback(for: inputURL) else {
+                    throw CommandError(error.exitCode,
+                        "\(tier) conversion isn't available (its runtime isn't installed) and this format has no basic conversion. Open Upmarket to download the \(tier) runtime.")
+                }
+                notice("\(tier) conversion isn't available (runtime not installed) — using basic conversion instead. Open Upmarket to enable \(tier) conversion.")
+                debugLog("fallback: \(pathway.rawValue) → \(fallback.rawValue) (\(error.message))", options.debug)
+                document = try await execute(pathway: fallback, inputURL: inputURL, debug: options.debug)
+            }
+            document = validateAndRepair(document, debug: options.debug)
+            debugLog("pages=\(document.pages) pipeline=\(document.pipeline) elapsed=\(String(format: "%.2fs", Date().timeIntervalSince(start)))", options.debug)
+
+            let rendered = render(document, sourceName: inputURL.lastPathComponent, mode: options.outputFormat)
+            try write(rendered, to: outURL, force: options.force)
         }
     }
 
-    private static func validateOutputDestination(_ url: URL, force: Bool, authorizedRoot: URL) throws {
-        guard isDescendant(url, of: authorizedRoot) else {
-            throw CommandError(.outputWriteFailed, "Output must be written to Upmarket MCP output storage.")
+    /// Picks the concrete engine. `--auto` runs the Apple classifier for PDFs and
+    /// uses format-based routing for everything else, mirroring the app.
+    private static func resolvePathway(for inputURL: URL, engine: Engine, debug: Bool) async throws -> Pathway {
+        let ext = inputURL.pathExtension.lowercased()
+        let isPDF = ext == "pdf"
+        let isImage = imageExtensions.contains(ext)
+        let isText = ext == "txt" || ext == "md"
+
+        switch engine {
+        case .ai:      return .doclingAI
+        case .complex: return .doclingEnhanced
+        case .native:
+            if isPDF { return .pdfkit }      // execute() falls back to Vision if no text
+            if isImage { return .vision }
+            if isText { return .text }
+            throw CommandError(.inputRejected, "--native/--basic can't convert .\(ext). Try --complex, --max, or --auto.")
+        case .auto:
+            if isPDF {
+                if let classification = try? await NativeDocumentClassifier.classify(pdfURL: inputURL) {
+                    debugLog("auto: classifier=\(classification.recommendedPathway.rawValue) reasons=[\(classification.reasons.joined(separator: ", "))]", debug)
+                    switch classification.recommendedPathway {
+                    case .pdfKit:    return .pdfkit
+                    case .visionOCR: return .vision
+                    case .enhanced:  return .doclingEnhanced
+                    }
+                }
+                debugLog("auto: classification unavailable → PDFKit", debug)
+                return .pdfkit
+            }
+            if isImage { return .vision }
+            if isText { return .text }
+            return .doclingEnhanced   // office / html / epub / csv → Docling
+        }
+    }
+
+    /// The in-process native route for a file, used as the `--auto` fallback when a
+    /// Docling/AI path is unavailable. Nil for formats only Docling can handle.
+    private static func nativeFallback(for inputURL: URL) -> Pathway? {
+        let ext = inputURL.pathExtension.lowercased()
+        if ext == "pdf" { return .pdfkit }
+        if imageExtensions.contains(ext) { return .vision }
+        if ext == "txt" || ext == "md" { return .text }
+        return nil
+    }
+
+    private static func execute(pathway: Pathway, inputURL: URL, debug: Bool) async throws -> ConvertedDocument {
+        switch pathway {
+        case .pdfkit:
+            if let native = nativePDFKit(inputURL) { return native }
+            debugLog("PDFKit found no extractable text → Vision OCR", debug)
+            return try await nativeVisionPDF(inputURL)
+        case .vision:
+            return inputURL.pathExtension.lowercased() == "pdf"
+                ? try await nativeVisionPDF(inputURL)
+                : try await nativeVisionImage(inputURL)
+        case .text:
+            return try nativeText(inputURL)
+        case .doclingEnhanced:
+            return try helperConvert(inputURL: inputURL, useAI: false)
+        case .doclingAI:
+            return try helperConvert(inputURL: inputURL, useAI: true)
+        }
+    }
+
+    // MARK: - Native engines (in-process)
+
+    /// Digital-PDF text via PDFKit. Returns nil for locked or text-less (scanned) PDFs
+    /// so the caller can fall back to Vision OCR.
+    private static func nativePDFKit(_ inputURL: URL) -> ConvertedDocument? {
+        guard let document = PDFDocument(url: inputURL), !document.isLocked else { return nil }
+        var pages: [String] = []
+        for index in 0..<document.pageCount {
+            if let text = document.page(at: index)?.string?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
+                pages.append(text)
+            }
+        }
+        let markdown = pages.joined(separator: "\n\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !markdown.isEmpty else { return nil }
+        return ConvertedDocument(markdown: markdown, pages: document.pageCount, format: "PDF",
+                                 title: inputURL.deletingPathExtension().lastPathComponent, pipeline: Pathway.pdfkit.rawValue)
+    }
+
+    private static func nativeVisionPDF(_ inputURL: URL) async throws -> ConvertedDocument {
+        let result = try await VisionDocumentExtractor.extract(pdfURL: inputURL)
+        return ConvertedDocument(markdown: result.markdown, pages: result.pageCount, format: "PDF",
+                                 title: inputURL.deletingPathExtension().lastPathComponent,
+                                 pipeline: Pathway.vision.rawValue, tables: result.structuredTables)
+    }
+
+    private static func nativeVisionImage(_ inputURL: URL) async throws -> ConvertedDocument {
+        let result = try await VisionDocumentExtractor.extract(imageURL: inputURL)
+        return ConvertedDocument(markdown: result.markdown, pages: result.pageCount,
+                                 format: inputURL.pathExtension.uppercased(),
+                                 title: inputURL.deletingPathExtension().lastPathComponent,
+                                 pipeline: Pathway.vision.rawValue, tables: result.structuredTables)
+    }
+
+    private static func nativeText(_ inputURL: URL) throws -> ConvertedDocument {
+        let contents = try String(contentsOf: inputURL, encoding: .utf8)
+        return ConvertedDocument(markdown: contents, pages: 1, format: inputURL.pathExtension.uppercased(),
+                                 title: inputURL.deletingPathExtension().lastPathComponent, pipeline: Pathway.text.rawValue)
+    }
+
+    // MARK: - Shared validation / repair
+
+    /// Repairs missing tables when structured table data is available (Vision), and emits
+    /// quality metrics under --debug — using the same validators the app runs.
+    private static func validateAndRepair(_ document: ConvertedDocument, debug: Bool) -> ConvertedDocument {
+        var result = document
+        if !document.tables.isEmpty {
+            let report = DocumentStructureValidator.validateAndRepair(
+                originalMarkdown: document.markdown,
+                convertedMarkdown: document.markdown,
+                originalTables: document.tables
+            )
+            if let repaired = report.reformattedMarkdown {
+                result.markdown = repaired
+                debugLog("structure repair applied (\(report.issues.count) issue(s))", debug)
+            }
+        }
+        if debug {
+            let validation = ConversionValidator.validate(
+                originalMarkdown: result.markdown,
+                convertedMarkdown: result.markdown,
+                tablesDetected: result.tables.count,
+                listsDetected: 0,
+                pagesProcessed: result.pages
+            )
+            debugLog("validation: words=\(validation.metrics.outputWordCount) chars=\(validation.metrics.outputCharCount) tables=\(validation.metrics.tablesDetected)", debug)
+            validation.warnings.forEach { debugLog("warning: \($0)", debug) }
+        }
+        return result
+    }
+
+    // MARK: - Runtime helper (Docling / Docling-AI)
+
+    private static func helperConvert(inputURL: URL, useAI: Bool) throws -> ConvertedDocument {
+        let workspaceURL = try makeWorkspace()
+        defer { try? FileManager.default.removeItem(at: workspaceURL) }
+
+        let request = RuntimeHelperRequest(
+            operation: "convert", filePath: inputURL.path,
+            title: inputURL.deletingPathExtension().lastPathComponent, useAI: useAI,
+            password: nil, workspacePath: workspaceURL.path, key: nil, progressFile: nil,
+            allowedInputRoots: [inputURL.deletingLastPathComponent().path]
+        )
+        let response = try runHelper(request)
+        guard response.success, let output = response.output else { throw mappedRuntimeError(response) }
+
+        let markdown: String
+        if let inline = output.markdown {
+            markdown = inline
+        } else if let markdownFile = output.markdownFile {
+            markdown = try String(contentsOf: URL(fileURLWithPath: markdownFile), encoding: .utf8)
+        } else {
+            throw CommandError(.conversionFailed, "Upmarket returned an unreadable conversion result.")
+        }
+        return ConvertedDocument(markdown: markdown, pages: output.pages, format: output.format,
+                                 title: output.title.isEmpty ? inputURL.deletingPathExtension().lastPathComponent : output.title,
+                                 pipeline: output.pipeline)
+    }
+
+    // MARK: - Input / output
+
+    private static func outputURL(for inputURL: URL, explicit: URL?, format: OutputFormat) -> URL {
+        explicit ?? inputURL.deletingPathExtension().appendingPathExtension(format.fileExtension)
+    }
+
+    private static func validateInput(_ url: URL) throws {
+        guard ToolFormatCapabilityMatrix.accepts(url) else {
+            throw CommandError(.inputRejected, "Unsupported input format: .\(url.pathExtension)")
+        }
+        guard (try? url.checkResourceIsReachable()) == true else {
+            throw CommandError(.inputRejected, "Input file does not exist or cannot be reached.")
+        }
+        let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isReadableKey, .fileSizeKey])
+        guard values.isRegularFile == true else { throw CommandError(.inputRejected, "Input must be a regular file.") }
+        guard values.isReadable != false else { throw CommandError(.inputRejected, "Input file is not readable.") }
+        guard let fileSize = values.fileSize, Int64(fileSize) <= maxInputBytes else {
+            throw CommandError(.inputRejected, "Input file is too large. Maximum size is 500 MB.")
+        }
+    }
+
+    private static func validateOutputDestination(_ url: URL, force: Bool) throws {
+        let directory = url.deletingLastPathComponent()
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: directory.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+            throw CommandError(.outputWriteFailed, "Output directory does not exist.")
+        }
+        guard FileManager.default.isWritableFile(atPath: directory.path) else {
+            throw CommandError(.outputWriteFailed, "Output directory is not writable.")
         }
         if FileManager.default.fileExists(atPath: url.path), !force {
             throw CommandError(.outputWriteFailed, "Output file already exists. Pass --force to replace it.")
         }
     }
 
-    private static func openApp(handoffID: String) throws {
+    private static func makeWorkspace() throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("upmarket-cli-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    private static func runHelper(_ request: RuntimeHelperRequest) throws -> RuntimeHelperResponse {
+        let helperURL = try runtimeHelperURL()
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        process.arguments = ["upmarket://convert?cli=\(handoffID)"]
+        process.executableURL = helperURL
+        let input = Pipe(), output = Pipe(), error = Pipe()
+        process.standardInput = input; process.standardOutput = output; process.standardError = error
+
         try process.run()
+        input.fileHandleForWriting.write(try JSONEncoder().encode(request))
+        input.fileHandleForWriting.closeFile()
+        let outputData = output.fileHandleForReading.readDataToEndOfFile()
+        let errorData = error.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
+
         guard process.terminationStatus == 0 else {
-            throw CommandError(.conversionFailed, "Upmarket could not be opened.")
+            let detail = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            throw CommandError(.conversionFailed, detail?.isEmpty == false ? detail! : "Upmarket runtime helper failed.")
         }
-    }
 
-    private static func waitForResponse(at url: URL) throws -> CLIConversionResponse {
         let decoder = JSONDecoder()
-        let deadline = Date().addingTimeInterval(responseTimeout)
-        while Date() < deadline {
-            if let data = try? Data(contentsOf: url) {
-                return try decoder.decode(CLIConversionResponse.self, from: data)
-            }
-            Thread.sleep(forTimeInterval: 0.2)
+        var finalResponse: RuntimeHelperResponse?
+        for line in String(data: outputData, encoding: .utf8)?.split(separator: "\n") ?? [] {
+            guard let data = line.data(using: .utf8) else { continue }
+            if (try? decoder.decode(RuntimeProgressEvent.self, from: data))?.event == "progress" { continue }
+            if let response = try? decoder.decode(RuntimeHelperResponse.self, from: data) { finalResponse = response }
         }
-        throw CommandError(.conversionFailed, "Upmarket did not finish the conversion.")
+        guard let finalResponse else { throw CommandError(.conversionFailed, "Upmarket runtime helper returned an unreadable response.") }
+        return finalResponse
     }
 
-    private static func copyOutput(from sourceURL: URL, to url: URL, force: Bool) throws {
+    private static func runtimeHelperURL() throws -> URL {
+        if let override = ProcessInfo.processInfo.environment["UPMARKET_RUNTIME_HELPER_PATH"], !override.isEmpty {
+            let url = URL(fileURLWithPath: override)
+            guard FileManager.default.isExecutableFile(atPath: url.path) else {
+                throw CommandError(.conversionFailed, "Upmarket runtime helper is not executable at \(url.path).")
+            }
+            return url
+        }
+        let executableDirectory = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().deletingLastPathComponent()
+        let helperURL = executableDirectory.appendingPathComponent("UpmarketRuntimeHelper")
+        guard FileManager.default.isExecutableFile(atPath: helperURL.path) else {
+            throw CommandError(.conversionFailed, "Upmarket runtime helper is missing next to upmarket-cli. The Docling/AI paths need the full app install.")
+        }
+        return helperURL
+    }
+
+    private static func mappedRuntimeError(_ response: RuntimeHelperResponse) -> CommandError {
+        let message = response.needsPassword ? "This PDF is password-protected." : (response.message ?? "Upmarket could not convert this document.")
+        switch response.code {
+        case "conversion.password": return CommandError(.inputRejected, "This PDF is password-protected.")
+        case "runtime.helper.runtime-unavailable": return CommandError(.aiUnavailable, message)
+        default: return CommandError(.conversionFailed, message)
+        }
+    }
+
+    // MARK: - Output formatting
+
+    private static func render(_ document: ConvertedDocument, sourceName: String, mode: OutputFormat) -> String {
+        switch mode {
+        case .markdown:    return document.markdown
+        case .frontmatter: return frontmatter(for: document, sourceName: sourceName) + "\n" + document.markdown
+        case .json:        return json(for: document, sourceName: sourceName)
+        }
+    }
+
+    private static func frontmatter(for document: ConvertedDocument, sourceName: String) -> String {
+        [
+            "---",
+            "title: \(yamlString(document.title))",
+            "source: \(yamlString(sourceName))",
+            "converted: \(yamlString(ISO8601DateFormatter().string(from: Date())))",
+            "format: \(yamlString(document.format))",
+            "pipeline: \(yamlString(document.pipeline))",
+            "pages: \(document.pages)",
+            "word_count: \(wordCount(document.markdown))",
+            "---", ""
+        ].joined(separator: "\n")
+    }
+
+    private static func json(for document: ConvertedDocument, sourceName: String) -> String {
+        struct Payload: Encodable { let title: String; let markdown: String; let metadata: Metadata }
+        struct Metadata: Encodable {
+            let source: String; let converted: String; let format: String
+            let pipeline: String; let pages: Int; let word_count: Int
+        }
+        let payload = Payload(
+            title: document.title, markdown: document.markdown,
+            metadata: Metadata(source: sourceName, converted: ISO8601DateFormatter().string(from: Date()),
+                               format: document.format, pipeline: document.pipeline, pages: document.pages,
+                               word_count: wordCount(document.markdown))
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        guard let data = try? encoder.encode(payload), let text = String(data: data, encoding: .utf8) else {
+            return #"{"title":"","markdown":"","metadata":{}}"#
+        }
+        return text
+    }
+
+    private static func wordCount(_ text: String) -> Int {
+        text.split { $0.isWhitespace }.filter { token in token.contains { $0.isLetter || $0.isNumber } }.count
+    }
+
+    private static func yamlString(_ value: String) -> String {
+        let escaped = value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\r", with: "\\r")
+        return "\"\(escaped)\""
+    }
+
+    private static func write(_ output: String, to url: URL, force: Bool) throws {
+        try validateOutputDestination(url, force: force)
         let directory = url.deletingLastPathComponent()
         let temporaryURL = directory.appendingPathComponent(".\(url.lastPathComponent).\(UUID().uuidString).tmp")
         do {
-            try FileManager.default.copyItem(at: sourceURL, to: temporaryURL)
+            try Data(output.utf8).write(to: temporaryURL, options: .atomic)
             if FileManager.default.fileExists(atPath: url.path) {
-                guard force else {
-                    throw CommandError(.outputWriteFailed, "Output file already exists. Pass --force to replace it.")
-                }
+                guard force else { throw CommandError(.outputWriteFailed, "Output file already exists. Pass --force to replace it.") }
                 _ = try FileManager.default.replaceItemAt(url, withItemAt: temporaryURL)
             } else {
                 try FileManager.default.moveItem(at: temporaryURL, to: url)
             }
         } catch let error as CommandError {
-            try? FileManager.default.removeItem(at: temporaryURL)
-            throw error
+            try? FileManager.default.removeItem(at: temporaryURL); throw error
         } catch {
             try? FileManager.default.removeItem(at: temporaryURL)
             throw CommandError(.outputWriteFailed, "Could not write output file.")
         }
     }
 
-    private static func isSafeRelativeFileName(_ value: String) -> Bool {
-        !value.isEmpty
-            && !value.contains("/")
-            && !value.contains("\\")
-            && value != "."
-            && value != ".."
+    private static func debugLog(_ message: String, _ enabled: Bool) {
+        guard enabled else { return }
+        fputs("[upmarket] \(message)\n", stderr)
+    }
+
+    /// Always-visible note to stderr (e.g. a tier fallback). Keeps stdout/output clean.
+    private static func notice(_ message: String) {
+        fputs("upmarket: \(message)\n", stderr)
     }
 
     private static func printUsage() {
         print("""
         Usage:
-          upmarket-cli convert input.pdf -o output.md [--ai] [--format markdown|frontmatter|json] [--force]
+          upmarket-cli <input...> [routing] [--format markdown|frontmatter|json] [--force] [--debug]
+          upmarket-cli -h | --help
+
+        Routing (choose at most one; default --auto):
+          --auto                  Let Upmarket inspect the document and pick the best route.
+          --basic, --native       In-process Apple conversion (PDFKit for text, Vision OCR for scans).
+          --pro, --complex        Enhanced conversion (layout + table extraction).
+          --max, --ai             AI conversion for scanned/complex documents.
+
+        If a requested Enhanced/AI runtime isn't installed, Upmarket falls back to basic
+        conversion (with a note) rather than failing — open the app to enable those tiers.
+
+        Options:
+          -o, --output <path>     Write output to this file (single input only).
+          --format <format>       Output format: markdown, frontmatter, or json.
+          --force                 Replace an existing output file.
+          --debug, -v             Print routing, timing, and validation details to stderr.
+          -h, --help              Show this help text.
+
+        Examples:
+          upmarket-cli report.pdf                 # writes report.md beside it
+          upmarket-cli *.pdf --pro
+          upmarket-cli scan.pdf --auto --debug
+          upmarket-cli notes.txt --format json
         """)
     }
-
-    private static func handoffInputName(for url: URL) -> String {
-        let fallbackExtension = url.pathExtension.isEmpty ? "dat" : url.pathExtension
-        let fallback = "input.\(fallbackExtension)"
-        let candidate = url.lastPathComponent
-        guard !candidate.isEmpty,
-              candidate != ".",
-              candidate != "..",
-              !candidate.contains("/"),
-              !candidate.contains("\\") else {
-            return fallback
-        }
-        return candidate
-    }
-
-    private static func isDescendant(_ url: URL, of directory: URL) -> Bool {
-        let resolvedURL = url.resolvingSymlinksInPath().standardizedFileURL
-        let resolvedDirectory = directory.resolvingSymlinksInPath().standardizedFileURL
-        let path = resolvedURL.path
-        let directoryPath = resolvedDirectory.path
-        return path == directoryPath || path.hasPrefix(directoryPath + "/")
-    }
 }
+
+// MARK: - Runtime helper wire types
+
+private struct RuntimeHelperRequest: Encodable {
+    let operation: String
+    let filePath: String?
+    let title: String?
+    let useAI: Bool?
+    let password: String?
+    let workspacePath: String?
+    let key: String?
+    let progressFile: String?
+    let allowedInputRoots: [String]?
+}
+
+private struct RuntimeHelperResponse: Decodable {
+    let success: Bool
+    let code: String?
+    let message: String?
+    let needsPassword: Bool
+    let output: RuntimeConversionOutput?
+}
+
+private struct RuntimeConversionOutput: Decodable {
+    let markdown: String?
+    let markdownFile: String?
+    let pages: Int
+    let format: String
+    let title: String
+    let pipeline: String
+}
+
+private struct RuntimeProgressEvent: Decodable { let event: String }
 
 private struct CommandError: Error {
     let exitCode: ExitCode
     let message: String
-
-    init(_ exitCode: ExitCode, _ message: String) {
-        self.exitCode = exitCode
-        self.message = message
-    }
-}
-
-private enum SupportedInputPolicy {
-    static let fileExtensions = [
-        "pdf", "html", "txt", "png", "jpg", "jpeg", "gif", "tiff",
-        "docx", "pptx", "xlsx", "epub", "csv", "json", "xml", "zip",
-        "mp3", "m4a", "wav", "aiff", "opus",
-    ]
-
-    static func supports(_ url: URL) -> Bool {
-        fileExtensions.contains(url.pathExtension.lowercased())
-    }
+    init(_ exitCode: ExitCode, _ message: String) { self.exitCode = exitCode; self.message = message }
 }

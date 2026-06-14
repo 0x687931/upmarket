@@ -130,7 +130,6 @@ require_entitlement_true() {
 require_entitlement_true "$APP_ENTITLEMENTS" "com.apple.security.app-sandbox" "app sandbox"
 require_entitlement_true "$HELPER_ENTITLEMENTS" "com.apple.security.app-sandbox" "runtime helper sandbox"
 require_entitlement_true "$HELPER_ENTITLEMENTS" "com.apple.security.inherit" "runtime helper sandbox inheritance"
-require_entitlement_true "$CLI_ENTITLEMENTS" "com.apple.security.app-sandbox" "command-line tool sandbox"
 require_entitlement_true "$MCP_ENTITLEMENTS" "com.apple.security.app-sandbox" "MCP server sandbox"
 
 require_entitlement_value() {
@@ -258,7 +257,10 @@ if [[ $# -gt 0 ]]; then
     require_entitlement_true "$HELPER_ENTITLEMENTS_DUMP" "com.apple.security.inherit" "signed helper sandbox inheritance"
   fi
   if require_signed_entitlements "$CLI_PATH" "$CLI_ENTITLEMENTS_DUMP" "command-line tool"; then
-    require_entitlement_true "$CLI_ENTITLEMENTS_DUMP" "com.apple.security.app-sandbox" "signed command-line tool sandbox"
+    if /usr/libexec/PlistBuddy -c "Print :com.apple.security.app-sandbox" "$CLI_ENTITLEMENTS_DUMP" >/dev/null 2>&1; then
+      echo "error: signed command-line tool must not be app-sandboxed"
+      exit 1
+    fi
   fi
   if require_signed_entitlements "$MCP_PATH" "$MCP_ENTITLEMENTS_DUMP" "MCP server"; then
     require_entitlement_true "$MCP_ENTITLEMENTS_DUMP" "com.apple.security.app-sandbox" "signed MCP server sandbox"

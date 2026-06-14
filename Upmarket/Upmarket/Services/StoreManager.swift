@@ -3,20 +3,27 @@ import StoreKit
 import Combine
 import OSLog
 
+/// The app's single StoreKit authority. Tier is derived entirely from verified
+/// non-consumable entitlements (Pro, Max); Basic is the default and needs no purchase.
+///
+/// This is the ONLY process that talks to StoreKit. The CLI and MCP surfaces get
+/// their tier by routing conversions through the in-app broker (see CLIConversionBroker)
+/// — they never read entitlements themselves, because StoreKit only resolves against
+/// this app bundle's receipt.
 final class StoreManager: ObservableObject {
 
     nonisolated static let shared = StoreManager()
 
-    // Product IDs — nonisolated so they're accessible from any actor context
-    nonisolated static let proID      = "com.upmarket.app.pro"
-    nonisolated static let maxID      = "com.upmarket.app.max"
-    nonisolated static let packID     = "com.upmarket.app.doc_pack"
+    // Product IDs — nonisolated so they're accessible from any actor context.
+    // Source of truth for these IDs is AppTier.productID; Store.storekit must match
+    // (enforced by AppTierContractTests).
+    nonisolated static let proID = AppTier.proProductID
+    nonisolated static let maxID = AppTier.maxProductID
 
     let objectWillChange = PassthroughSubject<Void, Never>()
 
-    private(set) var proProduct:   Product?
-    private(set) var maxProduct:   Product?
-    private(set) var packProduct:  Product?
+    private(set) var proProduct: Product?
+    private(set) var maxProduct: Product?
 
     private(set) var productsLoaded = false {
         willSet { objectWillChange.send() }
@@ -32,36 +39,15 @@ final class StoreManager: ObservableObject {
         willSet { objectWillChange.send() }
     }
 
-    // Beta access is granted only by verified non-consumable StoreKit entitlements.
-    private(set) var freeDocsRemaining: Int = 0 {
-        willSet { objectWillChange.send() }
-    }
-
-    // Purchased doc pack credits
-    private(set) var packCredits: Int = 0 {
-        willSet { objectWillChange.send() }
-    }
-
-    // How many packs the user has ever bought — drives nudge intensity
-    private(set) var packsEverPurchased: Int = 0 {
-        willSet { objectWillChange.send() }
-    }
-
-    private let accounting = StoreAccountingService()
-
     private var transactionListener: Task<Void, Error>?
 
     private init() {
         transactionListener = listenForTransactions()
         Task { await loadProducts() }
         Task { await refreshEntitlement() }
-        applyAccountingSnapshot(accounting.loadInitialState())
-
-        #if DEBUG
-        Task { @MainActor in
-            self.tier = .max
-        }
-        #endif
+        // No DEBUG tier override here: local builds start at Basic (the honest
+        // unpaid default). Use Preferences → Debug Tier Override (setDebugTier)
+        // to exercise Pro/Max locally. See StoreManagerTests.
     }
 
     deinit { transactionListener?.cancel() }
@@ -69,7 +55,8 @@ final class StoreManager: ObservableObject {
     // MARK: - Debug testing
 
     #if DEBUG
-    /// Override tier for UI testing (DEBUG only)
+    /// Override the tier locally to test paid/unpaid access without real purchases.
+    /// Drives the Preferences → Debug Tier Override buttons. DEBUG only.
     func setDebugTier(_ newTier: AppTier) {
         Task { @MainActor in
             self.tier = newTier
@@ -79,39 +66,13 @@ final class StoreManager: ObservableObject {
 
     // MARK: - Tier checks
 
-    /// Basic tier is always available — native conversion requires no purchase.
+    /// Every tier can convert — Basic does native Apple conversion for free.
+    /// Per-capability gating (Enhanced/AI) lives in AppTierGate, not here.
     var canConvert: Bool { true }
-
-    var upgradeNudge: UpgradeNudge { .none }
-
-    /// Human-readable nudge message
-    var nudgeMessage: String? {
-        let spent = String(format: "$%.2f", Double(packsEverPurchased) * 0.99)
-        switch upgradeNudge {
-        case .none: return nil
-        case .softNudge:
-            return "Running low — unlimited conversions for just $4.99."
-        case .strongNudge:
-            return "You've bought 2 packs — unlimited is better value at $4.99."
-        case .mathsNudge:
-            return "You've spent \(spent) on doc packs. Unlimited is $4.99 — just \(remainingToUnlimited(spent: Double(packsEverPurchased) * 0.99)) more."
-        }
-    }
-
-    // MARK: - Consuming docs
-
-    /// Basic tier has unlimited native conversion — always succeeds.
-    @discardableResult
-    func consumeConversion() -> Bool { true }
-
-    func shouldShowTrialPaywallAfterConversion() -> Bool { false }
 
     // MARK: - Purchasing
 
     func purchase(_ product: Product) async throws {
-        if product.id == Self.packID {
-            throw StoreError.unsupportedProduct
-        }
         if product.id == Self.maxID && !FeatureFlags.shared.aiAvailable {
             throw StoreError.unsupportedDevice
         }
@@ -119,11 +80,7 @@ final class StoreManager: ObservableObject {
         switch result {
         case .success(let verification):
             let transaction = try checkVerified(verification)
-            if transaction.productID == Self.packID {
-                try await recordPackTransaction(transaction)
-            } else {
-                await refreshEntitlement()
-            }
+            await refreshEntitlement()
             await transaction.finish()
         case .userCancelled, .pending: break
         @unknown default: break
@@ -154,14 +111,12 @@ final class StoreManager: ObservableObject {
         }
 
         do {
-            let productIDs = [Self.proID, Self.maxID]
-        let products = try await Product.products(for: productIDs)
+            let products = try await Product.products(for: [Self.proID, Self.maxID])
             await MainActor.run {
-                self.proProduct   = products.first { $0.id == Self.proID }
-                self.maxProduct   = products.first { $0.id == Self.maxID }
-                self.packProduct  = nil
+                self.proProduct = products.first { $0.id == Self.proID }
+                self.maxProduct = products.first { $0.id == Self.maxID }
                 self.productsLoaded = true
-                if self.proProduct == nil {
+                if self.proProduct == nil || self.maxProduct == nil {
                     self.productLoadError = "Some purchase options are unavailable. Check StoreKit configuration or App Store Connect product IDs."
                 }
             }
@@ -175,43 +130,29 @@ final class StoreManager: ObservableObject {
     }
 
     private func refreshEntitlement() async {
+        // Highest owned entitlement wins.
+        var resolved: AppTier = .basic
         for await result in Transaction.currentEntitlements {
             guard let transaction = try? checkVerified(result) else { continue }
             if transaction.productID == Self.maxID {
-                await MainActor.run { self.tier = .max }
-                return
+                resolved = .max
+                break
             }
-            if transaction.productID == Self.proID {
-                await MainActor.run { self.tier = .pro }
-                return
+            if transaction.productID == Self.proID, resolved < .pro {
+                resolved = .pro
             }
         }
-        await MainActor.run { self.tier = .basic }
-    }
-
-    private func remainingToUnlimited(spent: Double) -> String {
-        let remaining = max(0, 4.99 - spent)
-        return String(format: "$%.2f", remaining)
+        await MainActor.run { self.tier = resolved }
     }
 
     private func listenForTransactions() -> Task<Void, Error> {
         Task.detached {
             for await result in Transaction.updates {
-                guard let transaction = try? self.checkVerified(result) else { continue }
-                if transaction.productID == Self.packID {
-                    do {
-                        try await self.recordPackTransaction(transaction)
-                    } catch {
-                        await MainActor.run {
-                            self.productLoadError = "A document pack purchase could not be recorded. Keep Upmarket open and try Restore Purchases."
-                        }
-                        AppLog.storeKit.error("Failed to record pack transaction id=\(transaction.id, privacy: .public): \(error.localizedDescription, privacy: .private)")
-                        continue
-                    }
-                } else {
-                    await self.refreshEntitlement()
+                guard (try? self.checkVerified(result)) != nil else { continue }
+                await self.refreshEntitlement()
+                if case .verified(let transaction) = result {
+                    await transaction.finish()
                 }
-                await transaction.finish()
             }
         }
     }
@@ -222,35 +163,9 @@ final class StoreManager: ObservableObject {
         case .verified(let value): return value
         }
     }
-
-    private func recordPackTransaction(_ transaction: Transaction) async throws {
-        let snapshot = try accounting.recordPackTransaction(
-            transactionID: transaction.id,
-            isRevoked: transaction.revocationDate != nil,
-            freeDocsRemaining: freeDocsRemaining
-        )
-        await MainActor.run { self.applyAccountingSnapshot(snapshot) }
-    }
-
-    private func applyAccountingSnapshot(_ snapshot: StoreAccountingSnapshot) {
-        freeDocsRemaining = snapshot.freeDocsRemaining
-        packCredits = snapshot.packCredits
-        packsEverPurchased = snapshot.packsEverPurchased
-        if let userVisibleError = snapshot.userVisibleError {
-            productLoadError = userVisibleError
-        }
-    }
-}
-
-enum UpgradeNudge {
-    case none
-    case softNudge     // 1 pack bought, running low
-    case strongNudge   // 2 packs bought
-    case mathsNudge    // 3+ packs, show the maths
 }
 
 enum StoreError: Error {
     case failedVerification
     case unsupportedDevice
-    case unsupportedProduct
 }

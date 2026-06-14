@@ -8,23 +8,6 @@ private let maxBatchBytes: Int64 = 2 * 1024 * 1024 * 1024
 private let maxBatchFiles = 100
 private let quickActionStaleAge: TimeInterval = 24 * 60 * 60
 
-private enum SupportedInputPolicy {
-    static let fileExtensions = [
-        "pdf", "html", "txt", "png", "jpg", "jpeg", "gif", "tiff",
-        "docx", "pptx", "xlsx", "epub", "csv", "json", "xml", "zip",
-        "mp3", "m4a", "wav", "aiff", "opus",
-    ]
-
-    static var contentTypes: [UTType] {
-        fileExtensions.compactMap { UTType(filenameExtension: $0) }
-    }
-
-    static func supports(_ url: URL) -> Bool {
-        guard let ownType = UTType(filenameExtension: url.pathExtension) else { return false }
-        return contentTypes.contains { ownType.conforms(to: $0) }
-    }
-}
-
 private struct QuickActionHandoff: Encodable {
     let files: [String]
 }
@@ -142,7 +125,7 @@ class ActionViewController: NSViewController {
     }
 
     private func readableRegularFileSize(_ url: URL) -> Int64? {
-        guard SupportedInputPolicy.supports(url) else { return nil }
+        guard ToolFormatCapabilityMatrix.accepts(url) else { return nil }
         guard (try? url.checkResourceIsReachable()) == true else { return nil }
         guard let values = try? url.resourceValues(forKeys: [
             .isRegularFileKey,

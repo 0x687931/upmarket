@@ -11,6 +11,7 @@ struct RuntimeHelperRequest: Codable {
     let workspacePath: String?
     let key: String?
     let progressFile: String?
+    let allowedInputRoots: [String]?
 }
 
 struct RuntimeHelperResponse: Codable {
@@ -81,7 +82,7 @@ struct UpmarketRuntimeHelper {
         do {
             let data = FileHandle.standardInput.readDataToEndOfFile()
             let request = try JSONDecoder().decode(RuntimeHelperRequest.self, from: data)
-            configureRuntime(workspacePath: request.workspacePath)
+            configureRuntime(workspacePath: request.workspacePath, allowedInputRoots: request.allowedInputRoots)
             installPythonSandbox()
             let response = try handle(request)
             heartbeat.stop()
@@ -246,7 +247,8 @@ struct UpmarketRuntimeHelper {
             password: nil,
             workspacePath: nil,
             key: nil,
-            progressFile: nil
+            progressFile: nil,
+            allowedInputRoots: nil
         )
 
         let process = Process()
@@ -328,13 +330,25 @@ struct UpmarketRuntimeHelper {
         }
         // Fallback: bundled framework (development builds / CI only)
         let executableURL = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+        let siblingFramework = executableURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("Python.framework/Versions/3.12", isDirectory: true)
+        if FileManager.default.fileExists(atPath: siblingFramework.path) {
+            return siblingFramework
+        }
+        let debugAppFramework = executableURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("Upmarket.app/Contents/Frameworks/Python.framework/Versions/3.12", isDirectory: true)
+        if FileManager.default.fileExists(atPath: debugAppFramework.path) {
+            return debugAppFramework
+        }
         return executableURL
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .appendingPathComponent("Frameworks/Python.framework/Versions/3.12", isDirectory: true)
     }
 
-    private static func configureRuntime(workspacePath: String?) {
+    private static func configureRuntime(workspacePath: String?, allowedInputRoots: [String]?) {
         let frameworkRoot = resolveFrameworkRoot()
         let stdlibPath = frameworkRoot.appendingPathComponent("lib/python3.12", isDirectory: true)
         let sitePackagesPath = stdlibPath.appendingPathComponent("site-packages", isDirectory: true)
@@ -378,7 +392,10 @@ struct UpmarketRuntimeHelper {
 
         if let workspacePath {
             setenv("TMPDIR", workspacePath, 1)
-            setenv("UPMARKET_ALLOWED_INPUT_ROOTS", workspacePath, 1)
+            let roots = ([workspacePath] + (allowedInputRoots ?? []))
+                .filter { !$0.isEmpty }
+                .joined(separator: ":")
+            setenv("UPMARKET_ALLOWED_INPUT_ROOTS", roots, 1)
         }
     }
 

@@ -20,10 +20,6 @@
         <string>group.com.upmarket.app</string>
     </array>
 
-    <!-- Background Assets: receive AI-model downloads scheduled by UpmarketBAExtension -->
-    <key>com.apple.developer.background-assets</key>
-    <true/>
-
     <!-- CloudKit: public feature availability flags only -->
     <key>com.apple.developer.icloud-container-identifiers</key>
     <array>

@@ -181,16 +181,13 @@ struct ContentView: View {
         HStack(spacing: 8) {
             switch store.tier {
             case .basic:
-                let freeLeft = store.freeDocsRemaining
-                Image(systemName: freeLeft > 0 ? "gift" : "lock")
+                Image(systemName: "wand.and.stars")
                     .font(.system(size: 13))
-                    .foregroundStyle(freeLeft > 0 ? Color.accentColor : AppTheme.Status.failed)
-                Text(freeLeft > 0
-                    ? "\(freeLeft) free conversion\(freeLeft == 1 ? "" : "s") remaining"
-                    : "Free trial ended — unlock to keep converting")
+                    .foregroundStyle(Color.accentColor)
+                Text("Upmarket Basic — Standard conversion")
                     .font(.system(size: 12, weight: .medium))
                 Spacer()
-                Button(freeLeft > 0 ? "See Plans" : "Unlock") {
+                Button("See Plans") {
                     PaywallWindowController.shared.show()
                 }
                 .buttonStyle(.bordered)
@@ -214,7 +211,7 @@ struct ContentView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 7)
         .background(store.tier == .basic
-            ? (store.freeDocsRemaining > 0 ? Color.accentColor.opacity(0.06) : AppTheme.Status.failed.opacity(0.06))
+            ? Color.accentColor.opacity(0.05)
             : (store.tier == .pro ? Color.accentColor.opacity(0.04) : AppTheme.Colour.sectionAmber.opacity(0.04)))
         Divider()
     }
@@ -344,10 +341,6 @@ struct ContentView: View {
             let message = FileAccessService.userVisibleMessage(for: error)
             AppLog.fileAccess.error("Rejected input before conversion: \(message, privacy: .private)")
             _ = conversion.addRejected(url, message: message)
-            return
-        }
-        guard store.consumeConversion() else {
-            PaywallWindowController.shared.show()
             return
         }
         pendingFileURL = url

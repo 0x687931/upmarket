@@ -74,22 +74,26 @@ final class StorageAccessTests: XCTestCase {
     }
 
     func testQuickActionSupportedInputAdapterMatchesAppPolicy() throws {
+        // The Quick Action must derive accepted inputs from the single source of truth
+        // (ToolFormatCapabilityMatrix) rather than a hand-maintained list that can drift.
         let quickActionSource = try String(contentsOf: quickActionSourceURL(), encoding: .utf8)
-        let expectedExtensions = ["pdf", "html", "txt", "png", "jpg", "jpeg", "gif", "tiff", "docx", "pptx", "xlsx", "epub", "csv", "json", "xml", "zip", "mp3", "m4a", "wav", "aiff", "opus"]
-
-        for fileExtension in expectedExtensions {
-            XCTAssertTrue(quickActionSource.contains("\"\(fileExtension)\""), "Quick Action policy is missing \(fileExtension)")
-            XCTAssertTrue(SupportedInputPolicy.supports(URL(fileURLWithPath: "/tmp/input.\(fileExtension)")), "App policy is missing \(fileExtension)")
-        }
+        XCTAssertTrue(
+            quickActionSource.contains("ToolFormatCapabilityMatrix.accepts("),
+            "Quick Action must gate inputs through ToolFormatCapabilityMatrix, the input-policy source of truth"
+        )
         XCTAssertFalse(quickActionSource.contains("?? .data"))
     }
 
     func testAppIntentSupportedTypeAdapterMatchesAppPolicy() throws {
+        // IntentFile.supportedContentTypes requires macOS 15 (target is 13.3), so the App
+        // Intent enforces the policy at perform time via validateReadableInput, which routes
+        // through SupportedInputPolicy.supports — the single source of truth. This guards
+        // against an Intent that converts without first applying the input policy.
         let intentsSource = try String(contentsOf: intentsSourceURL(), encoding: .utf8)
-
-        for identifier in SupportedInputPolicy.typeIdentifiers {
-            XCTAssertTrue(intentsSource.contains("\"\(identifier)\""), "App Intent policy is missing \(identifier)")
-        }
+        XCTAssertTrue(
+            intentsSource.contains("validateReadableInput"),
+            "App Intent must enforce the input policy at perform time via validateReadableInput"
+        )
     }
 
     func testStorageKindClassifiesAppleCloudAndProviderPaths() {
