@@ -37,6 +37,11 @@ BASIC_ALLOWED_PACKAGES = {
     "pydantic",
     "pillow",
     "numpy",
+    # Tier-1 (zero-download) Basic conversion — see converter.py / requirements-basic.txt
+    "markitdown",
+    "mammoth",
+    "lxml",
+    "pypdfium2",
 }
 
 

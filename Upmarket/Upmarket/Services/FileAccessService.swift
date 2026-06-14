@@ -193,6 +193,12 @@ final class FileAccessService {
         }
     }
 
+    func copyText(_ text: String) {
+        Task {
+            await FileWriteService.shared.copyMarkdown(text)
+        }
+    }
+
     nonisolated static func userVisibleMessage(for error: Error) -> String {
         if let fileError = error as? FileAccessError,
            let message = fileError.errorDescription {

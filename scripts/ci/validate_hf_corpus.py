@@ -80,6 +80,13 @@ def main() -> int:
         'docvqa': repo_root / 'tests' / 'datasets' / 'manifests' / 'hf_docvqa_manifest.json',
     }
 
+    # The HuggingFace datasets (pdfa/idl/docvqa) lack usable ground truth and are NOT
+    # part of the evaluation corpus (see tests/corpus — document+ground-truth pairs only).
+    # Treat them as optional: if no manifests are present, there is nothing to validate.
+    if not any(path.exists() for path in manifests.values()):
+        print("\n⚠️  HuggingFace manifests not present — corpus not configured (optional). Skipping.")
+        return 0
+
     print("\n📋 Manifests:")
     for name, path in manifests.items():
         valid, msg = validate_manifest(path, min_docs=100)

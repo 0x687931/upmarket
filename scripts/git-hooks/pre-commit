@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Self-healing generated docs.
+#
+# CI runs `scripts/docs/generate_repo_docs.py --check` via gate.sh, which fails
+# the build when docs/generated/ drifts from the source it summarizes. This hook
+# regenerates those docs (write mode) and re-stages them whenever a commit
+# touches an input the generator reads, so committed docs always match committed
+# source and that check never trips. The check itself stays a hard fail in CI on
+# purpose — this just keeps local commits ahead of it.
+#
+# Installed by scripts/git-hooks/install.sh. Set UPMARKET_HOOK_DRYRUN=1 to print
+# the decision without regenerating (used for testing the hook).
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+# Inputs the generator reads (see scripts/docs/generate_repo_docs.py): app Swift,
+# its tests, the Python bridge, scripts/ entry counts, and docs/*.md counts.
+input_re='^(Upmarket/Upmarket/.*\.swift|Upmarket/Upmarket[A-Za-z]*Tests/.*\.swift|UpmarketPython/.*\.py|scripts/|docs/)'
+
+staged="$(git diff --cached --name-only --diff-filter=ACMRD)"
+
+# Ignore staged paths that are only the generated docs themselves, so a commit
+# that just re-stages regenerated output doesn't re-trigger needlessly.
+relevant="$(printf '%s\n' "$staged" | grep -vE '^docs/generated/' | grep -E "$input_re" || true)"
+
+if [[ -z "$relevant" ]]; then
+  exit 0
+fi
+
+if [[ "${UPMARKET_HOOK_DRYRUN:-0}" == "1" ]]; then
+  echo "[pre-commit] would regenerate docs/generated/ (triggered by):"
+  printf '  %s\n' $relevant
+  exit 0
+fi
+
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "error: pre-commit hook needs python3 to regenerate docs/generated/" >&2
+  echo "       install python3 or commit with --no-verify if you have regenerated manually" >&2
+  exit 1
+fi
+
+python3 scripts/docs/generate_repo_docs.py >/dev/null
+git add docs/generated/

@@ -6,10 +6,10 @@ import OSLog
 /// The app's single StoreKit authority. Tier is derived entirely from verified
 /// non-consumable entitlements (Pro, Max); Basic is the default and needs no purchase.
 ///
-/// This is the ONLY process that talks to StoreKit. The CLI and MCP surfaces get
-/// their tier by routing conversions through the in-app broker (see CLIConversionBroker)
-/// — they never read entitlements themselves, because StoreKit only resolves against
-/// this app bundle's receipt.
+/// This is the ONLY process that talks to StoreKit. It persists the resolved tier to a
+/// TierSnapshot so out-of-process tools (CLI/MCP) can gate themselves — they never read
+/// entitlements directly, because StoreKit only resolves against this app's receipt.
+/// The app is free to download with a 5-conversion trial; after that a tier is required.
 final class StoreManager: ObservableObject {
 
     nonisolated static let shared = StoreManager()
@@ -17,11 +17,13 @@ final class StoreManager: ObservableObject {
     // Product IDs — nonisolated so they're accessible from any actor context.
     // Source of truth for these IDs is AppTier.productID; Store.storekit must match
     // (enforced by AppTierContractTests).
+    nonisolated static let basicID = AppTier.basicProductID
     nonisolated static let proID = AppTier.proProductID
     nonisolated static let maxID = AppTier.maxProductID
 
     let objectWillChange = PassthroughSubject<Void, Never>()
 
+    private(set) var basicProduct: Product?
     private(set) var proProduct: Product?
     private(set) var maxProduct: Product?
 
@@ -37,6 +39,19 @@ final class StoreManager: ObservableObject {
 
     private(set) var tier: AppTier = .basic {
         willSet { objectWillChange.send() }
+    }
+
+    /// True once any tier is purchased. When false, the user is in the free trial.
+    private(set) var isPurchased = false {
+        willSet { objectWillChange.send() }
+    }
+
+    private let trialLimit = 5
+    private let trialUsedKey = "upmarket.trialConversionsUsed"
+
+    /// Free conversions left before the paywall (only meaningful while !isPurchased).
+    var trialConversionsRemaining: Int {
+        max(0, trialLimit - UserDefaults.standard.integer(forKey: trialUsedKey))
     }
 
     private var transactionListener: Task<Void, Error>?
@@ -60,15 +75,34 @@ final class StoreManager: ObservableObject {
     func setDebugTier(_ newTier: AppTier) {
         Task { @MainActor in
             self.tier = newTier
+            self.isPurchased = true   // debug override behaves like a purchase
+            self.writeSnapshot()
         }
     }
     #endif
 
     // MARK: - Tier checks
 
-    /// Every tier can convert — Basic does native Apple conversion for free.
-    /// Per-capability gating (Enhanced/AI) lives in AppTierGate, not here.
+    /// Every tier can convert — Basic does native Apple conversion. Per-capability gating
+    /// (Enhanced/AI) lives in AppTierGate; the trial limit is consumeTrialConversion().
     var canConvert: Bool { true }
+
+    /// Call before a conversion. Purchased users are unlimited; trial users get
+    /// `trialLimit` free conversions, then this returns false (caller shows the paywall).
+    @discardableResult
+    func consumeTrialConversion() -> Bool {
+        if isPurchased { return true }
+        let used = UserDefaults.standard.integer(forKey: trialUsedKey)
+        guard used < trialLimit else { return false }
+        UserDefaults.standard.set(used + 1, forKey: trialUsedKey)
+        objectWillChange.send()
+        return true
+    }
+
+    /// Persists the resolved tier for out-of-process tools (CLI/MCP). MainActor.
+    private func writeSnapshot() {
+        TierSnapshot(tier: tier.rawValue, purchased: isPurchased).write()
+    }
 
     // MARK: - Purchasing
 
@@ -111,12 +145,13 @@ final class StoreManager: ObservableObject {
         }
 
         do {
-            let products = try await Product.products(for: [Self.proID, Self.maxID])
+            let products = try await Product.products(for: [Self.basicID, Self.proID, Self.maxID])
             await MainActor.run {
+                self.basicProduct = products.first { $0.id == Self.basicID }
                 self.proProduct = products.first { $0.id == Self.proID }
                 self.maxProduct = products.first { $0.id == Self.maxID }
                 self.productsLoaded = true
-                if self.proProduct == nil || self.maxProduct == nil {
+                if self.basicProduct == nil || self.proProduct == nil || self.maxProduct == nil {
                     self.productLoadError = "Some purchase options are unavailable. Check StoreKit configuration or App Store Connect product IDs."
                 }
             }
@@ -130,19 +165,24 @@ final class StoreManager: ObservableObject {
     }
 
     private func refreshEntitlement() async {
-        // Highest owned entitlement wins.
+        // Highest owned entitlement wins; any ownership ends the trial.
         var resolved: AppTier = .basic
+        var purchased = false
         for await result in Transaction.currentEntitlements {
             guard let transaction = try? checkVerified(result) else { continue }
-            if transaction.productID == Self.maxID {
-                resolved = .max
-                break
-            }
-            if transaction.productID == Self.proID, resolved < .pro {
-                resolved = .pro
+            switch transaction.productID {
+            case Self.maxID: resolved = .max; purchased = true
+            case Self.proID: if resolved < .pro { resolved = .pro }; purchased = true
+            case Self.basicID: purchased = true
+            default: break
             }
         }
-        await MainActor.run { self.tier = resolved }
+        let finalTier = resolved, finalPurchased = purchased
+        await MainActor.run {
+            self.tier = finalTier
+            self.isPurchased = finalPurchased
+            self.writeSnapshot()
+        }
     }
 
     private func listenForTransactions() -> Task<Void, Error> {

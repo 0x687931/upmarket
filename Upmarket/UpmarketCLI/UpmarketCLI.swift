@@ -37,8 +37,9 @@ private enum Pathway: String {
     case pdfkit          = "native-pdfkit"
     case vision          = "native-vision"
     case text            = "native-text"
-    case doclingEnhanced = "docling"
-    case doclingAI       = "docling-ai"
+    case markItDown      = "markitdown"      // basic (Tier-1): office/markup via the helper
+    case doclingEnhanced = "docling"         // Pro: enhanced PDF layout/tables
+    case doclingAI       = "docling-ai"      // Max: Granite VLM
 }
 
 private enum OutputFormat: String {
@@ -143,6 +144,7 @@ private enum UpmarketCLI {
     // MARK: - Conversion driver
 
     private static func run(_ options: Options) async throws {
+        try requireProEntitlement(for: options.engine)
         for inputURL in options.inputURLs {
             let outURL = outputURL(for: inputURL, explicit: options.outputURL, format: options.outputFormat)
             try validateInput(inputURL)
@@ -179,6 +181,19 @@ private enum UpmarketCLI {
         }
     }
 
+    /// The CLI is a Pro/Max feature. Enforced via the tier snapshot the app writes
+    /// (StoreManager); the unsandboxed CLI can't read StoreKit itself.
+    private static func requireProEntitlement(for engine: Engine) throws {
+        guard let snap = TierSnapshot.read(), snap.purchased, snap.tier >= TierSnapshot.proTier else {
+            throw CommandError(.purchaseRequired,
+                "The Upmarket command-line tool requires Upmarket Pro. Open Upmarket to upgrade.")
+        }
+        if engine == .ai, snap.tier < TierSnapshot.maxTier {
+            throw CommandError(.aiUnavailable,
+                "Upmarket AI requires Upmarket Max. Open Upmarket to upgrade.")
+        }
+    }
+
     /// Picks the concrete engine. `--auto` runs the Apple classifier for PDFs and
     /// uses format-based routing for everything else, mirroring the app.
     private static func resolvePathway(for inputURL: URL, engine: Engine, debug: Bool) async throws -> Pathway {
@@ -194,7 +209,7 @@ private enum UpmarketCLI {
             if isPDF { return .pdfkit }      // execute() falls back to Vision if no text
             if isImage { return .vision }
             if isText { return .text }
-            throw CommandError(.inputRejected, "--native/--basic can't convert .\(ext). Try --complex, --max, or --auto.")
+            return .markItDown               // office/markup is basic (Tier-1) via MarkItDown
         case .auto:
             if isPDF {
                 if let classification = try? await NativeDocumentClassifier.classify(pdfURL: inputURL) {
@@ -210,7 +225,7 @@ private enum UpmarketCLI {
             }
             if isImage { return .vision }
             if isText { return .text }
-            return .doclingEnhanced   // office / html / epub / csv → Docling
+            return .markItDown   // office / html / epub / csv → MarkItDown (basic)
         }
     }
 
@@ -236,7 +251,9 @@ private enum UpmarketCLI {
                 : try await nativeVisionImage(inputURL)
         case .text:
             return try nativeText(inputURL)
-        case .doclingEnhanced:
+        case .markItDown, .doclingEnhanced:
+            // Both go through the helper with useAI=false. The helper uses Docling for
+            // enhanced formats when the Pro runtime is present, else MarkItDown (Tier-1).
             return try helperConvert(inputURL: inputURL, useAI: false)
         case .doclingAI:
             return try helperConvert(inputURL: inputURL, useAI: true)

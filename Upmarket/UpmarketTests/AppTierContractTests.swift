@@ -2,9 +2,10 @@ import XCTest
 @testable import Upmarket
 
 /// THE tier contract, enforced. `AppTier` is the single source of truth for tiers,
-/// product IDs, and prices. `Store.storekit` (and, in production, App Store Connect)
-/// must agree with it. If a test here fails, a tier definition drifted — fix `AppTier`
-/// first, then make the others match. Do not weaken these assertions to make them pass.
+/// product IDs, prices, and the document-type → tier matrix. `Store.storekit` (and, in
+/// production, App Store Connect) must agree with it. If a test here fails, a tier
+/// definition drifted — fix `AppTier` first, then make the others match. Do not weaken
+/// these assertions to make them pass.
 final class AppTierContractTests: XCTestCase {
 
     private struct StoreKitFile: Decodable {
@@ -21,49 +22,60 @@ final class AppTierContractTests: XCTestCase {
             .deletingLastPathComponent()   // UpmarketTests/
             .deletingLastPathComponent()   // Upmarket/ (project dir)
             .appendingPathComponent("Upmarket/Store.storekit")
-        let data = try Data(contentsOf: url)
-        return try JSONDecoder().decode(StoreKitFile.self, from: data)
+        return try JSONDecoder().decode(StoreKitFile.self, from: Data(contentsOf: url))
     }
 
-    /// Paid tiers and expected price, derived from AppTier (the source of truth).
-    private let expectedPaidProducts: [String: String] = [
-        AppTier.proProductID: AppTier.pro.price,
-        AppTier.maxProductID: AppTier.max.price,
+    /// Numeric amount only, ignoring currency symbol (real currency is per-storefront).
+    private func amount(_ s: String) -> String { s.filter { $0.isNumber || $0 == "." } }
+
+    /// All three tiers are paid non-consumables (no free tier; the app is free to
+    /// download with a 5-conversion trial). Derived from AppTier (source of truth).
+    private let expectedProducts: [String: String] = [
+        AppTier.basicProductID: AppTier.basic.price,
+        AppTier.proProductID:   AppTier.pro.price,
+        AppTier.maxProductID:   AppTier.max.price,
     ]
 
     func testStoreKitProductsMatchAppTierExactly() throws {
         let file = try loadStoreKit()
 
-        // 1. Every paid tier maps to exactly one non-consumable at the AppTier price.
-        for (productID, price) in expectedPaidProducts {
+        for (productID, price) in expectedProducts {
             let matches = file.nonConsumableProducts.filter { $0.productID == productID }
-            XCTAssertEqual(matches.count, 1,
-                           "Store.storekit must contain exactly one non-consumable \(productID)")
+            XCTAssertEqual(matches.count, 1, "Store.storekit must contain exactly one non-consumable \(productID)")
             if let product = matches.first {
-                XCTAssertEqual("$" + product.displayPrice, price,
-                               "\(productID) price in Store.storekit ($\(product.displayPrice)) must match AppTier (\(price))")
+                XCTAssertEqual(amount(product.displayPrice), amount(price),
+                               "\(productID) price in Store.storekit (\(product.displayPrice)) must match AppTier (\(price))")
             }
         }
 
-        // 2. No product AppTier doesn't know about (catches stray basic / doc_pack).
-        let known = Set(expectedPaidProducts.keys)
+        let known = Set(expectedProducts.keys)
         for product in file.nonConsumableProducts + file.products {
             XCTAssertTrue(known.contains(product.productID),
-                          "Store.storekit contains \(product.productID), unknown to AppTier. Remove it or add it to AppTier.")
+                          "Store.storekit contains \(product.productID), unknown to AppTier.")
         }
-
-        // 3. The consumable doc-pack economy was removed — no consumables allowed.
         XCTAssertTrue(file.products.isEmpty, "Store.storekit must not define consumable products.")
     }
 
-    func testStoreManagerIDsAreDerivedFromAppTier() {
+    func testAllTiersArePaidWithDistinctProductIDs() {
+        let ids = [AppTier.basic.productID, AppTier.pro.productID, AppTier.max.productID]
+        XCTAssertEqual(Set(ids).count, 3, "Each tier must have a distinct product ID")
+        XCTAssertEqual(StoreManager.basicID, AppTier.basicProductID)
         XCTAssertEqual(StoreManager.proID, AppTier.proProductID)
         XCTAssertEqual(StoreManager.maxID, AppTier.maxProductID)
     }
 
-    func testBasicTierIsFreeWithNoProduct() {
-        XCTAssertNil(AppTier.basic.productID)
-        XCTAssertEqual(AppTier.pro.productID, AppTier.proProductID)
-        XCTAssertEqual(AppTier.max.productID, AppTier.maxProductID)
+    /// Document-type → tier matrix (the upgrade-funnel contract).
+    func testDocumentTypeTierMatrix() {
+        // Pro-only formats: spreadsheets, presentations, ebooks, audio.
+        let proFormats: [ConversionFormat] = [.xlsx, .pptx, .epub, .mp3, .m4a, .wav, .aiff]
+        for fmt in proFormats {
+            XCTAssertEqual(AppTier.requiredTier(for: fmt), .pro, "\(fmt) must require Pro")
+        }
+        // Basic formats: everyday documents, images, and PDF (complexity is layered on
+        // separately by ConversionCapability).
+        let basicFormats: [ConversionFormat] = [.txt, .md, .docx, .html, .csv, .pdf, .png, .jpg, .jpeg]
+        for fmt in basicFormats {
+            XCTAssertEqual(AppTier.requiredTier(for: fmt), .basic, "\(fmt) must be Basic")
+        }
     }
 }

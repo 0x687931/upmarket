@@ -2,7 +2,7 @@ import SwiftUI
 import StoreKit
 
 private enum PaywallTier {
-    case max, pro
+    case basic, pro, max
 }
 
 struct PaywallView: View {
@@ -28,11 +28,14 @@ struct PaywallView: View {
             VStack(spacing: 0) {
                 header
                 VStack(spacing: 12) {
-                    if flags.aiAvailable {
-                        tierCard(.max)
+                    if !store.isPurchased {
+                        tierCard(.basic)
                     }
                     if store.tier < .pro {
                         tierCard(.pro)
+                    }
+                    if flags.aiAvailable {
+                        tierCard(.max)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -180,47 +183,72 @@ struct PaywallView: View {
 
     private func tierName(_ tier: PaywallTier) -> String {
         switch tier {
-        case .max: return "Upmarket Max"
-        case .pro: return "Upmarket Pro"
+        case .basic: return "Upmarket Basic"
+        case .pro:   return "Upmarket Pro"
+        case .max:   return "Upmarket Max"
         }
     }
 
     private func tierPrice(_ tier: PaywallTier) -> String {
         switch tier {
-        case .max: return store.maxProduct?.displayPrice ?? "$14.99"
-        case .pro: return store.proProduct?.displayPrice ?? "$9.99"
+        case .basic: return store.basicProduct?.displayPrice ?? AppTier.basic.price
+        case .pro:   return store.proProduct?.displayPrice ?? AppTier.pro.price
+        case .max:   return store.maxProduct?.displayPrice ?? AppTier.max.price
         }
     }
 
     private func tierTagline(_ tier: PaywallTier) -> String {
         switch tier {
-        case .max: return "AI pipeline for complex, scanned, and research documents"
-        case .pro: return "Enhanced conversion for tables, multi-column layouts, and PDFs"
+        case .basic: return "Everyday documents — Word, PDF, HTML, images, and OCR"
+        case .pro:   return "Spreadsheets, audio, complex PDFs, batch, and the command-line tool"
+        case .max:   return "AI pipeline for scanned, handwritten, and research documents"
         }
     }
 
     private func tierFeatures(_ tier: PaywallTier) -> [(text: String, isHighlight: Bool)] {
         switch tier {
-        case .max:
+        case .basic:
             return [
-                ("Upmarket AI for scanned, complex and research documents", true),
-                ("Includes everything in Pro", false),
+                ("Word, PDF, HTML, CSV, text → Markdown", true),
+                ("Scanned PDF & image OCR, batch conversion", false),
                 ("100% on-device — nothing sent to the cloud", false)
             ]
         case .pro:
             return [
-                ("Enhanced table, layout, and multi-column PDFs", true),
-                ("Word, PowerPoint, Excel, HTML → Markdown", false),
-                ("Unlimited conversions — every format", false)
+                ("Spreadsheets, presentations, ebooks, audio", true),
+                ("Complex PDF layout + table extraction, command-line tool", false),
+                ("Everything in Basic", false)
+            ]
+        case .max:
+            return [
+                ("Upmarket AI for scanned, complex and research documents", true),
+                ("Handwriting & advanced table repair — everything in Pro", false),
+                ("100% on-device — nothing sent to the cloud", false)
             ]
         }
     }
 
     // MARK: - CTA
 
+    private var selectedProduct: Product? {
+        switch selectedTier {
+        case .basic: return store.basicProduct
+        case .pro:   return store.proProduct
+        case .max:   return store.maxProduct
+        }
+    }
+
+    private var selectedProductID: String {
+        switch selectedTier {
+        case .basic: return StoreManager.basicID
+        case .pro:   return StoreManager.proID
+        case .max:   return StoreManager.maxID
+        }
+    }
+
     private var ctaButton: some View {
-        let product: Product? = selectedTier == .max ? store.maxProduct : store.proProduct
-        let purchasingID: String = selectedTier == .max ? StoreManager.maxID : StoreManager.proID
+        let product = selectedProduct
+        let purchasingID = selectedProductID
 
         return Button {
             guard let product else { return }

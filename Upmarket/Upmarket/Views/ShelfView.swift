@@ -300,6 +300,13 @@ struct ShelfView: View {
             }
             return
         }
+        guard store.consumeTrialConversion() else {
+            PaywallWindowController.shared.show()
+            if let cleanupDirectory {
+                try? FileManager.default.removeItem(at: cleanupDirectory)
+            }
+            return
+        }
         _ = conversion.add(url)
     }
 

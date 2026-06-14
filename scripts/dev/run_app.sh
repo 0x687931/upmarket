@@ -120,7 +120,10 @@ sign_for_launch() {
   codesign_if_present "$APP_PATH/Contents/Frameworks/Python.framework" --deep
   codesign_if_present "$APP_PATH/Contents/MacOS/Upmarket.debug.dylib"
   codesign_if_present "$APP_PATH/Contents/MacOS/__preview.dylib"
-  codesign_if_present "$APP_PATH/Contents/MacOS/UpmarketRuntimeHelper" --entitlements "$entitlements_dir/Inherited.entitlements"
+  # The debug helper is unsandboxed (its project entitlements) so the unsandboxed CLI can
+  # spawn it directly. Signing it sandbox-inherit (the old behavior) makes it SIGTRAP in
+  # sandbox init when launched outside the app. (Release uses sandbox-inherit; App Store.)
+  codesign_if_present "$APP_PATH/Contents/MacOS/UpmarketRuntimeHelper" --entitlements "$ROOT/Upmarket/UpmarketRuntimeHelper/UpmarketRuntimeHelper.debug.entitlements"
   # Sign each tool with its real project entitlements so the local launch matches the
   # shipping build: the CLI is unsandboxed (reads arbitrary input paths, hands off to the
   # app via the App Group container); the MCP is sandboxed with the App Group.

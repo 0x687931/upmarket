@@ -3,6 +3,8 @@ set -euo pipefail
 
 SITE="${1:-Upmarket/Python/Python.xcframework/macos-arm64_x86_64/Python.framework/Versions/3.12/lib/python3.12/site-packages}"
 LOCK="requirements.txt"
+# The app bundle ships ONLY the basic tier; Docling/MLX are Pro/Max downloads.
+BASIC_LOCK="requirements-basic.txt"
 STDLIB="$(dirname "$SITE")"
 SITE_PYTHON_VERSION="$(printf '%s\n' "$SITE" | sed -nE 's#.*lib/python([0-9]+[.][0-9]+)/site-packages$#\1#p')"
 PYTHON_CHECK_BIN="${PYTHON_CHECK_BIN:-python$SITE_PYTHON_VERSION}"
@@ -18,8 +20,14 @@ if [[ -z "$SITE_PYTHON_VERSION" ]]; then
 fi
 
 if ! command -v "$PYTHON_CHECK_BIN" >/dev/null 2>&1; then
-  echo "error: $PYTHON_CHECK_BIN is required to verify bundled Python $SITE_PYTHON_VERSION extensions"
-  exit 1
+  # Fall back to a uv-managed interpreter of the right version (matches build_python_env.sh).
+  if command -v uv >/dev/null 2>&1 && uv python find "$SITE_PYTHON_VERSION" >/dev/null 2>&1; then
+    PYTHON_CHECK_BIN="$(uv python find "$SITE_PYTHON_VERSION")"
+  else
+    echo "error: a Python $SITE_PYTHON_VERSION interpreter is required to verify the bundle"
+    echo "       (install: uv python install $SITE_PYTHON_VERSION, or set PYTHON_CHECK_BIN)."
+    exit 1
+  fi
 fi
 
 ACTUAL_CHECK_VERSION="$("$PYTHON_CHECK_BIN" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
@@ -96,7 +104,7 @@ PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_CACHE_DIR="$CHECK_VENV/pip-cache" PYTHONPATH
 trap - EXIT
 rm -rf "$CHECK_VENV"
 
-PYTHONPATH="$SITE" HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 "$PYTHON_CHECK_BIN" - "$SITE" "$LOCK" <<'PY'
+PYTHONPATH="$SITE" HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 "$PYTHON_CHECK_BIN" - "$SITE" "$BASIC_LOCK" <<'PY'
 import importlib
 import importlib.util
 import codecs
@@ -123,10 +131,10 @@ for module in modules:
 
 codecs.lookup("cp437")
 
+# Basic-tier modules only — Docling and MLX ship as Pro/Max downloads, not in the bundle.
 bundle_required_modules = [
-    "docling.datamodel.vlm_model_specs",
-    "docling.pipeline.vlm_pipeline",
-    "mlx.core",
+    "markitdown",
+    "pypdfium2",
 ]
 
 for module in bundle_required_modules:

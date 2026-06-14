@@ -343,6 +343,10 @@ struct ContentView: View {
             _ = conversion.addRejected(url, message: message)
             return
         }
+        guard store.consumeTrialConversion() else {
+            PaywallWindowController.shared.show()
+            return
+        }
         pendingFileURL = url
 
         conversion.analyse(fileURL: url) { advice in

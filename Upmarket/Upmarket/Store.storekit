@@ -2,12 +2,27 @@
   "identifier" : "com.upmarket.app.storekit",
   "nonConsumableProducts" : [
     {
-      "displayPrice" : "9.99",
+      "displayPrice" : "4.99",
+      "familySharable" : false,
+      "internalID" : "com.upmarket.app.basic",
+      "localizations" : [
+        {
+          "description" : "Convert everyday documents — Word, PDF, HTML, images — to clean Markdown. Everything runs on your Mac.",
+          "displayName" : "Upmarket Basic",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.upmarket.app.basic",
+      "referenceName" : "Basic",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "14.99",
       "familySharable" : false,
       "internalID" : "com.upmarket.app.pro",
       "localizations" : [
         {
-          "description" : "Enhanced conversion with layout analysis and table extraction. Everything runs on your Mac.",
+          "description" : "Spreadsheets, presentations, audio, scanned and complex PDFs, batch conversion, and the command-line tool.",
           "displayName" : "Upmarket Pro",
           "locale" : "en_US"
         }
@@ -17,12 +32,12 @@
       "type" : "NonConsumable"
     },
     {
-      "displayPrice" : "14.99",
+      "displayPrice" : "49.99",
       "familySharable" : false,
       "internalID" : "com.upmarket.app.max",
       "localizations" : [
         {
-          "description" : "AI-powered conversion for scanned pages and complex documents. Everything runs on your Mac.",
+          "description" : "AI document reconstruction for the toughest scans, handwriting, and complex layouts. Runs locally on your Mac.",
           "displayName" : "Upmarket Max",
           "locale" : "en_US"
         }
