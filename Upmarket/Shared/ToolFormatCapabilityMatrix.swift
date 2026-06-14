@@ -18,6 +18,9 @@ enum ConversionFormat: String, CaseIterable, Sendable {
     case docx
     case pptx
     case xlsx
+    case doc
+    case xls
+    case ppt
     case html
     case md
     case txt
@@ -105,8 +108,8 @@ enum ToolFormatCapabilityMatrix {
         add(.imageIO, [.png, .jpg, .jpeg, .gif, .tiff, .tif, .webp, .bmp, .heic, .heif], .metadataOnly)
         add(.avFoundation, [.mp3, .m4a, .wav, .aiff, .opus, .flac, .aac, .ogg, .mp4, .m4v, .mov, .avi, .mpeg, .mpg, .webm, .mkv, .wma, .wmv], .metadataOnly)
         add(.pythonPDFium, [.pdf], .fallback, advanced: true)
-        add(.markItDown, [.docx, .pptx, .xlsx, .html, .md, .txt, .csv, .json, .xml, .epub, .zip, .webvtt, .png, .jpg, .jpeg, .mp3, .m4a, .wav], .fallback, advanced: true)
-        add(.enhanced, [.pdf, .docx, .pptx, .xlsx, .html, .md, .txt, .asciidoc, .epub, .xml, .png, .jpg, .jpeg, .tif, .tiff, .webp], .primary, advanced: true)
+        add(.markItDown, [.docx, .pptx, .xlsx, .doc, .xls, .ppt, .html, .md, .txt, .csv, .json, .xml, .epub, .zip, .webvtt, .png, .jpg, .jpeg, .mp3, .m4a, .wav], .fallback, advanced: true)
+        add(.enhanced, [.pdf, .docx, .pptx, .xlsx, .doc, .xls, .ppt, .html, .md, .txt, .asciidoc, .epub, .xml, .png, .jpg, .jpeg, .tif, .tiff, .webp], .primary, advanced: true)
         add(.upmarketAI, [.pdf, .png, .jpg, .jpeg, .tif, .tiff, .webp], .primary, advanced: true)
 
         return entries
@@ -115,7 +118,7 @@ enum ToolFormatCapabilityMatrix {
     nonisolated static let acceptedFormats: [ConversionFormat] = {
         let productSurface: Set<ConversionFormat> = [
             .pdf, .html, .txt, .png, .jpg, .jpeg, .gif, .tiff,
-            .docx, .pptx, .xlsx, .epub, .csv, .json, .xml, .zip,
+            .docx, .pptx, .xlsx, .doc, .xls, .ppt, .epub, .csv, .json, .xml, .zip,
             .mp3, .m4a, .wav, .aiff, .opus,
         ]
         return ConversionFormat.allCases.filter {

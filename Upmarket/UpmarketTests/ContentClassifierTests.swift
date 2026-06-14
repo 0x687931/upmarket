@@ -182,6 +182,38 @@ final class ContentClassifierTests: XCTestCase {
         XCTAssertEqual(classification.recommendedPathway, .nativeOffice)
     }
 
+    /// Guards the "Basic tier ships no Python" guarantee: every Basic-tier document/text
+    /// format must classify to the `.native` capability (no advanced runtime), and the
+    /// formats that still need the runtime must be Pro. If a future change regresses a
+    /// Basic format onto the Python path, this fails.
+    func testBasicDocumentFormatsRequireNoRuntime() async throws {
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("classifier-tier-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: workspace) }
+
+        func tier(forExtension ext: String) async -> ConversionCapability? {
+            let url = workspace.appendingPathComponent("sample.\(ext)")
+            try? Data("placeholder".utf8).write(to: url)
+            // Structured-format classification keys on the extension, not file contents, and
+            // is independent of the runtime — assert it holds even when the runtime exists.
+            return await ContentClassifier.classify(
+                fileURL: url, supportsAdvancedRuntime: true, supportsAI: false
+            )?.requiredTier
+        }
+
+        // Basic document/text formats — must be native (no Python). DOC is legacy binary Word.
+        for ext in ["docx", "doc", "txt", "md", "csv"] {
+            let capability = await tier(forExtension: ext)
+            XCTAssertEqual(capability, .native, "\(ext) is a Basic format and must convert natively")
+        }
+        // Formats that legitimately still require the advanced runtime → Enhanced (Pro).
+        for ext in ["xlsx", "pptx", "xls", "ppt", "epub", "json", "xml", "zip", "webvtt"] {
+            let capability = await tier(forExtension: ext)
+            XCTAssertEqual(capability, .enhanced, "\(ext) has no native engine and must require the runtime")
+        }
+    }
+
     func testHTMLClassifiedAsNativeRegardlessOfRuntime() async throws {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("classifier-\(UUID().uuidString).html")

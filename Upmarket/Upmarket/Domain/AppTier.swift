@@ -49,10 +49,15 @@ enum AppTier: Int, Comparable, Equatable, Sendable {
     /// layered on by ConversionCapability. Enforced by AppTierContractTests.
     static func requiredTier(for format: ConversionFormat) -> AppTier {
         switch format {
-        case .xlsx, .pptx, .epub, .mp3, .m4a, .wav, .aiff:
-            return .pro          // spreadsheets, presentations, ebooks, audio
+        case .xlsx, .pptx, .xls, .ppt, .epub, .mp3, .m4a, .wav, .aiff,
+             .json, .xml, .zip, .webvtt, .asciidoc:
+            // Spreadsheets, presentations, ebooks, audio, and structured formats with no
+            // native engine (so they require the advanced runtime). ZIP stays runtime-gated.
+            return .pro
         default:
-            return .basic        // documents, images, digital/scanned PDF
+            // Documents (DOC/DOCX), text (TXT/MD/CSV), HTML, images, digital/scanned PDF —
+            // all served by in-process native engines, so the Basic tier needs no Python.
+            return .basic
         }
     }
 }

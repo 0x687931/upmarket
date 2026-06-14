@@ -122,7 +122,7 @@ enum ContentClassifier {
         // otherwise it needs the advanced runtime (e.g. XLSX/PPTX/EPUB are Pro, and ZIP/
         // JSON/XML have no native engine yet, so they require Enhanced).
         let structuredFormats: Set<ConversionFormat> = [
-            .docx, .pptx, .xlsx, .md, .txt, .asciidoc, .epub,
+            .docx, .pptx, .xlsx, .doc, .xls, .ppt, .md, .txt, .asciidoc, .epub,
             .csv, .json, .xml, .zip, .webvtt
         ]
         if let format, structuredFormats.contains(format) {
@@ -164,7 +164,7 @@ enum ContentClassifier {
     /// own earlier branch and is intentionally excluded here.
     private static func nativeStructuredPathway(for format: ConversionFormat) -> ConversionPathway? {
         switch format {
-        case .docx:
+        case .docx, .doc:
             return .nativeOffice
         case .txt, .md, .csv:
             return .nativeText
