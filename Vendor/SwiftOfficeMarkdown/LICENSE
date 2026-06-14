@@ -1,0 +1,17 @@
+Copyright (c) 2026 Andrew McArdle. All rights reserved.
+
+This software and its source code (the "Software") are proprietary and
+confidential. No license, right, or permission is granted to any party other
+than the copyright holder to use, copy, modify, merge, publish, distribute,
+sublicense, or sell copies of the Software, in whole or in part, without the
+prior written permission of the copyright holder.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM, OUT OF,
+OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+NOTE: The XSD schema files under Reference/Schemas/ are ISO/IEC © material,
+included for development and testing only (see Reference/NOTICE.md), and are not
+covered by this notice.
