@@ -133,6 +133,13 @@ final class PostProcessingTests: XCTestCase {
         XCTAssertTrue(output.markdown.contains("### Subsection"))
     }
 
+    func testWritingToolsLineMergePreservesMarkdownTableRows() {
+        if #available(macOS 15.1, *) {
+            XCTAssertFalse(WritingToolsRefiner.shouldMergeLine("| --- | --- |", into: "| A | B |"))
+            XCTAssertTrue(WritingToolsRefiner.isMarkdownTableRow("| A | B |"))
+        }
+    }
+
     // MARK: - Integration: NL → Writing Tools Pipeline
 
     func testFullPipeline() async {

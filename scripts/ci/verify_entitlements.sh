@@ -128,6 +128,7 @@ require_entitlement_true() {
 }
 
 require_entitlement_true "$APP_ENTITLEMENTS" "com.apple.security.app-sandbox" "app sandbox"
+require_entitlement_true "$APP_ENTITLEMENTS" "com.apple.developer.background-assets" "app Background Assets downloads"
 require_entitlement_true "$HELPER_ENTITLEMENTS" "com.apple.security.app-sandbox" "runtime helper sandbox"
 require_entitlement_true "$HELPER_ENTITLEMENTS" "com.apple.security.inherit" "runtime helper sandbox inheritance"
 require_entitlement_true "$MCP_ENTITLEMENTS" "com.apple.security.app-sandbox" "MCP server sandbox"

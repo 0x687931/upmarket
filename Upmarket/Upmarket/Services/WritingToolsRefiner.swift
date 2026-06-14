@@ -150,6 +150,15 @@ struct WritingToolsRefiner {
                 continue
             }
 
+            if isMarkdownTableRow(trimmed) {
+                if !currentParagraph.isEmpty {
+                    mergedLines.append(currentParagraph)
+                    currentParagraph = ""
+                }
+                mergedLines.append(trimmed)
+                continue
+            }
+
             // Check if this line looks like it was broken mid-sentence
             // Heuristic: if previous line didn't end with sentence terminator and
             // current line doesn't start with capital or special marker, merge
@@ -194,8 +203,12 @@ struct WritingToolsRefiner {
 
     /// Check if a line should be merged with the current paragraph.
     /// Returns true if the line appears to be a continuation of a broken sentence.
-    private nonisolated static func shouldMergeLine(_ line: String, into paragraph: String) -> Bool {
+    nonisolated static func shouldMergeLine(_ line: String, into paragraph: String) -> Bool {
         guard !line.isEmpty && !paragraph.isEmpty else { return false }
+
+        if isMarkdownTableRow(line) || isMarkdownTableRow(paragraph) {
+            return false
+        }
 
         // Don't merge if current paragraph ends with a sentence terminator
         if endsWithSentenceTerminator(paragraph) {
@@ -205,7 +218,7 @@ struct WritingToolsRefiner {
         // Don't merge if line starts with a heading, list marker, or code fence
         let startsWithSpecial = line.hasPrefix("#") || line.hasPrefix("-") ||
                                 line.hasPrefix("*") || line.hasPrefix(">") ||
-                                line.hasPrefix("`")
+                                line.hasPrefix("`") || line.hasPrefix("|")
         if startsWithSpecial {
             return false
         }
@@ -217,6 +230,11 @@ struct WritingToolsRefiner {
 
         // Merge if line looks like a sentence continuation
         return true
+    }
+
+    nonisolated static func isMarkdownTableRow(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        return trimmed.hasPrefix("|") && trimmed.dropFirst().contains("|")
     }
 
     /// Check if text ends with a sentence terminator (., !, ?, etc).
