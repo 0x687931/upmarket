@@ -637,7 +637,9 @@ final class ConversionQueueTests: XCTestCase {
         let result = await ConversionRunner(supportsAdvancedRuntime: false)
             .run(ConversionJob(sourceURL: docx))
 
-        XCTAssertEqual(result.errorMessage, ConversionError.unsupportedOnThisMac.errorDescription)
+        // DOCX converts natively in the Basic tier; an invalid container fails native
+        // parsing with `.inaccessible`. The workspace must still be cleaned up.
+        XCTAssertEqual(result.errorMessage, ConversionError.inaccessible.errorDescription)
         XCTAssertEqual(workspaceNames(), before)
     }
 
@@ -648,13 +650,48 @@ final class ConversionQueueTests: XCTestCase {
         addTeardownBlock {
             try? FileManager.default.removeItem(at: workspace)
         }
-        let docx = workspace.appendingPathComponent("structured.docx")
-        try Data("not a real docx, but enough to prove routing".utf8).write(to: docx)
+        // EPUB is a Pro format with no native engine, so a native-only runtime must reject
+        // it. (DOCX/TXT/CSV are Basic and now convert natively — see the native-conversion
+        // tests below.)
+        let epub = workspace.appendingPathComponent("structured.epub")
+        try Data("not a real epub, but enough to prove routing".utf8).write(to: epub)
 
         let result = await ConversionRunner(supportsAdvancedRuntime: false)
-            .run(ConversionJob(sourceURL: docx))
+            .run(ConversionJob(sourceURL: epub))
 
         XCTAssertEqual(result.errorMessage, ConversionError.unsupportedOnThisMac.errorDescription)
+    }
+
+    func testNativeOnlyRuntimeConvertsPlainTextFormats() async throws {
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketNativeTextTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: workspace)
+        }
+
+        let txt = workspace.appendingPathComponent("note.txt")
+        try "Hello from plain text".write(to: txt, atomically: true, encoding: .utf8)
+        let txtResult = await ConversionRunner(supportsAdvancedRuntime: false)
+            .run(ConversionJob(sourceURL: txt))
+        XCTAssertNil(txtResult.errorMessage)
+        XCTAssertEqual(txtResult.output?.selectedPathway, .nativeText)
+        XCTAssertTrue(txtResult.output?.markdown.contains("Hello from plain text") ?? false)
+
+        let csv = workspace.appendingPathComponent("data.csv")
+        try "Name,Score\nAda,99\nGrace,100".write(to: csv, atomically: true, encoding: .utf8)
+        let csvResult = await ConversionRunner(supportsAdvancedRuntime: false)
+            .run(ConversionJob(sourceURL: csv))
+        XCTAssertNil(csvResult.errorMessage)
+        XCTAssertEqual(csvResult.output?.selectedPathway, .nativeText)
+        // Rendered as a Markdown table (assert content/structure, not exact column padding,
+        // which post-processing may normalise).
+        let csvMarkdown = csvResult.output?.markdown ?? ""
+        XCTAssertTrue(csvMarkdown.contains("|"), "CSV must render as a Markdown table")
+        XCTAssertTrue(csvMarkdown.contains("---"), "CSV table must have a header separator row")
+        for token in ["Name", "Score", "Ada", "99", "Grace", "100"] {
+            XCTAssertTrue(csvMarkdown.contains(token), "CSV table missing \(token)")
+        }
     }
 
     func testNativeOnlyRuntimeStillConvertsDigitalPDF() async throws {

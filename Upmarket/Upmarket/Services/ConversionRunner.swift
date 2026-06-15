@@ -1,6 +1,7 @@
 import Foundation
 import OSLog
 import PDFKit
+import SwiftOfficeMarkdown
 
 struct ConversionRunner {
     typealias ProgressHandler = (ConversionProgress) -> Void
@@ -214,7 +215,9 @@ struct ConversionRunner {
             return NativeMetadataExtractor.imageMetadata(url: tempURL, title: title)
 
         case .structuredDocument:
-            // HTML converts in-process; everything else is the Enhanced (Python) pathway.
+            // Basic-tier structured formats convert in-process (no Python); formats the
+            // tier contract gates above Basic, or that have no native engine, use the
+            // Enhanced (Python) runtime. The capability gate has already cleared the tier.
             let ext = job.sourceURL.pathExtension.lowercased()
             if ext == "html" || ext == "htm" {
                 let native = runNativeHTMLConversion(fileURL: tempURL, title: title)
@@ -226,6 +229,39 @@ struct ConversionRunner {
                     fileURL: tempURL, title: title, useAI: false,
                     password: job.password, workspaceURL: workspaceURL, progress: progress
                 )
+            }
+            if NativeTextConverter.extensions.contains(ext) {
+                // Plain-text family (.txt/.md/.csv) — Basic-tier, in-process, no Python.
+                let native = runNativeTextConversion(fileURL: tempURL, title: title, ext: ext)
+                if case .success = native { return native }
+                guard supportsAdvancedRuntime else { return native }
+                return await runPythonConversion(
+                    fileURL: tempURL, title: title, useAI: false,
+                    password: job.password, workspaceURL: workspaceURL, progress: progress
+                )
+            }
+            if Self.nativeOfficeExtensions.contains(ext) {
+                // Word documents (.docx) are Basic-tier: the schema-driven native engine is
+                // the primary path — no Python. Spreadsheets/presentations are Pro and only
+                // reach here once the capability gate has cleared the runtime, where Enhanced
+                // is preferred with the native engine as the fallback.
+                let format = ConversionFormat(fileExtension: ext)
+                let isBasicOffice = format.map { AppTier.requiredTier(for: $0) == .basic } ?? false
+                if isBasicOffice || !supportsAdvancedRuntime {
+                    let native = runNativeOfficeConversion(fileURL: tempURL, title: title)
+                    if case .success = native { return native }
+                    guard supportsAdvancedRuntime else { return native }
+                    return await runPythonConversion(
+                        fileURL: tempURL, title: title, useAI: false,
+                        password: job.password, workspaceURL: workspaceURL, progress: progress
+                    )
+                }
+                let enhanced = await runPythonConversion(
+                    fileURL: tempURL, title: title, useAI: false,
+                    password: job.password, workspaceURL: workspaceURL, progress: progress
+                )
+                if case .success = enhanced { return enhanced }
+                return runNativeOfficeConversion(fileURL: tempURL, title: title)
             }
             guard supportsAdvancedRuntime else {
                 return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
@@ -274,9 +310,9 @@ struct ConversionRunner {
                     workspaceURL: workspaceURL, classifierEvidence: evidence,
                     secondary: .advanced(useAI: true), progress: progress
                 )
-            case .speech, .metadata, .nativeHTML:
-                // Not reachable for digital documents (nativeHTML routes via .structuredDocument);
-                // PDFKit is the safe native default for any PDF/image that lands here.
+            case .speech, .metadata, .nativeHTML, .nativeOffice, .nativeText:
+                // Not reachable for digital documents (native HTML/Office/text route
+                // via .structuredDocument); PDFKit is the safe native default here.
                 return await runPDFKitConversion(
                     fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
                 )
@@ -567,6 +603,57 @@ struct ConversionRunner {
             pipeline: .fast,
             selectedPathway: .nativeHTML,
             metadata: DocumentMetadata.nativeHTML()
+        ))
+    }
+
+    /// Office documents (OOXML `.docx/.xlsx/.pptx` + variants, and legacy binary
+    /// `.doc/.xls/.xlsb/.ppt`) converted in-process — no Python runtime needed.
+    static let nativeOfficeExtensions: Set<String> = [
+        "docx", "docm", "dotx", "dotm",
+        "xlsx", "xlsm", "xltx", "xltm", "xlsb",
+        "pptx", "pptm", "potx", "potm", "ppsx", "ppsm",
+        "doc", "xls", "ppt",
+    ]
+
+    /// Plain-text family (`.txt/.md/.csv`) → Markdown, in-process. No Python, no network,
+    /// no download — runs in the Basic tier. Returns `.failure` on unreadable input so the
+    /// caller can fall back to the Enhanced runtime when it is available.
+    private func runNativeTextConversion(fileURL: URL, title: String, ext: String) -> ConversionResult {
+        let signpost = AppSignpost.conversion.beginInterval("nativeExtract")
+        defer { AppSignpost.conversion.endInterval("nativeExtract", signpost) }
+
+        guard let data = try? Data(contentsOf: fileURL) else {
+            return .failure(ConversionError.inaccessible.errorDescription ?? "Upmarket couldn't access this file.")
+        }
+        guard let markdown = try? NativeTextConverter.convert(data: data, ext: ext),
+              !markdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return .failure(ConversionError.inaccessible.errorDescription ?? "Upmarket couldn't read this file.")
+        }
+        return .success(ConversionOutput(
+            markdown: markdown,
+            pages: 1,
+            format: ext.uppercased(),
+            title: title,
+            pipeline: .fast,
+            selectedPathway: .nativeText
+        ))
+    }
+
+    private func runNativeOfficeConversion(fileURL: URL, title: String) -> ConversionResult {
+        let signpost = AppSignpost.conversion.beginInterval("nativeExtract")
+        defer { AppSignpost.conversion.endInterval("nativeExtract", signpost) }
+
+        guard let markdown = try? OfficeToMarkdown.convert(fileURL: fileURL),
+              !markdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return .failure(ConversionError.inaccessible.errorDescription ?? "Upmarket couldn't read this document.")
+        }
+        return .success(ConversionOutput(
+            markdown: markdown,
+            pages: 0,
+            format: fileURL.pathExtension.uppercased(),
+            title: title,
+            pipeline: .fast,
+            selectedPathway: .nativeOffice
         ))
     }
 

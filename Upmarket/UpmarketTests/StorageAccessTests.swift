@@ -85,10 +85,11 @@ final class StorageAccessTests: XCTestCase {
     }
 
     func testAppIntentSupportedTypeAdapterMatchesAppPolicy() throws {
-        // IntentFile.supportedContentTypes requires macOS 15 (target is 13.3), so the App
-        // Intent enforces the policy at perform time via validateReadableInput, which routes
-        // through SupportedInputPolicy.supports — the single source of truth. This guards
-        // against an Intent that converts without first applying the input policy.
+        // The App Intent enforces the input policy at perform time via validateReadableInput,
+        // which routes through SupportedInputPolicy.supports — the single source of truth.
+        // This guards against an Intent that converts without first applying the input policy.
+        // (The deployment target is macOS 26.0, so IntentFile.supportedContentTypes is also
+        // available should we ever want to declare types up front as well.)
         let intentsSource = try String(contentsOf: intentsSourceURL(), encoding: .utf8)
         XCTAssertTrue(
             intentsSource.contains("validateReadableInput"),

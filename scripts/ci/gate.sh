@@ -154,6 +154,10 @@ unit_gate() {
 
 runtime_gate() {
   run_step "Build Python runtime" scripts/build_python_env.sh
+  # The first-party bridge sync+verify used to run as an app build phase that wrote into the
+  # embedded framework. The app no longer embeds Python, so run it here against the source
+  # xcframework (the Pro download's basis) to keep the install_runtime_sandbox check.
+  run_step "Sync and verify Python bridge" scripts/ci/sync_and_verify_python_bridge.sh
   run_step "Verify Python bundle imports" scripts/ci/verify_python_bundle.sh
   build_gate
   run_step "Verify built app package gates" scripts/ci/verify_release_app.sh "$DERIVED_DATA_DIR/Build/Products/Debug/Upmarket.app"

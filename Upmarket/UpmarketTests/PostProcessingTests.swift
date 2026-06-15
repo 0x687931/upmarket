@@ -59,15 +59,15 @@ final class PostProcessingTests: XCTestCase {
         // 3. Mark whether refinement occurred
 
         if WritingToolsAvailabilityCheck.isAvailable {
-            // On macOS 15.1+, should attempt refinement
+            // When Writing Tools is available, should attempt refinement
             XCTAssertTrue(output.markdown.count > 0, "Output should have content")
             // Check if sentence merging happened
             if !output.markdown.contains("\n") || output.markdown.contains("fox jumps") {
                 XCTAssertTrue(output.wasRefined, "Should mark as refined if sentences were merged")
             }
         } else {
-            // On older macOS, no refinement attempted
-            XCTAssertFalse(output.wasRefined, "Should not claim refinement on unsupported OS")
+            // When Writing Tools is unavailable (e.g. Apple Intelligence off), no refinement
+            XCTAssertFalse(output.wasRefined, "Should not claim refinement when Writing Tools is unavailable")
         }
     }
 
@@ -110,7 +110,7 @@ final class PostProcessingTests: XCTestCase {
         // WritingToolsRefinerAdapter always returns input unchanged on unsupported OS
         let input = "# Test\n\nSome content here."
         let output = await WritingToolsService.refineMarkdown(input, language: "en")
-        // On macOS < 15.1 or Intel, wasRefined should be false
+        // When Writing Tools is unavailable (Apple Intelligence off / unsupported), no refinement
         if !WritingToolsAvailabilityCheck.isAvailable {
             XCTAssertFalse(output.wasRefined)
             XCTAssertEqual(output.markdown, input)
@@ -134,10 +134,8 @@ final class PostProcessingTests: XCTestCase {
     }
 
     func testWritingToolsLineMergePreservesMarkdownTableRows() {
-        if #available(macOS 15.1, *) {
-            XCTAssertFalse(WritingToolsRefiner.shouldMergeLine("| --- | --- |", into: "| A | B |"))
-            XCTAssertTrue(WritingToolsRefiner.isMarkdownTableRow("| A | B |"))
-        }
+        XCTAssertFalse(WritingToolsRefiner.shouldMergeLine("| --- | --- |", into: "| A | B |"))
+        XCTAssertTrue(WritingToolsRefiner.isMarkdownTableRow("| A | B |"))
     }
 
     // MARK: - Integration: NL → Writing Tools Pipeline
@@ -177,9 +175,8 @@ final class PostProcessingTests: XCTestCase {
 /// Exposes availability check for test assertions
 enum WritingToolsAvailabilityCheck {
     static var isAvailable: Bool {
-        if #available(macOS 15.1, *) {
-            return WritingToolsRefiner.isAvailable
-        }
-        return false
+        // Deployment target is macOS 26.0, so the OS always satisfies Writing Tools'
+        // macOS 15.1 requirement; availability now depends only on the feature itself.
+        WritingToolsRefiner.isAvailable
     }
 }

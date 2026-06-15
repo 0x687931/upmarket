@@ -80,7 +80,7 @@ One Swift boundary wraps all of this. `docling_bridge/` (converter, analyser, po
 ## Key Constraints
 
 - **App Sandbox is always on.** Do not add temporary exceptions or broad filesystem access without a P0 implementation-plan item. Network entitlement (`com.apple.security.network.client`) is only for model download.
-- Bundle ID `com.upmarket.app`; App Group `group.com.upmarket.app`. Minimum deployment target macOS 13.3 (Ventura). Python 3.12.
+- Bundle ID `com.upmarket.app`; App Group `group.com.upmarket.app`. Minimum deployment target macOS 26.0. Python 3.12.
 - Models stored in `~/Library/Application Support/Upmarket/models/`; validate before enabling model-backed conversion.
 - **Pin ALL Python deps with exact `==`** in `requirements.txt`. Proposed updates go in `requirements-candidate.txt` first. Known conflict: `mlx-vlm` vs `docling-ibm-models` want different `transformers` versions — see `docs/IMPLEMENTATION_PLAN.md`.
 - Conversion runs off the main thread; progress flows via async streams to SwiftUI. Target: 10-page PDF < 30s on M1.

@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		81E090C22FCB12E400FC901A /* Python.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 81E090C02FCB12E400FC901A /* Python.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		81AAFF0A2FDF0512006AEB11 /* SwiftOfficeMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = 81AAFF092FDF0512006AEB11 /* SwiftOfficeMarkdown */; };
 		AA00000F00000000000000FA /* UpmarketQuickAction.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = AA000003000000000000003A /* UpmarketQuickAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		BB000001000000000000001B /* UpmarketRuntimeHelper in Embed Runtime Helper */ = {isa = PBXBuildFile; fileRef = BB000002000000000000002B /* UpmarketRuntimeHelper */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		BB000003000000000000003B /* PythonKit in Frameworks */ = {isa = PBXBuildFile; productRef = 81A3B75C2FCB1073004A488D /* PythonKit */; };
@@ -69,17 +69,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		81E090C32FCB12E400FC901A /* Embed Frameworks */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-				81E090C22FCB12E400FC901A /* Python.xcframework in Embed Frameworks */,
-			);
-			name = "Embed Frameworks";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		AA00000E00000000000000EA /* Embed App Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -188,6 +177,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				81AAFF0A2FDF0512006AEB11 /* SwiftOfficeMarkdown in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -287,8 +277,6 @@
 				81A3B7282FCB0F91004A488D /* Frameworks */,
 				81A3B7292FCB0F91004A488D /* Resources */,
 				CC000003000000000000003C /* Stamp Build Metadata */,
-				81E090C32FCB12E400FC901A /* Embed Frameworks */,
-				CC000001000000000000001C /* Sync Python Bridge */,
 				AA00000E00000000000000EA /* Embed App Extensions */,
 				BB000007000000000000007B /* Embed Runtime Helper */,
 				EE000017000000000000017E /* Embed Command Tools */,
@@ -308,6 +296,7 @@
 			);
 			name = Upmarket;
 			packageProductDependencies = (
+				81AAFF092FDF0512006AEB11 /* SwiftOfficeMarkdown */,
 			);
 			productName = Upmarket;
 			productReference = 81A3B72B2FCB0F91004A488D /* Upmarket.app */;
@@ -497,6 +486,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				81A3B75B2FCB1073004A488D /* XCLocalSwiftPackageReference "Vendor/PythonKit" */,
+				81AAFF082FDF0512006AEB11 /* XCLocalSwiftPackageReference "../Vendor/SwiftOfficeMarkdown" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 81A3B72C2FCB0F91004A488D /* Products */;
@@ -546,34 +536,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		CC000001000000000000001C /* Sync Python Bridge */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"$(SRCROOT)/../scripts/ci/sync_and_verify_python_bridge.sh",
-				"$(SRCROOT)/../scripts/ci/sync_python_bridge.sh",
-				"$(SRCROOT)/../UpmarketPython/docling_bridge",
-				"$(SRCROOT)/../UpmarketPython/models",
-			);
-			name = "Sync Python Bridge";
-			outputPaths = (
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge",
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge/__init__.py",
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge/analyser.py",
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge/converter.py",
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge/postprocessor.py",
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/docling_bridge/security.py",
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/upmarket_models",
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/upmarket_models/__init__.py",
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Python.framework/Versions/3.12/lib/python3.12/site-packages/upmarket_models/model_manager.py",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "cd \"$SRCROOT/..\"\nSITE=\"$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH/Python.framework/Versions/3.12/lib/python3.12/site-packages\"\nscripts/ci/sync_and_verify_python_bridge.sh \"$SITE\"\n";
-		};
 		CC000002000000000000002C /* Validate App Package */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -724,6 +686,7 @@
 		81A3B74A2FCB0F91004A488D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = arm64;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -774,7 +737,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -787,6 +750,7 @@
 		81A3B74B2FCB0F91004A488D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = arm64;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -831,7 +795,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -842,9 +806,12 @@
 		81A3B74D2FCB0F91004A488D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = Upmarket/Upmarket.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -863,6 +830,7 @@
 				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
+				EXCLUDED_ARCHS = "";
 				EXCLUDED_SOURCE_FILE_NAMES = Info.plist;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Upmarket/Info.plist;
@@ -870,10 +838,11 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.upmarket.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -888,9 +857,12 @@
 		81A3B74E2FCB0F91004A488D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = Upmarket/Upmarket.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -909,6 +881,7 @@
 				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
+				EXCLUDED_ARCHS = "";
 				EXCLUDED_SOURCE_FILE_NAMES = Info.plist;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Upmarket/Info.plist;
@@ -916,10 +889,11 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.upmarket.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -944,7 +918,7 @@
 					"@executable_path",
 					"@loader_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.upmarket.UpmarketTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -971,7 +945,7 @@
 					"@executable_path",
 					"@loader_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.upmarket.UpmarketTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -992,7 +966,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Q54Q5726NT;
 				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.upmarket.UpmarketUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1012,7 +986,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Q54Q5726NT;
 				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.upmarket.UpmarketUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1033,7 +1007,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Q54Q5726NT;
 				INFOPLIST_FILE = UpmarketQuickActionSupport/Info.plist;
-				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.upmarket.app.quickaction;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1050,7 +1024,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Q54Q5726NT;
 				INFOPLIST_FILE = UpmarketQuickActionSupport/Info.plist;
-				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.upmarket.app.quickaction;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1075,7 +1049,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.upmarket.app.runtime-helper";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1106,7 +1080,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.upmarket.app.runtime-helper";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1131,7 +1105,7 @@
 				DEVELOPMENT_TEAM = Q54Q5726NT;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.upmarket.app.cli;
 				PRODUCT_NAME = "upmarket-cli";
@@ -1154,7 +1128,7 @@
 				DEVELOPMENT_TEAM = Q54Q5726NT;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.upmarket.app.cli;
 				PRODUCT_NAME = "upmarket-cli";
@@ -1177,7 +1151,7 @@
 				DEVELOPMENT_TEAM = Q54Q5726NT;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.upmarket.app.mcp;
 				PRODUCT_NAME = "upmarket-mcp";
@@ -1200,7 +1174,7 @@
 				DEVELOPMENT_TEAM = Q54Q5726NT;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.upmarket.app.mcp;
 				PRODUCT_NAME = "upmarket-mcp";
@@ -1295,6 +1269,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Vendor/PythonKit;
 		};
+		81AAFF082FDF0512006AEB11 /* XCLocalSwiftPackageReference "../Vendor/SwiftOfficeMarkdown" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Vendor/SwiftOfficeMarkdown;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1302,6 +1280,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 81A3B75B2FCB1073004A488D /* XCLocalSwiftPackageReference "Vendor/PythonKit" */;
 			productName = PythonKit;
+		};
+		81AAFF092FDF0512006AEB11 /* SwiftOfficeMarkdown */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SwiftOfficeMarkdown;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

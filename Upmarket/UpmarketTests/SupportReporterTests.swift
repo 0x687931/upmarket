@@ -68,7 +68,7 @@ final class SupportReporterTests: XCTestCase {
         DiagnosticSnapshot(
             appVersion: "1.0",
             buildNumber: "42",
-            macOSVersion: "macOS 15.5",
+            macOSVersion: "macOS 26.0",
             hardwareModel: "Mac15,6",
             localeIdentifier: "en_US",
             correlationID: "job-123",

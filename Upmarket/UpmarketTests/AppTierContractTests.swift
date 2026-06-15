@@ -66,14 +66,20 @@ final class AppTierContractTests: XCTestCase {
 
     /// Document-type → tier matrix (the upgrade-funnel contract).
     func testDocumentTypeTierMatrix() {
-        // Pro-only formats: spreadsheets, presentations, ebooks, audio.
-        let proFormats: [ConversionFormat] = [.xlsx, .pptx, .epub, .mp3, .m4a, .wav, .aiff]
+        // Pro-only formats: spreadsheets, presentations (incl. legacy .xls/.ppt), ebooks,
+        // audio, and structured formats with no native engine (JSON/XML/ZIP/WebVTT/AsciiDoc
+        // require the advanced runtime).
+        let proFormats: [ConversionFormat] = [
+            .xlsx, .pptx, .xls, .ppt, .epub, .mp3, .m4a, .wav, .aiff,
+            .json, .xml, .zip, .webvtt, .asciidoc,
+        ]
         for fmt in proFormats {
             XCTAssertEqual(AppTier.requiredTier(for: fmt), .pro, "\(fmt) must require Pro")
         }
-        // Basic formats: everyday documents, images, and PDF (complexity is layered on
-        // separately by ConversionCapability).
-        let basicFormats: [ConversionFormat] = [.txt, .md, .docx, .html, .csv, .pdf, .png, .jpg, .jpeg]
+        // Basic formats: everyday documents (incl. legacy .doc), text, HTML, images, and PDF
+        // — all served by in-process native engines (complexity is layered on separately by
+        // ConversionCapability).
+        let basicFormats: [ConversionFormat] = [.txt, .md, .docx, .doc, .html, .csv, .pdf, .png, .jpg, .jpeg]
         for fmt in basicFormats {
             XCTAssertEqual(AppTier.requiredTier(for: fmt), .basic, "\(fmt) must be Basic")
         }

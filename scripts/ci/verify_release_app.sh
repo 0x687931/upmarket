@@ -2,15 +2,29 @@
 set -euo pipefail
 
 APP="${1:?usage: scripts/ci/verify_release_app.sh /path/to/Upmarket.app}"
-PYTHON_FRAMEWORK="$APP/Contents/Frameworks/Python.framework"
-SITE="$APP/Contents/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages"
-SITE_PYTHON_VERSION="$(printf '%s\n' "$SITE" | sed -nE 's#.*lib/python([0-9]+[.][0-9]+)/site-packages$#\1#p')"
-PYTHON_CHECK_BIN="${PYTHON_CHECK_BIN:-python$SITE_PYTHON_VERSION}"
+
+# The Basic tier is fully native; the Python runtime is a Pro Background Assets download,
+# not bundled. The shipped app must therefore NOT embed a Python runtime. Runtime checks
+# that need the interpreter run against the SOURCE xcframework (what the Pro asset is
+# built from), since that is the canonical runtime location now.
+SOURCE_SITE="Upmarket/Python/Python.xcframework/macos-arm64_x86_64/Python.framework/Versions/3.12/lib/python3.12/site-packages"
+PYTHON_CHECK_BIN="${PYTHON_CHECK_BIN:-python3.12}"
 
 if [[ ! -d "$APP" ]]; then
   echo "error: app bundle missing: $APP"
   exit 1
 fi
+
+# Re-embed guard: regressing the embed back into the app would re-bloat it by ~104 MB and
+# break the "Basic ships no Python" guarantee.
+EMBEDDED_FRAMEWORK="$APP/Contents/Frameworks/Python.framework"
+if [[ -e "$EMBEDDED_FRAMEWORK" ]]; then
+  echo "error: app bundle embeds Python.framework — Basic must ship native (Python is a Pro download)."
+  echo "       Remove Python.xcframework from the Upmarket target's Frameworks/Embed phases."
+  echo "       Found: $EMBEDDED_FRAMEWORK"
+  exit 1
+fi
+echo "ok: app bundle does not embed a Python runtime"
 
 run_bundle_preflight() {
   local bundle_path="$1"
@@ -41,11 +55,13 @@ do {
 
 scripts/ci/verify_effective_plist.sh "$APP"
 scripts/ci/verify_entitlements.sh "$APP"
-run_bundle_preflight "$PYTHON_FRAMEWORK"
-scripts/ci/verify_python_bundle.sh "$SITE"
-PYTHONPATH="$SITE" "$PYTHON_CHECK_BIN" scripts/ci/test_archive_security.py
+run_bundle_preflight "$APP"
+# Archive-security guards run against the source runtime (the Pro download's basis).
+PYTHONPATH="$SOURCE_SITE" "$PYTHON_CHECK_BIN" scripts/ci/test_archive_security.py
 scripts/ci/validate_runtime_helper.py "$APP"
 scripts/ci/validate_mcp_server.py "$APP"
-scripts/ci/smoke_convert_offline.sh "$APP"
+# No app path → smoke runs against the source runtime, validating the Pro download's
+# offline model-missing behavior.
+scripts/ci/smoke_convert_offline.sh
 
 echo "ok: release app package gates passed"
