@@ -179,7 +179,7 @@ private enum UpmarketCLI {
         let ext = inputURL.pathExtension.lowercased()
         let isPDF = ext == "pdf"
         let isImage = imageExtensions.contains(ext)
-        let isText = ext == "txt" || ext == "md"
+        let isText = ext == "txt" || ext == "md" || ext == "csv"
 
         // Office/markup formats are app-only; the CLI converts PDF, images, and text.
         func nativeRoute() throws -> Pathway {

@@ -295,7 +295,13 @@ struct ConversionRunner {
                     fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
                 )
             }
-            // Everything else (scanned images/TIFF, non-eligible docs): Apple Vision OCR.
+            // Scanned images carry no page structure that PDFKit/PDF-Vision can parse, so they
+            // need the image-specific Vision-OCR API rather than the PDF quality path (which
+            // calls VisionDocumentExtractor.extract(pdfURL:) and would fail on raw images).
+            if Self.imageExtensions.contains(ext) {
+                return await runVisionImageExtraction(fileURL: tempURL, title: title)
+            }
+            // Scanned/complex PDFs and non-eligible docs: Apple Vision OCR over the PDF path.
             return await runQualitySelectedPDFConversion(
                 fileURL: tempURL, title: title, password: job.password,
                 workspaceURL: workspaceURL, classifierEvidence: evidence,
@@ -328,6 +334,47 @@ struct ConversionRunner {
         AppLog.conversion.info("Audio transcription unavailable; trying native media metadata ext=\(fileURL.pathExtension, privacy: .public)")
         let metadata = await NativeMetadataExtractor.mediaMetadata(url: fileURL, title: title)
         return metadata.output == nil ? previous : metadata
+    }
+
+    /// Raster image formats that carry OCR-able text. Routed through the image-specific
+    /// Vision API rather than the PDF path, which cannot open a bare image.
+    static let imageExtensions: Set<String> = [
+        "png", "jpg", "jpeg", "tiff", "tif", "heic", "heif", "webp", "bmp", "gif",
+    ]
+
+    /// Apple Vision OCR for a single scanned image. Mirrors `runVisionExtraction` but uses
+    /// the image entry point (`extract(imageURL:)`); images are never password-protected.
+    private func runVisionImageExtraction(fileURL: URL, title: String) async -> ConversionResult {
+        let signpost = AppSignpost.conversion.beginInterval("nativeExtract")
+        defer { AppSignpost.conversion.endInterval("nativeExtract", signpost) }
+
+        do {
+            let result = try await VisionDocumentExtractor.extract(imageURL: fileURL)
+            var metadata = DocumentMetadata.visionDocuments(elementType: result.documentElementType)
+            metadata = DocumentMetadata(
+                elementType: metadata.elementType,
+                language: metadata.language,
+                extractionMethod: "vision",
+                extractionConfidence: 0.85,
+                containsHandwriting: result.containsHandwriting,
+                handwritingRatio: result.handwritingRatio
+            )
+            return .success(ConversionOutput(
+                markdown: result.markdown,
+                pages: result.pageCount,
+                format: fileURL.pathExtension.uppercased(),
+                title: title,
+                pipeline: .fast,
+                selectedPathway: .visionOCR,
+                metadata: metadata,
+                originalTables: result.structuredTables
+            ))
+        } catch VisionDocumentExtractor.ExtractionError.passwordRequired {
+            // Not expected for images, but handled for parity with the PDF path.
+            return .failure(ConversionError.passwordRequired.errorDescription ?? "This file is protected.")
+        } catch {
+            return .failure(ConversionError.inaccessible.errorDescription ?? "Upmarket couldn't read this image.")
+        }
     }
 
     private func runVisionExtraction(fileURL: URL, title: String, password: String?, workspaceURL: URL) async -> ConversionResult {
@@ -412,7 +459,7 @@ struct ConversionRunner {
         return .success(ConversionOutput(
             markdown: pages.joined(separator: "\n\n---\n\n"),
             pages: document.pageCount, format: "PDF", title: title,
-            pipeline: .ai, selectedPathway: .enhanced,
+            pipeline: .ai, selectedPathway: .ai,
             metadata: DocumentMetadata.visionDocuments(elementType: nil),
             originalTables: []))
     }

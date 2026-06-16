@@ -172,11 +172,10 @@ struct AppTierGate: Sendable {
             return nil
 
         case .enhanced:
+            // Enhanced converts natively (SwiftOfficeMarkdown, NativeEPUBConverter, Vision)
+            // and runs on Intel as well as Apple Silicon, so it gates on tier only.
             if tier < .pro {
                 return "Enhanced conversion requires Upmarket Pro."
-            }
-            if !deviceSupportsRuntime {
-                return "Enhanced conversion requires Apple Silicon."
             }
             return nil
 

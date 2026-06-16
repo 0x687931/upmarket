@@ -695,6 +695,54 @@ final class ConversionQueueTests: XCTestCase {
         }
     }
 
+    func testScannedImageRoutesThroughVisionImageOCR() async throws {
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketScannedImageTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: workspace)
+        }
+
+        // Render text into a PNG so the classifier sees a scanned-image document (≥10 words)
+        // and routes it to the image-specific Vision OCR path — not the PDF-only quality path.
+        let size = NSSize(width: 1000, height: 300)
+        let image = NSImage(size: size)
+        image.lockFocus()
+        NSColor.white.setFill()
+        NSRect(origin: .zero, size: size).fill()
+        let sentence = "The quick brown fox jumps over the lazy dog near the river bank today"
+        NSAttributedString(
+            string: sentence,
+            attributes: [.font: NSFont.systemFont(ofSize: 48), .foregroundColor: NSColor.black]
+        ).draw(at: NSPoint(x: 20, y: 120))
+        image.unlockFocus()
+
+        guard let tiff = image.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiff),
+              let png = rep.representation(using: .png, properties: [:]) else {
+            return XCTFail("Expected to render a PNG fixture")
+        }
+        let imageURL = workspace.appendingPathComponent("scanned.png")
+        try png.write(to: imageURL)
+
+        // Force the scanned-document classification so the test deterministically exercises
+        // the image-OCR routing fix — a synthetic PNG can otherwise classify as photo/artwork
+        // (metadata-only). This guards the regression: a scanned image must use the image
+        // Vision-OCR path, not the PDF-only quality path.
+        let scanned = ContentClassifier.Classification(
+            kind: .scannedDocument, requiredTier: .native, hasExtractableText: false,
+            frameCount: 1, pdfEvidence: nil, recommendedPathway: .visionOCR
+        )
+        let result = await ConversionRunner(
+            supportsAdvancedRuntime: false, supportsAI: false,
+            classifyOverride: { _, _, _, _ in scanned }
+        ).run(ConversionJob(sourceURL: imageURL))
+
+        // The PDF-only path would fail to open a bare image; the image route must succeed.
+        XCTAssertNil(result.errorMessage)
+        XCTAssertEqual(result.output?.selectedPathway, .visionOCR)
+    }
+
     func testNativeOnlyRuntimeStillConvertsDigitalPDF() async throws {
         let workspace = FileManager.default.temporaryDirectory
             .appendingPathComponent("UpmarketNativePDFTests-\(UUID().uuidString)", isDirectory: true)

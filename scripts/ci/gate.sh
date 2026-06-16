@@ -93,6 +93,7 @@ xcode_ui_tests() {
     -destination "$DESTINATION" \
     -derivedDataPath "$DERIVED_DATA_DIR" \
     -only-testing:UpmarketUITests \
+    -skipMacroValidation \
     CODE_SIGNING_ALLOWED="$CODE_SIGNING"
 
   local products_dir="$DERIVED_DATA_DIR/Build/Products"
