@@ -8,12 +8,13 @@ on-device AI — now ships in a **~25 MB app** with a **~7.6 MB download**, and 
 ## Shipping app (Release archive, Apple Silicon)
 
 Measured from `xcodebuild archive` (Release, stripped — the actual shippable binary;
-symbols go to a separate dSYM, not the download):
+symbols go to a separate dSYM, not the download), then re-signed locally with the
+**Apple Distribution** cert (`Q54Q5726NT`) to confirm signed size:
 
 | Metric | Size |
 | --- | --- |
-| **Install size** (uncompressed `Upmarket.app`) | **~25 MB** |
-| **Download** (compressed package, estimate) | **~7.6 MB** |
+| **Install size** (uncompressed signed `Upmarket.app`) | **~25 MB** |
+| **Download** (compressed signed package) | **~7.5 MB** |
 | Main binary `Upmarket` (stripped) | 20 MB — dominated by statically-linked mlx-swift (Granite inference) |
 | `upmarket-cli` / `upmarket-mcp` | 270 KB / 122 KB |
 | Embedded `Python.framework` | **none** |
