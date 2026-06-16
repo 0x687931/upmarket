@@ -92,7 +92,7 @@ PDF classification (`NativeDocumentClassifier`) decides digital-text → PDFKit,
 
 ## Workflow
 
-- **Never commit to main** — always use a worktree. See `~/.claude/WORKTREE_WORKFLOW.md`.
+- **Never commit to main** — always use a worktree. See `~/.claude/WORKTREE_WORKFLOW.md`. This is enforced: a PreToolUse hook (`.claude/settings.json` → `.claude/hooks/require-worktree.sh`) hard-blocks `Edit`/`Write`/`NotebookEdit` and destructive `Bash` (`rm`, `git rm/mv/commit/reset/checkout/...`) whenever the target resolves to the primary checkout or a `main`/`master` HEAD. Create a worktree first: `git worktree add ../upmarket-<task> -b <branch>`.
 - PR for every feature; use `.github/PULL_REQUEST_TEMPLATE.md` (summary, release gate, scope, validation, risk review, agent handoff notes). Short imperative commit summaries.
 - Before a change is "done": identify the affected release gate in `docs/IMPLEMENTATION_PLAN.md` and run the matching `gate.sh` mode. If validation can't be run, say so explicitly in the handoff.
 - Multi-agent work: assign disjoint write sets; only one agent owns a file at a time. Agents read broadly, edit narrowly. See `AGENTS.md` and `docs/release/AGENT_TASK_ORCHESTRATION.md`.
