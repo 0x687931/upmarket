@@ -147,6 +147,13 @@ private enum UpmarketCLI {
             try validateInput(inputURL)
             try validateOutputDestination(outURL, force: options.force)
 
+            // Conversions the CLI can't run in-process — AI/Granite, Office, EPUB, HTML — are
+            // handed to the app, which owns those engines. Same routing decision, app executes.
+            if let brokered = try await maybeBrokerToApp(inputURL: inputURL, options: options) {
+                try write(brokered, to: outURL, force: options.force)
+                continue
+            }
+
             let pathway = try await resolvePathway(for: inputURL, engine: options.engine, debug: options.debug)
             debugLog("file=\(inputURL.lastPathComponent) engine=\(pathway.rawValue)", options.debug)
 
@@ -171,6 +178,76 @@ private enum UpmarketCLI {
             throw CommandError(.aiUnavailable,
                 "Upmarket AI requires Upmarket Max. Open Upmarket to upgrade.")
         }
+    }
+
+    /// Returns the app-converted output if `inputURL` needs an app-only engine (AI/Granite,
+    /// Office, EPUB, HTML), otherwise nil so the caller runs the in-process path.
+    private static func maybeBrokerToApp(inputURL: URL, options: Options) async throws -> String? {
+        let ext = inputURL.pathExtension.lowercased()
+        let inProcess = ext == "pdf" || imageExtensions.contains(ext) || ext == "txt" || ext == "md" || ext == "csv"
+        let useAI = options.engine == .ai
+        // In-process formats stay local unless the user asked for AI (which only the app runs).
+        guard useAI || !inProcess else { return nil }
+        return try await brokerToApp(
+            inputURL: inputURL, useAI: useAI,
+            outputMode: options.outputFormat.rawValue, debug: options.debug)
+    }
+
+    /// Hands a conversion to the running app over the shared handoff: write request.json + the
+    /// input into CLIHandoffs/<id>/, open upmarket://convert?cli=<id>, poll for response.json.
+    private static func brokerToApp(inputURL: URL, useAI: Bool, outputMode: String, debug: Bool) async throws -> String {
+        let fm = FileManager.default
+        guard let root = CLIHandoffPaths.rootURL(fileManager: fm) else {
+            throw CommandError(.conversionFailed, "Open the Upmarket app to convert this document.")
+        }
+        let id = UUID().uuidString
+        let dir = CLIHandoffPaths.handoffDirectory(id: id, root: root)
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: dir) }
+
+        let inputName = "input." + (inputURL.pathExtension.isEmpty ? "dat" : inputURL.pathExtension.lowercased())
+        try fm.copyItem(at: inputURL, to: dir.appendingPathComponent(inputName))
+        let request = CLIConversionRequest(
+            version: 1, inputFile: inputName, sourceDisplayName: inputURL.lastPathComponent,
+            useAI: useAI, outputMode: outputMode)
+        try JSONEncoder().encode(request).write(to: dir.appendingPathComponent("request.json"), options: .atomic)
+
+        debugLog("brokering to app: id=\(id) useAI=\(useAI)", debug)
+        try openURLScheme("upmarket://convert?cli=\(id)")
+
+        let responseURL = dir.appendingPathComponent("response.json")
+        let deadline = Date().addingTimeInterval(600)   // VLM over many pages is slow
+        while !fm.fileExists(atPath: responseURL.path) {
+            if Date() > deadline {
+                throw CommandError(.conversionFailed, "Timed out waiting for the Upmarket app. Make sure Upmarket is installed.")
+            }
+            try await Task.sleep(nanoseconds: 250_000_000)
+        }
+
+        let response = try JSONDecoder().decode(CLIConversionResponse.self, from: Data(contentsOf: responseURL))
+        switch response.status {
+        case .success:
+            guard let outputFile = response.outputFile else {
+                throw CommandError(.conversionFailed, "Upmarket returned no output.")
+            }
+            return try String(contentsOf: dir.appendingPathComponent(outputFile), encoding: .utf8)
+        case .purchaseRequired:
+            throw CommandError(.purchaseRequired, response.message ?? "Open Upmarket to unlock more conversions.")
+        case .aiUnavailable:
+            throw CommandError(.aiUnavailable, response.message ?? "Upmarket AI is not available for this conversion.")
+        case .inputRejected:
+            throw CommandError(.inputRejected, response.message ?? "Upmarket couldn't read this document.")
+        case .conversionFailed:
+            throw CommandError(.conversionFailed, response.message ?? "Upmarket couldn't convert this document.")
+        }
+    }
+
+    private static func openURLScheme(_ string: String) throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        process.arguments = [string]
+        try process.run()
+        process.waitUntilExit()
     }
 
     /// Picks the concrete engine. `--auto` runs the Apple classifier for PDFs and
