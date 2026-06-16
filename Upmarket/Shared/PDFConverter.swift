@@ -51,7 +51,7 @@ struct PDFConverter {
                 maximumSide: limits.maximumPageSidePoints,
                 maximumArea: limits.maximumPageAreaPoints
             )
-            let text = page.string ?? ""
+            let text = cleanText(page.string ?? "")
             totalChars += text.count
 
             if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { continue }
@@ -82,27 +82,45 @@ struct PDFConverter {
             return figureTextMarkdown(lines)
         }
 
-        // Heuristic: detect headings by font size via annotations
-        // PDFKit doesn't expose font sizes directly, so we use line length + position heuristics
-        var result: [String] = []
-        for (i, line) in lines.enumerated() {
-            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.isEmpty { continue }
+        let result = lines.map { headingMarkup(for: $0) ?? $0 }
+        return result.joined(separator: "\n")
+    }
 
-            // Short lines at start of page that aren't sentences are likely headings
-            let isLikelyHeading = trimmed.count < 80
-                && !trimmed.hasSuffix(".")
-                && !trimmed.hasSuffix(",")
-                && i < 3
+    // Numbered section heading, e.g. "1 Executive Summary", "2.1 Overview", "3.3 Financials".
+    // Requires a capital after the number so body list items like "1. we did x" don't match.
+    private static let numberedHeading = try! NSRegularExpression(pattern: #"^(\d+(?:\.\d+)*)\.?\s+[A-Z]"#)
+    private static let dotLeaders = try! NSRegularExpression(pattern: #"\.{4,}"#)
 
-            if isLikelyHeading && i == 0 {
-                result.append("## \(trimmed)")
-            } else {
-                result.append(trimmed)
-            }
+    /// Markdown heading markup for `line` if it looks like a section heading, else nil.
+    /// Levels follow section depth (depth 1 → `##`, 2 → `###`, …); cover-page ALL-CAPS
+    /// banners become a single `#`. Table-of-contents rows (dot leaders) are never headings.
+    private static func headingMarkup(for line: String) -> String? {
+        let range = NSRange(line.startIndex..., in: line)
+        // Skip ToC entries and sentence-like / long lines.
+        if dotLeaders.firstMatch(in: line, range: range) != nil { return nil }
+        if line.count > 80 || line.hasSuffix(".") || line.hasSuffix(",") || line.hasSuffix(";") { return nil }
+
+        if let match = numberedHeading.firstMatch(in: line, range: range),
+           let numbers = Range(match.range(at: 1), in: line) {
+            let depth = line[numbers].split(separator: ".").count
+            return String(repeating: "#", count: min(depth + 1, 6)) + " " + line
         }
 
-        return result.joined(separator: "\n")
+        // Cover-page / banner lines in all caps (e.g. "CAPSTONE").
+        let letters = line.filter(\.isLetter)
+        if letters.count >= 2, letters.allSatisfy(\.isUppercase) {
+            return "# " + line
+        }
+        return nil
+    }
+
+    /// PDFKit glyph spacing often inserts a space after an intra-word hyphen ("start- up").
+    /// Collapse `<letter>- <letter>` → `<letter>-<letter>`; spaced em-dashes (" - ", "—")
+    /// used as punctuation are left untouched (they have a space *before* the dash too).
+    private static let hyphenSpacing = try! NSRegularExpression(pattern: #"(?<=[A-Za-z])-[ \t]+(?=[A-Za-z])"#)
+    private static func cleanText(_ text: String) -> String {
+        let range = NSRange(text.startIndex..., in: text)
+        return hyphenSpacing.stringByReplacingMatches(in: text, range: range, withTemplate: "-")
     }
 
     private static func isLikelyFigureText(_ lines: [String]) -> Bool {

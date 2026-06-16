@@ -226,19 +226,14 @@ private enum UpmarketCLI {
 
     // MARK: - Native engines (in-process)
 
-    /// Digital-PDF text via PDFKit. Returns nil for locked or text-less (scanned) PDFs
-    /// so the caller can fall back to Vision OCR.
+    /// Digital-PDF text via the shared `PDFConverter` (same engine as the app, incl. hyphen
+    /// cleanup + heading detection). Returns nil for locked or text-less (scanned) PDFs so the
+    /// caller can fall back to Vision OCR.
     private static func nativePDFKit(_ inputURL: URL) -> ConvertedDocument? {
-        guard let document = PDFDocument(url: inputURL), !document.isLocked else { return nil }
-        var pages: [String] = []
-        for index in 0..<document.pageCount {
-            if let text = document.page(at: index)?.string?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
-                pages.append(text)
-            }
-        }
-        let markdown = pages.joined(separator: "\n\n").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !markdown.isEmpty else { return nil }
-        return ConvertedDocument(markdown: markdown, pages: document.pageCount, format: "PDF",
+        guard let result = try? PDFConverter.convert(url: inputURL),
+              !result.isLikelyScanned,
+              !result.markdown.isEmpty else { return nil }
+        return ConvertedDocument(markdown: result.markdown, pages: result.pageCount, format: "PDF",
                                  title: inputURL.deletingPathExtension().lastPathComponent, pipeline: Pathway.pdfkit.rawValue)
     }
 
