@@ -25,14 +25,5 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Cache Python runtime
-        uses: actions/cache@v4
-        with:
-          path: Upmarket/Python/Python.xcframework
-          key: ${{ runner.os }}-${{ runner.arch }}-python-runtime-${{ hashFiles('requirements.txt', 'scripts/build_python_env.sh', 'scripts/ci/verify_python_bundle.sh', 'UpmarketPython/**/*.py') }}
-
-      - name: Prepare Python runtime
-        run: scripts/ci/ensure_python_runtime.sh
-
       - name: Fast PR gate
         run: scripts/ci/gate.sh quick

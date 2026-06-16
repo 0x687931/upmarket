@@ -96,7 +96,7 @@ cp ~/Downloads/23wa.pdf "$CORPUS/pdf_digital/academic/algebra_rings_fields.pdf" 
     || echo "  - algebra_rings_fields.pdf (not found in Downloads)"
 
 echo ""
-echo "==> Corpus seeded. Run ./scripts/benchmark.sh to validate."
+echo "==> Corpus seeded. Run scripts/ci/gate.sh release to validate."
 echo ""
 echo "Next: Add .expected.md ground truth files for each document."
 echo "See docs/CORPUS_STRATEGY.md for instructions."

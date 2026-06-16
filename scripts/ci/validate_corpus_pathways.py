@@ -184,7 +184,7 @@ def main() -> int:
         "--results",
         action="append",
         default=[],
-        help="optional pathway benchmark JSON produced by scripts/benchmark.sh --pathway; may be repeated",
+        help="optional pathway benchmark JSON from a native pathway benchmark; may be repeated",
     )
     args = parser.parse_args()
 

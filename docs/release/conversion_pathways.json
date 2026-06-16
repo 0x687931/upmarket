@@ -2,15 +2,25 @@
   "version": 2,
   "manifest": "tests/corpus/manifest.json",
   "principle": "Every corpus document in a supported format must run through a shipping convert-to-Markdown pathway. Conversion is native-only (no Python); formats that had only a Python/Docling engine are listed in unsupported_formats and are not required to have a shipping pathway.",
-  "unsupported_formats": ["asciidoc", "nxml", "tex", "vtt", "xml"],
+  "unsupported_formats": [
+    "asciidoc",
+    "nxml",
+    "tex",
+    "vtt",
+    "xml"
+  ],
   "unsupported_formats_note": "These formats were served only by the removed Python/Docling runtime (AsciiDoc, NLM/JATS nxml, LaTeX, WebVTT, generic XML) and have no native engine. Their corpus documents are retained as historical reference and are exempt from shipping-pathway coverage. Add a native engine and a pathway here to bring one back into scope.",
   "pathways": {
     "swift-pdfkit": {
       "owner": "Services/PDFConverter.swift",
-      "runner": "python3 scripts/benchmark_pdfkit.py --json-output reports/corpus-swift-pdfkit.json",
+      "runner": "xcode-test",
       "release_status": "shipping",
-      "valid_formats": ["pdf"],
-      "compute_modes": ["cpu"],
+      "valid_formats": [
+        "pdf"
+      ],
+      "compute_modes": [
+        "cpu"
+      ],
       "accelerator_control": "none",
       "baseline_required": true,
       "notes": "Apple-native digital PDF extraction path. Uses PDFKit text extraction plus small Markdown cleanup heuristics."
@@ -19,8 +29,19 @@
       "owner": "Shared/VisionDocumentExtractor.swift",
       "runner": "xcode-test",
       "release_status": "shipping",
-      "valid_formats": ["pdf", "png", "jpg", "jpeg", "tiff", "tif", "heic", "heif"],
-      "compute_modes": ["os-managed-cpu-gpu-ane"],
+      "valid_formats": [
+        "pdf",
+        "png",
+        "jpg",
+        "jpeg",
+        "tiff",
+        "tif",
+        "heic",
+        "heif"
+      ],
+      "compute_modes": [
+        "os-managed-cpu-gpu-ane"
+      ],
       "accelerator_control": "none; Vision chooses available Apple hardware internally",
       "availability": "macOS/Vision availability gated",
       "baseline_required": true,
@@ -30,8 +51,16 @@
       "owner": "Services/SpeechTranscriber.swift",
       "runner": "xcode-test",
       "release_status": "shipping",
-      "valid_formats": ["mp3", "m4a", "wav", "aiff", "opus"],
-      "compute_modes": ["os-managed-cpu-gpu-ane"],
+      "valid_formats": [
+        "mp3",
+        "m4a",
+        "wav",
+        "aiff",
+        "opus"
+      ],
+      "compute_modes": [
+        "os-managed-cpu-gpu-ane"
+      ],
       "accelerator_control": "none; Speech framework chooses available Apple hardware internally",
       "availability": "Speech authorization and recognizer availability gated",
       "baseline_required": true,
@@ -39,20 +68,56 @@
     },
     "swift-imageio-metadata": {
       "owner": "Services/NativeMetadataExtractor.swift",
-      "runner": "scripts/benchmark_native_metadata.py --pathway swift-imageio-metadata --json-output reports/corpus-swift-imageio-metadata.json",
+      "runner": "xcode-test",
       "release_status": "shipping",
-      "valid_formats": ["png", "jpg", "jpeg", "gif", "tiff", "tif", "webp", "bmp", "heic", "heif"],
-      "compute_modes": ["cpu", "hardware-codec"],
+      "valid_formats": [
+        "png",
+        "jpg",
+        "jpeg",
+        "gif",
+        "tiff",
+        "tif",
+        "webp",
+        "bmp",
+        "heic",
+        "heif"
+      ],
+      "compute_modes": [
+        "cpu",
+        "hardware-codec"
+      ],
       "accelerator_control": "none",
       "baseline_required": true,
       "notes": "Apple-native image metadata Markdown path."
     },
     "swift-avfoundation-metadata": {
       "owner": "Services/NativeMetadataExtractor.swift",
-      "runner": "scripts/benchmark_native_metadata.py --pathway swift-avfoundation-metadata --json-output reports/corpus-swift-avfoundation-metadata.json",
+      "runner": "xcode-test",
       "release_status": "shipping",
-      "valid_formats": ["mp3", "m4a", "wav", "aiff", "opus", "flac", "aac", "ogg", "mp4", "m4v", "mov", "avi", "mpeg", "mpg", "webm", "mkv", "wma", "wmv"],
-      "compute_modes": ["cpu", "hardware-codec"],
+      "valid_formats": [
+        "mp3",
+        "m4a",
+        "wav",
+        "aiff",
+        "opus",
+        "flac",
+        "aac",
+        "ogg",
+        "mp4",
+        "m4v",
+        "mov",
+        "avi",
+        "mpeg",
+        "mpg",
+        "webm",
+        "mkv",
+        "wma",
+        "wmv"
+      ],
+      "compute_modes": [
+        "cpu",
+        "hardware-codec"
+      ],
       "accelerator_control": "none",
       "baseline_required": true,
       "notes": "Apple-native media metadata Markdown path."
@@ -61,8 +126,18 @@
       "owner": "Vendor/SwiftOfficeMarkdown (OfficeToMarkdown)",
       "runner": "xcode-test",
       "release_status": "shipping",
-      "valid_formats": ["docx", "doc", "xlsx", "xlsm", "xls", "pptx", "ppt"],
-      "compute_modes": ["cpu"],
+      "valid_formats": [
+        "docx",
+        "doc",
+        "xlsx",
+        "xlsm",
+        "xls",
+        "pptx",
+        "ppt"
+      ],
+      "compute_modes": [
+        "cpu"
+      ],
       "accelerator_control": "none",
       "baseline_required": true,
       "notes": "Native OOXML/legacy-binary Office conversion via the vendored SwiftOfficeMarkdown engine (ZipReader + part parsers). Replaces the Python MarkItDown/Docling office path."
@@ -71,8 +146,13 @@
       "owner": "Services/NativeHTMLConverter.swift",
       "runner": "xcode-test",
       "release_status": "shipping",
-      "valid_formats": ["html", "htm"],
-      "compute_modes": ["cpu"],
+      "valid_formats": [
+        "html",
+        "htm"
+      ],
+      "compute_modes": [
+        "cpu"
+      ],
       "accelerator_control": "none",
       "baseline_required": true,
       "notes": "In-process HTML-to-Markdown via libxml2/XMLDocument. Replaces the Python MarkItDown HTML path."
@@ -81,8 +161,14 @@
       "owner": "Services/NativeTextConverter.swift",
       "runner": "xcode-test",
       "release_status": "shipping",
-      "valid_formats": ["txt", "md", "csv"],
-      "compute_modes": ["cpu"],
+      "valid_formats": [
+        "txt",
+        "md",
+        "csv"
+      ],
+      "compute_modes": [
+        "cpu"
+      ],
       "accelerator_control": "none",
       "baseline_required": true,
       "notes": "In-process plain-text/Markdown/CSV-to-Markdown conversion."
@@ -91,8 +177,12 @@
       "owner": "Services/NativeEPUBConverter.swift",
       "runner": "xcode-test",
       "release_status": "shipping",
-      "valid_formats": ["epub"],
-      "compute_modes": ["cpu"],
+      "valid_formats": [
+        "epub"
+      ],
+      "compute_modes": [
+        "cpu"
+      ],
       "accelerator_control": "none",
       "baseline_required": true,
       "notes": "In-process EPUB-to-Markdown: SwiftOfficeMarkdown ZipReader + OPF spine ordering + the native HTML walker. Replaces the Python MarkItDown EPUB path."
