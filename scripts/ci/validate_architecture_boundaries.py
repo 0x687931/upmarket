@@ -10,20 +10,14 @@ from pathlib import Path
 ROOT = Path("Upmarket/Upmarket")
 VIEW_DIR = ROOT / "Views"
 APP_SOURCE = ROOT / "UpmarketApp.swift"
-APPROVED_PYTHONKIT_IMPORTS: set[Path] = set()
-APPROVED_PYTHON_CALLS = APPROVED_PYTHONKIT_IMPORTS
-HELPER_SOURCE = Path("Upmarket/UpmarketRuntimeHelper/main.swift")
 REQUIRED_CORE_FILES = {
     ROOT / "Domain" / "ConversionJob.swift",
     ROOT / "Domain" / "ConversionResult.swift",
     ROOT / "Domain" / "ConversionError.swift",
     ROOT / "Services" / "ConversionQueue.swift",
     ROOT / "Services" / "ConversionRunner.swift",
-    ROOT / "Services" / "PythonWorker.swift",
 }
 FORBIDDEN_IN_VIEWS = {
-    "import PythonKit": "views must not import PythonKit",
-    "Python.import": "views must not call Python modules",
     "NSOpenPanel(": "views must use FileAccessService for open panels",
     "NSSavePanel(": "views must use FileAccessService or SavePreference for save panels",
     "NSPasteboard.general": "views must use FileAccessService for pasteboard writes",
@@ -71,20 +65,16 @@ def main() -> int:
 
     for path in sorted(ROOT.rglob("*.swift")):
         text = path.read_text(encoding="utf-8")
-        if "import PythonKit" in text and path not in APPROVED_PYTHONKIT_IMPORTS:
-            errors.append(f"{path}: PythonKit imports must stay behind PythonBridge/PythonWorker")
-        if "Python.import" in text and path not in APPROVED_PYTHON_CALLS:
-            errors.append(f"{path}: Python.import calls must stay behind PythonBridge/PythonWorker")
+        # The Python runtime has been removed entirely — conversion is native-only.
+        if "import PythonKit" in text:
+            errors.append(f"{path}: PythonKit must not be reintroduced; conversion is native-only")
+        if "Python.import" in text:
+            errors.append(f"{path}: Python calls must not be reintroduced; conversion is native-only")
         if path.parent == ROOT / "Services" and "print(" in text:
             errors.append(f"{path}: service diagnostics must use AppLog/OSLog, not print")
 
     if not (ROOT / "Services" / "FileAccessService.swift").exists():
         errors.append("Services/FileAccessService.swift is required for AppKit file/pasteboard operations")
-
-    if not HELPER_SOURCE.exists():
-        errors.append("UpmarketRuntimeHelper/main.swift is required for isolated runtime work")
-    elif "import PythonKit" not in HELPER_SOURCE.read_text(encoding="utf-8"):
-        errors.append("UpmarketRuntimeHelper/main.swift must own the only PythonKit import")
 
     if errors:
         for error in errors:

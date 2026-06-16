@@ -56,7 +56,7 @@ final class FirstPartyModelDownloadServiceTests: XCTestCase {
             "model_key": "upmarket_ai",
             "source_id": "com.upmarket.models.upmarket-ai",
             "revision": "e9939db25d2f296c8678d0491c4609a8c596c50a",
-            "storage_dir": "ibm-granite--granite-docling-258M-mlx",
+            "storage_dir": "upmarket_ai",
             "expected_files": expectedFiles,
             "expected_dirs": [],
             "files": files,
@@ -80,7 +80,7 @@ final class FirstPartyModelDownloadServiceTests: XCTestCase {
         let result = await service.downloadModel(key: "upmarket_ai", progressFile: "")
         XCTAssertTrue(result.success, result.error ?? "download failed")
 
-        let installed = modelsRoot.appendingPathComponent("ibm-granite--granite-docling-258M-mlx", isDirectory: true)
+        let installed = modelsRoot.appendingPathComponent("upmarket_ai", isDirectory: true)
         XCTAssertTrue(FileManager.default.isReadableFile(atPath: installed.appendingPathComponent("chat_template.jinja").path))
         XCTAssertTrue(FileManager.default.isReadableFile(atPath: installed.appendingPathComponent("tokenizer_config.json").path))
 

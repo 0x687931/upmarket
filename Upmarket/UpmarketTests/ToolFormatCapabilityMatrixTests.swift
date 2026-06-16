@@ -7,26 +7,22 @@ final class ToolFormatCapabilityMatrixTests: XCTestCase {
             let tools = Set(ToolFormatCapabilityMatrix.tools(for: format))
 
             XCTAssertTrue(tools.contains(.speech), "\(format.rawValue) should be valid for native Speech")
-            XCTAssertTrue(tools.contains(.markItDown), "\(format.rawValue) should be valid for MarkItDown fallback evaluation")
             XCTAssertTrue(tools.contains(.avFoundation), "\(format.rawValue) should be valid for AVFoundation metadata")
         }
     }
 
-    func testPDFFormatsExposeNativeAndPythonRoutes() {
+    func testPDFFormatsExposeNativeRoutes() {
         let tools = Set(ToolFormatCapabilityMatrix.tools(for: .pdf))
 
         XCTAssertTrue(tools.contains(.pdfKit))
         XCTAssertTrue(tools.contains(.vision))
-        XCTAssertTrue(tools.contains(.pythonPDFium))
-        XCTAssertTrue(tools.contains(.enhanced))
         XCTAssertTrue(tools.contains(.upmarketAI))
     }
 
-    func testPlainTextIsAcceptedOnlyThroughAdvancedDocumentRoutes() {
+    func testPlainTextIsAcceptedThroughNativeTextRoute() {
         let tools = Set(ToolFormatCapabilityMatrix.tools(for: .txt))
 
-        XCTAssertTrue(tools.contains(.markItDown))
-        XCTAssertTrue(tools.contains(.enhanced))
+        XCTAssertTrue(tools.contains(.nativeText))
         XCTAssertTrue(ToolFormatCapabilityMatrix.accepts(fileExtension: "txt"))
     }
 

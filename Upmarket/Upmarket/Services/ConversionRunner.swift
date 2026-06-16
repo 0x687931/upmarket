@@ -1,12 +1,14 @@
 import Foundation
+import ImageIO
 import OSLog
 import PDFKit
 import SwiftOfficeMarkdown
+import UpmarketVLM
+import UniformTypeIdentifiers
 
 struct ConversionRunner {
     typealias ProgressHandler = (ConversionProgress) -> Void
 
-    let pythonWorker: PythonWorker
     private let supportsAdvancedRuntime: Bool
     private let supportsAI: Bool
     private let tier: @Sendable () -> AppTier
@@ -17,7 +19,6 @@ struct ConversionRunner {
 
     @MainActor
     init(
-        pythonWorker: PythonWorker = PythonWorker(),
         supportsAdvancedRuntime: Bool = DeviceCapability.currentSupportsAdvancedRuntime,
         supportsAI: Bool = DeviceCapability.shared.supportsUpmarketAI,
         tier: (@Sendable () -> AppTier)? = nil,
@@ -25,7 +26,6 @@ struct ConversionRunner {
         classifyOverride: (@Sendable (URL, String?, Bool, Bool) async -> ContentClassifier.Classification?)? = nil,
         pdfCandidateBudget: PDFCandidateBudget = .default
     ) {
-        self.pythonWorker = pythonWorker
         self.supportsAdvancedRuntime = supportsAdvancedRuntime
         self.supportsAI = supportsAI
 
@@ -215,61 +215,23 @@ struct ConversionRunner {
             return NativeMetadataExtractor.imageMetadata(url: tempURL, title: title)
 
         case .structuredDocument:
-            // Basic-tier structured formats convert in-process (no Python); formats the
-            // tier contract gates above Basic, or that have no native engine, use the
-            // Enhanced (Python) runtime. The capability gate has already cleared the tier.
+            // All structured formats convert in-process with native engines — no Python.
+            // The capability gate has already cleared the tier.
             let ext = job.sourceURL.pathExtension.lowercased()
             if ext == "html" || ext == "htm" {
-                let native = runNativeHTMLConversion(fileURL: tempURL, title: title)
-                if case .success = native { return native }
-                // Native parse failed — fall back to Python only if the runtime is present,
-                // otherwise surface the native failure rather than a misleading capability error.
-                guard supportsAdvancedRuntime else { return native }
-                return await runPythonConversion(
-                    fileURL: tempURL, title: title, useAI: false,
-                    password: job.password, workspaceURL: workspaceURL, progress: progress
-                )
+                return runNativeHTMLConversion(fileURL: tempURL, title: title)
             }
             if NativeTextConverter.extensions.contains(ext) {
-                // Plain-text family (.txt/.md/.csv) — Basic-tier, in-process, no Python.
-                let native = runNativeTextConversion(fileURL: tempURL, title: title, ext: ext)
-                if case .success = native { return native }
-                guard supportsAdvancedRuntime else { return native }
-                return await runPythonConversion(
-                    fileURL: tempURL, title: title, useAI: false,
-                    password: job.password, workspaceURL: workspaceURL, progress: progress
-                )
+                // Plain-text family (.txt/.md/.csv) — in-process.
+                return runNativeTextConversion(fileURL: tempURL, title: title, ext: ext)
             }
             if Self.nativeOfficeExtensions.contains(ext) {
-                // Word documents (.docx) are Basic-tier: the schema-driven native engine is
-                // the primary path — no Python. Spreadsheets/presentations are Pro and only
-                // reach here once the capability gate has cleared the runtime, where Enhanced
-                // is preferred with the native engine as the fallback.
-                let format = ConversionFormat(fileExtension: ext)
-                let isBasicOffice = format.map { AppTier.requiredTier(for: $0) == .basic } ?? false
-                if isBasicOffice || !supportsAdvancedRuntime {
-                    let native = runNativeOfficeConversion(fileURL: tempURL, title: title)
-                    if case .success = native { return native }
-                    guard supportsAdvancedRuntime else { return native }
-                    return await runPythonConversion(
-                        fileURL: tempURL, title: title, useAI: false,
-                        password: job.password, workspaceURL: workspaceURL, progress: progress
-                    )
-                }
-                let enhanced = await runPythonConversion(
-                    fileURL: tempURL, title: title, useAI: false,
-                    password: job.password, workspaceURL: workspaceURL, progress: progress
-                )
-                if case .success = enhanced { return enhanced }
+                // OOXML + legacy-binary Office via the native SwiftOfficeMarkdown engine.
                 return runNativeOfficeConversion(fileURL: tempURL, title: title)
             }
-            guard supportsAdvancedRuntime else {
-                return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
-            }
-            return await runPythonConversion(
-                fileURL: tempURL, title: title, useAI: false,
-                password: job.password, workspaceURL: workspaceURL, progress: progress
-            )
+            // Formats with no native engine (e.g. .epub/.zip/.webvtt) are not supported
+            // without the removed Python runtime.
+            return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
 
         case .digitalDocument:
             // Digital PDF or image with embedded/clean text
@@ -280,35 +242,29 @@ struct ConversionRunner {
                 return await runPDFKitConversion(
                     fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
                 )
-            case .visionOCR:
+            case .visionOCR, .enhanced:
+                // Complex/digital documents: Apple Vision (PDFKit baseline + Vision OCR,
+                // quality-selected) is the Pure-Apple engine. The Enhanced (Docling/Python)
+                // path has been removed; native Granite is reserved for the AI pathway.
                 return await runQualitySelectedPDFConversion(
                     fileURL: tempURL, title: title, password: job.password,
                     workspaceURL: workspaceURL, classifierEvidence: evidence,
-                    secondary: .imageText, progress: progress
-                )
-            case .enhanced:
-                guard supportsAdvancedRuntime else {
-                    return await runPDFKitConversion(
-                        fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
-                    )
-                }
-                return await runQualitySelectedPDFConversion(
-                    fileURL: tempURL, title: title, password: job.password,
-                    workspaceURL: workspaceURL, classifierEvidence: evidence,
-                    secondary: .advanced(useAI: false), progress: progress
+                    progress: progress
                 )
             case .ai:
-                // AI pathway: use advanced Docling with AI models if available
-                guard supportsAdvancedRuntime, supportsAI, modelsReady() else {
-                    // Fallback to basic PDF if AI/models unavailable
-                    return await runPDFKitConversion(
+                // AI pathway. Native Granite-Docling (mlx-swift, no Python) replaces the
+                // legacy Docling-MLX Python path: used for clean typed Latin/simplified-
+                // Chinese documents when the model is present. Everything else (and any
+                // failure) falls through to Apple Vision native — also Pure-Apple.
+                if #available(macOS 26, *),
+                   ModelManager.shared.downloadedAssets.contains(.upmarketAI),
+                   evidence?.isGraniteDoclingEligible == true {
+                    return await runGraniteNativeConversion(
                         fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
                     )
                 }
-                return await runQualitySelectedPDFConversion(
-                    fileURL: tempURL, title: title, password: job.password,
-                    workspaceURL: workspaceURL, classifierEvidence: evidence,
-                    secondary: .advanced(useAI: true), progress: progress
+                return await runVisionExtraction(
+                    fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
                 )
             case .speech, .metadata, .nativeHTML, .nativeOffice, .nativeText:
                 // Not reachable for digital documents (native HTML/Office/text route
@@ -323,31 +279,24 @@ struct ConversionRunner {
             // Entitlement gate already passed above; route to best available
             let useAI = job.useAI && supportsAI
                 && tier() >= .max
-            if useAI {
-                // Pro+AI: PDFKit baseline + Vision OCR + AI (concurrent in runQualitySelectedPDFConversion)
-                let evidence = classification.pdfEvidence
-                let ext = job.sourceURL.pathExtension.lowercased()
-                if ext == "pdf" {
-                    return await runQualitySelectedPDFConversion(
-                        fileURL: tempURL, title: title, password: job.password,
-                        workspaceURL: workspaceURL, classifierEvidence: evidence,
-                        secondary: .all(useAI: true), progress: progress
-                    )
-                } else {
-                    // Image/TIFF — run AI directly (VLM handles images natively)
-                    return await runPythonConversion(
-                        fileURL: tempURL, title: title, useAI: true,
-                        password: job.password, workspaceURL: workspaceURL, progress: progress
-                    )
-                }
-            } else {
-                // Basic/Enhanced: Vision OCR is the best available for scanned content
-                return await runQualitySelectedPDFConversion(
-                    fileURL: tempURL, title: title, password: job.password,
-                    workspaceURL: workspaceURL, classifierEvidence: classification.pdfEvidence,
-                    secondary: .imageText, progress: progress
+            let evidence = classification.pdfEvidence
+            let ext = job.sourceURL.pathExtension.lowercased()
+            // Max+AI on a PDF: native Granite-Docling (mlx-swift) when the model is present
+            // and the document is Granite-eligible; otherwise Apple Vision.
+            if useAI, ext == "pdf",
+               #available(macOS 26, *),
+               ModelManager.shared.downloadedAssets.contains(.upmarketAI),
+               evidence?.isGraniteDoclingEligible == true {
+                return await runGraniteNativeConversion(
+                    fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
                 )
             }
+            // Everything else (scanned images/TIFF, non-eligible docs): Apple Vision OCR.
+            return await runQualitySelectedPDFConversion(
+                fileURL: tempURL, title: title, password: job.password,
+                workspaceURL: workspaceURL, classifierEvidence: evidence,
+                progress: progress
+            )
         }
     }
 
@@ -363,23 +312,7 @@ struct ConversionRunner {
         if speech.output != nil {
             return speech
         }
-        guard let format = ConversionFormat(fileExtension: fileURL.pathExtension) else {
-            return await runMediaMetadataFallback(fileURL: fileURL, title: title, previous: speech)
-        }
-        if supportsAdvancedRuntime, ToolFormatCapabilityMatrix.supports(.markItDown, format) {
-            AppLog.conversion.info("Audio native transcription unavailable; trying advanced fallback ext=\(fileURL.pathExtension, privacy: .public)")
-            let advanced = await runPythonConversion(
-                fileURL: fileURL,
-                title: title,
-                useAI: useAI,
-                password: password,
-                workspaceURL: workspaceURL,
-                progress: progress
-            )
-            if advanced.output != nil {
-                return advanced
-            }
-        }
+        // Speech transcription unavailable — fall back to native media metadata.
         return await runMediaMetadataFallback(fileURL: fileURL, title: title, previous: speech)
     }
 
@@ -439,6 +372,69 @@ struct ConversionRunner {
         } catch {
             return await runPDFKitConversion(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
         }
+    }
+
+    /// Native Granite-Docling (idefics3) PDF conversion via mlx-swift — the no-Python
+    /// replacement for the Docling-MLX AI path. Renders each page, runs the on-device VLM,
+    /// and parses DocTags to Markdown. Falls back to Apple Vision (also Pure-Apple) on any
+    /// model-load or inference failure.
+    @available(macOS 26, *)
+    private func runGraniteNativeConversion(
+        fileURL: URL, title: String, password: String?, workspaceURL: URL
+    ) async -> ConversionResult {
+        guard let document = PDFDocument(url: fileURL) else {
+            return await runVisionExtraction(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
+        }
+        if document.isLocked, let password { _ = document.unlock(withPassword: password) }
+        let engine = GraniteDoclingEngine(
+            source: .modelDirectory(ModelManager.shared.modelDirectoryURL(for: .upmarketAI)))
+        let tmp = FileManager.default.temporaryDirectory
+        var pages: [String] = []
+        do {
+            for i in 0..<document.pageCount {
+                try Task.checkCancellation()
+                guard let page = document.page(at: i), let cg = Self.renderPDFPage(page) else { continue }
+                let url = tmp.appendingPathComponent("granite-\(UUID().uuidString).png")
+                try Self.writePNG(cg, to: url)
+                defer { try? FileManager.default.removeItem(at: url) }
+                pages.append(try await engine.convertToMarkdown(imageURL: url))
+            }
+        } catch is CancellationError {
+            return .failure("Conversion cancelled.")
+        } catch {
+            AppLog.conversion.error("Native AI conversion failed; falling back to OCR: \(error.localizedDescription, privacy: .public)")
+            return await runVisionExtraction(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
+        }
+        return .success(ConversionOutput(
+            markdown: pages.joined(separator: "\n\n---\n\n"),
+            pages: document.pageCount, format: "PDF", title: title,
+            pipeline: .ai, selectedPathway: .enhanced,
+            metadata: DocumentMetadata.visionDocuments(elementType: nil),
+            originalTables: []))
+    }
+
+    private static func renderPDFPage(_ page: PDFPage, dpi: CGFloat = 150) -> CGImage? {
+        let bounds = page.bounds(for: .mediaBox)
+        let scale = dpi / 72.0
+        let w = Int(bounds.width * scale), h = Int(bounds.height * scale)
+        guard w > 0, h > 0,
+              let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+                                  space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+        ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
+        ctx.scaleBy(x: scale, y: scale)
+        page.draw(with: .mediaBox, to: ctx)
+        return ctx.makeImage()
+    }
+
+    private static func writePNG(_ image: CGImage, to url: URL) throws {
+        guard let dest = CGImageDestinationCreateWithURL(
+            url as CFURL, UTType.png.identifier as CFString, 1, nil) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        CGImageDestinationAddImage(dest, image, nil)
+        guard CGImageDestinationFinalize(dest) else { throw CocoaError(.fileWriteUnknown) }
     }
 
     /// Process large PDFs by chunking into Vision-safe pieces.
@@ -567,17 +563,10 @@ struct ConversionRunner {
                 return .failure(ConversionError.inaccessible.errorDescription ?? "Upmarket couldn't access this file.")
             }
         } catch {
-            guard supportsAdvancedRuntime else {
-                return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
-            }
-            return await runPythonConversion(
-                fileURL: fileURL,
-                title: title,
-                useAI: false,
-                password: password,
-                workspaceURL: workspaceURL,
-                progress: nil
-            )
+            // PDFKit couldn't parse it. Vision is run separately as the secondary candidate
+            // in runQualitySelectedPDFConversion, so surface a clear failure here rather than
+            // recursing into Vision (whose own fallback is PDFKit).
+            return .failure(ConversionError.inaccessible.errorDescription ?? "Upmarket couldn't read this document.")
         }
     }
 
@@ -657,44 +646,16 @@ struct ConversionRunner {
         ))
     }
 
-    enum PDFSecondaryCandidate {
-        case imageText
-        case advanced(useAI: Bool)
-        case all(useAI: Bool)
-    }
-
+    /// PDFKit baseline + Apple Vision OCR, quality-selected. Both engines are native
+    /// (Pure-Apple); the removed Python/Docling path is no longer a candidate.
     private func runQualitySelectedPDFConversion(
         fileURL: URL,
         title: String,
         password: String?,
         workspaceURL: URL,
         classifierEvidence: NativeDocumentClassifier.Evidence?,
-        secondary: PDFSecondaryCandidate,
         progress: ProgressHandler?
     ) async -> ConversionResult {
-        // Small Pro+AI PDFs can fan out across independent engines. Larger
-        // documents use the serial budget below so one input cannot multiply
-        // CPU, OCR, helper-process, and memory cost at the same time.
-        if case .all(let useAI) = secondary,
-           pdfCandidateBudget.allowsFullFanout(evidence: classifierEvidence) {
-            async let basicResult = runPDFKitConversion(
-                fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL
-            )
-            async let visionResult = runVisionExtraction(
-                fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL
-            )
-            async let pythonResult = runPythonConversion(
-                fileURL: fileURL, title: title, useAI: useAI,
-                password: password, workspaceURL: workspaceURL, progress: progress
-            )
-            let (basic, vision, python) = await (basicResult, visionResult, pythonResult)
-            let allResults: [(label: String, result: ConversionResult)] = [
-                ("basic", basic), ("image-text", vision),
-                (useAI ? "ai" : "advanced", python),
-            ]
-            return selectBest(from: allResults, evidence: classifierEvidence)
-        }
-
         var outputs: [(label: String, output: ConversionOutput)] = []
         var firstFailure: ConversionResult?
 
@@ -703,8 +664,7 @@ struct ConversionRunner {
             outputs.append((label: "basic", output: output))
             guard pdfCandidateBudget.shouldRunSecondary(
                 afterBasic: output,
-                evidence: classifierEvidence,
-                secondary: secondary
+                evidence: classifierEvidence
             ) else {
                 AppLog.conversion.info("PDF candidate budget accepted basic output without secondary path pages=\(output.pages, privacy: .public)")
                 return .success(output)
@@ -713,37 +673,11 @@ struct ConversionRunner {
             firstFailure = basic
         }
 
-        let secondaryCandidates: [(label: String, result: ConversionResult)]
-        switch secondary {
-        case .imageText:
-            secondaryCandidates = [(
-                label: "image-text",
-                result: await runVisionExtraction(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
-            )]
-        case .advanced(let useAI):
-            secondaryCandidates = [(
-                label: useAI ? "ai" : "advanced",
-                result: await runPythonConversion(
-                    fileURL: fileURL, title: title, useAI: useAI,
-                    password: password, workspaceURL: workspaceURL, progress: progress
-                )
-            )]
-        case .all(let useAI):
-            secondaryCandidates = [(
-                label: useAI ? "ai" : "advanced",
-                result: await runPythonConversion(
-                    fileURL: fileURL, title: title, useAI: useAI,
-                    password: password, workspaceURL: workspaceURL, progress: progress
-                )
-            )]
-        }
-
-        for candidate in secondaryCandidates {
-            if case .success(let output) = candidate.result {
-                outputs.append((label: candidate.label, output: output))
-            } else if firstFailure == nil {
-                firstFailure = candidate.result
-            }
+        let vision = await runVisionExtraction(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
+        if case .success(let output) = vision {
+            outputs.append((label: "image-text", output: output))
+        } else if firstFailure == nil {
+            firstFailure = vision
         }
 
         let serialResults = outputs.map { (label: $0.label, result: ConversionResult.success($0.output)) }
@@ -796,32 +730,4 @@ struct ConversionRunner {
         )
     }
 
-    private func runPythonConversion(
-        fileURL: URL,
-        title: String,
-        useAI: Bool,
-        password: String?,
-        workspaceURL: URL,
-        progress: ProgressHandler?
-    ) async -> ConversionResult {
-        guard supportsAdvancedRuntime else {
-            return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
-        }
-        progress?(.python)
-        let signpost = AppSignpost.conversion.beginInterval("pythonConvert")
-        defer { AppSignpost.conversion.endInterval("pythonConvert", signpost) }
-        return await pythonWorker.convert(
-            fileURL: fileURL,
-            title: title,
-            useAI: useAI,
-            password: password,
-            workspaceURL: workspaceURL,
-            heartbeat: {
-                progress?(.python)
-            },
-            progress: { helperProgress in
-                progress?(helperProgress)
-            }
-        )
-    }
 }

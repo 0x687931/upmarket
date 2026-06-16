@@ -3,7 +3,6 @@ set -euo pipefail
 
 APP_ENTITLEMENTS="Upmarket/Upmarket/Upmarket.entitlements"
 EXT_ENTITLEMENTS="Upmarket/UpmarketQuickActionSupport/UpmarketQuickAction.entitlements"
-HELPER_ENTITLEMENTS="Upmarket/UpmarketRuntimeHelper/UpmarketRuntimeHelper.entitlements"
 CLI_ENTITLEMENTS="Upmarket/UpmarketCLI/UpmarketCLI.entitlements"
 MCP_ENTITLEMENTS="Upmarket/UpmarketMCP/UpmarketMCP.entitlements"
 
@@ -18,7 +17,6 @@ check_file() {
 
 check_file "$APP_ENTITLEMENTS"
 check_file "$EXT_ENTITLEMENTS"
-check_file "$HELPER_ENTITLEMENTS"
 check_file "$CLI_ENTITLEMENTS"
 check_file "$MCP_ENTITLEMENTS"
 
@@ -129,8 +127,6 @@ require_entitlement_true() {
 
 require_entitlement_true "$APP_ENTITLEMENTS" "com.apple.security.app-sandbox" "app sandbox"
 require_entitlement_true "$APP_ENTITLEMENTS" "com.apple.developer.background-assets" "app Background Assets downloads"
-require_entitlement_true "$HELPER_ENTITLEMENTS" "com.apple.security.app-sandbox" "runtime helper sandbox"
-require_entitlement_true "$HELPER_ENTITLEMENTS" "com.apple.security.inherit" "runtime helper sandbox inheritance"
 require_entitlement_true "$MCP_ENTITLEMENTS" "com.apple.security.app-sandbox" "MCP server sandbox"
 
 require_entitlement_value() {
@@ -162,7 +158,7 @@ if /usr/libexec/PlistBuddy -c "Print :com.apple.security.temporary-exception.fil
   exit 1
 fi
 
-for file in "$APP_ENTITLEMENTS" "$EXT_ENTITLEMENTS" "$HELPER_ENTITLEMENTS" "$CLI_ENTITLEMENTS" "$MCP_ENTITLEMENTS"; do
+for file in "$APP_ENTITLEMENTS" "$EXT_ENTITLEMENTS" "$CLI_ENTITLEMENTS" "$MCP_ENTITLEMENTS"; do
   if /usr/libexec/PlistBuddy -c "Print :com.apple.security.temporary-exception.mach-lookup.global-name" "$file" >/dev/null 2>&1; then
     echo "error: $file contains temporary mach lookup sandbox exception"
     exit 1
@@ -188,7 +184,6 @@ if [[ $# -gt 0 ]]; then
   APP_PATH="$1"
   SCRATCH_DIR="${TARGET_TEMP_DIR:-${TMPDIR:-/tmp}}"
   APP_ENTITLEMENTS_DUMP="$SCRATCH_DIR/upmarket-entitlements.plist"
-  HELPER_ENTITLEMENTS_DUMP="$SCRATCH_DIR/upmarket-helper-entitlements.plist"
   CLI_ENTITLEMENTS_DUMP="$SCRATCH_DIR/upmarket-cli-entitlements.plist"
   MCP_ENTITLEMENTS_DUMP="$SCRATCH_DIR/upmarket-mcp-entitlements.plist"
 
@@ -229,11 +224,6 @@ if [[ $# -gt 0 ]]; then
     echo "ok: entitlements pass policy checks"
     exit 0
   fi
-  HELPER_PATH="$APP_PATH/Contents/MacOS/UpmarketRuntimeHelper"
-  if [[ ! -x "$HELPER_PATH" ]]; then
-    echo "error: runtime helper missing from signed app: $HELPER_PATH"
-    exit 1
-  fi
   CLI_PATH="$APP_PATH/Contents/MacOS/upmarket-cli"
   if [[ ! -x "$CLI_PATH" ]]; then
     echo "error: command-line tool missing from signed app: $CLI_PATH"
@@ -252,10 +242,6 @@ if [[ $# -gt 0 ]]; then
       echo "error: signed app iCloud container environment must be Development or Production"
       exit 1
     fi
-  fi
-  if require_signed_entitlements "$HELPER_PATH" "$HELPER_ENTITLEMENTS_DUMP" "helper"; then
-    require_entitlement_true "$HELPER_ENTITLEMENTS_DUMP" "com.apple.security.app-sandbox" "signed helper sandbox"
-    require_entitlement_true "$HELPER_ENTITLEMENTS_DUMP" "com.apple.security.inherit" "signed helper sandbox inheritance"
   fi
   if require_signed_entitlements "$CLI_PATH" "$CLI_ENTITLEMENTS_DUMP" "command-line tool"; then
     if /usr/libexec/PlistBuddy -c "Print :com.apple.security.app-sandbox" "$CLI_ENTITLEMENTS_DUMP" >/dev/null 2>&1; then

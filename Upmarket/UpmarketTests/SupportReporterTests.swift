@@ -50,7 +50,7 @@ final class SupportReporterTests: XCTestCase {
     func testFailedQueueJobProvidesSupportSnapshotContext() async throws {
         let queue = ConversionQueue { _, progress in
             progress?(.python)
-            return .failure(ConversionError.pythonRuntime("runtime failed").errorDescription ?? "Conversion failed.")
+            return .failure(ConversionError.engineFailed("engine failed").errorDescription ?? "Conversion failed.")
         }
         let id = queue.add(URL(fileURLWithPath: "/tmp/source.pdf"))
 
@@ -61,7 +61,7 @@ final class SupportReporterTests: XCTestCase {
         let snapshot = queue.diagnosticSnapshotForLastFailedJob()
         XCTAssertEqual(snapshot.correlationID, id.uuidString)
         XCTAssertEqual(snapshot.lastConversionStage, "Processing document")
-        XCTAssertEqual(snapshot.lastErrorCode, "runtime.bridge")
+        XCTAssertEqual(snapshot.lastErrorCode, "engine.failed")
     }
 
     private var sampleSnapshot: DiagnosticSnapshot {

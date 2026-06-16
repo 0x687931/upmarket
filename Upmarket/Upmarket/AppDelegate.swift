@@ -68,7 +68,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupBackgroundTasks() {
         DispatchQueue.global(qos: .utility).async {
             Self.removeStaleQuickActionHandoffs()
-            BundledModelService.installBundledModelsIfNeeded()
         }
     }
 

@@ -6,8 +6,7 @@ import OSLog
 /// Monitors Background Assets downloads for tier-based runtime and model assets.
 ///
 /// Per TIER_CONTRACT.md, downloads are segmented by tier:
-/// - Pro: python_runtime_pro (~350MB) — Docling + office libs
-/// - Max: ai_libraries (~750MB) — ML frameworks; upmarket_ai (~600MB) — model weights
+/// - Max: upmarket_ai (~600MB) — Granite-Docling mlx-swift model weights
 ///
 /// Background Assets downloads are scheduled by the UpmarketBackgroundAssetsExtension
 /// when the app is installed or updated. This service:
@@ -29,8 +28,6 @@ final class BackgroundAssetsDownloadService: NSObject, ObservableObject {
     // Download identifiers — must match what the extension schedules
     // and what is registered in App Store Connect.
     // See docs/TIER_CONTRACT.md for size and tier requirements.
-    static let pythonRuntimeDownloadID = "com.upmarket.download.python-runtime-pro"
-    static let aiLibrariesDownloadID = "com.upmarket.download.ai-libraries"
     static let upmarketAIDownloadID = "com.upmarket.download.upmarket-ai"
 
     private static let appGroup = "group.com.upmarket.app"
@@ -169,29 +166,16 @@ final class BackgroundAssetsDownloadService: NSObject, ObservableObject {
 
     private func downloadIdentifier(for key: String) -> String {
         switch key {
-        case "python_runtime_pro": return Self.pythonRuntimeDownloadID
-        case "ai_libraries": return Self.aiLibrariesDownloadID
-        case "upmarket_ai": return Self.upmarketAIDownloadID
+        case ModelAsset.upmarketAI.rawValue: return Self.upmarketAIDownloadID
         default: return "com.upmarket.download.\(key)"
         }
     }
 
     private func destinationURL(for key: String) -> URL {
-        switch key {
-        case "python_runtime_pro", "python_runtime":
-            // Both old and new keys resolve to same location
-            return ModelArchiveInstaller.defaultRuntimeDirectoryURL()
-                .appendingPathComponent("python_runtime_pro", isDirectory: true)
-        case "ai_libraries":
-            return ModelArchiveInstaller.defaultRuntimeDirectoryURL()
-                .appendingPathComponent("ai_libraries", isDirectory: true)
-        case "upmarket_ai":
-            return ModelArchiveInstaller.defaultModelsDirectoryURL()
-                .appendingPathComponent("ibm-granite--granite-docling-258M-mlx", isDirectory: true)
-        default:
-            return ModelArchiveInstaller.defaultModelsDirectoryURL()
-                .appendingPathComponent(key, isDirectory: true)
-        }
+        // The model is extracted to a flat directory named after the asset key so the
+        // native mlx-swift engine can load it via ModelConfiguration(directory:).
+        ModelArchiveInstaller.defaultModelsDirectoryURL()
+            .appendingPathComponent(key, isDirectory: true)
     }
 
     private func assetURL(for key: String) -> URL? {
@@ -207,11 +191,7 @@ final class BackgroundAssetsDownloadService: NSObject, ObservableObject {
 
     private func estimatedFileSize(for key: String) -> Int {
         switch key {
-        case "python_runtime_pro", "python_runtime":
-            return 367_000_000  // python_runtime_pro.tar.gz actual compressed size
-        case "ai_libraries":
-            return 373_000_000  // ai_libraries.tar.gz actual compressed size
-        case "upmarket_ai":
+        case ModelAsset.upmarketAI.rawValue:
             return 600_000_000  // Model weights (estimate)
         default:
             return 0
@@ -228,23 +208,7 @@ final class BackgroundAssetsDownloadService: NSObject, ObservableObject {
 
     private func modelSpec(for key: String) -> ModelSpec {
         switch key {
-        case "python_runtime_pro", "python_runtime":
-            return ModelSpec(
-                sourceID: "com.upmarket.runtime.python-pro",
-                revision: "3.12",
-                displayName: "Enhanced Conversions",
-                expectedFiles: ["python_runtime_ready"],
-                expectedDirs: ["lib"]
-            )
-        case "ai_libraries":
-            return ModelSpec(
-                sourceID: "com.upmarket.runtime.ai-libraries",
-                revision: "1",
-                displayName: "AI Libraries",
-                expectedFiles: ["ai_libraries_ready"],
-                expectedDirs: ["lib"]
-            )
-        case "upmarket_ai":
+        case ModelAsset.upmarketAI.rawValue:
             return ModelSpec(
                 sourceID: "com.upmarket.models.upmarket-ai",
                 revision: "e9939db25d2f296c8678d0491c4609a8c596c50a",
@@ -324,8 +288,7 @@ extension BackgroundAssetsDownloadService: BADownloadManagerDelegate {
 
     private func modelKey(for downloadID: String) -> String {
         switch downloadID {
-        case Self.pythonRuntimeDownloadID: return "python_runtime"
-        case Self.upmarketAIDownloadID: return "upmarket_ai"
+        case Self.upmarketAIDownloadID: return ModelAsset.upmarketAI.rawValue
         default: return downloadID.components(separatedBy: ".").last ?? downloadID
         }
     }

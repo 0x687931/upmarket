@@ -432,10 +432,10 @@ final class ConversionQueueTests: XCTestCase {
         await waitForResult(primary, in: queue)
     }
 
-    func testPythonBridgeFailureIsStoredPerJob() async {
+    func testEngineFailureIsStoredPerJob() async {
         let queue = ConversionQueue { _, progress in
             progress?(.python)
-            return .failure(ConversionError.pythonRuntime("Bridge unavailable").errorDescription!)
+            return .failure(ConversionError.engineFailed("Engine unavailable").errorDescription!)
         }
 
         let id = queue.add(URL(fileURLWithPath: "/tmp/python.pdf"))
@@ -650,16 +650,17 @@ final class ConversionQueueTests: XCTestCase {
         addTeardownBlock {
             try? FileManager.default.removeItem(at: workspace)
         }
-        // EPUB is a Pro format with no native engine, so a native-only runtime must reject
-        // it. (DOCX/TXT/CSV are Basic and now convert natively — see the native-conversion
-        // tests below.)
+        // EPUB was a Python-only format with no native engine. With the Python runtime
+        // removed it is no longer an accepted input type, so it is rejected at input
+        // validation. (DOCX/TXT/CSV are Basic and now convert natively — see the
+        // native-conversion tests below.)
         let epub = workspace.appendingPathComponent("structured.epub")
         try Data("not a real epub, but enough to prove routing".utf8).write(to: epub)
 
         let result = await ConversionRunner(supportsAdvancedRuntime: false)
             .run(ConversionJob(sourceURL: epub))
 
-        XCTAssertEqual(result.errorMessage, ConversionError.unsupportedOnThisMac.errorDescription)
+        XCTAssertEqual(result.errorMessage, ConversionError.inaccessible.errorDescription)
     }
 
     func testNativeOnlyRuntimeConvertsPlainTextFormats() async throws {
@@ -725,47 +726,6 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertEqual(result.output?.selectedPathway, .pdfKit)
     }
 
-    func testAIPDFRouteIsSelectedBySwiftAndPassedToRuntimeHelper() async throws {
-        let workspace = FileManager.default.temporaryDirectory
-            .appendingPathComponent("UpmarketAIPDFRouteTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
-        addTeardownBlock {
-            try? FileManager.default.removeItem(at: workspace)
-        }
-        let pdf = workspace.appendingPathComponent("ai-route.pdf")
-        try writePDF(to: pdf, text: "AI route PDF")
-        let requestLog = workspace.appendingPathComponent("helper-request.json")
-        let helper = try makeRuntimeHelperScript(
-            requestLog: requestLog,
-            response: #"{"success":true,"needsPassword":false,"output":{"markdown":"AI PDF route output","pages":1,"format":"PDF","title":"AI PDF","pipeline":"ai"}}"#
-        )
-        // Inject scanned classification so the test doesn't depend on live Vision/Metal.
-        let scannedClassification = ContentClassifier.Classification(
-            kind: .scannedDocument,
-            requiredTier: .ai,
-            hasExtractableText: false,
-            frameCount: 1,
-            pdfEvidence: nil,
-            recommendedPathway: .ai
-        )
-        let runner = ConversionRunner(
-            pythonWorker: PythonWorker(helperClient: RuntimeHelperClient(executableURL: helper, livenessInterval: 5)),
-            supportsAdvancedRuntime: true,
-            supportsAI: true,
-            tier: { .max },
-            modelsReady: { true },
-            classifyOverride: { _, _, _, _ in scannedClassification }
-        )
-
-        let result = await runner.run(ConversionJob(sourceURL: pdf, useAI: true))
-
-        XCTAssertNil(result.errorMessage)
-        let request = try String(contentsOf: requestLog, encoding: .utf8)
-        XCTAssertTrue(request.contains(#""operation":"convert""#))
-        XCTAssertTrue(request.contains(#""useAI":true"#))
-        XCTAssertTrue(request.contains(#""filePath":"#))
-    }
-
     private func writePDF(to url: URL, text: String) throws {
         var mediaBox = CGRect(x: 0, y: 0, width: 400, height: 300)
         guard let context = CGContext(url as CFURL, mediaBox: &mediaBox, nil) else {
@@ -780,24 +740,6 @@ final class ConversionQueueTests: XCTestCase {
         CTLineDraw(CTLineCreateWithAttributedString(attributed), context)
         context.endPDFPage()
         context.closePDF()
-    }
-
-    private func makeRuntimeHelperScript(requestLog: URL, response: String) throws -> URL {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("UpmarketRouteHelperTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let helper = directory.appendingPathComponent("helper.sh")
-        let source = """
-        #!/bin/sh
-        cat > '\(requestLog.path)'
-        printf '%s\\n' '\(response)'
-        """
-        try source.write(to: helper, atomically: true, encoding: .utf8)
-        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: helper.path)
-        addTeardownBlock {
-            try? FileManager.default.removeItem(at: directory)
-        }
-        return helper
     }
 
     // MARK: - Helpers

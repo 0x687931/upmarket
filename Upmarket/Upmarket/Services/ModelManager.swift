@@ -2,6 +2,11 @@ import Darwin
 import Foundation
 import Combine
 
+struct ModelDownloadResult: Sendable {
+    let success: Bool
+    let error: String?
+}
+
 nonisolated struct ModelStatus: Equatable, Sendable {
     let key: String
     let name: String
@@ -110,12 +115,10 @@ final class ModelManager: ObservableObject {
         modelsDirectoryURL: URL? = nil,
         runtimeDirectoryURL: URL? = nil,
         checkModelsHandler: @escaping CheckModelsHandler = {
-            try await PythonWorker().checkModels()
+            ModelManager.nativeModelStatuses(in: ModelManager.defaultModelsDirectoryURL())
         },
         downloadModelHandler: @escaping DownloadModelHandler = ModelManager.makeDownloadHandler(),
-        offlineModeHandler: @escaping OfflineModeHandler = {
-            await PythonWorker().setOfflineMode()
-        }
+        offlineModeHandler: @escaping OfflineModeHandler = { }
     ) {
         self.models = models
         self.modelsDirectoryURL = modelsDirectoryURL ?? Self.defaultModelsDirectoryURL()
@@ -162,17 +165,44 @@ final class ModelManager: ObservableObject {
 
     // MARK: - Size display helpers
 
-    var enhancedSizeMB: Int { ModelAsset.pythonRuntime.sizeMB + ModelAsset.layout.sizeMB }
-    var aiSizeMB: Int       { ModelAsset.upmarketAI.sizeMB }
-    var runtimeSizeMB: Int  { ModelAsset.pythonRuntime.sizeMB }
-    var proSizeMB: Int      { ModelAsset.upmarketAI.sizeMB }
+    var aiSizeMB: Int  { ModelAsset.upmarketAI.sizeMB }
+    var proSizeMB: Int { ModelAsset.upmarketAI.sizeMB }
+
+    /// Native model inventory: each downloadable asset's on-disk presence. Replaces the
+    /// former Python helper's model listing. Only the Max-tier AI weights remain.
+    static func nativeModelStatuses(in modelsDirectoryURL: URL) -> [ModelStatus] {
+        ModelAsset.allCases.map { asset in
+            let dir = modelsDirectoryURL.appendingPathComponent(asset.rawValue, isDirectory: true)
+            return ModelStatus(
+                key: asset.rawValue,
+                name: asset.displayName,
+                description: asset.displayName,
+                isDownloaded: modelDirectoryIsPopulated(dir),
+                sizeMB: asset.sizeMB,
+                isRequired: false,
+                tier: asset.requiredTier == .max ? "max" : "pro",
+                storageDirectory: asset.rawValue
+            )
+        }
+    }
+
+    /// An mlx-swift model directory is usable when it has a config and weight shards.
+    private static func modelDirectoryIsPopulated(_ url: URL) -> Bool {
+        guard let items = try? FileManager.default.contentsOfDirectory(atPath: url.path) else { return false }
+        return items.contains("config.json") && items.contains { $0.hasSuffix(".safetensors") }
+    }
 
     func actualInstalledSizeMB(_ asset: ModelAsset) -> Int {
         guard downloadedAssets.contains(asset) else { return 0 }
-        let modelDir = models.first { $0.key == asset.rawValue }?.storageDirectory ?? asset.rawValue
-        let modelURL = modelsDirectoryURL.appendingPathComponent(modelDir, isDirectory: true)
-        let bytes = directorySize(modelURL)
+        let bytes = directorySize(modelDirectoryURL(for: asset))
         return Int(bytes / 1_000_000)
+    }
+
+    /// Filesystem directory of a downloaded model asset — used by native engines
+    /// (e.g. `GraniteDoclingEngine`) to load weights without re-downloading.
+    func modelDirectoryURL(for asset: ModelAsset) -> URL {
+        let modelDir = models.first { $0.key == asset.rawValue }?.storageDirectory ?? asset.rawValue
+        return modelsDirectoryURL.appendingPathComponent(modelDir, isDirectory: true)
     }
 
     var checkError: String? {
@@ -237,15 +267,6 @@ final class ModelManager: ObservableObject {
             .appendingPathComponent("Upmarket/runtime", isDirectory: true)
     }
 
-    /// True when the Python runtime is present on disk and passes the sentinel check.
-    static func isRuntimeInstalled(runtimeDirectoryURL: URL? = nil) -> Bool {
-        let dir = runtimeDirectoryURL ?? defaultRuntimeDirectoryURL()
-        let sentinel = dir.appendingPathComponent("python_runtime/upmarket_runtime_ready")
-        let framework = dir.appendingPathComponent("python_runtime/Python.framework")
-        return FileManager.default.fileExists(atPath: sentinel.path)
-            && FileManager.default.fileExists(atPath: framework.path)
-    }
-
     private func directorySize(_ url: URL) -> Int64 {
         guard let enumerator = FileManager.default.enumerator(
             at: url, includingPropertiesForKeys: [.fileSizeKey],
@@ -284,7 +305,7 @@ final class ModelManager: ObservableObject {
         let missing = gate.missingDownloadableAssets(for: capability)
 
         if missing.isEmpty {
-            if let reason = gate.downloadUnavailableReason(for: capability.requiredAssets.first ?? .layout) {
+            if let reason = gate.downloadUnavailableReason(for: capability.requiredAssets.first ?? .upmarketAI) {
                 downloadError = reason
             }
             return
@@ -307,17 +328,11 @@ final class ModelManager: ObservableObject {
     private static func makeDownloadHandler() -> DownloadModelHandler {
         { key, progressFile in
 #if DEBUG
-            let baseDir = key == "python_runtime"
-                ? ModelManager.defaultRuntimeDirectoryURL()
-                : ModelManager.defaultModelsDirectoryURL()
-            return await FirstPartyModelDownloadService(modelsDirectoryURL: baseDir)
+            return await FirstPartyModelDownloadService(modelsDirectoryURL: ModelManager.defaultModelsDirectoryURL())
                 .downloadModel(key: key, progressFile: progressFile)
 #else
             switch key {
-            case "layout":
-                // Layout model is bundled in the app — just copy from the bundle.
-                return await BundledModelService().install(progressFile: progressFile)
-            case "python_runtime", "upmarket_ai":
+            case ModelAsset.upmarketAI.rawValue:
                 return await BackgroundAssetsDownloadService.shared.install(key: key, progressFile: progressFile)
             default:
                 return ModelDownloadResult(success: false, error: "Unknown model key: \(key)")

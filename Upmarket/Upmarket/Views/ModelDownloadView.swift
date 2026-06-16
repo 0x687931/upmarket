@@ -96,22 +96,6 @@ struct ModelDownloadView: View {
                     }
                 }
 
-                // Pro tier: Python runtime + layout models (required for Enhanced conversion)
-                ForEach(modelManager.models.filter { $0.tier == "pro" && $0.key != "upmarket_ai" }, id: \.key) { model in
-                    let asset = ModelAsset(rawValue: model.key)
-                    let gateReason = asset.flatMap { modelManager.gate(tier: store.tier).downloadUnavailableReason(for: $0) }
-                    modelRow(
-                        key: model.key,
-                        icon: model.key == ModelAsset.pythonRuntime.rawValue ? "cpu" : "doc.text.magnifyingglass",
-                        title: model.name,
-                        description: gateReason ?? model.error ?? model.description,
-                        sizeMB: model.sizeMB,
-                        isDownloaded: model.isDownloaded,
-                        badge: nil,
-                        available: model.isAvailable && gateReason == nil
-                    )
-                }
-
                 if store.tier >= .max {
                     ForEach(modelManager.models.filter { $0.tier == "max" }, id: \.key) { model in
                         let gateReason = modelManager.gate(tier: store.tier).downloadUnavailableReason(for: .upmarketAI)
@@ -188,23 +172,7 @@ struct ModelDownloadView: View {
     private var downloadButton: some View {
         AppSectionCard(title: "Downloads") {
             VStack(spacing: AppTheme.Spacing.sm) {
-            // Basic tier: Python runtime — shown to Basic+ users on Apple Silicon
-            if modelManager.gate(tier: store.tier).downloadUnavailableReason(for: .pythonRuntime) == nil {
-                let runtimeReady = modelManager.downloadedAssets.contains(.pythonRuntime)
-                if !runtimeReady {
-                    Button {
-                        modelManager.downloadAssets(for: .enhanced, gate: modelManager.gate(tier: store.tier))
-                    } label: {
-                        Label("Download Upmarket Runtime — \(modelManager.runtimeSizeMB) MB", systemImage: "arrow.down.circle.fill")
-                            .frame(maxWidth: .infinity)
-                            .fontWeight(.semibold)
-                    }
-                    .buttonStyle(AppActionButtonStyle())
-                    .controlSize(.large)
-                }
-            }
-
-            // Max tier: AI model weights — shown to Max users once runtime is ready
+            // Max tier: AI model weights — the only downloadable asset
             if modelManager.gate(tier: store.tier).downloadUnavailableReason(for: .upmarketAI) == nil {
                 let proReady = modelManager.models.filter { $0.tier == "max" }.allSatisfy(\.isDownloaded)
                 if !proReady {

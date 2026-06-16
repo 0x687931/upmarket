@@ -4,7 +4,6 @@ import XCTest
 final class PDFCandidateBudgetTests: XCTestCase {
     func testAcceptsStrongDigitalPDFKitOutputWithoutSecondaryPath() {
         let budget = PDFCandidateBudget(
-            maximumFullFanoutPages: 12,
             maximumSecondaryPages: 80,
             acceptBasicScore: 0.10
         )
@@ -23,8 +22,7 @@ final class PDFCandidateBudgetTests: XCTestCase {
 
         XCTAssertFalse(budget.shouldRunSecondary(
             afterBasic: output,
-            evidence: Self.digitalEvidence(pageCount: 1),
-            secondary: .advanced(useAI: false)
+            evidence: Self.digitalEvidence(pageCount: 1)
         ))
     }
 
@@ -41,8 +39,7 @@ final class PDFCandidateBudgetTests: XCTestCase {
 
         XCTAssertTrue(budget.shouldRunSecondary(
             afterBasic: output,
-            evidence: Self.scannedEvidence(pageCount: 3),
-            secondary: .imageText
+            evidence: Self.scannedEvidence(pageCount: 3)
         ))
     }
 
@@ -59,16 +56,8 @@ final class PDFCandidateBudgetTests: XCTestCase {
 
         XCTAssertFalse(budget.shouldRunSecondary(
             afterBasic: output,
-            evidence: Self.scannedEvidence(pageCount: 3),
-            secondary: .imageText
+            evidence: Self.scannedEvidence(pageCount: 3)
         ))
-    }
-
-    func testFullFanoutIsPageBounded() {
-        let budget = PDFCandidateBudget(maximumFullFanoutPages: 4)
-
-        XCTAssertTrue(budget.allowsFullFanout(evidence: Self.scannedEvidence(pageCount: 4)))
-        XCTAssertFalse(budget.allowsFullFanout(evidence: Self.scannedEvidence(pageCount: 5)))
     }
 
     private static func digitalEvidence(pageCount: Int) -> NativeDocumentClassifier.Evidence {

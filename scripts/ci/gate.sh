@@ -12,7 +12,6 @@ SCHEME="${UPMARKET_XCODE_SCHEME:-Upmarket}"
 DESTINATION="${UPMARKET_XCODE_DESTINATION:-platform=macOS,arch=arm64}"
 CODE_SIGNING="${UPMARKET_CODE_SIGNING_ALLOWED:-NO}"
 UI_CODE_SIGN_IDENTITY="${UPMARKET_UI_CODE_SIGN_IDENTITY:--}"
-PYTHON_XCFRAMEWORK="${UPMARKET_PYTHON_XCFRAMEWORK:-Upmarket/Python/Python.xcframework}"
 
 usage() {
   cat <<'USAGE'
@@ -60,12 +59,15 @@ run_step() {
   section_end
 }
 
+# Swift macro fingerprint validation is bypassed because the bundled UpmarketVLM package
+# depends on mlx-swift-lm's MLXHuggingFaceMacros, which can't be interactively trusted in CI.
 xcode_build() {
   xcodebuild build \
     -project "$PROJECT" \
     -scheme "$SCHEME" \
     -destination "$DESTINATION" \
     -derivedDataPath "$DERIVED_DATA_DIR" \
+    -skipMacroValidation \
     CODE_SIGNING_ALLOWED="$CODE_SIGNING"
 }
 
@@ -76,6 +78,7 @@ xcode_unit_tests() {
     -destination "$DESTINATION" \
     -derivedDataPath "$DERIVED_DATA_DIR" \
     -only-testing:UpmarketTests \
+    -skipMacroValidation \
     CODE_SIGNING_ALLOWED="$CODE_SIGNING"
 }
 
@@ -117,16 +120,6 @@ xcode_ui_tests() {
     -only-testing:UpmarketUITests
 }
 
-require_build_runtime() {
-  if [[ -d "$PYTHON_XCFRAMEWORK" ]]; then
-    return 0
-  fi
-
-  echo "error: build runtime missing: $PYTHON_XCFRAMEWORK"
-  echo "       Run scripts/ci/ensure_python_runtime.sh to prepare the local build runtime."
-  exit 1
-}
-
 policy_gate() {
   run_step "Verify Xcode project" scripts/ci/verify_xcode_project.sh
   run_step "Validate P0 task registry" scripts/ci/validate_task_registry.py
@@ -142,7 +135,6 @@ policy_gate() {
 }
 
 build_gate() {
-  run_step "Check build runtime" require_build_runtime
   run_step "Build unsigned app" xcode_build
   run_step "Verify effective plist" scripts/ci/verify_effective_plist.sh
   run_step "Validate MCP server smoke" scripts/ci/validate_mcp_server.py "$DERIVED_DATA_DIR/Build/Products/Debug/Upmarket.app"

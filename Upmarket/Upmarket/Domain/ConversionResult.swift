@@ -28,7 +28,7 @@ enum ConversionResult: Equatable, Sendable {
             .modelUnavailable,
             .downloadFailed,
             .upgradeRequired,
-            .pythonRuntime("")
+            .engineFailed("")
         ]
         return knownErrors.first { $0.errorDescription == message }?.diagnosticCode
             ?? ConversionError.failed(message).diagnosticCode
