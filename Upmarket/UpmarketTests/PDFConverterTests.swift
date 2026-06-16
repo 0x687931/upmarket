@@ -25,6 +25,32 @@ final class PDFConverterTests: XCTestCase {
         XCTAssertFalse(result.isLikelyScanned)
     }
 
+    func testPDFKitJoinsHyphenSpacingAndDetectsNumberedHeadings() throws {
+        let url = temporaryPDFURL()
+        try writePDF(
+            to: url,
+            pages: [
+                """
+                1 Executive Summary
+                Previso is a full- time start- up pursuing a subscription- based model.
+                2.1 Overview of the Market
+                """
+            ]
+        )
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let md = try PDFConverter.convert(url: url).markdown
+
+        // Hyphen-spacing artifacts collapsed.
+        XCTAssertTrue(md.contains("full-time"))
+        XCTAssertTrue(md.contains("start-up"))
+        XCTAssertTrue(md.contains("subscription-based"))
+        XCTAssertFalse(md.contains("full- time"))
+        // Numbered headings promoted by depth.
+        XCTAssertTrue(md.contains("## 1 Executive Summary"))
+        XCTAssertTrue(md.contains("### 2.1 Overview of the Market"))
+    }
+
     func testPDFKitConversionRejectsOverLimitPageCount() throws {
         let url = temporaryPDFURL()
         try writePDF(to: url, pages: ["Page One", "Page Two"])
