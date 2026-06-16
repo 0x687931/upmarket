@@ -42,7 +42,12 @@ Icon?
 # Environment
 .env
 .env.local
-.claude/
+# Ignore personal Claude config, but track shared team enforcement (worktree guard).
+.claude/*
+!.claude/settings.json
+!.claude/hooks
+.claude/hooks/*
+!.claude/hooks/require-worktree.sh
 
 # Dependencies
 Upmarket/Python/python-stdlib/
