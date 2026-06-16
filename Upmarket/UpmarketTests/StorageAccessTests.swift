@@ -60,9 +60,9 @@ final class StorageAccessTests: XCTestCase {
     }
 
     func testSupportedInputPolicyIncludesReleaseCriticalFormats() {
-        // EPUB/ZIP/WEBVTT were Python-only formats and were dropped when the Python runtime
-        // was removed; the rest are served by native engines.
-        let expectedExtensions = ["pdf", "txt", "docx", "pptx", "xlsx", "html", "csv", "png", "mp3", "wav"]
+        // All served by native engines (EPUB via ZipReader + HTML). ZIP/WEBVTT were
+        // Python-only and were dropped when the Python runtime was removed.
+        let expectedExtensions = ["pdf", "txt", "docx", "pptx", "xlsx", "html", "epub", "csv", "png", "mp3", "wav"]
         for fileExtension in expectedExtensions {
             let url = URL(fileURLWithPath: "/tmp/input.\(fileExtension)")
             XCTAssertTrue(SupportedInputPolicy.supports(url), "Expected \(fileExtension) to be accepted")

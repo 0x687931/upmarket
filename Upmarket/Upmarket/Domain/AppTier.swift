@@ -51,8 +51,9 @@ enum AppTier: Int, Comparable, Equatable, Sendable {
         switch format {
         case .xlsx, .pptx, .xls, .ppt, .epub, .mp3, .m4a, .wav, .aiff,
              .json, .xml, .zip, .webvtt, .asciidoc:
-            // Spreadsheets, presentations, ebooks, audio, and structured formats with no
-            // native engine (so they require the advanced runtime). ZIP stays runtime-gated.
+            // Spreadsheets, presentations, ebooks, and audio are Pro features (EPUB converts
+            // natively, like XLSX/PPTX, but stays a Pro format); structured formats with no
+            // native engine (JSON/XML/ZIP/WEBVTT) also require the advanced runtime.
             return .pro
         default:
             // Documents (DOC/DOCX), text (TXT/MD/CSV), HTML, images, digital/scanned PDF —

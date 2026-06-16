@@ -254,18 +254,18 @@ final class ConversionQueueTests: XCTestCase {
     func testRunningJobCanBeClassifiedAsStalledWithoutCancellingIt() {
         let job = ConversionJob(
             sourceURL: URL(fileURLWithPath: "/tmp/stalled.pdf"),
-            stage: .python,
+            stage: .processing,
             lastProgressAt: Date(timeIntervalSince1970: 100)
         )
 
         XCTAssertTrue(job.hasNoRecentProgress(referenceDate: Date(timeIntervalSince1970: 165), threshold: 60))
         XCTAssertTrue(job.isRunning)
-        XCTAssertEqual(job.stage, .python)
+        XCTAssertEqual(job.stage, .processing)
     }
 
     func testProgressClearsRecoverableStalledState() async {
         let queue = ConversionQueue { _, progress in
-            progress?(.python)
+            progress?(.processing)
             try? await Task.sleep(nanoseconds: 20_000_000)
             progress?(.postProcessing)
             return .success(ConversionOutput(
@@ -279,7 +279,7 @@ final class ConversionQueueTests: XCTestCase {
 
         let id = queue.add(URL(fileURLWithPath: "/tmp/stalled.pdf"))
         await waitUntil {
-            queue.jobs.first(where: { $0.id == id })?.stage == .python
+            queue.jobs.first(where: { $0.id == id })?.stage == .processing
         }
 
         XCTAssertFalse(queue.jobs.first(where: { $0.id == id })?.isStalled ?? true)
@@ -290,9 +290,9 @@ final class ConversionQueueTests: XCTestCase {
 
     func testPythonProgressFractionAdvancesWithinPythonBand() async {
         let queue = ConversionQueue { _, progress in
-            progress?(ConversionProgress(stage: .python, fraction: 0.25, message: "Processing"))
+            progress?(ConversionProgress(stage: .processing, fraction: 0.25, message: "Processing"))
             try? await Task.sleep(nanoseconds: 30_000_000)
-            progress?(ConversionProgress(stage: .python, fraction: 0.75, message: "Processing"))
+            progress?(ConversionProgress(stage: .processing, fraction: 0.75, message: "Processing"))
             try? await Task.sleep(nanoseconds: 30_000_000)
             return .success(ConversionOutput(
                 markdown: "ok",
@@ -306,13 +306,13 @@ final class ConversionQueueTests: XCTestCase {
 
         let id = queue.add(URL(fileURLWithPath: "/tmp/progress.pdf"))
         await waitUntil {
-            guard let job = queue.job(id: id), job.stage == .python else { return false }
+            guard let job = queue.job(id: id), job.stage == .processing else { return false }
             return job.progress > 0.35 && job.progress < 0.45
         }
         let firstProgress = queue.job(id: id)?.progress ?? 0
 
         await waitUntil {
-            guard let job = queue.job(id: id), job.stage == .python else { return false }
+            guard let job = queue.job(id: id), job.stage == .processing else { return false }
             return job.progress > 0.65
         }
         let secondProgress = queue.job(id: id)?.progress ?? 0
@@ -434,7 +434,7 @@ final class ConversionQueueTests: XCTestCase {
 
     func testEngineFailureIsStoredPerJob() async {
         let queue = ConversionQueue { _, progress in
-            progress?(.python)
+            progress?(.processing)
             return .failure(ConversionError.engineFailed("Engine unavailable").errorDescription!)
         }
 
@@ -534,7 +534,7 @@ final class ConversionQueueTests: XCTestCase {
     func testLivenessMonitorClassifiesJobStalledAfterThreshold() async {
         var blocker: CheckedContinuation<Void, Never>?
         let queue = ConversionQueue { _, progress in
-            progress?(.python)
+            progress?(.processing)
             await withCheckedContinuation { continuation in
                 blocker = continuation
             }
@@ -542,7 +542,7 @@ final class ConversionQueueTests: XCTestCase {
         }
 
         let id = queue.add(URL(fileURLWithPath: "/tmp/stalled.pdf"))
-        await waitUntil { queue.job(id: id)?.stage == .python }
+        await waitUntil { queue.job(id: id)?.stage == .processing }
 
         // Simulate 65s elapsed since last progress — crosses the 60s threshold.
         queue.classifyStalledJobsForTesting(referenceDate: Date(timeIntervalSinceNow: 65))
@@ -555,14 +555,14 @@ final class ConversionQueueTests: XCTestCase {
     func testLivenessMonitorClearsIsStalled_WhenProgressArrives() async {
         let blocker = TaskBlocker()
         let queue = ConversionQueue { _, progress in
-            progress?(.python)
+            progress?(.processing)
             await blocker.wait()
             progress?(.postProcessing)
             return .success(ConversionOutput(markdown: "ok", pages: 1, format: "PDF", title: "recover", pipeline: .fast))
         }
 
         let id = queue.add(URL(fileURLWithPath: "/tmp/recover.pdf"))
-        await waitUntil { queue.job(id: id)?.stage == .python }
+        await waitUntil { queue.job(id: id)?.stage == .processing }
 
         // Force stalled via the test hook
         queue.classifyStalledJobsForTesting(referenceDate: Date(timeIntervalSinceNow: 65))
@@ -650,15 +650,15 @@ final class ConversionQueueTests: XCTestCase {
         addTeardownBlock {
             try? FileManager.default.removeItem(at: workspace)
         }
-        // EPUB was a Python-only format with no native engine. With the Python runtime
-        // removed it is no longer an accepted input type, so it is rejected at input
-        // validation. (DOCX/TXT/CSV are Basic and now convert natively — see the
+        // ZIP/WEBVTT were Python-only formats with no native engine. With the Python
+        // runtime removed they are no longer accepted input types, so they are rejected at
+        // input validation. (DOCX/TXT/CSV/EPUB now convert natively — see the
         // native-conversion tests below.)
-        let epub = workspace.appendingPathComponent("structured.epub")
-        try Data("not a real epub, but enough to prove routing".utf8).write(to: epub)
+        let zip = workspace.appendingPathComponent("structured.zip")
+        try Data("not a real zip, but enough to prove routing".utf8).write(to: zip)
 
         let result = await ConversionRunner(supportsAdvancedRuntime: false)
-            .run(ConversionJob(sourceURL: epub))
+            .run(ConversionJob(sourceURL: zip))
 
         XCTAssertEqual(result.errorMessage, ConversionError.inaccessible.errorDescription)
     }

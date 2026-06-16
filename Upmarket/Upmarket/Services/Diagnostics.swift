@@ -7,7 +7,6 @@ enum AppLog {
 
     nonisolated static let conversion = Logger(subsystem: subsystem, category: "conversion")
     nonisolated static let launch = Logger(subsystem: subsystem, category: "launch")
-    nonisolated static let pythonBridge = Logger(subsystem: subsystem, category: "pythonBridge")
     nonisolated static let modelDownload = Logger(subsystem: subsystem, category: "modelDownload")
     nonisolated static let storeKit = Logger(subsystem: subsystem, category: "storeKit")
     nonisolated static let fileAccess = Logger(subsystem: subsystem, category: "fileAccess")
@@ -133,7 +132,7 @@ enum Diagnostics {
             return "Analysing document"
         case ConversionStage.extracting.rawValue:
             return "Reading document"
-        case ConversionStage.python.rawValue:
+        case ConversionStage.processing.rawValue:
             return "Processing document"
         case ConversionStage.postProcessing.rawValue:
             return "Cleaning Markdown"

@@ -10,6 +10,7 @@ enum ConversionTool: String, CaseIterable, Sendable {
     case swiftOffice    // SwiftOfficeMarkdown — native OOXML/legacy Office
     case nativeText     // in-process .txt/.md/.csv
     case nativeHTML     // in-process libxml2 HTML
+    case nativeEPUB     // in-process ZipReader + libxml2 HTML
     case upmarketAI     // native Granite-Docling (mlx-swift)
 }
 
@@ -110,17 +111,18 @@ enum ToolFormatCapabilityMatrix {
         add(.swiftOffice, [.docx, .pptx, .xlsx, .doc, .xls, .ppt], .primary)
         add(.nativeText, [.md, .txt, .csv], .primary)
         add(.nativeHTML, [.html], .primary)
+        add(.nativeEPUB, [.epub], .primary)
         add(.upmarketAI, [.pdf, .png, .jpg, .jpeg, .tif, .tiff, .webp], .primary, advanced: true)
 
         return entries
     }()
 
     nonisolated static let acceptedFormats: [ConversionFormat] = {
-        // Formats with a native engine. EPUB/JSON/XML/ZIP/WEBVTT were Python-only and are
-        // no longer supported after the Python runtime removal.
+        // Formats with a native engine. EPUB converts natively (ZIP + HTML); JSON/XML/ZIP/
+        // WEBVTT were Python-only and are no longer supported after the Python runtime removal.
         let productSurface: Set<ConversionFormat> = [
             .pdf, .html, .txt, .csv, .png, .jpg, .jpeg, .gif, .tiff,
-            .docx, .pptx, .xlsx, .doc, .xls, .ppt,
+            .docx, .pptx, .xlsx, .doc, .xls, .ppt, .epub,
             .mp3, .m4a, .wav, .aiff, .opus,
         ]
         return ConversionFormat.allCases.filter {

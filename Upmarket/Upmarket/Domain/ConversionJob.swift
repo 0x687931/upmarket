@@ -5,14 +5,14 @@ nonisolated enum ConversionStage: String, Equatable, Sendable {
     case copying
     case analysing
     case extracting
-    case python
+    case processing
     case postProcessing
     case complete
     case failed
     case cancelled
 
     var isRunning: Bool {
-        self == .queued || self == .copying || self == .analysing || self == .extracting || self == .python || self == .postProcessing
+        self == .queued || self == .copying || self == .analysing || self == .extracting || self == .processing || self == .postProcessing
     }
 }
 
@@ -35,7 +35,7 @@ nonisolated struct ConversionProgress: Equatable, Sendable {
     static let copying = ConversionProgress(stage: .copying)
     static let analysing = ConversionProgress(stage: .analysing)
     static let extracting = ConversionProgress(stage: .extracting)
-    static let python = ConversionProgress(stage: .python)
+    static let processing = ConversionProgress(stage: .processing)
     static let postProcessing = ConversionProgress(stage: .postProcessing)
     static let complete = ConversionProgress(stage: .complete)
     static let failed = ConversionProgress(stage: .failed)
@@ -90,7 +90,7 @@ struct ConversionJob: Identifiable, Equatable {
         case .queued:         return "Queued"
         case .copying, .analysing: return "Preparing…"
         case .extracting:     return "Reading…"
-        case .python:         return "Processing…"
+        case .processing:     return "Processing…"
         case .postProcessing: return "Refining…"
         case .complete:       return "Done"
         case .failed:         return "Failed"
@@ -119,7 +119,7 @@ struct ConversionJob: Identifiable, Equatable {
     }
 
     // Scalar progress used by arc ring and progress bar.
-    // Python stage owns the widest band because it is the longest phase.
+    // The processing stage owns the widest band because it is the longest phase.
     var progress: Double {
         if let progressFraction, stage.isRunning {
             let band = progressBand
@@ -130,7 +130,7 @@ struct ConversionJob: Identifiable, Equatable {
         case .copying:        return 0.06
         case .analysing:      return 0.12
         case .extracting:     return 0.20
-        case .python:         return 0.55
+        case .processing:     return 0.55
         case .postProcessing: return 0.88
         case .complete:       return 1.0
         case .failed:         return 1.0
@@ -144,7 +144,7 @@ struct ConversionJob: Identifiable, Equatable {
         case .copying:        return (0.01, 0.06)
         case .analysing:      return (0.06, 0.12)
         case .extracting:     return (0.12, 0.20)
-        case .python:         return (0.20, 0.88)
+        case .processing:     return (0.20, 0.88)
         case .postProcessing: return (0.88, 0.96)
         case .complete:       return (1.0, 1.0)
         case .failed:         return (1.0, 1.0)

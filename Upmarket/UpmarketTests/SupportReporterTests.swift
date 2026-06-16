@@ -28,7 +28,7 @@ final class SupportReporterTests: XCTestCase {
         XCTAssertTrue(preview.body.contains("Category: Conversion failure"))
         XCTAssertTrue(preview.body.contains("Correlation ID: job-123"))
         XCTAssertTrue(preview.body.contains("Last Stage: Processing document"))
-        XCTAssertTrue(preview.body.contains("Last Error: runtime.bridge"))
+        XCTAssertTrue(preview.body.contains("Last Error: engine.failed"))
         XCTAssertTrue(preview.body.contains("[redacted path]"))
         XCTAssertFalse(preview.body.contains("/Users/alex/Documents/private.pdf"))
         XCTAssertFalse(preview.body.contains("private.pdf"))
@@ -49,7 +49,7 @@ final class SupportReporterTests: XCTestCase {
     @MainActor
     func testFailedQueueJobProvidesSupportSnapshotContext() async throws {
         let queue = ConversionQueue { _, progress in
-            progress?(.python)
+            progress?(.processing)
             return .failure(ConversionError.engineFailed("engine failed").errorDescription ?? "Conversion failed.")
         }
         let id = queue.add(URL(fileURLWithPath: "/tmp/source.pdf"))
@@ -72,8 +72,8 @@ final class SupportReporterTests: XCTestCase {
             hardwareModel: "Mac15,6",
             localeIdentifier: "en_US",
             correlationID: "job-123",
-            lastConversionStage: "python",
-            lastErrorCode: "runtime.bridge",
+            lastConversionStage: "processing",
+            lastErrorCode: "engine.failed",
             plistStatus: "ok",
             entitlementStatus: "sandboxed",
             modelManifestStatus: "manifest-present"

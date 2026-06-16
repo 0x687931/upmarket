@@ -229,7 +229,11 @@ struct ConversionRunner {
                 // OOXML + legacy-binary Office via the native SwiftOfficeMarkdown engine.
                 return runNativeOfficeConversion(fileURL: tempURL, title: title)
             }
-            // Formats with no native engine (e.g. .epub/.zip/.webvtt) are not supported
+            if ext == "epub" {
+                // EPUB is a ZIP of XHTML — converted in-process (ZipReader + native HTML).
+                return runNativeEPUBConversion(fileURL: tempURL, title: title)
+            }
+            // Formats with no native engine (e.g. .zip/.webvtt) are not supported
             // without the removed Python runtime.
             return .failure(ConversionError.unsupportedOnThisMac.errorDescription ?? "This conversion is not supported on this Mac.")
 
@@ -266,8 +270,8 @@ struct ConversionRunner {
                 return await runVisionExtraction(
                     fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
                 )
-            case .speech, .metadata, .nativeHTML, .nativeOffice, .nativeText:
-                // Not reachable for digital documents (native HTML/Office/text route
+            case .speech, .metadata, .nativeHTML, .nativeOffice, .nativeText, .nativeEPUB:
+                // Not reachable for digital documents (native HTML/Office/text/EPUB route
                 // via .structuredDocument); PDFKit is the safe native default here.
                 return await runPDFKitConversion(
                     fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
@@ -643,6 +647,25 @@ struct ConversionRunner {
             title: title,
             pipeline: .fast,
             selectedPathway: .nativeOffice
+        ))
+    }
+
+    /// EPUB → Markdown in-process (ZipReader + native HTML walker). No Python, no download.
+    private func runNativeEPUBConversion(fileURL: URL, title: String) -> ConversionResult {
+        let signpost = AppSignpost.conversion.beginInterval("nativeExtract")
+        defer { AppSignpost.conversion.endInterval("nativeExtract", signpost) }
+
+        guard let markdown = try? NativeEPUBConverter.convert(fileURL: fileURL),
+              !markdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return .failure(ConversionError.inaccessible.errorDescription ?? "Upmarket couldn't read this book.")
+        }
+        return .success(ConversionOutput(
+            markdown: markdown,
+            pages: 0,
+            format: "EPUB",
+            title: title,
+            pipeline: .fast,
+            selectedPathway: .nativeEPUB
         ))
     }
 
