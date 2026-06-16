@@ -38,8 +38,7 @@ The following run on background threads and use async/await:
 
 - `ConversionRunner` — conversion orchestration (async, runs off main thread)
 - `FileSystemMetrics` — file I/O via actor isolation
-- `RuntimeHelperClient` — subprocess communication (IPC, blocking but off main thread)
-- `PythonWorker` — Python subprocess invocation (async)
+- `GraniteDoclingEngine` (`UpmarketVLM`) — on-device mlx-swift VLM inference (async actor)
 - `WritingToolsService` — Writing Tools refinement (async, macOS 15.1+)
 - `FoundationModelEnhancer` — foundation model calls (async)
 
@@ -77,7 +76,7 @@ Typical conversion flow:
 1. **User clicks "Convert"** on SwiftUI view (main thread)
 2. **View calls `ConversionQueue.add()`** → state change on @MainActor (main thread)
 3. **`ConversionQueue` spawns task** → `ConversionRunner.run()` (background thread, async)
-4. **`ConversionRunner` does file I/O, Python calls, etc.** (background)
+4. **`ConversionRunner` does file I/O, native conversion (incl. mlx-swift inference), etc.** (background)
 5. **`ConversionRunner` publishes result** → posts `Notification` (any thread)
 6. **`ConversionQueue` receives notification** → `@MainActor` context resumes (main thread)
 7. **SwiftUI view observes state change** and re-renders (main thread)

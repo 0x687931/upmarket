@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Upmarket is a macOS App Store app that converts documents (PDF, DOCX, PPTX, XLSX, HTML, images, audio, video) to Markdown. It prefers on-device Apple frameworks and falls back to an embedded CPython + Docling runtime for complex documents. It runs 100% offline — no cloud inference, no API keys.
+Upmarket is a macOS App Store app that converts documents (PDF, DOCX, PPTX, XLSX, HTML, EPUB, images, audio) to Markdown. Conversion is **100% native Swift** — Apple frameworks (PDFKit, Vision, Speech, AVFoundation, ImageIO), the vendored SwiftOfficeMarkdown engine for Office, libxml2 for HTML, and on-device Granite-Docling (mlx-swift) for the AI tier. There is no Python runtime. It runs 100% offline — no cloud inference, no API keys.
 
 The product loop: drop or choose a document → watch clear progress → get Markdown → copy/save it → pay once for durable value. Philosophy (see `docs/PROJECT_VISION.md`): Linus-style minimalism + DHH-style coherent monolith. Keep code obvious, small, native-first, debuggable. Avoid protocol forests, speculative abstractions, Redux/TCA-style frameworks, and hidden background magic.
 
@@ -14,11 +14,12 @@ The single source of truth for build/test is `scripts/ci/gate.sh`. Run from repo
 
 - `scripts/ci/gate.sh quick` — normal local/PR gate: static policy checks, unsigned build, effective-plist check, unit tests. **Run this before every PR.** (This is exactly what CI runs.)
 - `scripts/ci/gate.sh policy` — static policy checks only (fast).
-- `scripts/ci/gate.sh runtime` — rebuild + verify the bundled Python runtime and app package. Use for Python, dependency, entitlement, model, corpus, or packaging changes.
+- `scripts/ci/gate.sh runtime` — rebuild + verify the packaged app (no-Python-embed guard, entitlements, plist, bundled CLI/MCP). Use for entitlement, model, corpus, or packaging changes.
 - `scripts/ci/gate.sh minor` (alias `release`) — full release gate without UI automation.
 - `scripts/ci/gate.sh major` — release gate **plus** UI automation. Reserve for major candidates / explicit UI changes; it may switch system light/dark appearance.
-- `scripts/ci/ensure_python_runtime.sh` — prepares the local (git-ignored) `Upmarket/Python/Python.xcframework` if `gate.sh quick` reports it missing.
 - `scripts/dev/run_app.sh` — deterministic local build + ad-hoc-signed sandboxed launch. `--relaunch` to kill an older instance first. CloudKit / App Group capabilities require real signing.
+
+The build needs `-skipMacroValidation` (for the mlx-swift-lm Swift macro); `gate.sh` and `run_app.sh` already pass it. CI scripts are written in `python3` (system Python, as a scripting language) — that is unrelated to the removed conversion runtime.
 
 Direct Xcode (when you need a single test or finer control):
 
@@ -30,29 +31,24 @@ xcodebuild test -project Upmarket/Upmarket.xcodeproj -scheme Upmarket \
   -only-testing:UpmarketTests/ConversionQueueTests/testSomething
 ```
 
-Python bridge work: `python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt`. Rebuild the bundled runtime with `scripts/build_python_env.sh`.
-
 ## Architecture
 
 Authoritative diagrams: `docs/ARCHITECTURE.md`. Boundary map before moving code: `docs/release/ARCHITECTURE_BOUNDARIES.md` and `docs/release/adr/0001-minimalist-monolith-boundaries.md`.
 
-### Conversion is native-first, with a Python fallback in a separate process
+### Conversion is native-only, in-process
 
-There is **one conversion entry point**: `ConversionQueue.add()` → `ConversionRunner.run()`. A job owns its own progress, result, error, and cancellation state. Routing by file type happens in `ConversionRunner`:
+There is **one conversion entry point**: `ConversionQueue.add()` → `ConversionRunner.run()`. A job owns its own progress, result, error, and cancellation state. Routing by file type happens in `ConversionRunner`, and every engine runs **in-process** inside `Upmarket.app`:
 
-- **Apple-native paths run in-process** inside `Upmarket.app`: PDFKit (digital PDFs), Vision OCR (scanned PDFs/images), Speech (audio), AVFoundation (video/audio metadata), ImageIO (image metadata), NaturalLanguage (post-processing).
-- **Python paths run in `UpmarketRuntimeHelper`** — a separate sandboxed process launched **per job**. Docling, MarkItDown, and pdfium live here. A helper crash or hang maps to a typed Swift error and **cannot take down the main app**.
+- **PDFKit** (digital PDFs), **Vision OCR + adaptive table banding** (scanned/complex PDFs and images), **Speech** (audio), **AVFoundation/ImageIO** (media/image metadata), **NaturalLanguage** (post-processing).
+- **SwiftOfficeMarkdown** (`OfficeToMarkdown`) for DOCX/XLSX/PPTX + legacy binary Office; **NativeHTMLConverter** (libxml2) for HTML; **NativeTextConverter** for TXT/MD/CSV; **NativeEPUBConverter** (ZipReader + OPF spine + HTML walker) for EPUB.
+- **Native Granite-Docling (mlx-swift)** for the AI tier — `UpmarketVLM.GraniteDoclingEngine`, rendering PDF pages and parsing DocTags to Markdown.
 
-The Swift↔Python boundary is a single funnel: `PythonWorker` → `RuntimeHelperClient` → the `UpmarketRuntimeHelper` process. SwiftUI views never call Python, StoreKit, or file APIs directly.
-
-PDF classification (`NativeDocumentClassifier`) decides digital-text → PDFKit, scanned → Vision, complex → Docling. With AI enabled, multiple pathways run and `MarkdownQualityScorer` selects the best output.
-
-Docling pipelines: Enhanced tier = `StandardPdfPipeline` (layout + table OCR); AI tier = `VlmPipeline` (Granite Docling MLX). Output is always `export_to_markdown()`.
+PDF classification (`NativeDocumentClassifier`) decides digital-text → PDFKit, scanned/complex → Vision; `NativeDocumentClassifier.recommendedEngine` gates the native Granite path to clean typed Latin/simplified-Chinese docs. The quality-selected PDF path runs PDFKit + Vision and `MarkdownQualityScorer` picks the best output. SwiftUI views never call conversion engines, StoreKit, or file APIs directly.
 
 ### Layers (`Upmarket/Upmarket/`)
 
 - `Views/` — SwiftUI only. Render state, send actions. No business logic.
-- `Services/` — concrete coordinators (singletons injected via `.environmentObject`): `ConversionQueue`, `ConversionRunner`, `PythonWorker`, `RuntimeHelperClient`, `ModelManager`, `StoreManager`, `FileAccessService`, window controllers, native extractors, etc.
+- `Services/` — concrete coordinators (singletons injected via `.environmentObject`): `ConversionQueue`, `ConversionRunner`, `ModelManager`, `StoreManager`, `FileAccessService`, native converters/extractors, window controllers, etc.
 - `Domain/` — value types (structs/enums) for shared domain data.
 - `Intents/` — App Intents.
 - `Design/` — `AppTheme`, button styles (amber/orange design system).
@@ -60,29 +56,30 @@ Docling pipelines: Enhanced tier = `StandardPdfPipeline` (layout + table OCR); A
 ### Targets (schemes in `Upmarket/Upmarket.xcodeproj`)
 
 - **Upmarket** — the SwiftUI app.
-- **UpmarketRuntimeHelper** — sandboxed per-job Python host (`Upmarket/UpmarketRuntimeHelper/main.swift`).
-- **UpmarketCLI** — command-line conversion entry (`CLIConversionBroker` bridges app ↔ CLI).
+- **UpmarketCLI** — command-line conversion entry (`CLIConversionBroker` bridges app ↔ CLI). PDF/image/text native; Office/EPUB route to the app.
 - **UpmarketMCP** — MCP server exposing conversion as tools (`UpmarketMCP/`).
 - **UpmarketQuickAction** — Finder/Share extension.
 
-### Python (`UpmarketPython/`)
+### Vendored Swift packages (`Upmarket/Vendor/`, `Vendor/`)
 
-One Swift boundary wraps all of this. `docling_bridge/` (converter, analyser, postprocessor, security) and `models/` (model_manager). Source here is synced into the helper at build time — see `scripts/ci/sync_python_bridge.sh`.
+- **`UpmarketVLM`** — wraps mlx-swift-lm to load and run Granite-Docling (`GraniteDoclingEngine`, `DocTags` → Markdown parser).
+- **`SwiftOfficeMarkdown`** — first-party OOXML/legacy-binary Office engine (`ZipReader`, part parsers).
 
 ## Architecture Decisions (Do Not Revisit Without Good Reason)
 
 - **SwiftUI only** — no AppKit/NSViewController unless SwiftUI genuinely cannot do it.
 - **Native Apple APIs preferred** where practical: PDFKit, Vision, NaturalLanguage, Speech, AVFoundation, ImageIO, StoreKit, OSLog.
-- **BeeWare Python-Apple-support** for CPython embedding; **PythonKit** (vendored at `Upmarket/Vendor/PythonKit/`) for interop; **Docling** as the conversion engine.
+- **No Python runtime.** Conversion is native Swift end-to-end; the embedded CPython + Docling/MarkItDown runtime and the `UpmarketRuntimeHelper` process were removed. Do not reintroduce them (enforced by `scripts/ci/validate_architecture_boundaries.py`).
+- **Granite-Docling runs via mlx-swift** (`UpmarketVLM`), not Python MLX.
 - **No cloud inference, no Ollama, no Hugging Face at runtime** (`HF_HUB_OFFLINE=1` after model cache). Model download is the only network-dependent setup path.
-- App ships lean (Swift only); the Python runtime (~1.3 GB) and model weights (~3–5 GB) are gated post-purchase downloads.
+- App ships lean; only the Max-tier Granite model weights (`upmarket_ai`, ~600 MB) are a gated post-purchase download.
 
 ## Key Constraints
 
 - **App Sandbox is always on.** Do not add temporary exceptions or broad filesystem access without a P0 implementation-plan item. Network entitlement (`com.apple.security.network.client`) is only for model download.
-- Bundle ID `com.upmarket.app`; App Group `group.com.upmarket.app`. Minimum deployment target macOS 26.0. Python 3.12.
-- Models stored in `~/Library/Application Support/Upmarket/models/`; validate before enabling model-backed conversion.
-- **Pin ALL Python deps with exact `==`** in `requirements.txt`. Proposed updates go in `requirements-candidate.txt` first. Known conflict: `mlx-vlm` vs `docling-ibm-models` want different `transformers` versions — see `docs/IMPLEMENTATION_PLAN.md`.
+- Bundle ID `com.upmarket.app`; App Group `group.com.upmarket.app`. Minimum deployment target macOS 26.0.
+- Models stored in `~/Library/Application Support/Upmarket/models/upmarket_ai/` (flat mlx-swift layout); validate before enabling model-backed conversion.
+- **Swift package dependencies are pinned in `Package.resolved`** (committed). The app's only local packages are first-party (`UpmarketVLM`, `SwiftOfficeMarkdown`).
 - Conversion runs off the main thread; progress flows via async streams to SwiftUI. Target: 10-page PDF < 30s on M1.
 - **Diagnostics are privacy-redacted by default.** Never commit model weights, generated runtimes, private documents, credentials, or unredacted diagnostics.
 - **User-facing copy must not expose implementation toolkit names** (Python, Docling, internal converter packages) except in licenses or explicit diagnostic previews. This is enforced by `scripts/ci/validate_user_facing_copy.py`.
@@ -91,7 +88,7 @@ One Swift boundary wraps all of this. `docling_bridge/` (converter, analyser, po
 
 - No force unwraps — use `guard`/`if let`.
 - Comments explain *why* (non-obvious constraints), never *what*.
-- Python calls are always async — wrap in `Task { await ... }`.
+- Conversion and model-load calls are async — wrap in `Task { await ... }`.
 
 ## Workflow
 

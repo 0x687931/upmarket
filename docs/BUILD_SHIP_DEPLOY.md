@@ -24,8 +24,8 @@ Use these documents together:
 - Xcode 26 or newer selected with `xcodebuild -version`.
 - Apple Developer Program membership and App Store Connect access.
 - The Upmarket app target has the release team configured in the Xcode project.
-- Python 3.12 is available for runtime verification.
-- `Upmarket/Python/Python.xcframework` exists locally. If missing, run `scripts/ci/ensure_python_runtime.sh`.
+- `python3` is available (CI validators are Python scripts; conversion itself is native Swift).
+- The build passes `-skipMacroValidation` for the mlx-swift-lm macro (gate.sh and run_app.sh already do).
 - App Store Connect records exist for the app, in-app purchases, privacy answers, support links, and TestFlight tester groups.
 
 ## Release Lanes
@@ -35,7 +35,7 @@ Use these documents together:
 | Local development | Owner machine | `scripts/dev/run_app.sh` | Daily iteration |
 | Fast PR gate | CI and local | `scripts/ci/gate.sh quick` | Every PR |
 | UI automation | CI and local | `scripts/ci/gate.sh ui`; `.github/workflows/ui-automation.yml` | UI-sensitive PRs, manual runs |
-| Runtime package | CI and local | `scripts/ci/gate.sh runtime` | Python, dependency, entitlement, package changes |
+| Runtime package | CI and local | `scripts/ci/gate.sh runtime` | Entitlement, model, corpus, app-package changes |
 | Minor candidate | Release owner | `scripts/ci/gate.sh minor` | Internal beta candidate |
 | Major candidate | Release owner | `scripts/ci/gate.sh major` | Major release or explicit UI changes |
 | TestFlight internal | Internal testers | App Store Connect TestFlight build page | First beta distribution |
@@ -70,13 +70,13 @@ scripts/ci/gate.sh major
 
 ## Runtime And Package Verification
 
-Use the runtime gate when a change touches Python, packaged dependencies, entitlements, model handling, corpus conversion, app package structure, or release automation:
+Use the runtime gate when a change touches entitlements, model handling, corpus conversion, app package structure, or release automation:
 
 ```sh
 scripts/ci/gate.sh runtime
 ```
 
-The package verifier checks effective plist values, entitlements, Apple bundle preflight, bundled Python imports, Python bridge security preflight, runtime helper boundaries, MCP smoke, and offline conversion smoke:
+The package verifier checks effective plist values, entitlements, Apple bundle preflight (Release archives), the no-Python-embed guard (the shipped app must not contain a Python framework), and MCP server smoke:
 
 ```sh
 scripts/ci/verify_release_app.sh /path/to/Upmarket.app
@@ -90,46 +90,16 @@ UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS=1 scripts/ci/verify_entitlements.sh /path/t
 
 ## Model Asset Hosting
 
-### Debug / development (GitHub CDN)
+The only downloadable asset is `upmarket_ai` — the Granite-Docling-258M **mlx-swift** weights (~600 MB), delivered as a flat directory (`config.json` + `*.safetensors` + tokenizer files). Basic and Pro are fully native and need no download.
 
-Debug builds download models from GitHub Releases. Manifests are small JSON files committed to the repo; archives are `.tar.gz` files attached to a GitHub Release. Downloads are resumable — if interrupted, the next attempt picks up from where it stopped.
+- **Debug / development:** `FirstPartyModelDownloadService` fetches a manifest + per-file archive (resumable, checksum-verified, atomic promote). Point it at a base URL via `UPMARKET_MODEL_MANIFEST_BASE_URL`.
+- **Production / TestFlight:** `BackgroundAssetsDownloadService` + the `UpmarketBackgroundAssetsExtension` deliver the asset via Apple Background Assets.
 
-**One-time setup** (repeat when models change):
+The Python-based archive-staging scripts were removed with the runtime; a native helper that produces the `upmarket_ai` archive + manifest from the published HF mlx repo is a follow-up. Until then, stage the directory by hand from a local model cache.
 
-```sh
-# 1. Stage archives and manifests.
-#    python_runtime is sourced from the bundled xcframework — no prior download needed.
-#    layout and upmarket_ai require a developer-intake download first (see below).
-scripts/build/stage_github_model_assets.py \
-  --release-url https://github.com/OWNER/REPO/releases/download/models-v1
-
-# 2. Create the GitHub Release and upload archives.
-gh release create models-v1 --title "Model Assets v1"
-gh release upload models-v1 build/github-model-assets/archives/*.tar.gz
-
-# 3. Commit manifests to the repo.
-cp build/github-model-assets/manifests/*.json resources/model-manifests/
-git add resources/model-manifests/ && git commit -m "Add GitHub CDN model manifests v1"
-
-# 4. Enable in Xcode: open the Upmarket scheme → Run → Environment Variables.
-#    Set UPMARKET_MODEL_MANIFEST_BASE_URL (enable the row):
-#      https://raw.githubusercontent.com/OWNER/REPO/main/resources/model-manifests/
-```
-
-**Developer-intake download** (to stage layout / upmarket_ai):
+### Production / TestFlight archive
 
 ```sh
-# Launch the app with developer intake enabled, then trigger download from Preferences → Models.
-UPMARKET_ENABLE_DEVELOPER_MODEL_INTAKE=1 scripts/dev/run_app.sh
-```
-
-### Production / TestFlight (Apple CDN)
-
-Production and TestFlight model downloads must be first-party. Stage model assets from a manifest-validated local cache, upload the staged directory to the Apple-hosted model location, and build the app with that base URL:
-
-```sh
-scripts/build/stage_first_party_model_assets.py --output build/first-party-model-assets
-
 xcodebuild archive \
   -project Upmarket/Upmarket.xcodeproj \
   -scheme Upmarket \
@@ -152,8 +122,7 @@ UPMARKET_REQUIRE_MODEL_MANIFEST_BASE_URL=1 scripts/ci/verify_release_app.sh "$AP
 The app's download runtime has no host restriction — only the release verification script does. You can exercise the exact same code path against a local HTTP server:
 
 ```sh
-# 1. Stage models locally (requires models in Application Support — use developer intake first).
-scripts/build/stage_first_party_model_assets.py --output build/first-party-model-assets
+# 1. Stage the upmarket_ai model directory locally (manifest + flat mlx weights).
 
 # 2. Serve the staged directory.
 python3 -m http.server 8765 --directory build/first-party-model-assets
