@@ -5,9 +5,11 @@ from pathlib import Path
 
 
 def resolve(corpus: Path, rel: str) -> Path | None:
+    # Manifest paths are repo-root-relative (Document + GroundTruth schema); fall back to
+    # corpus-relative for any legacy entries.
     candidates = [
+        Path(rel),
         corpus / rel,
-        corpus / "docling" / "docling" / rel,
     ]
     for candidate in candidates:
         if candidate.exists():
@@ -42,7 +44,7 @@ def main() -> int:
             failed = True
         ids.add(doc_id)
 
-        rel_file = doc.get("file")
+        rel_file = doc.get("document")
         if not rel_file or resolve(corpus, rel_file) is None:
             print(f"error: corpus file missing for {doc_id}: {rel_file}")
             failed = True

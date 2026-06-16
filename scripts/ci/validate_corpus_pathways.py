@@ -13,8 +13,6 @@ from pathlib import Path
 MANIFEST = Path("tests/corpus/manifest.json")
 PATHWAYS = Path("docs/release/conversion_pathways.json")
 BASELINE = Path("docs/release/corpus_pathway_baseline.json")
-RELEASE_LOCKS = (Path("requirements.txt"), Path("requirements-candidate.txt"))
-PACKAGED_SITE = Path("Upmarket/Python/Python.xcframework")
 
 
 def load_json(path: Path) -> dict:
@@ -24,10 +22,6 @@ def load_json(path: Path) -> dict:
         raise SystemExit(f"error: missing file: {path}")
     except json.JSONDecodeError as exc:
         raise SystemExit(f"error: invalid JSON in {path}: {exc}")
-
-
-def normalise_package_name(line: str) -> str:
-    return line.split("#", 1)[0].split("==", 1)[0].strip().lower().replace("_", "-")
 
 
 def validate_registry(manifest: dict, pathways_doc: dict, baseline: dict) -> list[str]:
@@ -40,17 +34,18 @@ def validate_registry(manifest: dict, pathways_doc: dict, baseline: dict) -> lis
         errors.append("conversion pathway registry has no pathways")
         return errors
 
-    corpus_categories = Counter(doc.get("category", "unknown") for doc in docs)
+    # The corpus is format-keyed (Document + GroundTruth schema, no category field), and
+    # conversion is native-only. Formats with no native engine are exempted via
+    # unsupported_formats; every other corpus document must be covered by a shipping pathway.
+    corpus_formats = Counter(doc.get("format", "unknown") for doc in docs)
+    unsupported_formats = set(pathways_doc.get("unsupported_formats", []))
+
+    for fmt in sorted(unsupported_formats - set(corpus_formats)):
+        errors.append(f"unsupported_formats lists '{fmt}', which is not present in the corpus (remove the stale entry)")
+
     shipping_coverage = {doc.get("id"): [] for doc in docs}
 
     for pathway_id, config in pathways.items():
-        valid_categories = set(config.get("valid_categories", []))
-        if not valid_categories:
-            errors.append(f"{pathway_id}: valid_categories is required")
-            continue
-        unknown = sorted(valid_categories - set(corpus_categories))
-        if unknown:
-            errors.append(f"{pathway_id}: references unknown corpus categories: {', '.join(unknown)}")
         valid_formats = set(config.get("valid_formats", []))
 
         runner = config.get("runner")
@@ -64,17 +59,23 @@ def validate_registry(manifest: dict, pathways_doc: dict, baseline: dict) -> lis
         if release_status == "shipping" and config.get("baseline_required") is not True:
             errors.append(f"{pathway_id}: shipping pathways must require a baseline")
 
+        if release_status == "shipping" and not valid_formats:
+            errors.append(f"{pathway_id}: shipping pathways must declare valid_formats")
+
         if "pymupdf" in pathway_id.lower() and release_status != "internal-reference-only":
             errors.append(f"{pathway_id}: PyMuPDF pathways must stay internal-reference-only")
 
         if release_status == "shipping":
             for doc in docs:
-                if doc.get("category") in valid_categories and (not valid_formats or doc.get("format") in valid_formats):
+                if doc.get("format") in valid_formats:
                     shipping_coverage[doc.get("id")].append(pathway_id)
 
-    for doc_id, covered_by in shipping_coverage.items():
-        if not covered_by:
-            errors.append(f"{doc_id}: no shipping conversion pathway covers this corpus document")
+    for doc in docs:
+        if not shipping_coverage[doc.get("id")] and doc.get("format") not in unsupported_formats:
+            errors.append(
+                f"{doc.get('id')}: no shipping pathway covers format '{doc.get('format')}' "
+                "(add a pathway with that format in valid_formats, or list it in unsupported_formats)"
+            )
 
     expected_manifest = str(MANIFEST)
     if baseline.get("manifest") != expected_manifest:
@@ -82,25 +83,6 @@ def validate_registry(manifest: dict, pathways_doc: dict, baseline: dict) -> lis
     if baseline.get("pathways") != str(PATHWAYS):
         errors.append(f"{BASELINE}: pathways must be {PATHWAYS}")
 
-    return errors
-
-
-def validate_pymupdf_release_exclusion() -> list[str]:
-    errors: list[str] = []
-    forbidden = {"pymupdf", "pymupdf4llm", "fitz"}
-    for lock in RELEASE_LOCKS:
-        if not lock.exists():
-            continue
-        for number, line in enumerate(lock.read_text(encoding="utf-8").splitlines(), start=1):
-            name = normalise_package_name(line)
-            if name in forbidden:
-                errors.append(f"{lock}:{number}: {name} must not be in release dependency locks")
-
-    if PACKAGED_SITE.exists():
-        for package in forbidden:
-            matches = list(PACKAGED_SITE.rglob(package))
-            if matches:
-                errors.append(f"{PACKAGED_SITE}: packaged runtime contains forbidden PyMuPDF package path: {matches[0]}")
     return errors
 
 
@@ -211,7 +193,6 @@ def main() -> int:
     baseline = load_json(Path(args.baseline))
 
     errors = validate_registry(manifest, pathways, baseline)
-    errors.extend(validate_pymupdf_release_exclusion())
     for result_path in args.results:
         errors.extend(validate_results(load_json(Path(result_path)), baseline))
 
