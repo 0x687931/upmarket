@@ -6,6 +6,8 @@ final class PaywallWindowController: NSWindowController {
 
     static let shared = PaywallWindowController()
 
+    private var escapeMonitor: Any?
+
     private init() {
         let modalSize = AppTheme.WindowSize.modal
         let panel = NSPanel(
@@ -49,12 +51,30 @@ final class PaywallWindowController: NSWindowController {
 
 extension PaywallWindowController: NSWindowDelegate {
     func windowDidBecomeKey(_ notification: Notification) {
-        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        // Add once and tear down when the paywall loses key/closes — re-adding on every
+        // focus would stack monitors that intercept Escape app-wide and never get released.
+        guard escapeMonitor == nil else { return }
+        escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 {  // Escape
                 self?.window?.close()
                 return nil
             }
             return event
+        }
+    }
+
+    func windowDidResignKey(_ notification: Notification) {
+        removeEscapeMonitor()
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        removeEscapeMonitor()
+    }
+
+    private func removeEscapeMonitor() {
+        if let escapeMonitor {
+            NSEvent.removeMonitor(escapeMonitor)
+            self.escapeMonitor = nil
         }
     }
 }

@@ -85,6 +85,13 @@ final class ShelfWindowController: NSWindowController {
         )
         hosting.wantsLayer = true
         hosting.layer?.backgroundColor = NSColor.clear.cgColor
+        // The AppKit window shadow is generated from the content view's backing-layer mask,
+        // not from the SwiftUI clipShape. Without rounding the layer here, the shadow stays
+        // rectangular and its square corners poke out behind the rounded SwiftUI clip — the
+        // recurring "square corners" bug. Match the SwiftUI panel radius so the shadow rounds too.
+        hosting.layer?.cornerRadius = ShelfLayout.panelCornerRadius
+        hosting.layer?.cornerCurve = .continuous
+        hosting.layer?.masksToBounds = true
         // Disable automatic window resizing — we size the panel ourselves via resizeToContent.
         // Without this, NSHostingView grows the panel from its top-left corner (down+right),
         // which is the opposite of what corner-anchored expansion requires.
@@ -338,14 +345,6 @@ extension ShelfWindowController {
 // MARK: - NSWindowDelegate — snap on drag end
 
 extension ShelfWindowController: NSWindowDelegate {
-    func windowDidResize(_ notification: Notification) {
-        // The panel is transparent with a rounded SwiftUI clip, so AppKit derives the drop
-        // shadow from the content alpha and caches it per frame size. It does not recompute
-        // on resize — when the shelf collapses to mini, the larger frame's rectangular shadow
-        // lingers behind the rounded bottom corners. Force a recompute on every resize step.
-        window?.invalidateShadow()
-    }
-
     func windowDidMove(_ notification: Notification) {
         // Ignore moves we triggered programmatically (hover expand/collapse).
         guard !isProgrammaticResize else { return }

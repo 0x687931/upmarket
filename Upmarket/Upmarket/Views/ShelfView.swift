@@ -168,7 +168,7 @@ struct ShelfView: View {
         .clipShape(RoundedRectangle(cornerRadius: ShelfLayout.panelCornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: ShelfLayout.panelCornerRadius, style: .continuous)
-                .stroke(Color.white.opacity(0.3), lineWidth: 0.5)
+                .stroke(AppTheme.Colour.separator, lineWidth: 0.5)
         )
         .shadow(
             color: isConverting ? AppTheme.Colour.amberShadow.opacity(0.35) : .black.opacity(0.18),
@@ -353,7 +353,9 @@ struct ControlStrip: View {
             )
         }
         .frame(width: ShelfLayout.controlStripWidth)
-        .background(Color.white.opacity(0.25))
+        // Adaptive tint that lifts the strip off the glass in both light and dark mode
+        // (Color.primary inverts with the appearance, unlike a fixed white).
+        .background(Color.primary.opacity(0.06))
     }
 }
 
@@ -549,7 +551,7 @@ struct ShelfCard: View {
         .padding(.vertical, ShelfLayout.cardPaddingVertical)
         .padding(.horizontal, ShelfLayout.cardPaddingHorizontal)
         .frame(width: job.isRunning ? ShelfLayout.activeCardWidth : ShelfLayout.passiveCardWidth, height: ShelfLayout.cardHeight)
-        .background(Color.white.opacity(0.5))
+        .background(Color(nsColor: .controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: ShelfLayout.cardCornerRadius, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: ShelfLayout.cardCornerRadius, style: .continuous).stroke(AppTheme.Colour.separator, lineWidth: 0.5))
         .animation(.spring(response: 0.3, dampingFraction: 0.75), value: job.isRunning)
@@ -634,7 +636,7 @@ struct ShelfActionButton: View {
                 .font(.system(size: ShelfLayout.actionButtonIconSize))
                 .foregroundStyle(danger ? AppTheme.Status.failed : .secondary)
                 .frame(width: ShelfLayout.actionButtonSize, height: ShelfLayout.actionButtonSize)
-                .background(Color.white.opacity(0.6))
+                .background(Color(nsColor: .controlBackgroundColor))
                 .clipShape(RoundedRectangle(cornerRadius: ShelfLayout.actionButtonCornerRadius, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -651,7 +653,7 @@ struct OverflowStack: View {
         ZStack {
             ForEach(0..<min(3, count), id: \.self) { i in
                 RoundedRectangle(cornerRadius: ShelfLayout.cardCornerRadius, style: .continuous)
-                    .fill(Color.white.opacity(0.55))
+                    .fill(Color(nsColor: .controlBackgroundColor))
                     .frame(width: 38, height: 48)
                     .overlay(RoundedRectangle(cornerRadius: ShelfLayout.cardCornerRadius, style: .continuous).stroke(AppTheme.Colour.separator, lineWidth: 0.5))
                     .offset(x: CGFloat(i) * 3, y: CGFloat(-i) * 2)
