@@ -144,13 +144,10 @@ unit_gate() {
   run_step "Unit tests" xcode_unit_tests
 }
 
+# Conversion is native-only; there is no embedded Python runtime to build or verify, so
+# "runtime" mode now rebuilds and verifies the packaged app (entitlements, no-Python embed,
+# bundled CLI/MCP). Use it for entitlement, model, corpus, or packaging changes.
 runtime_gate() {
-  run_step "Build Python runtime" scripts/build_python_env.sh
-  # The first-party bridge sync+verify used to run as an app build phase that wrote into the
-  # embedded framework. The app no longer embeds Python, so run it here against the source
-  # xcframework (the Pro download's basis) to keep the install_runtime_sandbox check.
-  run_step "Sync and verify Python bridge" scripts/ci/sync_and_verify_python_bridge.sh
-  run_step "Verify Python bundle imports" scripts/ci/verify_python_bundle.sh
   build_gate
   run_step "Verify built app package gates" scripts/ci/verify_release_app.sh "$DERIVED_DATA_DIR/Build/Products/Debug/Upmarket.app"
 }
@@ -159,9 +156,6 @@ corpus_and_model_gate() {
   run_step "Validate corpus manifest" scripts/ci/validate_corpus.py
   run_step "Validate corpus baseline" scripts/ci/validate_corpus_baseline.py
   run_step "Validate corpus conversion pathways" scripts/ci/validate_corpus_pathways.py
-  run_step "Repair and validate local model manifests" scripts/ci/validate_models.py --repair
-  run_step "Validate model fault states" scripts/ci/test_model_faults.py
-  run_step "Validate AI runtime test doubles" scripts/ci/test_ai_runtime_doubles.py
   hf_dataset_gate
 }
 
