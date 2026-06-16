@@ -207,10 +207,11 @@ final class ContentClassifierTests: XCTestCase {
             let capability = await tier(forExtension: ext)
             XCTAssertEqual(capability, .native, "\(ext) is a Basic format and must convert natively")
         }
-        // Formats that legitimately still require the advanced runtime → Enhanced (Pro).
+        // Pro formats route through the Enhanced capability gate (EPUB/XLSX/PPTX convert
+        // natively once the tier clears; JSON/XML/ZIP/WEBVTT have no native engine).
         for ext in ["xlsx", "pptx", "xls", "ppt", "epub", "json", "xml", "zip", "webvtt"] {
             let capability = await tier(forExtension: ext)
-            XCTAssertEqual(capability, .enhanced, "\(ext) has no native engine and must require the runtime")
+            XCTAssertEqual(capability, .enhanced, "\(ext) routes through the advanced-runtime capability gate")
         }
     }
 

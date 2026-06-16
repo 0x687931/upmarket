@@ -11,7 +11,6 @@ DESTINATION="${UPMARKET_XCODE_DESTINATION:-platform=macOS,arch=arm64}"
 DERIVED_DATA_DIR="${DERIVED_DATA_DIR:-build/DerivedData}"
 CODE_SIGNING_ALLOWED="${UPMARKET_CODE_SIGNING_ALLOWED:-NO}"
 CODE_SIGNING_REQUIRED="${UPMARKET_CODE_SIGNING_REQUIRED:-NO}"
-PYTHON_XCFRAMEWORK="${UPMARKET_PYTHON_XCFRAMEWORK:-Upmarket/Python/Python.xcframework}"
 SIGN_FOR_LAUNCH="${UPMARKET_SIGN_FOR_LAUNCH:-YES}"
 CLEAN_BEFORE_BUILD="${UPMARKET_CLEAN_BEFORE_BUILD:-YES}"
 
@@ -117,13 +116,8 @@ sign_for_launch() {
   local entitlements_dir="$DERIVED_DATA_DIR/LocalRunEntitlements"
   write_local_entitlements
 
-  codesign_if_present "$APP_PATH/Contents/Frameworks/Python.framework" --deep
   codesign_if_present "$APP_PATH/Contents/MacOS/Upmarket.debug.dylib"
   codesign_if_present "$APP_PATH/Contents/MacOS/__preview.dylib"
-  # The debug helper is unsandboxed (its project entitlements) so the unsandboxed CLI can
-  # spawn it directly. Signing it sandbox-inherit (the old behavior) makes it SIGTRAP in
-  # sandbox init when launched outside the app. (Release uses sandbox-inherit; App Store.)
-  codesign_if_present "$APP_PATH/Contents/MacOS/UpmarketRuntimeHelper" --entitlements "$ROOT/Upmarket/UpmarketRuntimeHelper/UpmarketRuntimeHelper.debug.entitlements"
   # Sign each tool with its real project entitlements so the local launch matches the
   # shipping build: the CLI is unsandboxed (reads arbitrary input paths, hands off to the
   # app via the App Group container); the MCP is sandboxed with the App Group.
@@ -158,12 +152,6 @@ done
 APP_PATH="$DERIVED_DATA_DIR/Build/Products/$CONFIGURATION/Upmarket.app"
 
 if [[ "$BUILD" == "1" ]]; then
-  if [[ ! -d "$PYTHON_XCFRAMEWORK" ]]; then
-    echo "error: build runtime missing: $PYTHON_XCFRAMEWORK"
-    echo "       Run scripts/ci/ensure_python_runtime.sh to prepare the local build runtime."
-    exit 1
-  fi
-
   if enabled "$CLEAN_BEFORE_BUILD"; then
     if [[ "$APP_PATH" != *"/Build/Products/"*"/Upmarket.app" ]]; then
       echo "error: refusing to remove unexpected app path: $APP_PATH"
@@ -178,6 +166,7 @@ if [[ "$BUILD" == "1" ]]; then
     -configuration "$CONFIGURATION" \
     -destination "$DESTINATION" \
     -derivedDataPath "$DERIVED_DATA_DIR" \
+    -skipMacroValidation \
     CODE_SIGNING_ALLOWED="$CODE_SIGNING_ALLOWED" \
     CODE_SIGNING_REQUIRED="$CODE_SIGNING_REQUIRED"
 

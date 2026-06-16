@@ -45,26 +45,11 @@ jobs:
           APP="$ARCHIVE_PATH/Products/Applications/Upmarket.app"
           scripts/ci/verify_release_app.sh "$APP"
 
-      - name: Corpus benchmark baseline
-        run: |
-          mkdir -p reports
-          scripts/benchmark.sh --pipeline fast --json-output reports/corpus-fast.json --fail-below 76
-          scripts/ci/validate_corpus_baseline.py --results reports/corpus-fast.json
-
-      - name: Corpus pathway benchmark baseline
-        run: |
-          mkdir -p reports
-          scripts/benchmark.sh --pathway python-fast-pdfium --json-output reports/corpus-python-fast-pdfium.json --fail-below 80
-          scripts/ci/validate_corpus_pathways.py --results reports/corpus-python-fast-pdfium.json
-          scripts/ci/summarize_corpus_pathway_reports.py reports/corpus-*.json --pathways docs/release/conversion_pathways.json --output reports/corpus-pathway-comparison.md
-
-      - name: Upload corpus benchmark comparison
-        uses: actions/upload-artifact@v4
-        with:
-          name: corpus-pathway-comparison
-          path: |
-            reports/corpus-*.json
-            reports/corpus-pathway-comparison.md
+      # Corpus pathway coverage + manifest/baseline integrity are validated by
+      # `gate.sh release` (corpus_and_model_gate). The corpus quality-scoring benchmark
+      # harness was Python/Docling-based and was removed with the runtime; a native
+      # harness (drive upmarket-cli over the corpus, score against ground truth) is a
+      # follow-up.
 
       - name: UI automation tests
         run: scripts/ci/gate.sh ui

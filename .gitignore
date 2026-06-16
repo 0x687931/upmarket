@@ -55,3 +55,6 @@ Upmarket/Python/python-stdlib/
 # Generated CI/local reports
 reports/
 Upmarket/LocalDev.xcconfig
+
+# SwiftPM build artifacts in vendored packages
+Upmarket/Vendor/*/.build/

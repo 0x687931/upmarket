@@ -22,24 +22,22 @@ User drops / opens a file
   │
   │   PDF ─────────────────────────────────────────────────────────────┐
   │   │  classifier → "digital text"  → PDFKit (fast, in-process)      │
-  │   │  classifier → "scanned"       → Vision OCR (in-process)        │
-  │   │  classifier → "complex"       → Python/Docling (helper)        │
-  │   │  useAI = true                 → quality-selected:              │
-  │   │                                  PDFKit baseline, then best of  │
-  │   │                                  Vision OCR / Docling / Granite │
+  │   │  classifier → "scanned/complex" → Vision OCR + table banding   │
+  │   │  useAI = true & Granite-eligible → native Granite-Docling      │
+  │   │                                    (mlx-swift), else Vision     │
+  │   │  quality-selected: PDFKit baseline vs Vision OCR                │
   │   └────────────────────────────────────────────────────────────────┘
   │
   │   Audio (mp3, m4a, wav…)
   │   └─ Speech framework (in-process)
-  │      └─ fallback: Python/MarkItDown (helper)
-  │         └─ fallback: AVFoundation metadata (in-process)
+  │      └─ fallback: AVFoundation metadata (in-process)
   │
   │   Image (jpg, png, tiff…) → ImageIO/CoreGraphics metadata (in-process)
   │
-  │   Video (mp4, mov…)       → AVFoundation metadata (in-process)
-  │
-  │   DOCX / PPTX / XLSX /
-  │   HTML / CSV / XML / …   → Python/Docling via helper process
+  │   DOCX / PPTX / XLSX     → SwiftOfficeMarkdown (in-process)
+  │   HTML                   → NativeHTMLConverter / libxml2 (in-process)
+  │   TXT / MD / CSV         → NativeTextConverter (in-process)
+  │   EPUB                   → NativeEPUBConverter (ZipReader + HTML)
   │
   ├─ stage: postProcessing → NaturalLanguage cleanup and metadata extraction
   └─ stage: complete / failed / cancelled
@@ -51,21 +49,21 @@ User drops / opens a file
 
 ### Process boundary
 
-Apple-native paths (PDFKit, Vision, Speech, AVFoundation, ImageIO) run
-**in-process** inside `Upmarket.app`. Python paths (Docling, MarkItDown,
-pdfium) run inside `UpmarketRuntimeHelper` — a separate sandboxed process
-launched per job. A helper crash or hang maps to a typed Swift error and
-cannot take down the main app.
+Every engine runs **in-process** inside `Upmarket.app` — there is no Python
+runtime and no helper process. Apple frameworks (PDFKit, Vision, Speech,
+AVFoundation, ImageIO), the vendored SwiftOfficeMarkdown/HTML/text/EPUB
+converters, and the native Granite-Docling VLM (`UpmarketVLM`, mlx-swift) all
+execute within the app and its sandbox.
 
-### Docling pipelines used
+### Conversion engines by tier
 
-| Upmarket tier | Docling pipeline      | Model              |
-|---------------|-----------------------|--------------------|
-| Enhanced      | StandardPdfPipeline   | layout + table OCR |
-| AI            | VlmPipeline           | Granite Docling MLX|
+| Upmarket tier | Engine                                   | Notes                         |
+|---------------|------------------------------------------|-------------------------------|
+| Basic         | PDFKit / Vision / Office / HTML / text    | native, no download           |
+| Pro           | same native engines (complex PDF, sheets) | tier gate, no download        |
+| AI (Max)      | Granite-Docling-258M via mlx-swift        | `upmarket_ai` model download  |
 
-Output is always `export_to_markdown()` for v1.0. HTML output
-(`export_to_html()`) is a v1.1 candidate for Enhanced and AI paths.
+Output is Markdown (`DocTags → Markdown` for the Granite path).
 
 ---
 
@@ -109,8 +107,8 @@ User opens Settings → Models
                     │
                     ▼
             AI tier unlocked
-            ConversionRunner routes useAI=true jobs to
-            UpmarketRuntimeHelper → VlmPipeline (Granite MLX)
+            ConversionRunner routes Granite-eligible useAI=true jobs to
+            UpmarketVLM.GraniteDoclingEngine (mlx-swift, in-process)
 ```
 
 ### Model storage

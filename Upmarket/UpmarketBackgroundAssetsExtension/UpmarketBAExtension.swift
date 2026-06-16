@@ -97,12 +97,6 @@ private enum AssetCatalog {
     ///   4. Bump the app version so applicationDidUpdate fires for existing installs.
     static let aiAssets: [Asset] = [
         Asset(
-            downloadID: "com.upmarket.download.python-runtime",
-            // Replace with the App Store Connect CDN URL for the runtime archive.
-            url: URL(string: "https://placeholder.apple.cdn/python_runtime.tar.gz")!,
-            fileSize: 1_400_000_000
-        ),
-        Asset(
             downloadID: "com.upmarket.download.upmarket-ai",
             // Replace with the App Store Connect CDN URL for the AI model archive.
             url: URL(string: "https://placeholder.apple.cdn/upmarket_ai.tar.gz")!,

@@ -27,23 +27,6 @@ def require_text(path: str, needles: list[str], label: str, errors: list[str]) -
 def main() -> int:
     errors: list[str] = []
 
-    builder = (ROOT / "scripts" / "build_python_env.sh").read_text(encoding="utf-8")
-    require(
-        'Python.xcframework/macos-arm64_x86_64/Python.framework/Versions/$PYTHON_VERSION' in builder,
-        "build_python_env.sh must rebuild the embedded Python.xcframework runtime",
-        errors,
-    )
-    require(
-        'SITE="$FRAMEWORK_ROOT/lib/python$PYTHON_VERSION/site-packages"' in builder,
-        "build_python_env.sh must install dependencies into Python.xcframework site-packages",
-        errors,
-    )
-    require(
-        "python-stdlib" not in builder,
-        "build_python_env.sh must not install into Upmarket/Python/python-stdlib",
-        errors,
-    )
-
     rc = (ROOT / ".github" / "workflows" / "release-candidate.yml").read_text(encoding="utf-8")
     require(
         'APP="$ARCHIVE_PATH/Products/Applications/Upmarket.app"' in rc,
@@ -108,7 +91,7 @@ def main() -> int:
     require_text(
         "Upmarket/Shared/ToolFormatCapabilityMatrix.swift",
         [
-            "case markItDown",
+            "case swiftOffice",
             ".mp3, .m4a, .wav",
             "requiresAdvancedRuntime",
             "requiresAuthorisation",
@@ -121,7 +104,7 @@ def main() -> int:
         [
             "testAudioFormatsExposeAllValidRoutes",
             "tools.contains(.speech)",
-            "tools.contains(.markItDown)",
+            "tools.contains(.nativeText)",
             "tools.contains(.avFoundation)",
         ],
         "tool-format capability matrix tests",
@@ -158,18 +141,6 @@ def main() -> int:
             '"documents": [',
         ],
         "corpus expected-status ledger",
-        errors,
-    )
-    require_text(
-        "scripts/ci/summarize_corpus_pathway_reports.py",
-        [
-            "Unexpected Failed",
-            "Expected Blocked",
-            "Env Blocked",
-            "normalised_status",
-            "is_expected_blocked_error",
-        ],
-        "corpus pathway comparison failure accounting",
         errors,
     )
     require_text(

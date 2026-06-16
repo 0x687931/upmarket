@@ -33,6 +33,19 @@ struct NativeDocumentClassifier {
         }
     }
 
+    /// Engine for the complex/AI document path. Apple Vision is the Pure-Apple default —
+    /// robust across scripts, handwriting, and the long tail, never catastrophic. Granite-
+    /// Docling (native VLM via mlx-swift) is routed in only where it is measurably better:
+    /// clean, typed, Latin / simplified-Chinese print documents. Validated on the
+    /// OmniDocBench typed-document subset (Granite ≈ +5 pts there; ~0% on traditional
+    /// Chinese / RTL / handwriting, where Vision wins).
+    enum DocumentEngine: String, Equatable {
+        case appleVision = "apple_vision"
+        case graniteDoclingNative = "granite_docling_native"
+
+        var diagnosticLabel: String { rawValue }
+    }
+
     struct Capabilities: Equatable {
         let visionTextRecognitionAvailable: Bool
         let coreMLAvailable: Bool
@@ -206,6 +219,35 @@ struct NativeDocumentClassifier {
             if hasMixedLanguages { hints.append("preserve mixed-language text") }
             return hints
         }
+
+        /// Scripts where Granite-Docling is validated/expected strong: Latin scripts and
+        /// simplified Chinese. Traditional Chinese (`zh-Hant`), RTL, and other CJK go to
+        /// Apple Vision. `detectedLanguage` is an NLLanguage raw value (e.g. "en",
+        /// "zh-Hans", "zh-Hant").
+        var isGraniteFriendlyScript: Bool {
+            guard let lang = detectedLanguage?.lowercased() else { return false }
+            if lang.hasPrefix("zh-hant") { return false }                 // traditional Chinese -> Vision
+            if lang.hasPrefix("zh-hans") || lang == "zh" { return true }  // simplified Chinese (validated)
+            // Latin-script languages (validated: en; others assumed Granite-friendly, expand as validated).
+            let latin: Set<String> = ["en", "fr", "de", "es", "it", "pt", "nl", "sv", "da", "nb",
+                                      "fi", "pl", "cs", "tr", "vi", "id", "ms", "ro", "hu", "hr", "ca"]
+            return latin.contains { lang == $0 || lang.hasPrefix($0 + "-") }
+        }
+
+        /// Route to Granite-Docling (native) instead of Apple Vision. Granite wins on clean,
+        /// typed, Latin/simplified-Chinese print; it fails on traditional Chinese, RTL, dense
+        /// multi-column (newspapers), and low-confidence (handwriting/degraded) inputs — all of
+        /// which fall through to Vision, the robust default.
+        /// ponytail: handwriting is proxied by low Vision confidence at classify time — there is
+        /// no dedicated pre-conversion handwriting signal yet; tighten when one lands.
+        var isGraniteDoclingEligible: Bool {
+            visionTextRecognitionAvailable
+                && visionAverageConfidence >= 0.6        // degraded / handwriting proxy
+                && !hasRTLText
+                && !hasMixedLanguages
+                && visionEstimatedColumns < 3            // newspapers / dense multi-column -> Vision
+                && isGraniteFriendlyScript
+        }
     }
 
     struct Classification: Equatable {
@@ -227,6 +269,13 @@ struct NativeDocumentClassifier {
 
         var shouldUseNativeFirst: Bool {
             recommendedPathway == .pdfKit || recommendedPathway == .visionOCR
+        }
+
+        /// Engine for the complex document path: Apple Vision by default; Granite-Docling
+        /// (native) only when the classifier signals a clean typed Latin/simplified-Chinese
+        /// document. Consumed by ConversionRunner once the native Granite engine is wired.
+        var recommendedEngine: DocumentEngine {
+            evidence.isGraniteDoclingEligible ? .graniteDoclingNative : .appleVision
         }
 
         var complexityAdvice: ComplexityAdvice {

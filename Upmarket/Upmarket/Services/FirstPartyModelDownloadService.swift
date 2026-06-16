@@ -472,29 +472,11 @@ private enum ModelDownloadCatalog {
 
     private static let specs = [
         ModelDownloadSpec(
-            key: "python_runtime",
-            displayName: "Upmarket Runtime",
-            sourceID: "com.upmarket.runtime.python",
-            revision: "1",
-            storageDirectory: "python_runtime",
-            expectedFiles: ["upmarket_runtime_ready"],
-            expectedDirs: ["Python.framework"]
-        ),
-        ModelDownloadSpec(
-            key: "layout",
-            displayName: "Upmarket Enhanced",
-            sourceID: "com.upmarket.models.layout",
-            revision: "72661864b9c29fb7cced011822786bed346811ea",
-            storageDirectory: "layout",
-            expectedFiles: ["config.json"],
-            expectedDirs: ["model_artifacts"]
-        ),
-        ModelDownloadSpec(
             key: "upmarket_ai",
             displayName: "Upmarket AI",
             sourceID: "com.upmarket.models.upmarket-ai",
             revision: "e9939db25d2f296c8678d0491c4609a8c596c50a",
-            storageDirectory: "ibm-granite--granite-docling-258M-mlx",
+            storageDirectory: "upmarket_ai",
             expectedFiles: [
                 "added_tokens.json",
                 "chat_template.jinja",

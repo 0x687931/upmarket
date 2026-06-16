@@ -442,10 +442,6 @@ struct PreferencesView: View {
 					.padding(.bottom, 4)
 
 				VStack(spacing: 8) {
-					ModelManagementRow(asset: .pythonRuntime, onUpgrade: { showPaywall = true })
-						.environmentObject(modelManager)
-						.environmentObject(store)
-
 					ModelManagementRow(asset: .upmarketAI, onUpgrade: { showPaywall = true })
 						.environmentObject(modelManager)
 						.environmentObject(store)
@@ -801,31 +797,11 @@ private struct ModelManagementRow: View {
 		}
 
 		switch asset {
-		case .pythonRuntime:
-			let sizeString = isDownloaded
-				? "\(modelManager.actualInstalledSizeMB(asset)) MB installed"
-				: "\(asset.sizeMB) MB (one-time download)"
-			return "Layout analysis and table extraction · \(sizeString)"
-
-		case .aiLibraries:
-			// Hidden from UI — only shown if advanced settings enabled
-			let sizeString = isDownloaded
-				? "\(modelManager.actualInstalledSizeMB(asset)) MB installed"
-				: "\(asset.sizeMB) MB (one-time download)"
-			return "Machine learning frameworks · \(sizeString)"
-
 		case .upmarketAI:
-			// Shows both AI model + libraries together
-			let aiModelSize = isDownloaded ? modelManager.actualInstalledSizeMB(.upmarketAI) : asset.sizeMB
-			let libSize = modelManager.downloadedAssets.contains(.aiLibraries) ? 0 : 750
-			let totalSize = aiModelSize + libSize
-			let sizeString = isDownloaded && modelManager.downloadedAssets.contains(.aiLibraries)
-				? "\(aiModelSize) MB installed"
-				: "\(totalSize) MB (one-time download)"
+			let sizeString = isDownloaded
+				? "\(modelManager.actualInstalledSizeMB(.upmarketAI)) MB installed"
+				: "\(asset.sizeMB) MB (one-time download)"
 			return "Understands scanned pages and complex documents · \(sizeString)"
-
-		case .layout:
-			return "Included with app"
 		}
 	}
 
@@ -833,7 +809,7 @@ private struct ModelManagementRow: View {
 		if isLocked        { return "lock.fill" }
 		if isDownloading   { return "arrow.down.circle.fill" }
 		if isDownloaded    { return "checkmark.circle.fill" }
-		return asset == .pythonRuntime ? "cpu.fill" : "sparkles"
+		return "sparkles"
 	}
 
 	private var iconColor: Color {

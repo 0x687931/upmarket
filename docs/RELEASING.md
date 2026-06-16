@@ -2,106 +2,67 @@
 
 The canonical build, shipping, and deployment process is `docs/BUILD_SHIP_DEPLOY.md`. Use that document for release commands, UI automation, archive verification, TestFlight, App Store submission, and deployment evidence.
 
-This file keeps dependency-specific notes that are still useful during release preparation.
+Conversion is native Swift end-to-end — there is no Python runtime and no Python dependency lifecycle to track. This file keeps the release-prep notes that are still useful.
 
 ## Before Every Release
 
-### 1. Check upstream dependencies for updates
-```bash
-./scripts/update_dependencies.sh --check-only
-```
+### 1. Review Swift package dependencies
+
+App dependencies are Swift packages pinned in
+`Upmarket/Upmarket.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` (committed). To pick up upstream updates, resolve in Xcode (File → Packages → Update to Latest Package Versions) and commit the changed `Package.resolved`, then run `scripts/ci/gate.sh quick`.
 
 Key repos to watch:
-- **Docling**: https://github.com/docling-project/docling/releases
-- **pypdfium2**: https://github.com/pypdfium2-team/pypdfium2/releases
-- **BeeWare Python**: https://github.com/beeware/Python-Apple-support/releases
-- **Feature flags**: CloudKit public record `FeatureFlags/global` in `iCloud.com.upmarket.app` (language support changes; see `docs/release/FEATURE_FLAG_LANGUAGE_POLICY.md`)
+- **mlx-swift / mlx-swift-lm**: https://github.com/ml-explore — the Granite-Docling (`UpmarketVLM`) inference stack.
+- **swift-huggingface / swift-transformers**: https://github.com/huggingface — tokenizer/model loading.
+- **Feature flags**: CloudKit public record `FeatureFlags/global` in `iCloud.com.upmarket.app` (language support changes; see `docs/release/FEATURE_FLAG_LANGUAGE_POLICY.md`).
 
-### 2. Stage candidate updates
-
-Edit `requirements-candidate.txt` with exact pins only. Do not edit `requirements.txt` until the candidate has passed validation and human review.
+### 2. Refresh license attributions
 
 ```bash
-./scripts/update_dependencies.sh --install-candidate
+scripts/generate_licenses.sh
 ```
 
-If accepted, promote by copying the exact candidate pins to `requirements.txt` in the same reviewed change.
+Regenerates `Upmarket/Upmarket/Resources/licenses.json` (the About screen) from `Package.resolved` + each checkout's LICENSE file. First-party vendored code (`SwiftOfficeMarkdown`, `UpmarketVLM`) is intentionally excluded. Requires a build first so the SwiftPM checkouts exist.
 
-### 3. Stage first-party model assets
+### 3. Stage the AI model asset
 
-Before TestFlight or App Store packaging, stage model manifests and files from a manifest-validated local cache, then upload the output directory to the Apple-hosted model location:
-
-```bash
-scripts/build/stage_first_party_model_assets.py --output build/first-party-model-assets
-```
-
-The app's default download path uses `FirstPartyModelDownloadService`. The Python/Hugging Face snapshot downloader is developer intake tooling only, is disabled unless `UPMARKET_ENABLE_DEVELOPER_MODEL_INTAKE=1`, and must not be the packaged customer download path.
+The Max-tier `upmarket_ai` asset (Granite-Docling mlx-swift weights, ~600 MB) is delivered as a flat directory (`config.json` + `*.safetensors`) via Apple Background Assets, downloaded by `BackgroundAssetsDownloadService` (`FirstPartyModelDownloadService` for local/debug). Upload the model archive to the App Store Connect Additional Resources slot registered in `UpmarketBackgroundAssetsExtension`. (A native staging helper that produces the archive from the published HF mlx repo is a follow-up.)
 
 ### 4. Test conversion quality
-```bash
-# Test fast path (no models)
-.venv/bin/python3 -c "
-from docling_bridge.converter import convert
-r = convert('path/to/test.pdf', {'use_enhanced': False})
-print(r['success'], r['pipeline'], r['metadata'])
-"
 
-# Test enhanced path (requires layout models downloaded)
-.venv/bin/python3 -c "
-from docling_bridge.converter import convert
-r = convert('path/to/complex.pdf', {'use_enhanced': True})
-print(r['success'], r['pipeline'])
-"
+```bash
+# Native gate: builds + runs the unit suite (367 tests) and policy checks.
+scripts/ci/gate.sh quick
+
+# Spot-check real documents through the CLI (PDF / image / text):
+xcrun --sdk macosx swiftc -version >/dev/null   # ensure toolchain
+build/DerivedData/Build/Products/Debug/Upmarket.app/Contents/MacOS/upmarket-cli convert path/to/test.pdf
 ```
 
-### 5. Build and test in Xcode
-- Cmd+Shift+K (clean)
-- Cmd+B (build)
-- Cmd+R (run) — test with real documents
+Corpus pathway coverage and manifest/baseline integrity are validated by `scripts/ci/gate.sh release` (the `corpus_and_model_gate`). A native corpus quality-scoring benchmark (drive `upmarket-cli` over the corpus, score against ground truth) is a follow-up — the previous Python/Docling benchmark harness was removed with the runtime.
 
-### 6. Update version number
-In Xcode: Upmarket target → General → Version (MARKETING_VERSION)
-Bump: patch for bug fixes (1.0.1), minor for features (1.1.0), major for breaking (2.0.0)
+### 5. Build, version, archive, submit
 
-### 7. Archive and submit
-- Product → Archive
-- Distribute App → App Store Connect
-- Upload
+- `scripts/ci/gate.sh quick` (or `major` for a UI-automation release candidate).
+- Bump `MARKETING_VERSION` (Upmarket target → General → Version): patch for fixes (1.0.1), minor for features (1.1.0), major for breaking (2.0.0).
+- Product → Archive → Distribute App → App Store Connect → Upload.
 
 ---
 
 ## Enabling New Languages for Upmarket AI
 
-Feature flags describe Upmarket's shipped app behavior, not every upstream Docling or Granite Docling capability claim. Use `docs/release/cloudkit_feature_flags_seed.json` as the initial beta record.
+Feature flags describe Upmarket's shipped app behavior, not every upstream Granite-Docling capability claim. Use `docs/release/cloudkit_feature_flags_seed.json` as the initial beta record.
 
-When Docling or Granite Docling improves support for a language:
+When Granite-Docling improves support for a language:
 
-1. Confirm the upstream claim from a primary source and record it in `docs/release/FEATURE_FLAG_LANGUAGE_POLICY.md`
-2. Add or identify representative fixtures for that language
-3. Test Upmarket AI conversion quality on Apple Silicon with the pinned release runtime/model
-4. Keep the language in `ai_experimental_locales` while the evidence is upstream-explicit early support only
-5. Move the language to `ai_supported_locales` only after the shipped Upmarket path meets beta quality
-6. Bump the CloudKit record `version`
-7. Deploy the CloudKit schema/record change to production before release users need it
-8. Verify the signed release build has `com.apple.developer.icloud-container-environment=Production`
-9. No app update needed — users get AI for that language after the next feature availability check
+1. Confirm the upstream claim from a primary source and record it in `docs/release/FEATURE_FLAG_LANGUAGE_POLICY.md`.
+2. Add or identify representative fixtures for that language.
+3. Test Upmarket AI conversion quality on Apple Silicon with the pinned release model.
+4. Keep the language in `ai_experimental_locales` while the evidence is upstream-explicit early support only.
+5. Move the language to `ai_supported_locales` only after the shipped Upmarket path meets beta quality.
+6. Bump the CloudKit record `version`.
+7. Deploy the CloudKit schema/record change to production before release users need it.
+8. Verify the signed release build has `com.apple.developer.icloud-container-environment=Production`.
+9. No app update needed — users get AI for that language after the next feature availability check.
 
----
-
-## Dependency Version History
-
-| Version | Docling | pypdfium2 | PyTorch | Notes |
-|---|---|---|---|---|
-| 1.0.0 | 2.96.0 | 5.8.0 | 2.12.0 | Initial release; PyMuPDF/pymupdf4llm excluded |
-
----
-
-## Known Issues Per Dependency Version
-
-### Docling
-- All versions: RT-DETRv2 uses float64 — apply `scripts/patch_mps.sh` after any transformers update
-- v2.96.0: `num_pages()` must be called as a method, not accessed as attribute
-
-### PyTorch
-- 2.x on Apple Silicon: MPS backend auto-enabled, no code changes needed
-- Intel Mac: falls back to CPU automatically
+Note: Granite-Docling-258M is not multilingual. `NativeDocumentClassifier.recommendedEngine` gates the native Granite path to clean typed Latin and simplified-Chinese documents; everything else falls back to Apple Vision.

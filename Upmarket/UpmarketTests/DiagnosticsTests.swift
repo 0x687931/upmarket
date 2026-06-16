@@ -32,7 +32,7 @@ final class DiagnosticsTests: XCTestCase {
 
     func testDiagnosticSnapshotUsesNeutralStageName() {
         let snapshot = Diagnostics.makeSnapshot(
-            lastConversionStage: .python,
+            lastConversionStage: .processing,
             lastErrorCode: "runtime.bridge"
         )
 

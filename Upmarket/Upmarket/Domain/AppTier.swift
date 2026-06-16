@@ -51,8 +51,9 @@ enum AppTier: Int, Comparable, Equatable, Sendable {
         switch format {
         case .xlsx, .pptx, .xls, .ppt, .epub, .mp3, .m4a, .wav, .aiff,
              .json, .xml, .zip, .webvtt, .asciidoc:
-            // Spreadsheets, presentations, ebooks, audio, and structured formats with no
-            // native engine (so they require the advanced runtime). ZIP stays runtime-gated.
+            // Spreadsheets, presentations, ebooks, and audio are Pro features (EPUB converts
+            // natively, like XLSX/PPTX, but stays a Pro format); structured formats with no
+            // native engine (JSON/XML/ZIP/WEBVTT) also require the advanced runtime.
             return .pro
         default:
             // Documents (DOC/DOCX), text (TXT/MD/CSV), HTML, images, digital/scanned PDF —
@@ -65,19 +66,16 @@ enum AppTier: Int, Comparable, Equatable, Sendable {
 // MARK: - ModelAsset
 
 /// Every binary asset that must be present on disk for a conversion capability to function.
-/// Raw values match the Python model_manager.py MODELS dict keys exactly.
+/// Only the Max-tier AI model remains a download: all other engines are native (PDFKit,
+/// Vision, Speech, AVFoundation, SwiftOfficeMarkdown), so Basic and Pro need no assets.
 /// See docs/TIER_CONTRACT.md for what each asset contains and which tier requires it.
 enum ModelAsset: String, CaseIterable, Equatable, Hashable, Sendable {
-    case pythonRuntime = "python_runtime_pro"   // Pro tier: ~350MB
-    case aiLibraries   = "ai_libraries"         // Max tier: ~750MB
-    case upmarketAI    = "upmarket_ai"          // Max tier: ~600MB (model weights)
-    case layout        = "layout"               // Enhanced detection: ~20MB
+    case upmarketAI = "upmarket_ai"   // Max tier: ~600MB (Granite-Docling mlx-swift weights)
 
     /// The minimum purchased tier required to download and use this asset.
     var requiredTier: AppTier {
         switch self {
-        case .pythonRuntime, .layout: return .pro
-        case .aiLibraries, .upmarketAI: return .max
+        case .upmarketAI: return .max
         }
     }
 
@@ -91,29 +89,20 @@ enum ModelAsset: String, CaseIterable, Equatable, Hashable, Sendable {
 
     var delivery: Delivery {
         switch self {
-        case .layout:                           return .bundledInApp
-        case .pythonRuntime,
-             .aiLibraries,
-             .upmarketAI:                       return .backgroundAssets
+        case .upmarketAI: return .backgroundAssets
         }
     }
 
     var displayName: String {
         switch self {
-        case .pythonRuntime: return "Enhanced Conversions"
-        case .aiLibraries:   return "AI Libraries"
-        case .upmarketAI:    return "AI for Complex Documents"
-        case .layout:        return "Enhanced Model"
+        case .upmarketAI: return "AI for Complex Documents"
         }
     }
 
-    /// Download size (compressed tar.gz file size users will actually download).
+    /// Download size (compressed archive file size users will actually download).
     var sizeMB: Int {
         switch self {
-        case .pythonRuntime: return 367   // python_runtime_pro.tar.gz actual size
-        case .aiLibraries:   return 373   // ai_libraries.tar.gz actual size
-        case .upmarketAI:    return 600   // Model weights (estimate)
-        case .layout:        return 20
+        case .upmarketAI: return 600   // Model weights (estimate)
         }
     }
 }
@@ -125,9 +114,10 @@ enum ModelAsset: String, CaseIterable, Equatable, Hashable, Sendable {
 enum ConversionCapability: Equatable, Sendable {
     /// Apple-native only: PDFKit, Vision OCR, Speech, AVFoundation. Always available.
     case native
-    /// Docling layout + table pipeline. Requires Pro tier + python_runtime + layout.
+    /// Native complex-document path (PDFKit + Vision quality selection, SwiftOfficeMarkdown).
+    /// Requires Pro tier; no download.
     case enhanced
-    /// Granite Docling VLM pipeline. Requires Max tier + python_runtime + upmarket_ai.
+    /// Granite-Docling VLM (mlx-swift, native). Requires Max tier + upmarket_ai weights.
     case ai
 
     var requiredTier: AppTier {
@@ -142,8 +132,8 @@ enum ConversionCapability: Equatable, Sendable {
     var requiredAssets: [ModelAsset] {
         switch self {
         case .native:   return []
-        case .enhanced: return [.pythonRuntime, .layout]
-        case .ai:       return [.pythonRuntime, .aiLibraries, .upmarketAI]
+        case .enhanced: return []
+        case .ai:       return [.upmarketAI]
         }
     }
 
@@ -182,15 +172,12 @@ struct AppTierGate: Sendable {
             return nil
 
         case .enhanced:
+            // Enhanced converts natively (SwiftOfficeMarkdown, NativeEPUBConverter, Vision)
+            // and runs on Intel as well as Apple Silicon, so it gates on tier only.
             if tier < .pro {
                 return "Enhanced conversion requires Upmarket Pro."
             }
-            if !deviceSupportsRuntime {
-                return "Enhanced conversion requires Apple Silicon."
-            }
-            let missing = capability.requiredAssets.filter { !downloadedAssets.contains($0) }
-            if missing.isEmpty { return nil }
-            return "Download \(missing.map(\.displayName).joined(separator: " and ")) to use Enhanced conversion."
+            return nil
 
         case .ai:
             if tier < .max {
@@ -225,10 +212,6 @@ struct AppTierGate: Sendable {
             }
         }
         switch asset {
-        case .pythonRuntime, .layout:
-            if !deviceSupportsRuntime { return "Enhanced conversion requires Apple Silicon." }
-        case .aiLibraries:
-            if !deviceSupportsRuntime { return "Upmarket AI requires Apple Silicon." }
         case .upmarketAI:
             if !deviceSupportsRuntime { return "Upmarket AI requires Apple Silicon." }
             if !aiFeatureEnabled {

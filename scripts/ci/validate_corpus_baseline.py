@@ -98,7 +98,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--baseline", default=str(BASELINE))
     parser.add_argument("--manifest", default=str(MANIFEST))
-    parser.add_argument("--results", help="optional benchmark JSON produced by scripts/benchmark.sh --json-output")
+    parser.add_argument("--results", help="optional benchmark JSON from a native corpus benchmark")
     args = parser.parse_args()
 
     baseline = load_json(Path(args.baseline))

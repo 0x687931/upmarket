@@ -9,9 +9,6 @@
 /* Begin PBXBuildFile section */
 		81AAFF0A2FDF0512006AEB11 /* SwiftOfficeMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = 81AAFF092FDF0512006AEB11 /* SwiftOfficeMarkdown */; };
 		AA00000F00000000000000FA /* UpmarketQuickAction.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = AA000003000000000000003A /* UpmarketQuickAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		BB000001000000000000001B /* UpmarketRuntimeHelper in Embed Runtime Helper */ = {isa = PBXBuildFile; fileRef = BB000002000000000000002B /* UpmarketRuntimeHelper */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		BB000003000000000000003B /* PythonKit in Frameworks */ = {isa = PBXBuildFile; productRef = 81A3B75C2FCB1073004A488D /* PythonKit */; };
-		BB000004000000000000004B /* Python.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 81E090C02FCB12E400FC901A /* Python.xcframework */; };
 		EE000015000000000000015E /* upmarket-cli in Embed Command Tools */ = {isa = PBXBuildFile; fileRef = DD000002000000000000002D /* upmarket-cli */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		EE000016000000000000016E /* upmarket-mcp in Embed Command Tools */ = {isa = PBXBuildFile; fileRef = EE000002000000000000002E /* upmarket-mcp */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -37,20 +34,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = AA000004000000000000004A;
 			remoteInfo = UpmarketQuickAction;
-		};
-		BB000005000000000000005B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 81A3B7232FCB0F91004A488D /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = BB000006000000000000006B;
-			remoteInfo = UpmarketRuntimeHelper;
-		};
-		DD000020000000000000020D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 81A3B7232FCB0F91004A488D /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = BB000006000000000000006B;
-			remoteInfo = UpmarketRuntimeHelper;
 		};
 		EE000011000000000000011E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -80,17 +63,6 @@
 			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		BB000007000000000000007B /* Embed Runtime Helper */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 6;
-			files = (
-				BB000001000000000000001B /* UpmarketRuntimeHelper in Embed Runtime Helper */,
-			);
-			name = "Embed Runtime Helper";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		EE000017000000000000017E /* Embed Command Tools */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -109,9 +81,7 @@
 		81A3B72B2FCB0F91004A488D /* Upmarket.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Upmarket.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		81A3B7382FCB0F91004A488D /* UpmarketTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UpmarketTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		81A3B7422FCB0F91004A488D /* UpmarketUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UpmarketUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		81E090C02FCB12E400FC901A /* Python.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Python.xcframework; path = Python/Python.xcframework; sourceTree = "<group>"; };
 		AA000003000000000000003A /* UpmarketQuickAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = UpmarketQuickAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		BB000002000000000000002B /* UpmarketRuntimeHelper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = UpmarketRuntimeHelper; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD000002000000000000002D /* upmarket-cli */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "upmarket-cli"; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE000002000000000000002E /* upmarket-mcp */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "upmarket-mcp"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -153,11 +123,6 @@
 		AA00000D00000000000000DA /* UpmarketQuickAction */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = UpmarketQuickAction;
-			sourceTree = "<group>";
-		};
-		BB000008000000000000008B /* UpmarketRuntimeHelper */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = UpmarketRuntimeHelper;
 			sourceTree = "<group>";
 		};
 		DD000008000000000000008D /* UpmarketCLI */ = {
@@ -202,15 +167,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		BB000009000000000000009B /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				BB000003000000000000003B /* PythonKit in Frameworks */,
-				BB000004000000000000004B /* Python.xcframework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		DD000009000000000000009D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -234,7 +190,6 @@
 				81A3B72D2FCB0F91004A488D /* Upmarket */,
 				990000000000000000000001 /* Shared */,
 				AA00000D00000000000000DA /* UpmarketQuickAction */,
-				BB000008000000000000008B /* UpmarketRuntimeHelper */,
 				DD000008000000000000008D /* UpmarketCLI */,
 				EE000008000000000000008E /* UpmarketMCP */,
 				81A3B73B2FCB0F91004A488D /* UpmarketTests */,
@@ -248,7 +203,6 @@
 			isa = PBXGroup;
 			children = (
 				81A3B72B2FCB0F91004A488D /* Upmarket.app */,
-				BB000002000000000000002B /* UpmarketRuntimeHelper */,
 				DD000002000000000000002D /* upmarket-cli */,
 				EE000002000000000000002E /* upmarket-mcp */,
 				AA000003000000000000003A /* UpmarketQuickAction.appex */,
@@ -261,7 +215,6 @@
 		81A3B75E2FCB116B004A488D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				81E090C02FCB12E400FC901A /* Python.xcframework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -278,7 +231,6 @@
 				81A3B7292FCB0F91004A488D /* Resources */,
 				CC000003000000000000003C /* Stamp Build Metadata */,
 				AA00000E00000000000000EA /* Embed App Extensions */,
-				BB000007000000000000007B /* Embed Runtime Helper */,
 				EE000017000000000000017E /* Embed Command Tools */,
 				CC000002000000000000002C /* Validate App Package */,
 			);
@@ -286,7 +238,6 @@
 			);
 			dependencies = (
 				AA00000C00000000000000CA /* PBXTargetDependency */,
-				BB00000C00000000000000CB /* PBXTargetDependency */,
 				EE000012000000000000012E /* PBXTargetDependency */,
 				EE000014000000000000014E /* PBXTargetDependency */,
 			);
@@ -297,6 +248,7 @@
 			name = Upmarket;
 			packageProductDependencies = (
 				81AAFF092FDF0512006AEB11 /* SwiftOfficeMarkdown */,
+				DD00000000000000000000A2 /* UpmarketVLM */,
 			);
 			productName = Upmarket;
 			productReference = 81A3B72B2FCB0F91004A488D /* Upmarket.app */;
@@ -369,28 +321,6 @@
 			productReference = AA000003000000000000003A /* UpmarketQuickAction.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		BB000006000000000000006B /* UpmarketRuntimeHelper */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = BB00000A00000000000000AB /* Build configuration list for PBXNativeTarget "UpmarketRuntimeHelper" */;
-			buildPhases = (
-				BB00000D00000000000000DB /* Sources */,
-				BB000009000000000000009B /* Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				BB000008000000000000008B /* UpmarketRuntimeHelper */,
-			);
-			name = UpmarketRuntimeHelper;
-			packageProductDependencies = (
-				81A3B75C2FCB1073004A488D /* PythonKit */,
-			);
-			productName = UpmarketRuntimeHelper;
-			productReference = BB000002000000000000002B /* UpmarketRuntimeHelper */;
-			productType = "com.apple.product-type.tool";
-		};
 		DD000006000000000000006D /* UpmarketCLI */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = DD00000A00000000000000AD /* Build configuration list for PBXNativeTarget "UpmarketCLI" */;
@@ -401,7 +331,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				DD000021000000000000021D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				990000000000000000000001 /* Shared */,
@@ -456,9 +385,6 @@
 						CreatedOnToolsVersion = 26.5;
 						TestTargetID = 81A3B72A2FCB0F91004A488D;
 					};
-					BB000006000000000000006B = {
-						CreatedOnToolsVersion = 26.5;
-					};
 					DD000006000000000000006D = {
 						CreatedOnToolsVersion = 26.5;
 					};
@@ -485,8 +411,8 @@
 			mainGroup = 81A3B7222FCB0F91004A488D;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				81A3B75B2FCB1073004A488D /* XCLocalSwiftPackageReference "Vendor/PythonKit" */,
 				81AAFF082FDF0512006AEB11 /* XCLocalSwiftPackageReference "../Vendor/SwiftOfficeMarkdown" */,
+				DD00000000000000000000A1 /* XCLocalSwiftPackageReference "Vendor/UpmarketVLM" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 81A3B72C2FCB0F91004A488D /* Products */;
@@ -495,7 +421,6 @@
 			targets = (
 				81A3B72A2FCB0F91004A488D /* Upmarket */,
 				AA000004000000000000004A /* UpmarketQuickAction */,
-				BB000006000000000000006B /* UpmarketRuntimeHelper */,
 				DD000006000000000000006D /* UpmarketCLI */,
 				EE000006000000000000006E /* upmarket-mcp */,
 				81A3B7372FCB0F91004A488D /* UpmarketTests */,
@@ -544,33 +469,27 @@
 			);
 			inputPaths = (
 				"$(SRCROOT)/../scripts/ci/verify_entitlements.sh",
-				"$(SRCROOT)/../scripts/ci/validate_runtime_helper.py",
 				"$(SRCROOT)/../scripts/ci/validate_mcp_server.py",
 				"$(SRCROOT)/Upmarket.xcodeproj/project.pbxproj",
 				"$(SRCROOT)/Upmarket/Upmarket.entitlements",
 				"$(SRCROOT)/UpmarketQuickActionSupport/UpmarketQuickAction.entitlements",
-				"$(SRCROOT)/UpmarketRuntimeHelper/UpmarketRuntimeHelper.entitlements",
 				"$(SRCROOT)/UpmarketCLI/UpmarketCLI.entitlements",
 				"$(SRCROOT)/UpmarketMCP/UpmarketMCP.entitlements",
-				"$(SRCROOT)/UpmarketRuntimeHelper/main.swift",
-				"$(SRCROOT)/Vendor/PythonKit/UPMARKET_VENDOR.md",
 				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)",
 				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/Contents/Info.plist",
 				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/Contents/MacOS/Upmarket",
-				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/Contents/MacOS/UpmarketRuntimeHelper",
 				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/Contents/MacOS/upmarket-cli",
 				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/Contents/MacOS/upmarket-mcp",
 			);
 			name = "Validate App Package";
 			outputPaths = (
 				"$(TARGET_TEMP_DIR)/upmarket-entitlements.plist",
-				"$(TARGET_TEMP_DIR)/upmarket-helper-entitlements.plist",
 				"$(TARGET_TEMP_DIR)/upmarket-cli-entitlements.plist",
 				"$(TARGET_TEMP_DIR)/upmarket-mcp-entitlements.plist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cd \"$SRCROOT/..\"\nAPP=\"$TARGET_BUILD_DIR/$WRAPPER_NAME\"\nscripts/ci/verify_entitlements.sh \"$APP\"\nscripts/ci/validate_runtime_helper.py \"$APP\"\nscripts/ci/validate_mcp_server.py \"$APP\"\n";
+			shellScript = "cd \"$SRCROOT/..\"\nAPP=\"$TARGET_BUILD_DIR/$WRAPPER_NAME\"\nscripts/ci/verify_entitlements.sh \"$APP\"\nscripts/ci/validate_mcp_server.py \"$APP\"\n";
 		};
 		CC000003000000000000003C /* Stamp Build Metadata */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -621,13 +540,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		BB00000D00000000000000DB /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		DD00000D00000000000000DD /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -659,16 +571,6 @@
 			isa = PBXTargetDependency;
 			target = AA000004000000000000004A /* UpmarketQuickAction */;
 			targetProxy = AA00000B00000000000000BA /* PBXContainerItemProxy */;
-		};
-		BB00000C00000000000000CB /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = BB000006000000000000006B /* UpmarketRuntimeHelper */;
-			targetProxy = BB000005000000000000005B /* PBXContainerItemProxy */;
-		};
-		DD000021000000000000021D /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = BB000006000000000000006B /* UpmarketRuntimeHelper */;
-			targetProxy = DD000020000000000000020D /* PBXContainerItemProxy */;
 		};
 		EE000012000000000000012E /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1033,68 +935,6 @@
 			};
 			name = Release;
 		};
-		BB00000E00000000000000EB /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = UpmarketRuntimeHelper/UpmarketRuntimeHelper.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Q54Q5726NT;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
-				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.upmarket.app.runtime-helper";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				SKIP_INSTALL = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_INCLUDE_PATHS = "$(inherited) $(SRCROOT)/Vendor/PythonKit/build/$(CONFIGURATION)";
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		BB00000F00000000000000FB /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = UpmarketRuntimeHelper/UpmarketRuntimeHelper.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Q54Q5726NT;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
-				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.upmarket.app.runtime-helper";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				SKIP_INSTALL = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_INCLUDE_PATHS = "$(inherited) $(SRCROOT)/Vendor/PythonKit/build/$(CONFIGURATION)";
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Release;
-		};
 		DD00000E00000000000000ED /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1235,15 +1075,6 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		BB00000A00000000000000AB /* Build configuration list for PBXNativeTarget "UpmarketRuntimeHelper" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				BB00000E00000000000000EB /* Debug */,
-				BB00000F00000000000000FB /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		DD00000A00000000000000AD /* Build configuration list for PBXNativeTarget "UpmarketCLI" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1265,25 +1096,25 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		81A3B75B2FCB1073004A488D /* XCLocalSwiftPackageReference "Vendor/PythonKit" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Vendor/PythonKit;
-		};
 		81AAFF082FDF0512006AEB11 /* XCLocalSwiftPackageReference "../Vendor/SwiftOfficeMarkdown" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Vendor/SwiftOfficeMarkdown;
 		};
+		DD00000000000000000000A1 /* XCLocalSwiftPackageReference "Vendor/UpmarketVLM" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Vendor/UpmarketVLM;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		81A3B75C2FCB1073004A488D /* PythonKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 81A3B75B2FCB1073004A488D /* XCLocalSwiftPackageReference "Vendor/PythonKit" */;
-			productName = PythonKit;
-		};
 		81AAFF092FDF0512006AEB11 /* SwiftOfficeMarkdown */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SwiftOfficeMarkdown;
+		};
+		DD00000000000000000000A2 /* UpmarketVLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DD00000000000000000000A1 /* XCLocalSwiftPackageReference "Vendor/UpmarketVLM" */;
+			productName = UpmarketVLM;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -66,18 +66,12 @@ final class ModelManagerTests: XCTestCase {
     func testGateAfterCheckingAllowsAIWhenModelDownloaded() async {
         let manager = ModelManager(
             checkModelsHandler: {
-                return [
-                    Self.runtimeModel(isDownloaded: true),
-                    Self.aiLibrariesModel(isDownloaded: true),
-                    Self.maxModel(isDownloaded: true)
-                ]
+                return [Self.maxModel(isDownloaded: true)]
             }
         )
 
         let gate = await manager.gateAfterChecking(tier: .max)
         XCTAssertNil(gate.unavailableReason(for: .ai))
-        XCTAssertTrue(manager.downloadedAssets.contains(.pythonRuntime))
-        XCTAssertTrue(manager.downloadedAssets.contains(.aiLibraries))
         XCTAssertTrue(manager.downloadedAssets.contains(.upmarketAI))
         XCTAssertTrue(manager.hasCheckedModels)
     }
@@ -85,8 +79,6 @@ final class ModelManagerTests: XCTestCase {
     func testDownloadProgressUpdatesBeforeCompletion() async throws {
         let manager = ModelManager(
             models: [
-                Self.runtimeModel(isDownloaded: true),
-                Self.aiLibrariesModel(isDownloaded: false),
                 Self.maxModel(isDownloaded: false)
             ],
             downloadModelHandler: { _, progressFile in
@@ -98,14 +90,14 @@ final class ModelManagerTests: XCTestCase {
             }
         )
 
-        let gate = AppTierGate(tier: .max, downloadedAssets: [.pythonRuntime], deviceSupportsRuntime: true, aiFeatureEnabled: true, aiFeatureUnavailableReason: nil)
+        let gate = AppTierGate(tier: .max, downloadedAssets: [], deviceSupportsRuntime: true, aiFeatureEnabled: true, aiFeatureUnavailableReason: nil)
         manager.downloadAssets(for: .ai, gate: gate)
 
         try await waitUntil(timeout: 8) {
             manager.isDownloading && manager.downloadProgress >= 25
         }
         XCTAssertGreaterThanOrEqual(manager.downloadProgress, 25)
-        XCTAssertEqual(manager.downloadingModelKey, "ai_libraries")
+        XCTAssertEqual(manager.downloadingModelKey, "upmarket_ai")
 
         try await waitUntil(timeout: 8) {
             !manager.isDownloading
@@ -117,14 +109,14 @@ final class ModelManagerTests: XCTestCase {
 
     func testDownloadFailureSetsVisibleErrorAndClearsActiveModel() async throws {
         let manager = ModelManager(
-            models: [Self.proModel(isDownloaded: false)],
+            models: [Self.maxModel(isDownloaded: false)],
             downloadModelHandler: { _, _ in
                 ModelDownloadResult(success: false, error: "Connection failed")
             }
         )
 
-        let gate = AppTierGate(tier: .pro, downloadedAssets: [], deviceSupportsRuntime: true, aiFeatureEnabled: true, aiFeatureUnavailableReason: nil)
-        manager.downloadAsset(.layout, gate: gate)
+        let gate = AppTierGate(tier: .max, downloadedAssets: [], deviceSupportsRuntime: true, aiFeatureEnabled: true, aiFeatureUnavailableReason: nil)
+        manager.downloadAsset(.upmarketAI, gate: gate)
 
         try await waitUntil(timeout: 5) {
             !manager.isDownloading && manager.downloadError != nil
@@ -147,20 +139,18 @@ final class ModelManagerTests: XCTestCase {
             .appendingPathComponent("upmarket-model-storage-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: root) }
 
-        try writeBytes(11, to: root.appendingPathComponent("layout/model.bin"))
-        try writeBytes(17, to: root.appendingPathComponent("ibm-granite--granite-docling-258M-mlx/model.bin"))
+        try writeBytes(11, to: root.appendingPathComponent("upmarket_ai/model.bin"))
         try writeBytes(23, to: root.appendingPathComponent("stale-cache/model.bin"))
 
         let manager = ModelManager(
             models: [
-                Self.proModel(isDownloaded: true),
-                Self.maxModel(isDownloaded: false, storageDirectory: "ibm-granite--granite-docling-258M-mlx")
+                Self.maxModel(isDownloaded: true, storageDirectory: "upmarket_ai")
             ],
             modelsDirectoryURL: root
         )
 
         XCTAssertEqual(manager.downloadedModelCount, 1)
-        XCTAssertEqual(manager.downloadedModelEstimatedSizeMB, 20)
+        XCTAssertEqual(manager.downloadedModelEstimatedSizeMB, 600)
         XCTAssertEqual(manager.totalStorageUsed, 11)
     }
 
@@ -221,7 +211,7 @@ final class ModelManagerTests: XCTestCase {
             }
         )
 
-        let gate = AppTierGate(tier: .max, downloadedAssets: [.pythonRuntime], deviceSupportsRuntime: true, aiFeatureEnabled: true, aiFeatureUnavailableReason: nil)
+        let gate = AppTierGate(tier: .max, downloadedAssets: [], deviceSupportsRuntime: true, aiFeatureEnabled: true, aiFeatureUnavailableReason: nil)
         manager.downloadAssets(for: .ai, gate: gate)
 
         try await waitUntil(timeout: 5) {
@@ -260,9 +250,9 @@ final class ModelManagerTests: XCTestCase {
     func testIndividualDownloadUsesSelectedOptionalModelKey() async throws {
         let recorder = DownloadKeyRecorder()
         let manager = ModelManager(
-            models: [Self.proModel(isDownloaded: false)],
+            models: [Self.maxModel(isDownloaded: false)],
             checkModelsHandler: {
-                [Self.proModel(isDownloaded: true)]
+                [Self.maxModel(isDownloaded: true)]
             },
             downloadModelHandler: { key, _ in
                 await recorder.record(key)
@@ -270,17 +260,17 @@ final class ModelManagerTests: XCTestCase {
             }
         )
 
-        let gate = AppTierGate(tier: .pro, downloadedAssets: [], deviceSupportsRuntime: true, aiFeatureEnabled: true, aiFeatureUnavailableReason: nil)
-        manager.downloadAsset(.layout, gate: gate)
+        let gate = AppTierGate(tier: .max, downloadedAssets: [], deviceSupportsRuntime: true, aiFeatureEnabled: true, aiFeatureUnavailableReason: nil)
+        manager.downloadAsset(.upmarketAI, gate: gate)
 
         try await waitUntil(timeout: 5) {
             !manager.isDownloading
         }
 
         let keys = await recorder.keys
-        XCTAssertEqual(keys, ["layout"])
+        XCTAssertEqual(keys, ["upmarket_ai"])
         XCTAssertNil(manager.downloadError)
-        XCTAssertEqual(manager.models, [Self.proModel(isDownloaded: true)])
+        XCTAssertEqual(manager.models, [Self.maxModel(isDownloaded: true)])
     }
 
     private func writeBytes(_ count: Int, to url: URL) throws {
@@ -289,18 +279,6 @@ final class ModelManagerTests: XCTestCase {
             withIntermediateDirectories: true
         )
         try Data(repeating: 0, count: count).write(to: url)
-    }
-
-    private static func aiLibrariesModel(isDownloaded: Bool) -> ModelStatus {
-        ModelStatus(
-            key: "ai_libraries",
-            name: "AI Libraries",
-            description: "ML frameworks for AI conversion",
-            isDownloaded: isDownloaded,
-            sizeMB: 373,
-            isRequired: false,
-            tier: "max"
-        )
     }
 
     private static func maxModel(isDownloaded: Bool, storageDirectory: String? = nil) -> ModelStatus {
@@ -313,33 +291,6 @@ final class ModelManagerTests: XCTestCase {
             isRequired: false,
             tier: "max",
             storageDirectory: storageDirectory
-        )
-    }
-
-    private static func runtimeModel(isDownloaded: Bool) -> ModelStatus {
-        ModelStatus(
-            key: "python_runtime_pro",
-            name: "Upmarket Runtime",
-            description: "Required for Enhanced and AI conversion",
-            isDownloaded: isDownloaded,
-            sizeMB: 367,
-            isRequired: false,
-            tier: "pro",
-            error: isDownloaded ? nil : "not downloaded",
-            storageDirectory: "python_runtime_pro"
-        )
-    }
-
-    private static func proModel(isDownloaded: Bool) -> ModelStatus {
-        ModelStatus(
-            key: "layout",
-            name: "Upmarket Enhanced",
-            description: "Better results for complex PDFs",
-            isDownloaded: isDownloaded,
-            sizeMB: 20,
-            isRequired: false,
-            tier: "pro",
-            error: isDownloaded ? nil : "not downloaded"
         )
     }
 

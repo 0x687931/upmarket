@@ -35,8 +35,6 @@ SWIFT_COPY_FILES = [
 ]
 SWIFT_RUNTIME_LOG_FILES = [
     Path("Upmarket/Upmarket/Services/ConversionRunner.swift"),
-    Path("Upmarket/Upmarket/Services/PythonBridge.swift"),
-    Path("Upmarket/Upmarket/Services/PythonWorker.swift"),
 ]
 SWIFT_COPY_DIRS = [
     Path("Upmarket/Upmarket/Views"),

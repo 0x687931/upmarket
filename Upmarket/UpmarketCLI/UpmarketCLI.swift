@@ -4,9 +4,9 @@ import PDFKit
 
 // upmarket-cli — standalone document → Markdown converter. Runs the same Apple-native
 // engines as the app in-process (PDFKit / Vision via the shared VisionDocumentExtractor,
-// classification via the shared NativeDocumentClassifier) and shells the bundled
-// UpmarketRuntimeHelper for the Docling/Docling-AI paths. All routing/validation logic is
-// shared with the app via Upmarket/Shared/.
+// classification via the shared NativeDocumentClassifier). All routing/validation logic is
+// shared with the app via Upmarket/Shared/. Office/markup formats are converted by the app
+// itself; the command-line tool handles PDF, images, and plain text.
 
 private let maxInputBytes: Int64 = 500 * 1024 * 1024
 
@@ -28,18 +28,15 @@ private enum ExitCode: Int32 {
 private enum Engine {
     case auto       // --auto (default): classify the document, pick the best route
     case native     // --basic / --native: in-process Apple (PDFKit / Vision)
-    case complex    // --pro   / --complex: Docling Enhanced (layout + tables)
-    case ai         // --max   / --ai:     Docling AI (Granite VLM)
+    case complex    // --pro   / --complex: native complex-PDF path (Vision quality selection)
+    case ai         // --max   / --ai:     native AI path (Vision; Granite runs in the app)
 }
 
 /// The concrete engine actually executed for a document.
 private enum Pathway: String {
-    case pdfkit          = "native-pdfkit"
-    case vision          = "native-vision"
-    case text            = "native-text"
-    case markItDown      = "markitdown"      // basic (Tier-1): office/markup via the helper
-    case doclingEnhanced = "docling"         // Pro: enhanced PDF layout/tables
-    case doclingAI       = "docling-ai"      // Max: Granite VLM
+    case pdfkit = "native-pdfkit"
+    case vision = "native-vision"
+    case text   = "native-text"
 }
 
 private enum OutputFormat: String {
@@ -154,25 +151,7 @@ private enum UpmarketCLI {
             debugLog("file=\(inputURL.lastPathComponent) engine=\(pathway.rawValue)", options.debug)
 
             let start = Date()
-            var document: ConvertedDocument
-            do {
-                document = try await execute(pathway: pathway, inputURL: inputURL, debug: options.debug)
-            } catch let error as CommandError
-                where (pathway == .doclingEnhanced || pathway == .doclingAI) && error.exitCode.allowsBasicFallback {
-                // Never stop a conversion just because a paid runtime is missing. If the
-                // Docling/AI runtime isn't installed (or the helper fails for a non-input
-                // reason), fall back to basic (native) conversion. This applies to explicit
-                // --pro/--max too. Genuine input errors (password, unsupported) are not
-                // caught here and still surface.
-                let tier = (pathway == .doclingAI) ? "AI" : "Enhanced"
-                guard let fallback = nativeFallback(for: inputURL) else {
-                    throw CommandError(error.exitCode,
-                        "\(tier) conversion isn't available (its runtime isn't installed) and this format has no basic conversion. Open Upmarket to download the \(tier) runtime.")
-                }
-                notice("\(tier) conversion isn't available (runtime not installed) — using basic conversion instead. Open Upmarket to enable \(tier) conversion.")
-                debugLog("fallback: \(pathway.rawValue) → \(fallback.rawValue) (\(error.message))", options.debug)
-                document = try await execute(pathway: fallback, inputURL: inputURL, debug: options.debug)
-            }
+            var document = try await execute(pathway: pathway, inputURL: inputURL, debug: options.debug)
             document = validateAndRepair(document, debug: options.debug)
             debugLog("pages=\(document.pages) pipeline=\(document.pipeline) elapsed=\(String(format: "%.2fs", Date().timeIntervalSince(start)))", options.debug)
 
@@ -200,43 +179,34 @@ private enum UpmarketCLI {
         let ext = inputURL.pathExtension.lowercased()
         let isPDF = ext == "pdf"
         let isImage = imageExtensions.contains(ext)
-        let isText = ext == "txt" || ext == "md"
+        let isText = ext == "txt" || ext == "md" || ext == "csv"
 
-        switch engine {
-        case .ai:      return .doclingAI
-        case .complex: return .doclingEnhanced
-        case .native:
+        // Office/markup formats are app-only; the CLI converts PDF, images, and text.
+        func nativeRoute() throws -> Pathway {
             if isPDF { return .pdfkit }      // execute() falls back to Vision if no text
             if isImage { return .vision }
             if isText { return .text }
-            return .markItDown               // office/markup is basic (Tier-1) via MarkItDown
+            throw CommandError(.inputRejected,
+                "The command-line tool converts PDF, image, and text files. Open Upmarket to convert .\(ext) documents.")
+        }
+
+        switch engine {
+        case .native, .complex, .ai:
+            return try nativeRoute()
         case .auto:
             if isPDF {
                 if let classification = try? await NativeDocumentClassifier.classify(pdfURL: inputURL) {
                     debugLog("auto: classifier=\(classification.recommendedPathway.rawValue) reasons=[\(classification.reasons.joined(separator: ", "))]", debug)
                     switch classification.recommendedPathway {
-                    case .pdfKit:    return .pdfkit
-                    case .visionOCR: return .vision
-                    case .enhanced:  return .doclingEnhanced
+                    case .pdfKit:             return .pdfkit
+                    case .visionOCR, .enhanced: return .vision
                     }
                 }
                 debugLog("auto: classification unavailable → PDFKit", debug)
                 return .pdfkit
             }
-            if isImage { return .vision }
-            if isText { return .text }
-            return .markItDown   // office / html / epub / csv → MarkItDown (basic)
+            return try nativeRoute()
         }
-    }
-
-    /// The in-process native route for a file, used as the `--auto` fallback when a
-    /// Docling/AI path is unavailable. Nil for formats only Docling can handle.
-    private static func nativeFallback(for inputURL: URL) -> Pathway? {
-        let ext = inputURL.pathExtension.lowercased()
-        if ext == "pdf" { return .pdfkit }
-        if imageExtensions.contains(ext) { return .vision }
-        if ext == "txt" || ext == "md" { return .text }
-        return nil
     }
 
     private static func execute(pathway: Pathway, inputURL: URL, debug: Bool) async throws -> ConvertedDocument {
@@ -251,12 +221,6 @@ private enum UpmarketCLI {
                 : try await nativeVisionImage(inputURL)
         case .text:
             return try nativeText(inputURL)
-        case .markItDown, .doclingEnhanced:
-            // Both go through the helper with useAI=false. The helper uses Docling for
-            // enhanced formats when the Pro runtime is present, else MarkItDown (Tier-1).
-            return try helperConvert(inputURL: inputURL, useAI: false)
-        case .doclingAI:
-            return try helperConvert(inputURL: inputURL, useAI: true)
         }
     }
 
@@ -330,34 +294,6 @@ private enum UpmarketCLI {
         return result
     }
 
-    // MARK: - Runtime helper (Docling / Docling-AI)
-
-    private static func helperConvert(inputURL: URL, useAI: Bool) throws -> ConvertedDocument {
-        let workspaceURL = try makeWorkspace()
-        defer { try? FileManager.default.removeItem(at: workspaceURL) }
-
-        let request = RuntimeHelperRequest(
-            operation: "convert", filePath: inputURL.path,
-            title: inputURL.deletingPathExtension().lastPathComponent, useAI: useAI,
-            password: nil, workspacePath: workspaceURL.path, key: nil, progressFile: nil,
-            allowedInputRoots: [inputURL.deletingLastPathComponent().path]
-        )
-        let response = try runHelper(request)
-        guard response.success, let output = response.output else { throw mappedRuntimeError(response) }
-
-        let markdown: String
-        if let inline = output.markdown {
-            markdown = inline
-        } else if let markdownFile = output.markdownFile {
-            markdown = try String(contentsOf: URL(fileURLWithPath: markdownFile), encoding: .utf8)
-        } else {
-            throw CommandError(.conversionFailed, "Upmarket returned an unreadable conversion result.")
-        }
-        return ConvertedDocument(markdown: markdown, pages: output.pages, format: output.format,
-                                 title: output.title.isEmpty ? inputURL.deletingPathExtension().lastPathComponent : output.title,
-                                 pipeline: output.pipeline)
-    }
-
     // MARK: - Input / output
 
     private static func outputURL(for inputURL: URL, explicit: URL?, format: OutputFormat) -> URL {
@@ -390,67 +326,6 @@ private enum UpmarketCLI {
         }
         if FileManager.default.fileExists(atPath: url.path), !force {
             throw CommandError(.outputWriteFailed, "Output file already exists. Pass --force to replace it.")
-        }
-    }
-
-    private static func makeWorkspace() throws -> URL {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("upmarket-cli-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-        return url
-    }
-
-    private static func runHelper(_ request: RuntimeHelperRequest) throws -> RuntimeHelperResponse {
-        let helperURL = try runtimeHelperURL()
-        let process = Process()
-        process.executableURL = helperURL
-        let input = Pipe(), output = Pipe(), error = Pipe()
-        process.standardInput = input; process.standardOutput = output; process.standardError = error
-
-        try process.run()
-        input.fileHandleForWriting.write(try JSONEncoder().encode(request))
-        input.fileHandleForWriting.closeFile()
-        let outputData = output.fileHandleForReading.readDataToEndOfFile()
-        let errorData = error.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-
-        guard process.terminationStatus == 0 else {
-            let detail = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
-            throw CommandError(.conversionFailed, detail?.isEmpty == false ? detail! : "Upmarket runtime helper failed.")
-        }
-
-        let decoder = JSONDecoder()
-        var finalResponse: RuntimeHelperResponse?
-        for line in String(data: outputData, encoding: .utf8)?.split(separator: "\n") ?? [] {
-            guard let data = line.data(using: .utf8) else { continue }
-            if (try? decoder.decode(RuntimeProgressEvent.self, from: data))?.event == "progress" { continue }
-            if let response = try? decoder.decode(RuntimeHelperResponse.self, from: data) { finalResponse = response }
-        }
-        guard let finalResponse else { throw CommandError(.conversionFailed, "Upmarket runtime helper returned an unreadable response.") }
-        return finalResponse
-    }
-
-    private static func runtimeHelperURL() throws -> URL {
-        if let override = ProcessInfo.processInfo.environment["UPMARKET_RUNTIME_HELPER_PATH"], !override.isEmpty {
-            let url = URL(fileURLWithPath: override)
-            guard FileManager.default.isExecutableFile(atPath: url.path) else {
-                throw CommandError(.conversionFailed, "Upmarket runtime helper is not executable at \(url.path).")
-            }
-            return url
-        }
-        let executableDirectory = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().deletingLastPathComponent()
-        let helperURL = executableDirectory.appendingPathComponent("UpmarketRuntimeHelper")
-        guard FileManager.default.isExecutableFile(atPath: helperURL.path) else {
-            throw CommandError(.conversionFailed, "Upmarket runtime helper is missing next to upmarket-cli. The Docling/AI paths need the full app install.")
-        }
-        return helperURL
-    }
-
-    private static func mappedRuntimeError(_ response: RuntimeHelperResponse) -> CommandError {
-        let message = response.needsPassword ? "This PDF is password-protected." : (response.message ?? "Upmarket could not convert this document.")
-        switch response.code {
-        case "conversion.password": return CommandError(.inputRejected, "This PDF is password-protected.")
-        case "runtime.helper.runtime-unavailable": return CommandError(.aiUnavailable, message)
-        default: return CommandError(.conversionFailed, message)
         }
     }
 
@@ -571,39 +446,6 @@ private enum UpmarketCLI {
         """)
     }
 }
-
-// MARK: - Runtime helper wire types
-
-private struct RuntimeHelperRequest: Encodable {
-    let operation: String
-    let filePath: String?
-    let title: String?
-    let useAI: Bool?
-    let password: String?
-    let workspacePath: String?
-    let key: String?
-    let progressFile: String?
-    let allowedInputRoots: [String]?
-}
-
-private struct RuntimeHelperResponse: Decodable {
-    let success: Bool
-    let code: String?
-    let message: String?
-    let needsPassword: Bool
-    let output: RuntimeConversionOutput?
-}
-
-private struct RuntimeConversionOutput: Decodable {
-    let markdown: String?
-    let markdownFile: String?
-    let pages: Int
-    let format: String
-    let title: String
-    let pipeline: String
-}
-
-private struct RuntimeProgressEvent: Decodable { let event: String }
 
 private struct CommandError: Error {
     let exitCode: ExitCode

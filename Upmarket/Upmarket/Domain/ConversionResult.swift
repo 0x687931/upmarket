@@ -28,7 +28,7 @@ enum ConversionResult: Equatable, Sendable {
             .modelUnavailable,
             .downloadFailed,
             .upgradeRequired,
-            .pythonRuntime("")
+            .engineFailed("")
         ]
         return knownErrors.first { $0.errorDescription == message }?.diagnosticCode
             ?? ConversionError.failed(message).diagnosticCode
@@ -61,6 +61,7 @@ enum ConversionPathway: String, Codable, Equatable, Sendable {
     case nativeHTML = "nativeHTML"
     case nativeOffice = "nativeOffice"
     case nativeText = "nativeText"
+    case nativeEPUB = "nativeEPUB"
 
     var displayPipeline: Pipeline {
         switch self {
@@ -68,7 +69,7 @@ enum ConversionPathway: String, Codable, Equatable, Sendable {
             return .ai
         case .enhanced:
             return .enhanced
-        case .pdfKit, .visionOCR, .speech, .metadata, .nativeHTML, .nativeOffice, .nativeText:
+        case .pdfKit, .visionOCR, .speech, .metadata, .nativeHTML, .nativeOffice, .nativeText, .nativeEPUB:
             return .fast
         }
     }

@@ -254,18 +254,18 @@ final class ConversionQueueTests: XCTestCase {
     func testRunningJobCanBeClassifiedAsStalledWithoutCancellingIt() {
         let job = ConversionJob(
             sourceURL: URL(fileURLWithPath: "/tmp/stalled.pdf"),
-            stage: .python,
+            stage: .processing,
             lastProgressAt: Date(timeIntervalSince1970: 100)
         )
 
         XCTAssertTrue(job.hasNoRecentProgress(referenceDate: Date(timeIntervalSince1970: 165), threshold: 60))
         XCTAssertTrue(job.isRunning)
-        XCTAssertEqual(job.stage, .python)
+        XCTAssertEqual(job.stage, .processing)
     }
 
     func testProgressClearsRecoverableStalledState() async {
         let queue = ConversionQueue { _, progress in
-            progress?(.python)
+            progress?(.processing)
             try? await Task.sleep(nanoseconds: 20_000_000)
             progress?(.postProcessing)
             return .success(ConversionOutput(
@@ -279,7 +279,7 @@ final class ConversionQueueTests: XCTestCase {
 
         let id = queue.add(URL(fileURLWithPath: "/tmp/stalled.pdf"))
         await waitUntil {
-            queue.jobs.first(where: { $0.id == id })?.stage == .python
+            queue.jobs.first(where: { $0.id == id })?.stage == .processing
         }
 
         XCTAssertFalse(queue.jobs.first(where: { $0.id == id })?.isStalled ?? true)
@@ -290,9 +290,9 @@ final class ConversionQueueTests: XCTestCase {
 
     func testPythonProgressFractionAdvancesWithinPythonBand() async {
         let queue = ConversionQueue { _, progress in
-            progress?(ConversionProgress(stage: .python, fraction: 0.25, message: "Processing"))
+            progress?(ConversionProgress(stage: .processing, fraction: 0.25, message: "Processing"))
             try? await Task.sleep(nanoseconds: 30_000_000)
-            progress?(ConversionProgress(stage: .python, fraction: 0.75, message: "Processing"))
+            progress?(ConversionProgress(stage: .processing, fraction: 0.75, message: "Processing"))
             try? await Task.sleep(nanoseconds: 30_000_000)
             return .success(ConversionOutput(
                 markdown: "ok",
@@ -306,13 +306,13 @@ final class ConversionQueueTests: XCTestCase {
 
         let id = queue.add(URL(fileURLWithPath: "/tmp/progress.pdf"))
         await waitUntil {
-            guard let job = queue.job(id: id), job.stage == .python else { return false }
+            guard let job = queue.job(id: id), job.stage == .processing else { return false }
             return job.progress > 0.35 && job.progress < 0.45
         }
         let firstProgress = queue.job(id: id)?.progress ?? 0
 
         await waitUntil {
-            guard let job = queue.job(id: id), job.stage == .python else { return false }
+            guard let job = queue.job(id: id), job.stage == .processing else { return false }
             return job.progress > 0.65
         }
         let secondProgress = queue.job(id: id)?.progress ?? 0
@@ -432,10 +432,10 @@ final class ConversionQueueTests: XCTestCase {
         await waitForResult(primary, in: queue)
     }
 
-    func testPythonBridgeFailureIsStoredPerJob() async {
+    func testEngineFailureIsStoredPerJob() async {
         let queue = ConversionQueue { _, progress in
-            progress?(.python)
-            return .failure(ConversionError.pythonRuntime("Bridge unavailable").errorDescription!)
+            progress?(.processing)
+            return .failure(ConversionError.engineFailed("Engine unavailable").errorDescription!)
         }
 
         let id = queue.add(URL(fileURLWithPath: "/tmp/python.pdf"))
@@ -534,7 +534,7 @@ final class ConversionQueueTests: XCTestCase {
     func testLivenessMonitorClassifiesJobStalledAfterThreshold() async {
         var blocker: CheckedContinuation<Void, Never>?
         let queue = ConversionQueue { _, progress in
-            progress?(.python)
+            progress?(.processing)
             await withCheckedContinuation { continuation in
                 blocker = continuation
             }
@@ -542,7 +542,7 @@ final class ConversionQueueTests: XCTestCase {
         }
 
         let id = queue.add(URL(fileURLWithPath: "/tmp/stalled.pdf"))
-        await waitUntil { queue.job(id: id)?.stage == .python }
+        await waitUntil { queue.job(id: id)?.stage == .processing }
 
         // Simulate 65s elapsed since last progress — crosses the 60s threshold.
         queue.classifyStalledJobsForTesting(referenceDate: Date(timeIntervalSinceNow: 65))
@@ -555,14 +555,14 @@ final class ConversionQueueTests: XCTestCase {
     func testLivenessMonitorClearsIsStalled_WhenProgressArrives() async {
         let blocker = TaskBlocker()
         let queue = ConversionQueue { _, progress in
-            progress?(.python)
+            progress?(.processing)
             await blocker.wait()
             progress?(.postProcessing)
             return .success(ConversionOutput(markdown: "ok", pages: 1, format: "PDF", title: "recover", pipeline: .fast))
         }
 
         let id = queue.add(URL(fileURLWithPath: "/tmp/recover.pdf"))
-        await waitUntil { queue.job(id: id)?.stage == .python }
+        await waitUntil { queue.job(id: id)?.stage == .processing }
 
         // Force stalled via the test hook
         queue.classifyStalledJobsForTesting(referenceDate: Date(timeIntervalSinceNow: 65))
@@ -650,16 +650,17 @@ final class ConversionQueueTests: XCTestCase {
         addTeardownBlock {
             try? FileManager.default.removeItem(at: workspace)
         }
-        // EPUB is a Pro format with no native engine, so a native-only runtime must reject
-        // it. (DOCX/TXT/CSV are Basic and now convert natively — see the native-conversion
-        // tests below.)
-        let epub = workspace.appendingPathComponent("structured.epub")
-        try Data("not a real epub, but enough to prove routing".utf8).write(to: epub)
+        // ZIP/WEBVTT were Python-only formats with no native engine. With the Python
+        // runtime removed they are no longer accepted input types, so they are rejected at
+        // input validation. (DOCX/TXT/CSV/EPUB now convert natively — see the
+        // native-conversion tests below.)
+        let zip = workspace.appendingPathComponent("structured.zip")
+        try Data("not a real zip, but enough to prove routing".utf8).write(to: zip)
 
         let result = await ConversionRunner(supportsAdvancedRuntime: false)
-            .run(ConversionJob(sourceURL: epub))
+            .run(ConversionJob(sourceURL: zip))
 
-        XCTAssertEqual(result.errorMessage, ConversionError.unsupportedOnThisMac.errorDescription)
+        XCTAssertEqual(result.errorMessage, ConversionError.inaccessible.errorDescription)
     }
 
     func testNativeOnlyRuntimeConvertsPlainTextFormats() async throws {
@@ -694,6 +695,54 @@ final class ConversionQueueTests: XCTestCase {
         }
     }
 
+    func testScannedImageRoutesThroughVisionImageOCR() async throws {
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpmarketScannedImageTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: workspace)
+        }
+
+        // Render text into a PNG so the classifier sees a scanned-image document (≥10 words)
+        // and routes it to the image-specific Vision OCR path — not the PDF-only quality path.
+        let size = NSSize(width: 1000, height: 300)
+        let image = NSImage(size: size)
+        image.lockFocus()
+        NSColor.white.setFill()
+        NSRect(origin: .zero, size: size).fill()
+        let sentence = "The quick brown fox jumps over the lazy dog near the river bank today"
+        NSAttributedString(
+            string: sentence,
+            attributes: [.font: NSFont.systemFont(ofSize: 48), .foregroundColor: NSColor.black]
+        ).draw(at: NSPoint(x: 20, y: 120))
+        image.unlockFocus()
+
+        guard let tiff = image.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiff),
+              let png = rep.representation(using: .png, properties: [:]) else {
+            return XCTFail("Expected to render a PNG fixture")
+        }
+        let imageURL = workspace.appendingPathComponent("scanned.png")
+        try png.write(to: imageURL)
+
+        // Force the scanned-document classification so the test deterministically exercises
+        // the image-OCR routing fix — a synthetic PNG can otherwise classify as photo/artwork
+        // (metadata-only). This guards the regression: a scanned image must use the image
+        // Vision-OCR path, not the PDF-only quality path.
+        let scanned = ContentClassifier.Classification(
+            kind: .scannedDocument, requiredTier: .native, hasExtractableText: false,
+            frameCount: 1, pdfEvidence: nil, recommendedPathway: .visionOCR
+        )
+        let result = await ConversionRunner(
+            supportsAdvancedRuntime: false, supportsAI: false,
+            classifyOverride: { _, _, _, _ in scanned }
+        ).run(ConversionJob(sourceURL: imageURL))
+
+        // The PDF-only path would fail to open a bare image; the image route must succeed.
+        XCTAssertNil(result.errorMessage)
+        XCTAssertEqual(result.output?.selectedPathway, .visionOCR)
+    }
+
     func testNativeOnlyRuntimeStillConvertsDigitalPDF() async throws {
         let workspace = FileManager.default.temporaryDirectory
             .appendingPathComponent("UpmarketNativePDFTests-\(UUID().uuidString)", isDirectory: true)
@@ -725,47 +774,6 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertEqual(result.output?.selectedPathway, .pdfKit)
     }
 
-    func testAIPDFRouteIsSelectedBySwiftAndPassedToRuntimeHelper() async throws {
-        let workspace = FileManager.default.temporaryDirectory
-            .appendingPathComponent("UpmarketAIPDFRouteTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
-        addTeardownBlock {
-            try? FileManager.default.removeItem(at: workspace)
-        }
-        let pdf = workspace.appendingPathComponent("ai-route.pdf")
-        try writePDF(to: pdf, text: "AI route PDF")
-        let requestLog = workspace.appendingPathComponent("helper-request.json")
-        let helper = try makeRuntimeHelperScript(
-            requestLog: requestLog,
-            response: #"{"success":true,"needsPassword":false,"output":{"markdown":"AI PDF route output","pages":1,"format":"PDF","title":"AI PDF","pipeline":"ai"}}"#
-        )
-        // Inject scanned classification so the test doesn't depend on live Vision/Metal.
-        let scannedClassification = ContentClassifier.Classification(
-            kind: .scannedDocument,
-            requiredTier: .ai,
-            hasExtractableText: false,
-            frameCount: 1,
-            pdfEvidence: nil,
-            recommendedPathway: .ai
-        )
-        let runner = ConversionRunner(
-            pythonWorker: PythonWorker(helperClient: RuntimeHelperClient(executableURL: helper, livenessInterval: 5)),
-            supportsAdvancedRuntime: true,
-            supportsAI: true,
-            tier: { .max },
-            modelsReady: { true },
-            classifyOverride: { _, _, _, _ in scannedClassification }
-        )
-
-        let result = await runner.run(ConversionJob(sourceURL: pdf, useAI: true))
-
-        XCTAssertNil(result.errorMessage)
-        let request = try String(contentsOf: requestLog, encoding: .utf8)
-        XCTAssertTrue(request.contains(#""operation":"convert""#))
-        XCTAssertTrue(request.contains(#""useAI":true"#))
-        XCTAssertTrue(request.contains(#""filePath":"#))
-    }
-
     private func writePDF(to url: URL, text: String) throws {
         var mediaBox = CGRect(x: 0, y: 0, width: 400, height: 300)
         guard let context = CGContext(url as CFURL, mediaBox: &mediaBox, nil) else {
@@ -780,24 +788,6 @@ final class ConversionQueueTests: XCTestCase {
         CTLineDraw(CTLineCreateWithAttributedString(attributed), context)
         context.endPDFPage()
         context.closePDF()
-    }
-
-    private func makeRuntimeHelperScript(requestLog: URL, response: String) throws -> URL {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("UpmarketRouteHelperTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let helper = directory.appendingPathComponent("helper.sh")
-        let source = """
-        #!/bin/sh
-        cat > '\(requestLog.path)'
-        printf '%s\\n' '\(response)'
-        """
-        try source.write(to: helper, atomically: true, encoding: .utf8)
-        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: helper.path)
-        addTeardownBlock {
-            try? FileManager.default.removeItem(at: directory)
-        }
-        return helper
     }
 
     // MARK: - Helpers

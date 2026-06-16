@@ -12,7 +12,6 @@ SCHEME="${UPMARKET_XCODE_SCHEME:-Upmarket}"
 DESTINATION="${UPMARKET_XCODE_DESTINATION:-platform=macOS,arch=arm64}"
 CODE_SIGNING="${UPMARKET_CODE_SIGNING_ALLOWED:-NO}"
 UI_CODE_SIGN_IDENTITY="${UPMARKET_UI_CODE_SIGN_IDENTITY:--}"
-PYTHON_XCFRAMEWORK="${UPMARKET_PYTHON_XCFRAMEWORK:-Upmarket/Python/Python.xcframework}"
 
 usage() {
   cat <<'USAGE'
@@ -60,12 +59,15 @@ run_step() {
   section_end
 }
 
+# Swift macro fingerprint validation is bypassed because the bundled UpmarketVLM package
+# depends on mlx-swift-lm's MLXHuggingFaceMacros, which can't be interactively trusted in CI.
 xcode_build() {
   xcodebuild build \
     -project "$PROJECT" \
     -scheme "$SCHEME" \
     -destination "$DESTINATION" \
     -derivedDataPath "$DERIVED_DATA_DIR" \
+    -skipMacroValidation \
     CODE_SIGNING_ALLOWED="$CODE_SIGNING"
 }
 
@@ -76,6 +78,7 @@ xcode_unit_tests() {
     -destination "$DESTINATION" \
     -derivedDataPath "$DERIVED_DATA_DIR" \
     -only-testing:UpmarketTests \
+    -skipMacroValidation \
     CODE_SIGNING_ALLOWED="$CODE_SIGNING"
 }
 
@@ -90,6 +93,7 @@ xcode_ui_tests() {
     -destination "$DESTINATION" \
     -derivedDataPath "$DERIVED_DATA_DIR" \
     -only-testing:UpmarketUITests \
+    -skipMacroValidation \
     CODE_SIGNING_ALLOWED="$CODE_SIGNING"
 
   local products_dir="$DERIVED_DATA_DIR/Build/Products"
@@ -117,16 +121,6 @@ xcode_ui_tests() {
     -only-testing:UpmarketUITests
 }
 
-require_build_runtime() {
-  if [[ -d "$PYTHON_XCFRAMEWORK" ]]; then
-    return 0
-  fi
-
-  echo "error: build runtime missing: $PYTHON_XCFRAMEWORK"
-  echo "       Run scripts/ci/ensure_python_runtime.sh to prepare the local build runtime."
-  exit 1
-}
-
 policy_gate() {
   run_step "Verify Xcode project" scripts/ci/verify_xcode_project.sh
   run_step "Validate P0 task registry" scripts/ci/validate_task_registry.py
@@ -136,13 +130,11 @@ policy_gate() {
   run_step "Validate Nova extension" scripts/ci/validate_nova_extension.py
   run_step "Validate generated repository docs" scripts/docs/generate_repo_docs.py --check
   run_step "Validate release regression guards" scripts/ci/validate_release_regression_guards.py
-  run_step "Validate upstream watch workflow" scripts/ci/validate_upstream_watch_workflow.py
   run_step "Verify source entitlements" scripts/ci/verify_entitlements.sh
   run_step "Validate HuggingFace corpus configuration" scripts/ci/validate_hf_corpus.py
 }
 
 build_gate() {
-  run_step "Check build runtime" require_build_runtime
   run_step "Build unsigned app" xcode_build
   run_step "Verify effective plist" scripts/ci/verify_effective_plist.sh
   run_step "Validate MCP server smoke" scripts/ci/validate_mcp_server.py "$DERIVED_DATA_DIR/Build/Products/Debug/Upmarket.app"
@@ -152,13 +144,10 @@ unit_gate() {
   run_step "Unit tests" xcode_unit_tests
 }
 
+# Conversion is native-only; there is no embedded Python runtime to build or verify, so
+# "runtime" mode now rebuilds and verifies the packaged app (entitlements, no-Python embed,
+# bundled CLI/MCP). Use it for entitlement, model, corpus, or packaging changes.
 runtime_gate() {
-  run_step "Build Python runtime" scripts/build_python_env.sh
-  # The first-party bridge sync+verify used to run as an app build phase that wrote into the
-  # embedded framework. The app no longer embeds Python, so run it here against the source
-  # xcframework (the Pro download's basis) to keep the install_runtime_sandbox check.
-  run_step "Sync and verify Python bridge" scripts/ci/sync_and_verify_python_bridge.sh
-  run_step "Verify Python bundle imports" scripts/ci/verify_python_bundle.sh
   build_gate
   run_step "Verify built app package gates" scripts/ci/verify_release_app.sh "$DERIVED_DATA_DIR/Build/Products/Debug/Upmarket.app"
 }
@@ -167,9 +156,6 @@ corpus_and_model_gate() {
   run_step "Validate corpus manifest" scripts/ci/validate_corpus.py
   run_step "Validate corpus baseline" scripts/ci/validate_corpus_baseline.py
   run_step "Validate corpus conversion pathways" scripts/ci/validate_corpus_pathways.py
-  run_step "Repair and validate local model manifests" scripts/ci/validate_models.py --repair
-  run_step "Validate model fault states" scripts/ci/test_model_faults.py
-  run_step "Validate AI runtime test doubles" scripts/ci/test_ai_runtime_doubles.py
   hf_dataset_gate
 }
 

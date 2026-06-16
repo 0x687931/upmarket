@@ -500,7 +500,7 @@ struct FileRowView: View {
             return "Analyzing…"
         case .extracting:
             return "Reading…"
-        case .python:
+        case .processing:
             return "Processing…"
         case .postProcessing:
             return "Refining…"

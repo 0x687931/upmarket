@@ -55,14 +55,12 @@ def table(headers: list[str], rows: list[list[str]]) -> list[str]:
 
 def source_map() -> str:
     swift_files = sorted((ROOT / "Upmarket" / "Upmarket").rglob("*.swift"))
-    python_files = sorted((ROOT / "UpmarketPython").rglob("*.py"))
     test_files = sorted((ROOT / "Upmarket").glob("Upmarket*Tests/**/*.swift"))
     docs = sorted((ROOT / "docs").rglob("*.md"))
     scripts = source_entries(ROOT / "scripts")
 
     section_rows = [
-        ["Swift app", "`Upmarket/Upmarket`", f"{len(swift_files)} Swift files", "App shell, UI, domain models, services, StoreKit, native extraction"],
-        ["Python bridge", "`UpmarketPython`", f"{len(python_files)} Python files", "Conversion/model helper code copied into the packaged Python runtime"],
+        ["Swift app", "`Upmarket/Upmarket`", f"{len(swift_files)} Swift files", "App shell, UI, domain models, services, StoreKit, native extraction (PDFKit/Vision/Speech/Office/HTML/EPUB + native Granite)"],
         ["Tests", "`Upmarket/UpmarketTests`, `Upmarket/UpmarketUITests`", f"{len(test_files)} Swift test files", "Unit and UI validation"],
         ["Scripts", "`scripts`", f"{len(scripts)} entries", "Release, corpus, CI, dependency, and documentation automation"],
         ["Docs", "`docs`", f"{len(docs)} Markdown files", "Plans, release process, generated source maps, runbooks"],
@@ -75,11 +73,6 @@ def source_map() -> str:
     domain_rows = []
     for path in sorted((ROOT / "Upmarket" / "Upmarket" / "Domain").glob("*.swift")):
         domain_rows.append([f"`{rel(path)}`", ", ".join(swift_types(path)) or "-"])
-
-    python_rows = []
-    for path in python_files:
-        definitions = python_defs(path)
-        python_rows.append([f"`{rel(path)}`", ", ".join(definitions[:8]) or "-"])
 
     lines = [
         "# Generated Source Map",
@@ -98,10 +91,6 @@ def source_map() -> str:
         "",
         *table(["File", "Types"], service_rows),
         "",
-        "## Python Entry Points",
-        "",
-        *table(["File", "Definitions"], python_rows),
-        "",
     ]
     return "\n".join(lines)
 
@@ -113,7 +102,7 @@ def conversion_flow() -> str:
         pathway_rows.append([
             f"`{name}`",
             config.get("release_status", "-"),
-            ", ".join(config.get("valid_categories", [])),
+            ", ".join(config.get("valid_formats", [])),
             ", ".join(config.get("compute_modes", [])) or "-",
             config.get("accelerator_control", "-"),
             config.get("runner", "-"),
@@ -130,13 +119,13 @@ def conversion_flow() -> str:
         "1. User action enters SwiftUI views or Quick Action handoff.",
         "2. `ConversionQueue` owns job state, entitlement-gated enqueue, retry, cancellation, progress, and result/error state.",
         "3. `ConversionRunner` copies the source into an app-owned workspace and chooses the concrete extraction path.",
-        "4. Apple-native paths are attempted where valid: PDFKit, Vision, Speech, ImageIO, and AVFoundation.",
-        "5. Advanced/model paths go through `PythonWorker` into the isolated runtime helper; views and queue code do not import or call runtime packages directly.",
+        "4. Apple-native paths are attempted where valid: PDFKit, Vision, Speech, ImageIO, AVFoundation, plus native Office/HTML/text/EPUB engines.",
+        "5. The AI path runs native Granite-Docling (mlx-swift) in-process. Conversion is native-only — there is no Python runtime or helper process.",
         "6. Post-processing refines Markdown through native language/writing adapters with graceful availability checks.",
         "",
         "## Conversion Pathway Registry",
         "",
-        *table(["Pathway", "Status", "Valid Categories", "Compute Modes", "Control", "Runner", "Owner"], pathway_rows),
+        *table(["Pathway", "Status", "Valid Formats", "Compute Modes", "Control", "Runner", "Owner"], pathway_rows),
         "",
         "## Benchmark Outputs",
         "",
@@ -162,15 +151,17 @@ def release_automation() -> str:
             first_line = read_text(path).splitlines()[0] if read_text(path).splitlines() else ""
             script_rows.append([f"`{rel(path)}`", first_line.replace("#!", "").strip() or "-"])
 
-    lock_rows = []
-    for lock in (ROOT / "requirements.txt", ROOT / "requirements-candidate.txt"):
-        if lock.exists():
-            packages = [
-                line.split("==", 1)[0].strip()
-                for line in read_text(lock).splitlines()
-                if line.strip() and not line.startswith("#")
-            ]
-            lock_rows.append([f"`{rel(lock)}`", str(len(packages)), ", ".join(packages[:12])])
+    # Conversion is native-only; the app's dependencies are Swift packages pinned in
+    # Package.resolved (no Python requirements locks).
+    resolved = ROOT / "Upmarket" / "Upmarket.xcodeproj" / "project.xcworkspace" / "xcshareddata" / "swiftpm" / "Package.resolved"
+    package_rows = []
+    if resolved.exists():
+        for pin in json.loads(read_text(resolved)).get("pins", []):
+            location = pin.get("location", "").removesuffix(".git")
+            name = location.rsplit("/", 1)[-1] if location else pin.get("identity", "")
+            state = pin.get("state", {})
+            version = state.get("version") or state.get("revision", "")[:8]
+            package_rows.append([f"`{name}`", version, location])
 
     lines = [
         "# Generated Release Automation Map",
@@ -185,9 +176,9 @@ def release_automation() -> str:
         "",
         *table(["Script", "Purpose Hint"], script_rows),
         "",
-        "## Dependency Locks",
+        "## Swift Package Dependencies",
         "",
-        *table(["Lock", "Packages", "Examples"], lock_rows),
+        *table(["Package", "Version", "Source"], package_rows),
         "",
     ]
     return "\n".join(lines)

@@ -1,35 +1,66 @@
 {
-  "version": 1,
+  "version": 2,
   "manifest": "tests/corpus/manifest.json",
-  "principle": "Every corpus document must run through every valid convert-to-Markdown pathway. Release decisions compare current pathway results against stored pathway baselines.",
+  "principle": "Every corpus document in a supported format must run through a shipping convert-to-Markdown pathway. Conversion is native-only (no Python); formats that had only a Python/Docling engine are listed in unsupported_formats and are not required to have a shipping pathway.",
+  "unsupported_formats": [
+    "asciidoc",
+    "nxml",
+    "tex",
+    "vtt",
+    "xml"
+  ],
+  "unsupported_formats_note": "These formats were served only by the removed Python/Docling runtime (AsciiDoc, NLM/JATS nxml, LaTeX, WebVTT, generic XML) and have no native engine. Their corpus documents are retained as historical reference and are exempt from shipping-pathway coverage. Add a native engine and a pathway here to bring one back into scope.",
   "pathways": {
     "swift-pdfkit": {
       "owner": "Services/PDFConverter.swift",
-      "runner": "python3 scripts/benchmark_pdfkit.py --json-output reports/corpus-swift-pdfkit.json",
+      "runner": "xcode-test",
       "release_status": "shipping",
-      "valid_categories": ["pdf"],
-      "compute_modes": ["cpu"],
+      "valid_formats": [
+        "pdf"
+      ],
+      "compute_modes": [
+        "cpu"
+      ],
       "accelerator_control": "none",
       "baseline_required": true,
       "notes": "Apple-native digital PDF extraction path. Uses PDFKit text extraction plus small Markdown cleanup heuristics."
     },
     "swift-vision-document": {
-      "owner": "Services/VisionDocumentExtractor.swift",
+      "owner": "Shared/VisionDocumentExtractor.swift",
       "runner": "xcode-test",
       "release_status": "shipping",
-      "valid_categories": ["pdf", "image"],
-      "compute_modes": ["os-managed-cpu-gpu-ane"],
+      "valid_formats": [
+        "pdf",
+        "png",
+        "jpg",
+        "jpeg",
+        "tiff",
+        "tif",
+        "heic",
+        "heif"
+      ],
+      "compute_modes": [
+        "os-managed-cpu-gpu-ane"
+      ],
       "accelerator_control": "none; Vision chooses available Apple hardware internally",
       "availability": "macOS/Vision availability gated",
       "baseline_required": true,
-      "notes": "Apple-native OCR, document analysis, image quality, and classification path."
+      "notes": "Apple-native OCR, document analysis, image quality, and classification path (with adaptive table banding)."
     },
     "swift-speech": {
       "owner": "Services/SpeechTranscriber.swift",
       "runner": "xcode-test",
       "release_status": "shipping",
-      "valid_categories": ["audio"],
-      "compute_modes": ["os-managed-cpu-gpu-ane"],
+      "valid_formats": [
+        "mp3",
+        "m4a",
+        "wav",
+        "aiff",
+        "opus"
+      ],
+      "compute_modes": [
+        "os-managed-cpu-gpu-ane"
+      ],
       "accelerator_control": "none; Speech framework chooses available Apple hardware internally",
       "availability": "Speech authorization and recognizer availability gated",
       "baseline_required": true,
@@ -37,110 +68,124 @@
     },
     "swift-imageio-metadata": {
       "owner": "Services/NativeMetadataExtractor.swift",
-      "runner": "scripts/benchmark_native_metadata.py --pathway swift-imageio-metadata --json-output reports/corpus-swift-imageio-metadata.json",
+      "runner": "xcode-test",
       "release_status": "shipping",
-      "valid_categories": ["image"],
-      "compute_modes": ["cpu", "hardware-codec"],
+      "valid_formats": [
+        "png",
+        "jpg",
+        "jpeg",
+        "gif",
+        "tiff",
+        "tif",
+        "webp",
+        "bmp",
+        "heic",
+        "heif"
+      ],
+      "compute_modes": [
+        "cpu",
+        "hardware-codec"
+      ],
       "accelerator_control": "none",
       "baseline_required": true,
       "notes": "Apple-native image metadata Markdown path."
     },
     "swift-avfoundation-metadata": {
       "owner": "Services/NativeMetadataExtractor.swift",
-      "runner": "scripts/benchmark_native_metadata.py --pathway swift-avfoundation-metadata --json-output reports/corpus-swift-avfoundation-metadata.json",
+      "runner": "xcode-test",
       "release_status": "shipping",
-      "valid_categories": ["audio", "video"],
-      "compute_modes": ["cpu", "hardware-codec"],
+      "valid_formats": [
+        "mp3",
+        "m4a",
+        "wav",
+        "aiff",
+        "opus",
+        "flac",
+        "aac",
+        "ogg",
+        "mp4",
+        "m4v",
+        "mov",
+        "avi",
+        "mpeg",
+        "mpg",
+        "webm",
+        "mkv",
+        "wma",
+        "wmv"
+      ],
+      "compute_modes": [
+        "cpu",
+        "hardware-codec"
+      ],
       "accelerator_control": "none",
       "baseline_required": true,
       "notes": "Apple-native media metadata Markdown path."
     },
-    "python-fast-pdfium": {
-      "owner": "UpmarketPython/docling_bridge",
-      "runner": "scripts/benchmark.sh --pathway python-fast-pdfium",
+    "swift-office": {
+      "owner": "Vendor/SwiftOfficeMarkdown (OfficeToMarkdown)",
+      "runner": "xcode-test",
       "release_status": "shipping",
-      "valid_categories": ["pdf"],
-      "compute_modes": ["cpu"],
+      "valid_formats": [
+        "docx",
+        "doc",
+        "xlsx",
+        "xlsm",
+        "xls",
+        "pptx",
+        "ppt"
+      ],
+      "compute_modes": [
+        "cpu"
+      ],
       "accelerator_control": "none",
       "baseline_required": true,
-      "notes": "Bundled Python fast PDF fallback using pypdfium2, not PyMuPDF."
+      "notes": "Native OOXML/legacy-binary Office conversion via the vendored SwiftOfficeMarkdown engine (ZipReader + part parsers). Replaces the Python MarkItDown/Docling office path."
     },
-    "python-fast-markitdown": {
-      "owner": "UpmarketPython/docling_bridge",
-      "runner": "scripts/benchmark.sh --pathway python-fast-markitdown",
+    "swift-html": {
+      "owner": "Services/NativeHTMLConverter.swift",
+      "runner": "xcode-test",
       "release_status": "shipping",
-      "valid_categories": ["asciidoc", "audio", "csv", "docx", "html", "image", "pptx", "webvtt", "xlsx", "xml"],
-      "valid_formats": ["asciidoc", "csv", "docx", "epub", "html", "jpeg", "jpg", "json", "m4a", "md", "mp3", "png", "pptx", "wav", "webvtt", "xlsx", "xml", "zip"],
-      "compute_modes": ["cpu"],
-      "accelerator_control": "none for current fast non-PDF path",
-      "baseline_required": true,
-      "notes": "Bundled Python fast non-PDF conversion path."
-    },
-    "python-enhanced-docling": {
-      "owner": "UpmarketPython/docling_bridge",
-      "runner": "scripts/benchmark.sh --pathway python-enhanced-docling",
-      "release_status": "shipping",
-      "valid_categories": ["asciidoc", "csv", "docx", "html", "image", "pdf", "pptx", "webvtt", "xlsx", "xml"],
-      "compute_modes": ["cpu", "gpu-metal-mps"],
-      "accelerator_control": "partial; Python model stack may use PyTorch MPS/MLX when available",
-      "baseline_required": true,
-      "notes": "Enhanced Docling conversion path used when advanced conversion is enabled."
-    },
-    "python-ai-docling": {
-      "owner": "UpmarketPython/docling_bridge",
-      "runner": "scripts/benchmark.sh --pathway python-ai-docling",
-      "release_status": "shipping",
-      "valid_categories": ["image", "pdf"],
-      "compute_modes": ["apple-silicon-metal"],
-      "accelerator_control": "MLX requires Apple Silicon/Metal; not a generic Intel, AMD, or NVIDIA GPU path",
-      "baseline_required": true,
-      "notes": "Granite Docling MLX path for scanned, image-only, and unknown visual documents. Runtime use is gated by validated Upmarket AI model download. SmolDocling preview is deprecated and must not be used for release evidence."
-    },
-    "internal-reference-pymupdf": {
-      "owner": "developer benchmark environment only",
-      "runner": "scripts/benchmark.sh --pathway internal-reference-pymupdf",
-      "release_status": "internal-reference-only",
-      "valid_categories": ["pdf"],
-      "compute_modes": ["cpu"],
+      "valid_formats": [
+        "html",
+        "htm"
+      ],
+      "compute_modes": [
+        "cpu"
+      ],
       "accelerator_control": "none",
-      "baseline_required": false,
-      "license_gate": "May be promoted only after a commercial-license ADR and packaged-runtime validation.",
-      "notes": "Reference pathway for measuring possible uplift. It must not appear in release locks or the packaged app."
+      "baseline_required": true,
+      "notes": "In-process HTML-to-Markdown via libxml2/XMLDocument. Replaces the Python MarkItDown HTML path."
     },
-    "internal-reference-poppler": {
-      "owner": "developer benchmark environment only",
-      "runner": "scripts/benchmark.sh --pathway internal-reference-poppler",
-      "release_status": "internal-reference-only",
-      "valid_categories": ["pdf"],
-      "compute_modes": ["cpu"],
+    "swift-text": {
+      "owner": "Services/NativeTextConverter.swift",
+      "runner": "xcode-test",
+      "release_status": "shipping",
+      "valid_formats": [
+        "txt",
+        "md",
+        "csv"
+      ],
+      "compute_modes": [
+        "cpu"
+      ],
       "accelerator_control": "none",
-      "baseline_required": false,
-      "license_gate": "May be promoted only after license review, App Store packaging review, and packaged-runtime validation.",
-      "notes": "Reference pathway using Poppler pdftotext-style extraction. It must not appear in release locks or the packaged app."
+      "baseline_required": true,
+      "notes": "In-process plain-text/Markdown/CSV-to-Markdown conversion."
     },
-    "internal-reference-rapidocr": {
-      "owner": "developer benchmark environment only",
-      "runner": "scripts/benchmark.sh --pathway internal-reference-rapidocr",
-      "release_status": "internal-reference-only",
-      "valid_categories": ["image", "pdf"],
-      "compute_modes": ["cpu"],
-      "accelerator_control": "none for rapidocr-onnxruntime default package",
-      "baseline_required": false,
-      "license_gate": "May be promoted only after dependency/model license review, offline model packaging review, and packaged-runtime validation.",
-      "notes": "Reference OCR pathway for comparing Apple Vision OCR against RapidOCR output."
-    },
-    "internal-reference-paddleocr": {
-      "owner": "developer benchmark environment only",
-      "runner": "scripts/benchmark.sh --pathway internal-reference-paddleocr",
-      "release_status": "internal-reference-only",
-      "deprecated": true,
-      "blocked": true,
-      "valid_categories": ["image", "pdf"],
-      "compute_modes": ["cpu", "gpu"],
-      "accelerator_control": "environment-dependent; developer reference only",
-      "baseline_required": false,
-      "license_gate": "May be promoted only after dependency/model license review, offline model packaging review, and packaged-runtime validation.",
-      "notes": "Blocked/deprecated reference pathway. The 2026-06-01 M4 Pro benchmark required external model downloads, had multiple 45-second per-document timeouts, and showed native-process stability risk. Keep only as historical evidence unless a future ADR proves a safe isolated worker and material quality uplift."
+    "swift-epub": {
+      "owner": "Services/NativeEPUBConverter.swift",
+      "runner": "xcode-test",
+      "release_status": "shipping",
+      "valid_formats": [
+        "epub"
+      ],
+      "compute_modes": [
+        "cpu"
+      ],
+      "accelerator_control": "none",
+      "baseline_required": true,
+      "notes": "In-process EPUB-to-Markdown: SwiftOfficeMarkdown ZipReader + OPF spine ordering + the native HTML walker. Replaces the Python MarkItDown EPUB path."
     }
   }
 }

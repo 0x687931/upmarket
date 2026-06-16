@@ -169,6 +169,8 @@ enum ContentClassifier {
         case .txt, .md, .csv:
             return .nativeText
         default:
+            // EPUB/XLSX/PPTX are Pro: converted natively by ConversionRunner once the tier
+            // gate clears, but not classified Basic-native here.
             return nil
         }
     }

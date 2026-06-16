@@ -12,7 +12,7 @@ enum ConversionError: Error, Equatable, LocalizedError {
     case modelUnavailable
     case downloadFailed
     case upgradeRequired
-    case pythonRuntime(String)
+    case engineFailed(String)
     case failed(String)
 
     var diagnosticCode: String {
@@ -39,8 +39,8 @@ enum ConversionError: Error, Equatable, LocalizedError {
             return "model.download-failed"
         case .upgradeRequired:
             return "entitlement.upgrade-required"
-        case .pythonRuntime:
-            return "runtime.bridge"
+        case .engineFailed:
+            return "engine.failed"
         case .failed:
             return "conversion.failed"
         }
@@ -70,7 +70,7 @@ enum ConversionError: Error, Equatable, LocalizedError {
             return "Model download failed. Check your connection and try again from Settings."
         case .upgradeRequired:
             return "This document needs AI or Enhanced conversion. Upgrade to Pro to convert it."
-        case .pythonRuntime:
+        case .engineFailed:
             return "The conversion engine couldn't start. Please try again."
         case .failed(let message):
             return message
