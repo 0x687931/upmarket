@@ -47,7 +47,7 @@ Icon?
 !.claude/settings.json
 !.claude/hooks
 .claude/hooks/*
-!.claude/hooks/require-worktree.sh
+!.claude/hooks/*.sh
 
 # Dependencies
 Upmarket/Python/python-stdlib/
