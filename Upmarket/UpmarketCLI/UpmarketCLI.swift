@@ -4,9 +4,9 @@ import PDFKit
 
 // upmarket-cli — standalone document → Markdown converter. Runs the same Apple-native
 // engines as the app in-process (PDFKit / Vision via the shared VisionDocumentExtractor,
-// classification via the shared NativeDocumentClassifier). All routing/validation logic is
-// shared with the app via Upmarket/Shared/. Office/markup formats are converted by the app
-// itself; the command-line tool handles PDF, images, and plain text.
+// routing via the shared ContentClassifier — the exact same router the app uses). All
+// routing/validation logic is shared via Upmarket/Shared/. PDF, images, and plain text run
+// in-process; AI/Granite, Office, EPUB, and HTML are handed to the app over the handoff.
 
 private let maxInputBytes: Int64 = 500 * 1024 * 1024
 
@@ -147,16 +147,23 @@ private enum UpmarketCLI {
             try validateInput(inputURL)
             try validateOutputDestination(outURL, force: options.force)
 
-            let pathway = try await resolvePathway(for: inputURL, engine: options.engine, debug: options.debug)
-            debugLog("file=\(inputURL.lastPathComponent) engine=\(pathway.rawValue)", options.debug)
+            switch try await route(for: inputURL, engine: options.engine, debug: options.debug) {
+            case .broker(let useAI):
+                // AI/Granite, Office, EPUB, HTML — handed to the app, which owns those engines.
+                let text = try await brokerToApp(
+                    inputURL: inputURL, useAI: useAI,
+                    outputMode: options.outputFormat.rawValue, debug: options.debug)
+                try write(text, to: outURL, force: options.force)
 
-            let start = Date()
-            var document = try await execute(pathway: pathway, inputURL: inputURL, debug: options.debug)
-            document = validateAndRepair(document, debug: options.debug)
-            debugLog("pages=\(document.pages) pipeline=\(document.pipeline) elapsed=\(String(format: "%.2fs", Date().timeIntervalSince(start)))", options.debug)
-
-            let rendered = render(document, sourceName: inputURL.lastPathComponent, mode: options.outputFormat)
-            try write(rendered, to: outURL, force: options.force)
+            case .inProcess(let pathway):
+                debugLog("file=\(inputURL.lastPathComponent) engine=\(pathway.rawValue)", options.debug)
+                let start = Date()
+                var document = try await execute(pathway: pathway, inputURL: inputURL, debug: options.debug)
+                document = validateAndRepair(document, debug: options.debug)
+                debugLog("pages=\(document.pages) pipeline=\(document.pipeline) elapsed=\(String(format: "%.2fs", Date().timeIntervalSince(start)))", options.debug)
+                let rendered = render(document, sourceName: inputURL.lastPathComponent, mode: options.outputFormat)
+                try write(rendered, to: outURL, force: options.force)
+            }
         }
     }
 
@@ -173,40 +180,99 @@ private enum UpmarketCLI {
         }
     }
 
-    /// Picks the concrete engine. `--auto` runs the Apple classifier for PDFs and
-    /// uses format-based routing for everything else, mirroring the app.
-    private static func resolvePathway(for inputURL: URL, engine: Engine, debug: Bool) async throws -> Pathway {
+    /// Where a document runs: in-process (the CLI's Apple engines) or brokered to the app.
+    private enum Route {
+        case inProcess(Pathway)
+        case broker(useAI: Bool)
+    }
+
+    /// The single routing decision, shared with the app via ContentClassifier. `--auto`/`--pro`
+    /// let the classifier choose; `--max/--ai` forces AI; `--basic` forces the in-process path.
+    /// PDF/image/text run in-process; AI/Office/EPUB/HTML are handed to the app.
+    private static func route(for inputURL: URL, engine: Engine, debug: Bool) async throws -> Route {
+        if engine == .ai { return .broker(useAI: true) }
+
         let ext = inputURL.pathExtension.lowercased()
-        let isPDF = ext == "pdf"
-        let isImage = imageExtensions.contains(ext)
-        let isText = ext == "txt" || ext == "md" || ext == "csv"
-
-        // Office/markup formats are app-only; the CLI converts PDF, images, and text.
-        func nativeRoute() throws -> Pathway {
-            if isPDF { return .pdfkit }      // execute() falls back to Vision if no text
-            if isImage { return .vision }
-            if isText { return .text }
-            throw CommandError(.inputRejected,
-                "The command-line tool converts PDF, image, and text files. Open Upmarket to convert .\(ext) documents.")
+        func nativeRoute() -> Route {
+            if ext == "pdf" { return .inProcess(.pdfkit) }   // execute() falls back to Vision if no text
+            if imageExtensions.contains(ext) { return .inProcess(.vision) }
+            if ext == "txt" || ext == "md" || ext == "csv" { return .inProcess(.text) }
+            return .broker(useAI: false)                     // Office/EPUB/HTML/etc. → app
         }
 
-        switch engine {
-        case .native, .complex, .ai:
-            return try nativeRoute()
-        case .auto:
-            if isPDF {
-                if let classification = try? await NativeDocumentClassifier.classify(pdfURL: inputURL) {
-                    debugLog("auto: classifier=\(classification.recommendedPathway.rawValue) reasons=[\(classification.reasons.joined(separator: ", "))]", debug)
-                    switch classification.recommendedPathway {
-                    case .pdfKit:             return .pdfkit
-                    case .visionOCR, .enhanced: return .vision
-                    }
-                }
-                debugLog("auto: classification unavailable → PDFKit", debug)
-                return .pdfkit
+        // --basic/--native forces the in-process Apple path; everything else routes by content.
+        if engine == .native { return nativeRoute() }
+
+        guard let classification = await ContentClassifier.classify(fileURL: inputURL) else {
+            debugLog("auto: classification unavailable → format default", debug)
+            return nativeRoute()
+        }
+        debugLog("auto: classifier=\(classification.recommendedPathway.rawValue) kind=\(classification.kind.diagnosticLabel)", debug)
+        switch classification.recommendedPathway {
+        case .pdfKit:                                       return .inProcess(.pdfkit)
+        case .visionOCR, .enhanced:                         return .inProcess(.vision)
+        case .nativeText:                                   return .inProcess(.text)
+        case .ai:                                           return .broker(useAI: true)
+        case .nativeOffice, .nativeHTML, .nativeEPUB, .speech, .metadata:
+                                                            return .broker(useAI: false)
+        }
+    }
+
+    /// Hands a conversion to the running app over the shared handoff: write request.json + the
+    /// input into CLIHandoffs/<id>/, open upmarket://convert?cli=<id>, poll for response.json.
+    private static func brokerToApp(inputURL: URL, useAI: Bool, outputMode: String, debug: Bool) async throws -> String {
+        let fm = FileManager.default
+        guard let root = CLIHandoffPaths.rootURL(fileManager: fm) else {
+            throw CommandError(.conversionFailed, "Open the Upmarket app to convert this document.")
+        }
+        let id = UUID().uuidString
+        let dir = CLIHandoffPaths.handoffDirectory(id: id, root: root)
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: dir) }
+
+        let inputName = "input." + (inputURL.pathExtension.isEmpty ? "dat" : inputURL.pathExtension.lowercased())
+        try fm.copyItem(at: inputURL, to: dir.appendingPathComponent(inputName))
+        let request = CLIConversionRequest(
+            version: 1, inputFile: inputName, sourceDisplayName: inputURL.lastPathComponent,
+            useAI: useAI, outputMode: outputMode)
+        try JSONEncoder().encode(request).write(to: dir.appendingPathComponent("request.json"), options: .atomic)
+
+        debugLog("brokering to app: id=\(id) useAI=\(useAI)", debug)
+        try openURLScheme("upmarket://convert?cli=\(id)")
+
+        let responseURL = dir.appendingPathComponent("response.json")
+        let deadline = Date().addingTimeInterval(600)   // VLM over many pages is slow
+        while !fm.fileExists(atPath: responseURL.path) {
+            if Date() > deadline {
+                throw CommandError(.conversionFailed, "Timed out waiting for the Upmarket app. Make sure Upmarket is installed.")
             }
-            return try nativeRoute()
+            try await Task.sleep(nanoseconds: 250_000_000)
         }
+
+        let response = try JSONDecoder().decode(CLIConversionResponse.self, from: Data(contentsOf: responseURL))
+        switch response.status {
+        case .success:
+            guard let outputFile = response.outputFile else {
+                throw CommandError(.conversionFailed, "Upmarket returned no output.")
+            }
+            return try String(contentsOf: dir.appendingPathComponent(outputFile), encoding: .utf8)
+        case .purchaseRequired:
+            throw CommandError(.purchaseRequired, response.message ?? "Open Upmarket to unlock more conversions.")
+        case .aiUnavailable:
+            throw CommandError(.aiUnavailable, response.message ?? "Upmarket AI is not available for this conversion.")
+        case .inputRejected:
+            throw CommandError(.inputRejected, response.message ?? "Upmarket couldn't read this document.")
+        case .conversionFailed:
+            throw CommandError(.conversionFailed, response.message ?? "Upmarket couldn't convert this document.")
+        }
+    }
+
+    private static func openURLScheme(_ string: String) throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        process.arguments = [string]
+        try process.run()
+        process.waitUntilExit()
     }
 
     private static func execute(pathway: Pathway, inputURL: URL, debug: Bool) async throws -> ConvertedDocument {

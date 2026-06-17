@@ -15,6 +15,9 @@ import Vision
 ///
 /// The result drives routing in ConversionRunner: which pipeline to use, and
 /// whether the user needs to upgrade before conversion can proceed.
+// Local logger so this router can live in Shared (app/CLI/MCP) without the app's AppLog.
+private let classifierLog = Logger(subsystem: "com.upmarket.app", category: "conversion")
+
 enum ContentClassifier {
 
     // MARK: - Public types
@@ -209,7 +212,7 @@ enum ContentClassifier {
             pathway = supportsAI ? .ai : .visionOCR
         }
 
-        AppLog.conversion.info(
+        classifierLog.info(
             "ContentClassifier PDF kind=\(kind.diagnosticLabel, privacy: .public) tier=\(tier.diagnosticLabel, privacy: .public) pathway=\(pathway.rawValue, privacy: .public)"
         )
         return Classification(
@@ -233,7 +236,7 @@ enum ContentClassifier {
         let frameCount = imageFrameCount(fileURL: fileURL)
 
         if frameCount > 1 {
-            AppLog.conversion.info(
+            classifierLog.info(
                 "ContentClassifier image multi-page frameCount=\(frameCount, privacy: .public) → scanned document"
             )
             return Classification(
@@ -261,7 +264,7 @@ enum ContentClassifier {
         let hasText = textSignal.wordCount >= 10
 
         if hasText {
-            AppLog.conversion.info(
+            classifierLog.info(
                 "ContentClassifier image wordCount=\(textSignal.wordCount, privacy: .public) → scanned document"
             )
             return Classification(
@@ -273,7 +276,7 @@ enum ContentClassifier {
                 recommendedPathway: supportsAI ? .ai : .visionOCR
             )
         } else {
-            AppLog.conversion.info(
+            classifierLog.info(
                 "ContentClassifier image wordCount=\(textSignal.wordCount, privacy: .public) → no extractable text → metadata"
             )
             return Classification(
