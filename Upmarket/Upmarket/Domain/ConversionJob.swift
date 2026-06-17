@@ -51,6 +51,10 @@ struct ConversionJob: Identifiable, Equatable {
 
     var stage: ConversionStage
     var result: ConversionResult?
+    /// Where the converted file was auto-saved on completion (nil until saved, or
+    /// if the user cancelled/declined the save). Open/Reveal reuse this instead of
+    /// re-saving, so they don't create duplicate files.
+    var savedURL: URL?
     var lastProgressAt: Date
     var isStalled: Bool
     var progressFraction: Double?
