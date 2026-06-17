@@ -45,7 +45,9 @@ jobs:
       # Window-driven UI tests (main window/Preferences/Paywall/etc.) can't be
       # foregrounded by XCUITest on the headless runner; skip them here (they run
       # locally). See UpmarketUITests.skipIfWindowTestUnsupportedOnCI.
-      UPMARKET_SKIP_WINDOW_UITESTS: "1"
+      # The TEST_RUNNER_ prefix makes xcodebuild forward this into the XCUITest
+      # runner process (as UPMARKET_SKIP_WINDOW_UITESTS); a plain env var does not reach it.
+      TEST_RUNNER_UPMARKET_SKIP_WINDOW_UITESTS: "1"
     steps:
       - uses: actions/checkout@v4
 

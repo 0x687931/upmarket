@@ -25,8 +25,12 @@ final class UpmarketUITests: XCTestCase {
     /// (and can be a required check). They still run locally. The floating shelf and
     /// non-window tests are unaffected.
     private func skipIfWindowTestUnsupportedOnCI() throws {
+        // The workflow sets TEST_RUNNER_UPMARKET_SKIP_WINDOW_UITESTS; xcodebuild forwards
+        // TEST_RUNNER_-prefixed vars into the runner process, usually stripping the prefix.
+        // Check both names so we're robust to whether the prefix is stripped.
         let env = ProcessInfo.processInfo.environment
-        let onCI = env["UPMARKET_SKIP_WINDOW_UITESTS"] == "1" || env["GITHUB_ACTIONS"] == "true"
+        let onCI = env["UPMARKET_SKIP_WINDOW_UITESTS"] == "1"
+            || env["TEST_RUNNER_UPMARKET_SKIP_WINDOW_UITESTS"] == "1"
         guard onCI else { return }
         let windowDrivenTests: Set<String> = [
             "testContentViewChooseDocumentButton",
