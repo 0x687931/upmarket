@@ -23,7 +23,6 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            statusBanner
             dropZoneView
 
             Rectangle()
@@ -32,6 +31,8 @@ struct ContentView: View {
 
             queueListView
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            statusBanner
         }
         .accessibilityIdentifier("PrimaryConversionView")
         .frame(width: 480, height: 560)
@@ -178,6 +179,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private var statusBanner: some View {
+        Divider()
         HStack(spacing: 8) {
             switch store.tier {
             case .basic:
@@ -213,7 +215,6 @@ struct ContentView: View {
         .background(store.tier == .basic
             ? Color.accentColor.opacity(0.05)
             : (store.tier == .pro ? Color.accentColor.opacity(0.04) : AppTheme.Colour.sectionAmber.opacity(0.04)))
-        Divider()
     }
 
     // MARK: - Language Warning
