@@ -46,6 +46,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupUITestWindows() {
         guard AppRuntime.isRunningUITests else { return }
+        // The app defaults to .accessory (menu-bar agent) when the dock icon is hidden,
+        // and an accessory app's normal windows aren't reliably foregrounded for XCUITest
+        // (the floating shelf panel is the exception). Force a regular, activated app under
+        // UI test so the main window, Preferences, and Paywall become visible and hittable.
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
         MainWindowController.shared.show()
         if AppRuntime.isOpeningPaywall {
             PaywallWindowController.shared.show()
