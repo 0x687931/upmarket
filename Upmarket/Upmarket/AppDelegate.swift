@@ -35,6 +35,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupServices()
         setupBackgroundTasks()
         setupObservers()
+        // Service CLI/MCP conversion requests as files appear — no URL-scheme dependency.
+        if !AppRuntime.isRunningTests { CLIHandoffWatcher.shared.start() }
         AppLaunchMetrics.mark("post-launch-services")
     }
 

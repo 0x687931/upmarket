@@ -226,21 +226,25 @@ private enum UpmarketCLI {
             throw CommandError(.conversionFailed, "Open the Upmarket app to convert this document.")
         }
         let id = UUID().uuidString
-        let dir = CLIHandoffPaths.handoffDirectory(id: id, root: root)
-        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
-        defer { try? fm.removeItem(at: dir) }
+        let finalDir = CLIHandoffPaths.handoffDirectory(id: id, root: root)
+        // Stage the request beside its destination, then atomic-move it in, so the app's handoff
+        // watcher only ever sees a complete <uuid>/ (request.json + input) — no partial-read race.
+        let stagingDir = finalDir.deletingLastPathComponent().appendingPathComponent("\(id).staging", isDirectory: true)
+        try fm.createDirectory(at: stagingDir, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: finalDir); try? fm.removeItem(at: stagingDir) }
 
         let inputName = "input." + (inputURL.pathExtension.isEmpty ? "dat" : inputURL.pathExtension.lowercased())
-        try fm.copyItem(at: inputURL, to: dir.appendingPathComponent(inputName))
+        try fm.copyItem(at: inputURL, to: stagingDir.appendingPathComponent(inputName))
         let request = CLIConversionRequest(
             version: 1, inputFile: inputName, sourceDisplayName: inputURL.lastPathComponent,
             useAI: useAI, outputMode: outputMode)
-        try JSONEncoder().encode(request).write(to: dir.appendingPathComponent("request.json"), options: .atomic)
+        try JSONEncoder().encode(request).write(to: stagingDir.appendingPathComponent("request.json"), options: .atomic)
+        try fm.moveItem(at: stagingDir, to: finalDir)
 
         debugLog("brokering to app: id=\(id) useAI=\(useAI)", debug)
-        try openURLScheme("upmarket://convert?cli=\(id)")
+        launchAppIfNeeded()   // any running instance's watcher services the request
 
-        let responseURL = dir.appendingPathComponent("response.json")
+        let responseURL = finalDir.appendingPathComponent("response.json")
         let deadline = Date().addingTimeInterval(600)   // VLM over many pages is slow
         while !fm.fileExists(atPath: responseURL.path) {
             if Date() > deadline {
@@ -255,7 +259,7 @@ private enum UpmarketCLI {
             guard let outputFile = response.outputFile else {
                 throw CommandError(.conversionFailed, "Upmarket returned no output.")
             }
-            return try String(contentsOf: dir.appendingPathComponent(outputFile), encoding: .utf8)
+            return try String(contentsOf: finalDir.appendingPathComponent(outputFile), encoding: .utf8)
         case .purchaseRequired:
             throw CommandError(.purchaseRequired, response.message ?? "Open Upmarket to unlock more conversions.")
         case .aiUnavailable:
@@ -267,11 +271,13 @@ private enum UpmarketCLI {
         }
     }
 
-    private static func openURLScheme(_ string: String) throws {
+    /// Launch Upmarket in the background by bundle id (no-op if already running) so its handoff
+    /// watcher can service the request. No URL scheme → no LaunchServices routing fragility.
+    private static func launchAppIfNeeded() {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        process.arguments = [string]
-        try process.run()
+        process.arguments = ["-g", "-b", "com.upmarket.app"]
+        try? process.run()
         process.waitUntilExit()
     }
 
