@@ -42,6 +42,10 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
       DERIVED_DATA_DIR: build/DerivedData
       UPMARKET_RESULT_BUNDLE_DIR: build/TestResults
+      # Window-driven UI tests (main window/Preferences/Paywall/etc.) can't be
+      # foregrounded by XCUITest on the headless runner; skip them here (they run
+      # locally). See UpmarketUITests.skipIfWindowTestUnsupportedOnCI.
+      UPMARKET_SKIP_WINDOW_UITESTS: "1"
     steps:
       - uses: actions/checkout@v4
 
