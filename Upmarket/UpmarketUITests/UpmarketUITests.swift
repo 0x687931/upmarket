@@ -15,6 +15,38 @@ final class UpmarketUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         XCUIApplication().terminate()
+        try skipIfWindowTestUnsupportedOnCI()
+    }
+
+    /// Tests that drive the app's normal windows (main window, Preferences, Paywall,
+    /// Manage Models, Report a Problem) are unreliable on the headless CI runner —
+    /// XCUITest can't foreground/snapshot those windows there, though they pass on a
+    /// real local GUI session. Skip them in CI so xctest-ui reflects a runnable signal
+    /// (and can be a required check). They still run locally. The floating shelf and
+    /// non-window tests are unaffected.
+    private func skipIfWindowTestUnsupportedOnCI() throws {
+        // The workflow sets TEST_RUNNER_UPMARKET_SKIP_WINDOW_UITESTS; xcodebuild forwards
+        // TEST_RUNNER_-prefixed vars into the runner process, usually stripping the prefix.
+        // Check both names so we're robust to whether the prefix is stripped.
+        let env = ProcessInfo.processInfo.environment
+        let onCI = env["UPMARKET_SKIP_WINDOW_UITESTS"] == "1"
+            || env["TEST_RUNNER_UPMARKET_SKIP_WINDOW_UITESTS"] == "1"
+        guard onCI else { return }
+        let windowDrivenTests: Set<String> = [
+            "testContentViewChooseDocumentButton",
+            "testDropZoneVisibility",
+            "testDropZoneAccessibilityLabel",
+            "testManageModelsButtonStyle",
+            "testPaywallCTAAndRestoreButtonsPresent",
+            "testPreferencesInteractiveControls",
+            "testPreferencesMenuItemAccessibility",
+            "testPreferencesTabSwitching",
+            "testPreferencesWindowMaximumSize",
+            "testReportProblemCategorySelection",
+        ]
+        if windowDrivenTests.contains(where: { name.contains($0) }) {
+            throw XCTSkip("Window-driven UI automation is unreliable on the headless CI runner; runs locally only.")
+        }
     }
 
     override func tearDownWithError() throws {
