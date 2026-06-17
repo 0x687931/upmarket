@@ -61,6 +61,10 @@ write_local_entitlements() {
     <true/>
     <key>com.apple.security.files.user-selected.read-write</key>
     <true/>
+    <key>com.apple.security.application-groups</key>
+    <array>
+        <string>group.com.upmarket.app</string>
+    </array>
 </dict>
 </plist>
 PLIST
