@@ -4,39 +4,47 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [main]
-    paths:
-      - ".github/workflows/ui-automation.yml"
-      - "scripts/build/**"
-      - "scripts/ci/gate.sh"
-      - "Upmarket/Upmarket.xcodeproj/**"
-      - "Upmarket/Upmarket/AppDelegate.swift"
-      - "Upmarket/Upmarket/AppRuntime.swift"
-      - "Upmarket/Upmarket/UpmarketApp.swift"
-      - "Upmarket/Upmarket/Assets.xcassets/**"
-      - "Upmarket/Upmarket/Views/**"
-      - "Upmarket/Upmarket/Services/ShelfWindowController.swift"
-      - "Upmarket/Upmarket/Services/AppVisibilityPreference.swift"
-      - "Upmarket/Upmarket/Services/StoreManager.swift"
-      - "Upmarket/UpmarketUITests/**"
   push:
     branches: [main]
-    paths:
-      - ".github/workflows/ui-automation.yml"
-      - "scripts/build/**"
-      - "scripts/ci/gate.sh"
-      - "Upmarket/Upmarket.xcodeproj/**"
-      - "Upmarket/Upmarket/AppDelegate.swift"
-      - "Upmarket/Upmarket/AppRuntime.swift"
-      - "Upmarket/Upmarket/UpmarketApp.swift"
-      - "Upmarket/Upmarket/Assets.xcassets/**"
-      - "Upmarket/Upmarket/Views/**"
-      - "Upmarket/Upmarket/Services/ShelfWindowController.swift"
-      - "Upmarket/Upmarket/Services/AppVisibilityPreference.swift"
-      - "Upmarket/Upmarket/Services/StoreManager.swift"
-      - "Upmarket/UpmarketUITests/**"
 
+# The expensive macOS UI-automation job only runs when UI-relevant paths change
+# (decided by the `changes` job). `xctest-ui-gate` always runs and reports the
+# required status context, so PRs that don't touch UI paths aren't blocked by a
+# check that never reports. Branch protection should require `xctest-ui-gate`,
+# not `xctest-ui` directly.
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      ui: ${{ steps.filter.outputs.ui }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: filter
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "pull_request" ]; then
+            range="${PR_BASE}...HEAD"
+          elif [ "$EVENT" = "push" ] && [ -n "${PUSH_BEFORE:-}" ] && [ "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            range="${PUSH_BEFORE}...HEAD"
+          else
+            range=""   # workflow_dispatch / first push — can't diff, run to be safe
+          fi
+          pattern='^(\.github/workflows/ui-automation\.yml|scripts/build/|scripts/ci/gate\.sh|Upmarket/Upmarket\.xcodeproj/|Upmarket/Upmarket/(AppDelegate|AppRuntime|UpmarketApp)\.swift|Upmarket/Upmarket/Assets\.xcassets/|Upmarket/Upmarket/Views/|Upmarket/Upmarket/Services/(ShelfWindowController|AppVisibilityPreference|StoreManager)\.swift|Upmarket/UpmarketUITests/)'
+          if [ -z "$range" ] || git diff --name-only "$range" | grep -qE "$pattern"; then
+            echo "ui=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ui=false" >> "$GITHUB_OUTPUT"
+          fi
+
   xctest-ui:
+    needs: changes
+    if: needs.changes.outputs.ui == 'true'
     runs-on: macos-26
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
@@ -71,3 +79,33 @@ jobs:
           name: upmarket-ui-xcresult
           path: build/TestResults/*.xcresult
           if-no-files-found: ignore
+
+  # Always-running required status. Passes when UI paths were untouched (the macOS
+  # job is correctly skipped) or when it ran and passed; fails only when it ran and
+  # did not pass. This is the context to mark required in branch protection.
+  xctest-ui-gate:
+    needs: [changes, xctest-ui]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gate on xctest-ui result
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          UI_CHANGED: ${{ needs.changes.outputs.ui }}
+          XCTEST_RESULT: ${{ needs.xctest-ui.result }}
+        run: |
+          set -euo pipefail
+          if [ "$CHANGES_RESULT" != "success" ]; then
+            echo "changes job did not succeed ($CHANGES_RESULT) — failing gate."
+            exit 1
+          fi
+          if [ "$UI_CHANGED" != "true" ]; then
+            echo "No UI-relevant changes — xctest-ui skipped; gate passes."
+            exit 0
+          fi
+          if [ "$XCTEST_RESULT" = "success" ]; then
+            echo "xctest-ui passed; gate passes."
+            exit 0
+          fi
+          echo "xctest-ui result=$XCTEST_RESULT — failing gate."
+          exit 1
