@@ -123,6 +123,8 @@ struct VisionDocumentExtractor {
         var structuredTables: [TableRepair.StructuredTable] = []
         var elementType: String? = nil
         var handwritingSum: Double = 0
+        var bodyTextAll = ""
+        var bodyParts: [String] = []
 
         for obs in observations {
             let doc = obs.document
@@ -141,7 +143,7 @@ struct VisionDocumentExtractor {
             }
             // Body text
             let body = textFromContainer(doc.text).trimmingCharacters(in: .whitespacesAndNewlines)
-            if !body.isEmpty { parts.append(body) }
+            if !body.isEmpty { parts.append(body); bodyParts.append(body); bodyTextAll += "\n" + body }
             // Tables
             for table in doc.tables {
                 parts.append(tableToMarkdown(table))
@@ -162,10 +164,140 @@ struct VisionDocumentExtractor {
             handwritingSum += 0.0
         }
 
+        // ponytail: Vision misses TALL tables (validated on FinTabNet n=200: it fails to detect
+        // ~40% of tables, all row-count-bound, not resolution-bound). Fallback — slice the image
+        // into overlapping horizontal strips, re-run Vision per strip, stitch the cell grids back.
+        // Gated on "no table detected but the page reads as numeric/columnar" so prose pages don't
+        // pay the extra Vision passes. Tighten via NativeDocumentClassifier if it ever bands prose.
+        if tables == 0, looksTabular(bodyTextAll) {
+            for st in try await extractTablesByBanding(cgImage) {
+                parts.append(gridToMarkdown(st.rows))
+                tables += 1
+                structuredTables.append(st)
+            }
+            // The banded table IS the page content — drop the duplicate body-text prose.
+            if tables > 0 { parts.removeAll { bodyParts.contains($0) } }
+        }
+
         // Average handwriting across observations
         let avgHandwriting = observations.isEmpty ? 0.0 : handwritingSum / Double(observations.count)
 
         return (parts.joined(separator: "\n\n"), tables, lists, structuredTables, elementType, avgHandwriting)
+    }
+
+    // MARK: - Banding fallback for tall tables
+
+    /// Slice the image into overlapping horizontal strips (Vision detects short tables reliably),
+    /// run RecognizeDocumentsRequest per strip, and stitch the per-strip cell grids back together.
+    @available(macOS 26, *)
+    private static func extractTablesByBanding(_ cgImage: CGImage) async throws -> [TableRepair.StructuredTable] {
+        // ponytail: 200px strips / 110px overlap tuned on FinTabNet table crops (n=200). These are
+        // absolute pixels; revisit if page-scale renders shift the rows-per-strip much off ~6.
+        let bandHeight = 200, overlap = 110, step = bandHeight - overlap
+        let h = cgImage.height
+        var bandGrids: [[[String]]] = []
+        var top = 0
+        while top < h {
+            try Task.checkCancellation()
+            let rect = CGRect(x: 0, y: top, width: cgImage.width, height: min(bandHeight, h - top))
+            if let band = cgImage.cropping(to: rect) {
+                let obs = try await ImageRequestHandler(band).perform(RecognizeDocumentsRequest())
+                if let grid = biggestTableGrid(obs) { bandGrids.append(grid) }
+            }
+            if top + bandHeight >= h { break }
+            top += step
+        }
+        let stitched = stitchGrids(bandGrids)
+        return stitched.isEmpty ? [] : [TableRepair.StructuredTable(rows: stitched)]
+    }
+
+    /// The table with the most cells across all observations in a strip, as a row-major grid.
+    @available(macOS 26, *)
+    private static func biggestTableGrid(_ observations: [DocumentObservation]) -> [[String]]? {
+        var best: [[String]]? = nil
+        var bestCells = 0
+        for obs in observations {
+            for table in obs.document.tables {
+                let grid = table.rows.map { row in
+                    row.map { textFromContainerBox($0.content).replacingOccurrences(of: "\n", with: " ") }
+                }
+                let cells = grid.reduce(0) { $0 + $1.count }
+                if cells > bestCells { bestCells = cells; best = grid }
+            }
+        }
+        return best
+    }
+
+    /// Concatenate strip grids top-to-bottom, dropping rows that duplicate the previous strip's
+    /// tail (the overlap region), then normalize every row to the modal column count.
+    static func stitchGrids(_ grids: [[[String]]]) -> [[String]] {
+        var result: [[String]] = []
+        for rows in grids where !rows.isEmpty {
+            var skip = 0
+            var k = min(result.count, rows.count, 4)
+            while k > 0 {
+                let tail = Array(result.suffix(k)), head = Array(rows.prefix(k))
+                if zip(tail, head).allSatisfy({ rowsEqual($0, $1) }) { skip = k; break }
+                k -= 1
+            }
+            result.append(contentsOf: rows.dropFirst(skip))
+        }
+        guard !result.isEmpty else { return [] }
+        let modal = modalCount(result.map { $0.count })
+        var out: [[String]] = []
+        for row in result {
+            if row.count == modal { out.append(row) }
+            else if row.count < modal { out.append(row + Array(repeating: "", count: modal - row.count)) }
+            // rows with too many columns are strip-edge artifacts -> dropped
+        }
+        // Drop consecutive rows sharing a non-empty first-column key: overlap dupes
+        // whose OCR differed across strips slip past the exact suffix/prefix match.
+        var deduped: [[String]] = []
+        for row in out {
+            if let last = deduped.last, rowsEqual(last, row) { continue }
+            deduped.append(row)
+        }
+        return deduped.isEmpty ? result : deduped
+    }
+
+    private static func rowNorm(_ row: [String]) -> String {
+        row.map { $0.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) }.joined(separator: "|")
+    }
+
+    /// Two rows are "the same" if their normalized text matches, OR they share a
+    /// non-empty first-column key (the row label) — robust to OCR drift across strips.
+    private static func rowsEqual(_ a: [String], _ b: [String]) -> Bool {
+        if rowNorm(a) == rowNorm(b) { return true }
+        let ka = a.first?.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let kb = b.first?.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return !ka.isEmpty && ka == kb
+    }
+
+    private static func modalCount(_ counts: [Int]) -> Int {
+        var freq: [Int: Int] = [:]
+        for c in counts { freq[c, default: 0] += 1 }
+        return freq.max { $0.value < $1.value }?.key ?? 0
+    }
+
+    private static func gridToMarkdown(_ rows: [[String]]) -> String {
+        guard !rows.isEmpty else { return "" }
+        var lines: [String] = []
+        for (i, row) in rows.enumerated() {
+            lines.append("| " + row.joined(separator: " | ") + " |")
+            if i == 0 { lines.append("| " + row.map { _ in "---" }.joined(separator: " | ") + " |") }
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    /// Cheap "this page is a numeric/columnar table" signal: enough lines, many with ≥2 digit runs.
+    /// ponytail: targets the validated financial-table case; widen if sparse/text tables get missed.
+    private static func looksTabular(_ text: String) -> Bool {
+        let lines = text.split(separator: "\n").map(String.init).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        guard lines.count >= 6 else { return false }
+        let columnar = lines.filter { line in
+            line.split(whereSeparator: { !$0.isNumber }).filter { !$0.isEmpty }.count >= 2
+        }
+        return Double(columnar.count) / Double(lines.count) >= 0.3
     }
 
 
