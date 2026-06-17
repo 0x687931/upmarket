@@ -226,6 +226,10 @@ struct ShelfView: View {
                 displayMode = hasQueueItems ? .queue : .peek
             }
         }
+        // Surfaced to UI automation as a button (it's a tap target, not a Button view).
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityIdentifier("ShelfMini")
         .transition(.scale(scale: 0.86).combined(with: .opacity))
     }
 
@@ -335,21 +339,24 @@ struct ControlStrip: View {
                 color: AppTheme.Colour.trafficRed,
                 icon: "xmark",
                 action: onHide,
-                tooltip: "Hide shelf"
+                tooltip: "Hide shelf",
+                accessibilityID: "ShelfCloseButton"
             )
 
             StripButton(
                 color: AppTheme.Colour.trafficGreen,
                 icon: "plus",
                 action: onAdd,
-                tooltip: "Add files"
+                tooltip: "Add files",
+                accessibilityID: "ShelfAddButton"
             )
 
             StripButton(
                 color: AppTheme.Colour.iconGlyphTint,
                 icon: expanded ? "chevron.left" : "chevron.right",
                 action: onToggle,
-                tooltip: expanded ? "Collapse" : "Show queue"
+                tooltip: expanded ? "Collapse" : "Show queue",
+                accessibilityID: "ShelfToggleButton"
             )
         }
         .frame(width: ShelfLayout.controlStripWidth)
@@ -364,6 +371,7 @@ struct StripButton: View {
     let icon: String
     let action: () -> Void
     let tooltip: String
+    var accessibilityID: String = ""
     @State private var hovered = false
 
     var body: some View {
@@ -379,6 +387,7 @@ struct StripButton: View {
         }
         .buttonStyle(.plain)
         .help(tooltip)
+        .accessibilityIdentifier(accessibilityID)
         .onHover { hovered = $0 }
     }
 }

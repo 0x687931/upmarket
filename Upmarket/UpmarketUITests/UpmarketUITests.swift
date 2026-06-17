@@ -666,7 +666,9 @@ final class UpmarketUITests: XCTestCase {
         let miniShelf = app.buttons.matching(identifier: "ShelfMini").firstMatch
         XCTAssertTrue(miniShelf.waitForExistence(timeout: 3), "Mini shelf button must appear")
 
-        // Test rapid tapping
+        // Rapid-tap resilience: tapping the mini shelf expands it (the mini target is
+        // replaced by the control strip), so it can't "remain". Verify instead that the
+        // shelf survived the interaction and reached its expanded, functional state.
         for _ in 0..<20 {
             if miniShelf.isHittable {
                 miniShelf.tap()
@@ -674,7 +676,11 @@ final class UpmarketUITests: XCTestCase {
             }
         }
 
-        XCTAssertTrue(miniShelf.exists, "Mini shelf should remain after rapid taps")
+        let closeButton = app.buttons.matching(identifier: "ShelfCloseButton").firstMatch
+        XCTAssertTrue(
+            closeButton.waitForExistence(timeout: 2),
+            "Shelf must remain functional (expanded control strip) after tapping the mini shelf"
+        )
     }
 
     @MainActor

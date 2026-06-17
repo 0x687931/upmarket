@@ -68,6 +68,7 @@ final class ShelfWindowController: NSWindowController {
         panel.animationBehavior       = .utilityWindow
         panel.titlebarAppearsTransparent = true
         panel.titleVisibility         = .hidden
+        panel.setAccessibilityIdentifier("ShelfWindow")
         return panel
     }
 
