@@ -792,8 +792,11 @@ final class ConversionQueueTests: XCTestCase {
 
     // MARK: - Helpers
 
+    // Cap at ~10s, not 1s: a real conversion (classify + PDFKit/Vision) under CI load can take
+    // several seconds, which intermittently failed these waiters. The loop returns as soon as the
+    // condition holds, so fast runs stay fast — this only widens the ceiling.
     private func waitForResult(_ id: UUID, in queue: ConversionQueue) async {
-        for _ in 0..<100 {
+        for _ in 0..<1000 {
             if let job = queue.jobs.first(where: { $0.id == id }),
                job.result != nil,
                !job.isRunning {
@@ -805,7 +808,7 @@ final class ConversionQueueTests: XCTestCase {
     }
 
     private func waitUntil(_ predicate: @escaping () -> Bool) async {
-        for _ in 0..<100 {
+        for _ in 0..<1000 {
             if predicate() { return }
             await sleep(milliseconds: 10)
         }
