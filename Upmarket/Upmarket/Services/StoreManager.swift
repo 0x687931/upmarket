@@ -58,11 +58,14 @@ final class StoreManager: ObservableObject {
 
     private init() {
         transactionListener = listenForTransactions()
+#if DEBUG
+        // A purchased tier written to the shared snapshot (scripts/dev/set_debug_tier.sh, or
+        // Preferences → Debug Tier Override) is honored as a sticky local override, so the app,
+        // CLI, and MCP all read Pro/Max from the same file with no purchase and no GUI clicking.
+        applyDebugTierOverride()
+#endif
         Task { await loadProducts() }
         Task { await refreshEntitlement() }
-        // No DEBUG tier override here: local builds start at Basic (the honest
-        // unpaid default). Use Preferences → Debug Tier Override (setDebugTier)
-        // to exercise Pro/Max locally. See StoreManagerTests.
     }
 
     deinit { transactionListener?.cancel() }
@@ -70,14 +73,30 @@ final class StoreManager: ObservableObject {
     // MARK: - Debug testing
 
     #if DEBUG
+    /// True while a local debug tier override is in effect; keeps the StoreKit refresh from
+    /// clobbering it (and the snapshot the CLI/MCP read).
+    private var debugTierActive = false
+
     /// Override the tier locally to test paid/unpaid access without real purchases.
     /// Drives the Preferences → Debug Tier Override buttons. DEBUG only.
     func setDebugTier(_ newTier: AppTier) {
         Task { @MainActor in
             self.tier = newTier
             self.isPurchased = true   // debug override behaves like a purchase
+            self.debugTierActive = true
             self.writeSnapshot()
         }
+    }
+
+    /// Applies a sticky tier from the shared snapshot at launch (purchased + tier > basic only,
+    /// so the app's own unpaid snapshot writes are never misread as an override). Set it from a
+    /// shell with `scripts/dev/set_debug_tier.sh max` — the app, CLI, and MCP then all agree.
+    private func applyDebugTierOverride() {
+        guard let snap = TierSnapshot.read(), snap.purchased,
+              let overridden = AppTier(rawValue: snap.tier), overridden > .basic else { return }
+        tier = overridden
+        isPurchased = true
+        debugTierActive = true
     }
     #endif
 
@@ -165,6 +184,10 @@ final class StoreManager: ObservableObject {
     }
 
     private func refreshEntitlement() async {
+#if DEBUG
+        // A local debug tier override is the source of truth; don't let StoreKit reset it.
+        if debugTierActive { return }
+#endif
         // Highest owned entitlement wins; any ownership ends the trial.
         var resolved: AppTier = .basic
         var purchased = false
