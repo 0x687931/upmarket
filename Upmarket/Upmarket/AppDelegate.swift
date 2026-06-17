@@ -268,21 +268,36 @@ extension Notification.Name {
 
 @MainActor
 private enum MenuBarStatusIcon {
-    private static let convertingTint = NSColor(srgbRed: 0.91, green: 0.47, blue: 0.0, alpha: 1)
+    // The Upmarket brand amber (#E87800), used for the menu bar glyph.
+    private static let brandAmber = NSColor(srgbRed: 0.91, green: 0.47, blue: 0.0, alpha: 1)
     private static let iconSize = NSSize(width: 22, height: 22)
     private static let glyphSize = NSSize(width: 18, height: 18)
     private static let badgeSize = NSSize(width: 6, height: 6)
+
+    /// The hash glyph filled with the brand amber and marked non-template, so the menu
+    /// bar renders the color instead of repainting the template shape black/white.
+    /// (Tradeoff: a baked color doesn't auto-adapt to light/dark; amber reads on both.)
+    private static func amberGlyph(from hash: NSImage) -> NSImage {
+        let tinted = NSImage(size: hash.size, flipped: false) { rect in
+            brandAmber.set()
+            rect.fill()
+            // Mask the amber fill to the glyph's shape via the template's alpha.
+            hash.draw(in: rect, from: .zero, operation: .destinationIn, fraction: 1)
+            return true
+        }
+        tinted.isTemplate = false
+        return tinted
+    }
 
     static func image(isConverting: Bool) -> NSImage {
         guard let hash = NSImage(named: "MenuBarHash") else {
             return NSImage(size: iconSize)
         }
 
+        let glyph = amberGlyph(from: hash)
+
         guard isConverting else {
-            // Monochrome template — macOS tints it for light/dark menu bars and
-            // dims/highlights it when the menu is open, like other menu bar apps.
-            hash.isTemplate = true
-            return hash
+            return glyph
         }
 
         let composed = NSImage(size: iconSize)
@@ -294,7 +309,7 @@ private enum MenuBarStatusIcon {
             width: 10,
             height: 10
         )
-        convertingTint.withAlphaComponent(0.12).setFill()
+        brandAmber.withAlphaComponent(0.12).setFill()
         NSBezierPath(ovalIn: glowRect).fill()
 
         let glyphRect = NSRect(
@@ -303,7 +318,7 @@ private enum MenuBarStatusIcon {
             width: glyphSize.width,
             height: glyphSize.height
         )
-        hash.draw(in: glyphRect, from: .zero, operation: .sourceOver, fraction: 1)
+        glyph.draw(in: glyphRect, from: .zero, operation: .sourceOver, fraction: 1)
 
         let badgeRect = NSRect(
             x: iconSize.width - badgeSize.width - 2,
