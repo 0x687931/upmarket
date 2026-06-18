@@ -12,6 +12,13 @@ struct VisionDocumentExtractor {
         return false
     }
 
+    /// The strip-and-stitch banding fallback overrides the page body with a reconstructed grid.
+    /// Validated on the IDL corpus it does net harm: its stitch mis-groups cells and drops prose
+    /// (it tanked klpb0135 and fnpd0075), and row-major reading order already recovers label↔value
+    /// association without it. Disabled pending a stitch-quality fix; the banding functions and
+    /// their unit tests remain so that work can resume against them.
+    private static let tableBandingEnabled = false
+
     struct Result {
         let markdown: String
         let pageCount: Int
@@ -72,7 +79,10 @@ struct VisionDocumentExtractor {
             try Task.checkCancellation()
             guard let page = document.page(at: i),
                   let cgImage = try autoreleasepool(invoking: { try renderPage(page) }) else { continue }
-            let (md, t, l, tables, elementType, handwriting) = try await processImage(cgImage)
+            // Stage 2 text source — self-detected: born-digital pages (text layer, no full-page
+            // image) resolve exact text from PDFKit; scans return nil and fall back to Vision OCR.
+            let resolver = digitalTextResolver(for: page)
+            let (md, t, l, tables, elementType, handwriting) = try await processImage(cgImage, textResolver: resolver)
             if !md.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 pages.append(md)
             }
@@ -112,9 +122,55 @@ struct VisionDocumentExtractor {
                      handwritingRatio: handwriting, containsHandwriting: handwriting > 0.30)
     }
 
+    /// Stage 2 text source for a digital page: maps a Vision normalized line box into PDF space
+    /// and returns the exact PDFKit text inside it, or nil for a page with no usable text layer
+    /// (scanned), so callers fall back to Vision OCR. Returns nil text for empty regions too.
+    /// A born-digital page draws its text as vectors; a scan is one full-page raster image with
+    /// an (often worse) OCR text layer over it. Detect the scan by a single image XObject that
+    /// covers most of the page — a far more reliable signal than text-layer length, which both
+    /// kinds have. Validated on the IDL corpus (scans ≈2–4× page area) vs e-tickets (≈0.03).
+    private static func pageIsRasterScan(_ page: PDFPage) -> Bool {
+        guard let cg = page.pageRef, let dict = cg.dictionary else { return false }
+        let box = page.bounds(for: .mediaBox)
+        let pageArea = Double(box.width * box.height)
+        guard pageArea > 0 else { return false }
+        var res: CGPDFDictionaryRef?
+        guard CGPDFDictionaryGetDictionary(dict, "Resources", &res), let res else { return false }
+        var xobj: CGPDFDictionaryRef?
+        guard CGPDFDictionaryGetDictionary(res, "XObject", &xobj), let xobj else { return false }
+        var maxFraction = 0.0
+        CGPDFDictionaryApplyBlock(xobj, { _, value, _ in
+            var stream: CGPDFStreamRef?
+            guard CGPDFObjectGetValue(value, .stream, &stream), let stream,
+                  let sd = CGPDFStreamGetDictionary(stream) else { return true }
+            var subtype: UnsafePointer<CChar>?
+            guard CGPDFDictionaryGetName(sd, "Subtype", &subtype), let subtype,
+                  String(cString: subtype) == "Image" else { return true }
+            var w: CGPDFReal = 0, h: CGPDFReal = 0
+            CGPDFDictionaryGetNumber(sd, "Width", &w); CGPDFDictionaryGetNumber(sd, "Height", &h)
+            let estPoints = (Double(w) / 150.0 * 72.0) * (Double(h) / 150.0 * 72.0)  // assume ~150 dpi
+            maxFraction = max(maxFraction, estPoints / pageArea)
+            return true
+        }, nil)
+        return maxFraction >= 0.3
+    }
+
     @available(macOS 26, *)
-    private static func processImage(_ cgImage: CGImage) async throws -> (String, Int, Int, [TableRepair.StructuredTable], String?, Double) {
-        let request = RecognizeDocumentsRequest()
+    private static func digitalTextResolver(for page: PDFPage) -> ((CGRect) -> String?)? {
+        guard page.numberOfCharacters > 40, !pageIsRasterScan(page) else { return nil }  // scanned → OCR
+        let pb = page.bounds(for: .mediaBox)
+        guard pb.width > 0, pb.height > 0 else { return nil }
+        return { nb in
+            let r = CGRect(x: pb.minX + nb.minX * pb.width, y: pb.minY + nb.minY * pb.height,
+                           width: nb.width * pb.width, height: nb.height * pb.height)
+            let s = page.selection(for: r)?.string?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return (s?.isEmpty == false) ? s : nil
+        }
+    }
+
+    @available(macOS 26, *)
+    private static func processImage(_ cgImage: CGImage, textResolver: ((CGRect) -> String?)? = nil) async throws -> (String, Int, Int, [TableRepair.StructuredTable], String?, Double) {
+        let request = RecognizeDocumentsRequest()   // language correction is on by default
         let handler = ImageRequestHandler(cgImage)
         let observations = try await handler.perform(request)
 
@@ -141,8 +197,9 @@ struct VisionDocumentExtractor {
                 let t = textFromContainer(title).trimmingCharacters(in: .whitespacesAndNewlines)
                 if !t.isEmpty { parts.append("## \(t)") }
             }
-            // Body text
-            let body = textFromContainer(doc.text).trimmingCharacters(in: .whitespacesAndNewlines)
+            // Body text, reconstructed row-major from line geometry (Vision's own order walks
+            // multi-column layouts column-major; see rowMajorText).
+            let body = rowMajorText(doc.text, resolver: textResolver).trimmingCharacters(in: .whitespacesAndNewlines)
             if !body.isEmpty { parts.append(body); bodyParts.append(body); bodyTextAll += "\n" + body }
             // Tables
             for table in doc.tables {
@@ -153,8 +210,13 @@ struct VisionDocumentExtractor {
                     structuredTables.append(structured)
                 }
             }
-            // Lists
+            // Lists — Vision often classifies a table's bulleted label column as BOTH body text
+            // and a list, emitting it twice. Skip a list whose words are already in the body;
+            // keep genuine lists that live only in the list container.
+            let bodyWords = Set(tokenize(body))
             for list in doc.lists {
+                let items = list.items.map { textFromContainerBox($0.content) }
+                if isDuplicatedInBody(items: items, bodyWords: bodyWords) { continue }
                 parts.append(listToMarkdown(list))
                 lists += 1
             }
@@ -169,7 +231,7 @@ struct VisionDocumentExtractor {
         // into overlapping horizontal strips, re-run Vision per strip, stitch the cell grids back.
         // Gated on "no table detected but the page reads as numeric/columnar" so prose pages don't
         // pay the extra Vision passes. Tighten via NativeDocumentClassifier if it ever bands prose.
-        if tables == 0, looksTabular(bodyTextAll) {
+        if Self.tableBandingEnabled, tables == 0, looksTabular(bodyTextAll) {
             for st in try await extractTablesByBanding(cgImage) {
                 parts.append(gridToMarkdown(st.rows))
                 tables += 1
@@ -309,6 +371,67 @@ struct VisionDocumentExtractor {
         text.lines
             .compactMap { $0.topCandidates(1).first?.string }
             .joined(separator: "\n")
+    }
+
+    /// Reading order reconstructed from line geometry. Vision's own line order walks
+    /// wide-gap multi-column layouts column-major — it emits a whole label column, then a
+    /// detached value column — which severs label↔value association in tables and forms
+    /// (validated on the IDL corpus: klpb0135's trial table, fnpd0075's four data-table
+    /// pages). Group lines into rows by vertical band (centres within a shared y-span), then
+    /// order rows top→bottom and lines left→right within each row. Single-column prose has one
+    /// line per band, so it collapses to the natural top-to-bottom order unchanged.
+    @available(macOS 26, *)
+    private static func rowMajorText(_ text: DocumentObservation.Container.Text,
+                                     resolver: ((CGRect) -> String?)? = nil) -> String {
+        let lines: [(rect: CGRect, ocr: String)] = text.lines.compactMap { obs in
+            guard let s = obs.topCandidates(1).first?.string, !s.isEmpty else { return nil }
+            let b = obs.boundingRegion.boundingBox
+            return (CGRect(x: b.origin.x, y: b.origin.y, width: b.width, height: b.height), s)
+        }
+        guard !lines.isEmpty else { return "" }
+
+        // Top→bottom (normalized space: y grows upward). A line joins the current row when its
+        // vertical centre lies within the row anchor's span; otherwise it opens a new row.
+        // Anchoring on the row's first (topmost) line stops a tall cell swallowing the next row.
+        let ordered = lines.sorted { $0.rect.midY > $1.rect.midY }
+        var rows: [[(rect: CGRect, ocr: String)]] = []
+        for line in ordered {
+            if let anchor = rows.last?.first,
+               line.rect.midY <= anchor.rect.maxY, line.rect.midY >= anchor.rect.minY {
+                rows[rows.count - 1].append(line)
+            } else {
+                rows.append([line])
+            }
+        }
+        return rows.map { row -> String in
+            let cells = row.sorted { $0.rect.minX < $1.rect.minX }
+            // Scanned page: no text layer — use Vision's recognised text verbatim (unchanged).
+            guard let resolver else { return cells.map(\.ocr).joined(separator: "  ") }
+            // Digital page: pull EXACT text per cell from PDFKit. Snap each cell's left/right to
+            // the gutter midpoint between neighbouring cells (outer edges padded by ~a glyph), so
+            // the selection rect lands in whitespace and never clips the boundary glyph that
+            // Vision's tight image-derived box would otherwise drop.
+            let margin = (cells.map(\.rect.height).max() ?? 0.012) * 0.6
+            return cells.enumerated().map { j, cell in
+                let left = j == 0 ? cell.rect.minX - margin : (cells[j - 1].rect.maxX + cell.rect.minX) / 2
+                let right = j == cells.count - 1 ? cell.rect.maxX + margin : (cell.rect.maxX + cells[j + 1].rect.minX) / 2
+                let snapped = CGRect(x: left, y: cell.rect.minY, width: max(0, right - left), height: cell.rect.height)
+                return resolver(snapped) ?? cell.ocr
+            }.joined(separator: "  ")
+        }.joined(separator: "\n")
+    }
+
+    private static func tokenize(_ s: String) -> [String] {
+        s.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted).filter { $0.count > 1 }
+    }
+
+    /// True when most of a list's words already appear in the body — i.e. Vision emitted the
+    /// same content as both text and a list (the bulleted label column of a table). Positionless
+    /// so it generalises; short lists are kept (too little signal to call a duplicate).
+    private static func isDuplicatedInBody(items: [String], bodyWords: Set<String>) -> Bool {
+        let words = items.flatMap { tokenize($0) }
+        guard words.count >= 3 else { return false }
+        return Double(words.filter { bodyWords.contains($0) }.count) / Double(words.count) >= 0.7
     }
 
     @available(macOS 26, *)

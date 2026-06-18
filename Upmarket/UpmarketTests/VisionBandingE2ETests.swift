@@ -13,17 +13,12 @@ final class VisionBandingE2ETests: XCTestCase {
     }
 
     /// 000006.jpg is a 30-row financial table that direct Vision MISSES (returns no table).
-    /// With the banding fallback wired in, extract() must now recover it.
+    /// The banding fallback was meant to recover it — but on the IDL whole-page corpus its
+    /// stitch mis-groups cells and drops prose, so the call site is disabled
+    /// (VisionDocumentExtractor.tableBandingEnabled = false) pending a stitch-quality fix. This
+    /// test is skipped until then; the banding functions and their stitch unit tests remain.
     func testBandingRecoversTallTableEndToEnd() async throws {
-        try XCTSkipUnless(VisionDocumentExtractor.isAvailable, "needs macOS 26 Vision")
-        let url = fixture("000006.jpg")
-        try XCTSkipUnless(FileManager.default.fileExists(atPath: url.path), "corpus fixture absent")
-
-        let result = try await VisionDocumentExtractor.extract(imageURL: url)
-        XCTAssertGreaterThanOrEqual(result.tablesFound, 1, "banding should recover the missed tall table")
-        let rows = result.structuredTables.first?.rows.count ?? 0
-        XCTAssertGreaterThanOrEqual(rows, 10, "recovered table should have many rows; got \(rows)")
-        XCTAssertTrue(result.markdown.contains("|"), "markdown should contain a table")
+        throw XCTSkip("banding call site disabled (tableBandingEnabled=false) pending stitch-quality fix")
     }
 
     /// Control: a small table Vision detects on the first pass still works (no regression,
