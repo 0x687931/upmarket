@@ -6,6 +6,7 @@ let package = Package(
     platforms: [.macOS(.v14)],
     products: [
         .library(name: "UpmarketVLM", targets: ["UpmarketVLM"]),
+        .executable(name: "granite-run", targets: ["granite-run"]),
     ],
     dependencies: [
         .package(url: "https://github.com/ml-explore/mlx-swift-lm", branch: "main"),
@@ -20,6 +21,7 @@ let package = Package(
             .product(name: "HuggingFace", package: "swift-huggingface"),
             .product(name: "Transformers", package: "swift-transformers"),
         ]),
+        .executableTarget(name: "granite-run", dependencies: ["UpmarketVLM"]),
         .testTarget(name: "UpmarketVLMTests", dependencies: ["UpmarketVLM"]),
     ]
 )

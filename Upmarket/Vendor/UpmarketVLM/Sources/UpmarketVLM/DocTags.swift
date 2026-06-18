@@ -12,7 +12,10 @@ public enum DocTags {
         var s = raw
         if let r = s.range(of: "<doctag>") { s = String(s[r.upperBound...]) }
         if let r = s.range(of: "</doctag>") { s = String(s[..<r.lowerBound]) }
-        s = regexReplace(s, #"<loc_\d+>"#) { _ in "" }                       // drop location tokens
+        // Drop location tokens. Granite emits a bbox as `<loc_x1<loc_y1<loc_x2<loc_y2>` with a
+        // single closing `>` after the 4th coord, so the `>` must be optional or only the last
+        // token strips (leaving `<loc_x1<loc_y1<loc_x2` garbage that breaks tag matching).
+        s = regexReplace(s, #"<loc_\d+>?"#) { _ in "" }
 
         // Tables first (so their inner tags aren't stripped as text).
         s = regexReplace(s, #"<otsl>(.*?)</otsl>"#, options: [.dotMatchesLineSeparators]) {
@@ -48,6 +51,18 @@ public enum DocTags {
         // Collapse excess blank lines / spaces.
         s = regexReplace(s, #"[ \t]+\n"#) { _ in "\n" }
         s = regexReplace(s, #"\n{3,}"#) { _ in "\n\n" }
+        // Drop a block that exactly repeats the previous non-empty block. Tiled inference can
+        // re-emit content seen in both a sub-tile and the global thumbnail (e.g. a Bates number
+        // transcribed twice); table rows are exempt so legitimately repeated values survive.
+        var deduped: [String] = []
+        var lastContent = ""
+        for line in s.components(separatedBy: "\n") {
+            let t = line.trimmingCharacters(in: .whitespaces)
+            if !t.isEmpty, !t.hasPrefix("|"), t == lastContent { continue }
+            if !t.isEmpty { lastContent = t }
+            deduped.append(line)
+        }
+        s = deduped.joined(separator: "\n")
         return s.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 

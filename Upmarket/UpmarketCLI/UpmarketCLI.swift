@@ -284,9 +284,16 @@ private enum UpmarketCLI {
     private static func execute(pathway: Pathway, inputURL: URL, debug: Bool) async throws -> ConvertedDocument {
         switch pathway {
         case .pdfkit:
-            if let native = nativePDFKit(inputURL) { return native }
-            debugLog("PDFKit found no extractable text → Vision OCR", debug)
-            return try await nativeVisionPDF(inputURL)
+            // One reading-order engine for every PDF: Vision supplies line geometry + structure,
+            // and the text source is self-detected per page — exact PDFKit text for born-digital
+            // pages, Vision OCR for scans. This recovers row/column association that flat PDFKit
+            // text destroys (e.g. e-ticket tables). Flat extraction stays as the failure fallback.
+            do { return try await nativeVisionPDF(inputURL) }
+            catch {
+                debugLog("Vision PDF path failed (\(error)) → flat PDFKit", debug)
+                if let native = nativePDFKit(inputURL) { return native }
+                throw error
+            }
         case .vision:
             return inputURL.pathExtension.lowercased() == "pdf"
                 ? try await nativeVisionPDF(inputURL)
