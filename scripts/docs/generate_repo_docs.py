@@ -7,6 +7,7 @@ import argparse
 import difflib
 import json
 import re
+import subprocess
 import sys
 from collections import Counter
 from pathlib import Path
@@ -28,7 +29,31 @@ def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
+def _tracked_files() -> set[Path]:
+    """Absolute paths of every git-tracked file. The generated docs (and the CI 'stale docs'
+    check) must depend only on what's committed — never on untracked or gitignored junk sitting
+    in a developer's working tree, or the check fails non-deterministically per machine."""
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(ROOT), "ls-files", "-z"],
+            capture_output=True, check=True,
+        ).stdout
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+        return set()  # not a git checkout → fall back to the filesystem (no filtering)
+    return {ROOT / p.decode("utf-8") for p in out.split(b"\0") if p}
+
+
+TRACKED = _tracked_files()
+
+
+def tracked(paths) -> list[Path]:
+    """Keep only git-tracked files (pass everything through when not in a git checkout)."""
+    return sorted(p for p in paths if not TRACKED or p in TRACKED)
+
+
 def source_entries(path: Path) -> list[Path]:
+    if TRACKED:
+        return sorted(p for p in TRACKED if path in p.parents)
     return sorted(
         entry
         for entry in path.rglob("*")
@@ -54,9 +79,9 @@ def table(headers: list[str], rows: list[list[str]]) -> list[str]:
 
 
 def source_map() -> str:
-    swift_files = sorted((ROOT / "Upmarket" / "Upmarket").rglob("*.swift"))
-    test_files = sorted((ROOT / "Upmarket").glob("Upmarket*Tests/**/*.swift"))
-    docs = sorted((ROOT / "docs").rglob("*.md"))
+    swift_files = tracked((ROOT / "Upmarket" / "Upmarket").rglob("*.swift"))
+    test_files = tracked((ROOT / "Upmarket").glob("Upmarket*Tests/**/*.swift"))
+    docs = tracked((ROOT / "docs").rglob("*.md"))
     scripts = source_entries(ROOT / "scripts")
 
     section_rows = [
@@ -67,11 +92,11 @@ def source_map() -> str:
     ]
 
     service_rows = []
-    for path in sorted((ROOT / "Upmarket" / "Upmarket" / "Services").glob("*.swift")):
+    for path in tracked((ROOT / "Upmarket" / "Upmarket" / "Services").glob("*.swift")):
         service_rows.append([f"`{rel(path)}`", ", ".join(swift_types(path)) or "-"])
 
     domain_rows = []
-    for path in sorted((ROOT / "Upmarket" / "Upmarket" / "Domain").glob("*.swift")):
+    for path in tracked((ROOT / "Upmarket" / "Upmarket" / "Domain").glob("*.swift")):
         domain_rows.append([f"`{rel(path)}`", ", ".join(swift_types(path)) or "-"])
 
     lines = [
@@ -140,13 +165,13 @@ def conversion_flow() -> str:
 
 def release_automation() -> str:
     workflow_rows = []
-    for path in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
+    for path in tracked((ROOT / ".github" / "workflows").glob("*.yml")):
         text = read_text(path)
         steps = re.findall(r"^\s+- name: (.+)$", text, flags=re.MULTILINE)
         workflow_rows.append([f"`{rel(path)}`", ", ".join(steps) or "-"])
 
     script_rows = []
-    for path in sorted((ROOT / "scripts" / "ci").glob("*")):
+    for path in tracked((ROOT / "scripts" / "ci").glob("*")):
         if path.is_file():
             first_line = read_text(path).splitlines()[0] if read_text(path).splitlines() else ""
             script_rows.append([f"`{rel(path)}`", first_line.replace("#!", "").strip() or "-"])
