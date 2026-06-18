@@ -464,9 +464,15 @@ struct ConversionRunner {
             originalTables: []))
     }
 
-    private static func renderPDFPage(_ page: PDFPage, dpi: CGFloat = 150) -> CGImage? {
+    // Granite-Docling reads scanned pages at the embedded raster's native detail; 150 dpi
+    // upscales a typical scan into blur (the VLM then mis-reads it as a picture), so the AI
+    // path renders at 300 dpi. The scale is clamped so an oversized page can't exceed the
+    // Vision render-side budget and blow memory.
+    private static func renderPDFPage(_ page: PDFPage, dpi: CGFloat = 300) -> CGImage? {
         let bounds = page.bounds(for: .mediaBox)
-        let scale = dpi / 72.0
+        guard bounds.width > 0, bounds.height > 0 else { return nil }
+        let maxSide = CGFloat(VisionProcessingLimits.maximumRenderedSide)
+        let scale = min(dpi / 72.0, maxSide / max(bounds.width, bounds.height))
         let w = Int(bounds.width * scale), h = Int(bounds.height * scale)
         guard w > 0, h > 0,
               let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
