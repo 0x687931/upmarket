@@ -46,4 +46,25 @@ final class VisionBandingStitchTests: XCTestCase {
     func testEmptyInputIsEmpty() {
         XCTAssertEqual(VisionDocumentExtractor.stitchGrids([]), [])
     }
+
+    func testRepeatedKeyDistinctRowsKept() {
+        // Same first-column value but genuinely different data (e.g. repeated dates with
+        // different amounts) — both rows are real and must be kept, not deduped.
+        let grids = [[["2024-01-01", "100"], ["2024-01-01", "200"], ["2024-01-02", "300"]]]
+        XCTAssertEqual(
+            VisionDocumentExtractor.stitchGrids(grids),
+            [["2024-01-01", "100"], ["2024-01-01", "200"], ["2024-01-02", "300"]]
+        )
+    }
+
+    func testRepeatedKeyAcrossStripBoundaryKept() {
+        // A repeated-key row that lands at a strip boundary but differs in its data cell
+        // is NOT an overlap dupe — keep it.
+        let band1 = [["Acct-1", "100"]]
+        let band2 = [["Acct-1", "200"], ["Acct-2", "300"]]
+        XCTAssertEqual(
+            VisionDocumentExtractor.stitchGrids([band1, band2]),
+            [["Acct-1", "100"], ["Acct-1", "200"], ["Acct-2", "300"]]
+        )
+    }
 }
