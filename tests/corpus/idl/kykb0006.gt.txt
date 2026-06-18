@@ -1,0 +1,61 @@
+MARKETING/CUSTOMER INFORMATION SYSTEMS
+Second Quarter Accomplishment / Third Quarter Objectives
+BUSINESS ANALYSIS
+1995 Second Quarter Accomplishments
+Loaded March and April, 1995 MARLIN data into production in DataServer and MRS.
+Sct up and tested MARLIN on RBM PC's locally and at Winston-Salem office. Technically
+ready to roll out 10 all RBM's.
+Modified Forsyth Products Jobber Incentive reports for Peer Account information and YTD
+information and added new reports and maintenance tables to support their business
+requirements.
+Implemented in parallel with the current production VSR system a new batch update process
+that involved posting CSS sales to the new VSR ADABAS file and building a new
+brand/gcography summary process. Created 1st Quarter, 1995 Volume Ranking Reports for
+Trade Rclations.
+Began investigation and timing of work to convert MRS to Excel 5.0, revising views where
+required. Currently scheduled with LAN/Scrver upgrade at the ROU's.
+Determined RJR scope of work and implemented extract routines and files required by IRI to
+support the BIAD/IRI Proposal approved to load RJR Shipment, MSA Shipment, Estimated
+Consumption and Annual data from ANALECT to IRI Data Server EXPRESS. Coded and
+tested VSR and MSA extracts that will support IRI DataServer/EXPRESS and direct VAX
+loads
+Evaluated the IRI Proposal for running MARLIN using IRI Bridge to Chicago database and
+determined it to be not cost effective.
+Implemented in MRS the following views and enhancements: a new "MARLIN Region
+Tracking Report"; a modified MSA Military SOM view to include RJR Savings excluding
+Monarch, Winston Sclect, Winston Basc and Salem Preferred; an enhanced Competitive
+Offers view to remove MARLIN statistics and use advanced Excel text features; and a new
+Project Tracking graphical status.
+Page 1
+RJR0000000503007467
+70019 4351
+Source: https://www.industrydocuments.ucsf.edu/docs/kykb0006
+MARKETING/CUSTOMER INFORMATION SYSTEMS
+Second Quarter Accomplishment / Third Quarter Objectives
+Created and completed thrce Ad Hoc query/rcports against weckly SIS Pricing Strategy data
+10 address potential price gouging and effectiveness of implementation by Sales.
+Implemented Pricing Strategy Discounting matrix. Also in MRS, removed two detail Pricing
+strategies from MRS; modified Executive Regional Pricing Strategies to reflect
+presence/non-presence of Promotion Allocation dollars; added new Pricing Strategy view at
+Total US and Arca levels to show data for only outlet/rcgion/brand combinations receiving
+promotion allocation dollars; and began work on additional Pricing Strategy views for
+Division level data and Weekly and Monthly trended data.
+BUSINESS ANALYSIS
+1995 Third Quarter Objectives
+Load May, June, and July, 1995 MARLIN data into production in DataServer and MRS.
+Convert VSR on-line inquiries to new VSR ADABAS file and implement a generic VSR
+extraction routine, as well as VSR standard reporting; implement VSR Customer Master
+update and VSR shipment and customer extracts for MSA vendor. Complete Control-D
+Conversions for VSR, MSA, and MARLIN.
+Implement in MRS the additional Pricing Strategy vicws for Division level data and Weekly
+and Monthly trended data, as well as Executive Summary of "On Grid" only outlets.
+Implement Discounting Budget Status Financial report and implement revised weekly and
+monthly volume views. Also in MRS implement Military SOM goals with toggle button for
+cases/sticks vicw, and Top 49 Customers vicw with details for Full Price, Branded Savings
+and PL/Generic price tiers.
+Determine conversion plan for MRS with network protocal and Excel 5.0. Implementation
+tenetively planned for November, 1995 to coincide with ROULAN upgrades.
+Page 2
+RJR0000000503007467
+70019 4352
+Source: https://www.industrydocuments.ucsf.edu/docs/kykb0006

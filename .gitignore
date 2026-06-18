@@ -63,3 +63,7 @@ Upmarket/LocalDev.xcconfig
 
 # SwiftPM build artifacts in vendored packages
 Upmarket/Vendor/*/.build/
+
+# IDL eval generated outputs
+scripts/eval/idl_results.jsonl
+tests/corpus/idl/*.auto.md
