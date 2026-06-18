@@ -203,5 +203,13 @@ if [[ "$RELAUNCH" == "1" ]] && /usr/bin/pgrep -x Upmarket >/dev/null 2>&1; then
   fi
 fi
 
-/usr/bin/open "$APP_PATH"
-echo "opened: $APP_PATH"
+# Sync the freshly built app into /Applications so the copy you launch from Finder/Spotlight —
+# and the menu bar icon it shows — always matches this build, instead of a stale installed copy.
+# The dev build is ad-hoc signed; this is a local developer convenience, not a distribution step.
+INSTALLED_APP="/Applications/Upmarket.app"
+rm -rf "$INSTALLED_APP"
+/usr/bin/ditto "$APP_PATH" "$INSTALLED_APP"
+echo "synced: $APP_PATH -> $INSTALLED_APP"
+
+/usr/bin/open "$INSTALLED_APP"
+echo "opened: $INSTALLED_APP"
