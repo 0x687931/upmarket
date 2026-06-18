@@ -535,6 +535,12 @@ struct FileRowView: View {
     }
 
     private func revealInFinder() {
+        // Prefer the file auto-saved on completion; only save here if it's missing
+        // (e.g. the user declined the first-use prompt), to avoid duplicate files.
+        if let url = job.savedURL, FileManager.default.fileExists(atPath: url.path) {
+            FileAccessService.shared.revealInFinder(url)
+            return
+        }
         if let output = job.result?.output {
             let formatted = OutputFormatter.format(
                 output,
