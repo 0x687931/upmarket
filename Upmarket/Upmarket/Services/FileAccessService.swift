@@ -146,30 +146,6 @@ final class FileAccessService {
         }
     }
 
-    func autoSaveMarkdown(_ markdown: String, title: String, to directory: URL, fileExtension: String = "md") -> URL? {
-        let signpost = AppSignpost.conversion.beginInterval("autoSaveOutput")
-        defer { AppSignpost.conversion.endInterval("autoSaveOutput", signpost) }
-
-        let normalisedExtension = Self.normalisedFileExtension(fileExtension)
-        let filename = (title.isEmpty ? "converted" : title) + ".\(normalisedExtension)"
-        let fileURL = directory.appending(component: filename)
-
-        do {
-            let scoped = fileURL.startAccessingSecurityScopedResource()
-            defer {
-                if scoped {
-                    fileURL.stopAccessingSecurityScopedResource()
-                }
-            }
-            try markdown.write(to: fileURL, atomically: true, encoding: .utf8)
-            AppLog.fileAccess.info("Auto-saved markdown title=\(title, privacy: .private) path=\(fileURL.path, privacy: .private)")
-            return fileURL
-        } catch {
-            AppLog.fileAccess.error("Auto-save failed title=\(title, privacy: .private) error=\(error.localizedDescription, privacy: .private)")
-            return nil
-        }
-    }
-
     func copyMarkdown(_ markdown: String) {
         Task {
             await FileWriteService.shared.copyMarkdown(markdown)

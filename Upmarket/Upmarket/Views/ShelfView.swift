@@ -586,18 +586,22 @@ struct ShelfCard: View {
     }
 
     private func openOutput(_ job: ConversionJob) {
-        if let output = job.result?.output {
-            let formatted = formattedOutput(output)
-            Task { @MainActor in
-                let savedURL = await SavePreference.shared.save(
-                    markdown: formatted.text,
-                    title: job.sourceURL.deletingPathExtension().lastPathComponent,
-                    sourceURL: job.sourceURL,
-                    fileExtension: formatted.fileExtension
-                )
-                if let url = savedURL {
-                    FileAccessService.shared.open(url)
-                }
+        // Prefer the file auto-saved on completion; only save here if it's missing
+        // (e.g. the user declined the first-use prompt), to avoid duplicate files.
+        if let url = job.savedURL, FileManager.default.fileExists(atPath: url.path) {
+            FileAccessService.shared.open(url)
+            return
+        }
+        guard let output = job.result?.output else { return }
+        let formatted = formattedOutput(output)
+        Task { @MainActor in
+            if let url = await SavePreference.shared.save(
+                markdown: formatted.text,
+                title: job.sourceURL.deletingPathExtension().lastPathComponent,
+                sourceURL: job.sourceURL,
+                fileExtension: formatted.fileExtension
+            ) {
+                FileAccessService.shared.open(url)
             }
         }
     }

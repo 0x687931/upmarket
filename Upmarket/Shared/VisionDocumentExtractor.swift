@@ -237,8 +237,13 @@ struct VisionDocumentExtractor {
                 tables += 1
                 structuredTables.append(st)
             }
-            // The banded table IS the page content — drop the duplicate body-text prose.
-            if tables > 0 { parts.removeAll { bodyParts.contains($0) } }
+            // Drop only the body blocks that ARE the duplicated table text (Vision read the
+            // table as flowing text), identified by being themselves tabular. Genuine prose
+            // on the same page — captions, notes, paragraphs — is kept, even though the page
+            // overall passed the looser page-level looksTabular gate.
+            if tables > 0 {
+                parts.removeAll { bodyParts.contains($0) && blockIsTabular($0) }
+            }
         }
 
         // Average handwriting across observations
@@ -299,7 +304,7 @@ struct VisionDocumentExtractor {
             var k = min(result.count, rows.count, 4)
             while k > 0 {
                 let tail = Array(result.suffix(k)), head = Array(rows.prefix(k))
-                if zip(tail, head).allSatisfy({ rowsEqual($0, $1) }) { skip = k; break }
+                if zip(tail, head).allSatisfy({ isOverlapRow($0, $1) }) { skip = k; break }
                 k -= 1
             }
             result.append(contentsOf: rows.dropFirst(skip))
@@ -312,27 +317,36 @@ struct VisionDocumentExtractor {
             else if row.count < modal { out.append(row + Array(repeating: "", count: modal - row.count)) }
             // rows with too many columns are strip-edge artifacts -> dropped
         }
-        // Drop consecutive rows sharing a non-empty first-column key: overlap dupes
-        // whose OCR differed across strips slip past the exact suffix/prefix match.
-        var deduped: [[String]] = []
-        for row in out {
-            if let last = deduped.last, rowsEqual(last, row) { continue }
-            deduped.append(row)
-        }
-        return deduped.isEmpty ? result : deduped
+        // No global de-dup pass: overlap duplicates are already removed at the strip
+        // boundary above (isOverlapRow). Dropping consecutive rows that merely share a
+        // non-empty first-column key here would delete valid repeated-key data rows
+        // (repeated dates/categories/account codes in financial tables) — silent data loss.
+        return out
     }
 
     private static func rowNorm(_ row: [String]) -> String {
         row.map { $0.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) }.joined(separator: "|")
     }
 
-    /// Two rows are "the same" if their normalized text matches, OR they share a
-    /// non-empty first-column key (the row label) — robust to OCR drift across strips.
-    private static func rowsEqual(_ a: [String], _ b: [String]) -> Bool {
+    /// True when row `b` is a strip-overlap re-OCR of row `a` (so one should be dropped):
+    /// exact text match, OR the same non-empty first-column key with **no contradicting**
+    /// other cell — differences are only OCR gaps or sub/superstrings (e.g. "Plan" vs
+    /// "Plan (incorporated)"). Rows that share a key but have a genuinely different cell
+    /// value are NOT overlaps — they're distinct data rows (e.g. repeated dates with
+    /// different amounts) and must be kept.
+    private static func isOverlapRow(_ a: [String], _ b: [String]) -> Bool {
         if rowNorm(a) == rowNorm(b) { return true }
-        let ka = a.first?.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let kb = b.first?.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return !ka.isEmpty && ka == kb
+        let norm: (String) -> String = { $0.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) }
+        let ka = a.first.map(norm) ?? "", kb = b.first.map(norm) ?? ""
+        guard !ka.isEmpty, ka == kb else { return false }
+        for i in 1..<max(a.count, b.count) {
+            let x = i < a.count ? norm(a[i]) : ""
+            let y = i < b.count ? norm(b[i]) : ""
+            if x.isEmpty || y.isEmpty || x == y { continue }       // OCR gap or identical
+            if x.contains(y) || y.contains(x) { continue }          // OCR added/dropped text
+            return false                                            // different data → distinct rows
+        }
+        return true
     }
 
     private static func modalCount(_ counts: [Int]) -> Int {
@@ -360,6 +374,19 @@ struct VisionDocumentExtractor {
             line.split(whereSeparator: { !$0.isNumber }).filter { !$0.isEmpty }.count >= 2
         }
         return Double(columnar.count) / Double(lines.count) >= 0.3
+    }
+
+    /// Whether a single body block is itself the duplicated table text — most of its lines
+    /// are columnar (≥2 numeric runs). No minimum-line floor (unlike page-level looksTabular),
+    /// so a short block of figures still qualifies while prose (few columnar lines) does not.
+    private static func blockIsTabular(_ block: String) -> Bool {
+        let lines = block.split(separator: "\n").map(String.init)
+            .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        guard !lines.isEmpty else { return false }
+        let columnar = lines.filter { line in
+            line.split(whereSeparator: { !$0.isNumber }).filter { !$0.isEmpty }.count >= 2
+        }
+        return Double(columnar.count) / Double(lines.count) >= 0.5
     }
 
 

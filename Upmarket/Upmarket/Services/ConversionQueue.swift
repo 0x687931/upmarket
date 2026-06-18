@@ -323,25 +323,36 @@ final class ConversionQueue: ObservableObject {
         latestResult = result
         if stage == .complete, let output = result.output {
             historyStore?.record(job: jobs[index], output: output)
-            autoSaveConverted(output, sourceURL: jobs[index].sourceURL)
+            autoSaveConverted(output, jobID: jobs[index].id, sourceURL: jobs[index].sourceURL)
         }
         AppLog.conversion.info("Finished conversion correlationID=\(id.uuidString, privacy: .public) stage=\(stage.rawValue, privacy: .public)")
         continuations.removeValue(forKey: id)?.resume(returning: result)
     }
 
-    private func autoSaveConverted(_ output: ConversionOutput, sourceURL: URL) {
-        let sourceDirectory = sourceURL.deletingLastPathComponent()
+    private func autoSaveConverted(_ output: ConversionOutput, jobID: UUID, sourceURL: URL) {
+        // SavePreference can present a modal (first-use prompt / save panel); never do
+        // that under unit or UI tests, where it would hang with no one to dismiss it.
+        guard !AppRuntime.isRunningTests else { return }
         let formatted = OutputFormatter.format(
             output,
             sourceDisplayName: sourceURL.lastPathComponent,
             mode: OutputPreference.shared.mode
         )
-        _ = FileAccessService.shared.autoSaveMarkdown(
-            formatted.text,
-            title: output.title,
-            to: sourceDirectory,
-            fileExtension: formatted.fileExtension
-        )
+        // Route through SavePreference: prompts once for a destination (same folder /
+        // ask each time / a chosen folder), remembers it via a security-scoped bookmark,
+        // then writes silently. This replaces the old direct write to the source folder,
+        // which the sandbox blocked (file-scoped access can't create siblings).
+        Task { @MainActor in
+            guard let savedURL = await SavePreference.shared.save(
+                markdown: formatted.text,
+                title: output.title,
+                sourceURL: sourceURL,
+                fileExtension: formatted.fileExtension
+            ) else { return }
+            if let index = self.jobs.firstIndex(where: { $0.id == jobID }) {
+                self.jobs[index].savedURL = savedURL
+            }
+        }
     }
 
     private func startLivenessMonitorIfNeeded() {
