@@ -71,11 +71,12 @@ enum AppTier: Int, Comparable, Equatable, Sendable {
 /// See docs/TIER_CONTRACT.md for what each asset contains and which tier requires it.
 enum ModelAsset: String, CaseIterable, Equatable, Hashable, Sendable {
     case upmarketAI = "upmarket_ai"   // Max tier: ~600MB (Granite-Docling mlx-swift weights)
+    case lfm25VL    = "lfm25_vl"      // Max tier: ~2.0GB (LFM2.5-VL 1.6B 8-bit mlx-swift weights)
 
     /// The minimum purchased tier required to download and use this asset.
     var requiredTier: AppTier {
         switch self {
-        case .upmarketAI: return .max
+        case .upmarketAI, .lfm25VL: return .max
         }
     }
 
@@ -89,20 +90,22 @@ enum ModelAsset: String, CaseIterable, Equatable, Hashable, Sendable {
 
     var delivery: Delivery {
         switch self {
-        case .upmarketAI: return .backgroundAssets
+        case .upmarketAI, .lfm25VL: return .backgroundAssets
         }
     }
 
     var displayName: String {
         switch self {
         case .upmarketAI: return "AI for Complex Documents"
+        case .lfm25VL:    return "Advanced AI for Tables & Layout"
         }
     }
 
     /// Download size (compressed archive file size users will actually download).
     var sizeMB: Int {
         switch self {
-        case .upmarketAI: return 600   // Model weights (estimate)
+        case .upmarketAI: return 600    // Model weights (estimate)
+        case .lfm25VL:    return 2000   // 1.6B 8-bit weights (estimate)
         }
     }
 }
@@ -212,7 +215,8 @@ struct AppTierGate: Sendable {
             }
         }
         switch asset {
-        case .upmarketAI:
+        case .upmarketAI, .lfm25VL:
+            // Both AI engines run on mlx-swift and share the same device/feature gating.
             if !deviceSupportsRuntime { return "Upmarket AI requires Apple Silicon." }
             if !aiFeatureEnabled {
                 return aiFeatureUnavailableReason ?? "Upmarket AI is not available for this Mac or language yet."

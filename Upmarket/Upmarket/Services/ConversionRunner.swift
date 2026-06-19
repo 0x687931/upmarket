@@ -256,14 +256,12 @@ struct ConversionRunner {
                     progress: progress
                 )
             case .ai:
-                // AI pathway. Native Granite-Docling (mlx-swift, no Python) replaces the
-                // legacy Docling-MLX Python path: used for clean typed Latin/simplified-
-                // Chinese documents when the model is present. Everything else (and any
-                // failure) falls through to Apple Vision native — also Pure-Apple.
-                if #available(macOS 26, *),
-                   ModelManager.shared.downloadedAssets.contains(.upmarketAI),
-                   evidence?.isGraniteDoclingEligible == true {
-                    return await runGraniteNativeConversion(
+                // AI pathway. The user-selected native VLM (mlx-swift, no Python) runs when its
+                // weights are present. Granite-Docling is narrow (clean typed Latin/simplified-
+                // Chinese only); LFM2.5-VL is general-purpose so it skips that eligibility gate.
+                // Everything else (and any failure) falls through to Apple Vision native.
+                if #available(macOS 26, *), shouldUseVLM(evidence: evidence) {
+                    return await runVLMConversion(
                         fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
                     )
                 }
@@ -285,13 +283,12 @@ struct ConversionRunner {
                 && tier() >= .max
             let evidence = classification.pdfEvidence
             let ext = job.sourceURL.pathExtension.lowercased()
-            // Max+AI on a PDF: native Granite-Docling (mlx-swift) when the model is present
-            // and the document is Granite-eligible; otherwise Apple Vision.
+            // Max+AI on a PDF: the user-selected native VLM (mlx-swift) when its weights are
+            // present and (for Granite) the document is eligible; otherwise Apple Vision.
             if useAI, ext == "pdf",
                #available(macOS 26, *),
-               ModelManager.shared.downloadedAssets.contains(.upmarketAI),
-               evidence?.isGraniteDoclingEligible == true {
-                return await runGraniteNativeConversion(
+               shouldUseVLM(evidence: evidence) {
+                return await runVLMConversion(
                     fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
                 )
             }
@@ -425,30 +422,53 @@ struct ConversionRunner {
         }
     }
 
-    /// Native Granite-Docling (idefics3) PDF conversion via mlx-swift — the no-Python
-    /// replacement for the Docling-MLX AI path. Renders each page, runs the on-device VLM,
-    /// and parses DocTags to Markdown. Falls back to Apple Vision (also Pure-Apple) on any
-    /// model-load or inference failure.
+    /// True when the user-selected AI engine should run for this document: its weights are on
+    /// disk and — for the narrow Granite-Docling engine only — the document is eligible. The
+    /// general-purpose LFM2.5-VL engine skips the eligibility gate.
     @available(macOS 26, *)
-    private func runGraniteNativeConversion(
+    private func shouldUseVLM(evidence: NativeDocumentClassifier.Evidence?) -> Bool {
+        let engine = AIEngine.selected
+        guard ModelManager.shared.downloadedAssets.contains(engine.asset) else { return false }
+        return engine == .lfm2 || evidence?.isGraniteDoclingEligible == true
+    }
+
+    /// Native VLM (mlx-swift, no Python) PDF conversion — the no-Python replacement for the
+    /// Docling-MLX AI path. Renders each page and runs the user-selected on-device engine
+    /// (Granite-Docling → DocTags→Markdown, or LFM2.5-VL → plain Markdown). Falls back to
+    /// Apple Vision (also Pure-Apple) on any model-load or inference failure.
+    @available(macOS 26, *)
+    private func runVLMConversion(
         fileURL: URL, title: String, password: String?, workspaceURL: URL
     ) async -> ConversionResult {
         guard let document = PDFDocument(url: fileURL) else {
             return await runVisionExtraction(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
         }
         if document.isLocked, let password { _ = document.unlock(withPassword: password) }
-        let engine = GraniteDoclingEngine(
-            source: .modelDirectory(ModelManager.shared.modelDirectoryURL(for: .upmarketAI)))
+
+        // Pick the engine the user chose; each loads its own weights directory. The per-page
+        // closure hides the engine difference from the page loop below.
+        let engine = AIEngine.selected
+        let modelDir = ModelManager.shared.modelDirectoryURL(for: engine.asset)
+        let convert: @Sendable (URL) async throws -> String
+        switch engine {
+        case .granite:
+            let e = GraniteDoclingEngine(source: .modelDirectory(modelDir))
+            convert = { try await e.convertToMarkdown(imageURL: $0) }
+        case .lfm2:
+            let e = LFM2VLEngine(source: .modelDirectory(modelDir))
+            convert = { try await e.convertToMarkdown(imageURL: $0) }
+        }
+
         let tmp = FileManager.default.temporaryDirectory
         var pages: [String] = []
         do {
             for i in 0..<document.pageCount {
                 try Task.checkCancellation()
                 guard let page = document.page(at: i), let cg = Self.renderPDFPage(page) else { continue }
-                let url = tmp.appendingPathComponent("granite-\(UUID().uuidString).png")
+                let url = tmp.appendingPathComponent("vlm-\(UUID().uuidString).png")
                 try Self.writePNG(cg, to: url)
                 defer { try? FileManager.default.removeItem(at: url) }
-                pages.append(try await engine.convertToMarkdown(imageURL: url))
+                pages.append(try await convert(url))
             }
         } catch is CancellationError {
             return .failure("Conversion cancelled.")

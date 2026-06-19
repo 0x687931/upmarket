@@ -208,6 +208,7 @@ struct PreferencesView: View {
 	@AppStorage(AppVisibilityPreference.showMenuBarIconKey) private var showMenuBarIcon = AppVisibilityPreference.defaultShowMenuBarIcon
 	@AppStorage(AppVisibilityPreference.showShelfKey) private var showShelf = AppVisibilityPreference.defaultShowShelf
 	@AppStorage("upmarket.shelfAnchor") private var shelfAnchorRaw: Int = ShelfWindowController.ShelfAnchor.center.rawValue
+	@AppStorage(AIEngine.storageKey) private var aiEngineRaw: String = AIEngine.default.rawValue
 
 	var body: some View {
 		VStack(spacing: 0) {
@@ -441,10 +442,26 @@ struct PreferencesView: View {
 					.fixedSize(horizontal: false, vertical: true)
 					.padding(.bottom, 4)
 
+				Picker("Engine", selection: $aiEngineRaw) {
+					ForEach(AIEngine.productionCases, id: \.rawValue) { engine in
+						Text(engine.displayName).tag(engine.rawValue)
+					}
+				}
+				.pickerStyle(.segmented)
+				.padding(.bottom, 4)
+
+				Text("Pick the AI engine for complex documents. Download the matching model below.")
+					.font(.system(size: 12))
+					.foregroundStyle(.secondary)
+					.fixedSize(horizontal: false, vertical: true)
+					.padding(.bottom, 4)
+
 				VStack(spacing: 8) {
-					ModelManagementRow(asset: .upmarketAI, onUpgrade: { showPaywall = true })
-						.environmentObject(modelManager)
-						.environmentObject(store)
+					ForEach(AIEngine.productionCases, id: \.rawValue) { engine in
+						ModelManagementRow(asset: engine.asset, onUpgrade: { showPaywall = true })
+							.environmentObject(modelManager)
+							.environmentObject(store)
+					}
 				}
 			}
 		}
@@ -796,12 +813,14 @@ private struct ModelManagementRow: View {
 			return "Downloading…"
 		}
 
+		let sizeString = isDownloaded
+			? "\(modelManager.actualInstalledSizeMB(asset)) MB installed"
+			: "\(asset.sizeMB) MB (one-time download)"
 		switch asset {
 		case .upmarketAI:
-			let sizeString = isDownloaded
-				? "\(modelManager.actualInstalledSizeMB(.upmarketAI)) MB installed"
-				: "\(asset.sizeMB) MB (one-time download)"
 			return "Understands scanned pages and complex documents · \(sizeString)"
+		case .lfm25VL:
+			return "Stronger on tables and complex layout · \(sizeString)"
 		}
 	}
 
