@@ -1,0 +1,24 @@
+{
+  "model_key": "lfm25_vl",
+  "repository": "mlx-community/LFM2.5-VL-1.6B-8bit",
+  "revision": "051260290c8361562915be1b0292636a6ac8a7a3",
+  "quantization": {
+    "bits": 8,
+    "group_size": 64,
+    "mode": "affine"
+  },
+  "expected_files": [
+    "chat_template.jinja",
+    "config.json",
+    "generation_config.json",
+    "model.safetensors",
+    "model.safetensors.index.json",
+    "processor_config.json",
+    "tokenizer.json",
+    "tokenizer_config.json"
+  ],
+  "model_safetensors": {
+    "bytes": 2083497405,
+    "sha256": "377d10cf33b97a0f8e80efb8752d44bd7f246cae1e7bc622b3c9f1d8e1f7c657"
+  }
+}

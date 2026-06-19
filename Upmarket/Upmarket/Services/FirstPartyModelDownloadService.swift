@@ -494,6 +494,26 @@ private enum ModelDownloadCatalog {
             ],
             expectedDirs: []
         ),
+        // LFM2.5-VL 1.6B (8-bit mlx). Revision/expected_files must match scripts/models/
+        // stage_model_assets.py and the hosted manifest.
+        ModelDownloadSpec(
+            key: "lfm25_vl",
+            displayName: "Advanced AI for Tables & Layout",
+            sourceID: "com.upmarket.models.lfm25-vl",
+            revision: "051260290c8361562915be1b0292636a6ac8a7a3",
+            storageDirectory: "lfm25_vl",
+            expectedFiles: [
+                "chat_template.jinja",
+                "config.json",
+                "generation_config.json",
+                "model.safetensors",
+                "model.safetensors.index.json",
+                "processor_config.json",
+                "tokenizer.json",
+                "tokenizer_config.json",
+            ],
+            expectedDirs: []
+        ),
     ]
 
     static func spec(for key: String) throws -> ModelDownloadSpec {

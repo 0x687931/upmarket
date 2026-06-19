@@ -97,8 +97,14 @@ struct ModelDownloadView: View {
                 }
 
                 if store.tier >= .max {
-                    ForEach(modelManager.models.filter { $0.tier == "max" }, id: \.key) { model in
-                        let gateReason = modelManager.gate(tier: store.tier).downloadUnavailableReason(for: .upmarketAI)
+                    ForEach(modelManager.models.filter { model in
+                        model.tier == "max"
+                            && AIEngine.productionCases.contains(where: {
+                                $0.asset.rawValue == model.key
+                            })
+                    }, id: \.key) { model in
+                        let asset = ModelAsset(rawValue: model.key) ?? .upmarketAI
+                        let gateReason = modelManager.gate(tier: store.tier).downloadUnavailableReason(for: asset)
                         modelRow(
                             key: model.key,
                             icon: "sparkles",

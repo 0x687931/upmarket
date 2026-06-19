@@ -71,7 +71,7 @@ public enum DocTags {
         var rows: [[String]] = []
         var cur: [String] = []
         // Each control tag followed by its (optional) cell text up to the next tag.
-        for m in regexMatches(otsl, #"<(fcel|ecel|ched|rhed|lcel|ucel|xcel|nl)>([^<]*)"#) {
+        for m in regexMatches(otsl, #"<(fcel|ecel|ched|rhed|srow|lcel|ucel|xcel|nl)>([^<]*)"#) {
             let tag = m[1], text = clean(m[2])
             switch tag {
             case "nl":
@@ -79,7 +79,7 @@ public enum DocTags {
             case "ecel", "lcel", "ucel", "xcel":
                 cur.append("")                          // empty / merged cell
             default:
-                cur.append(text)                        // fcel, ched, rhed
+                cur.append(text)                        // fcel, ched, rhed, srow
             }
         }
         if !cur.isEmpty { rows.append(cur) }

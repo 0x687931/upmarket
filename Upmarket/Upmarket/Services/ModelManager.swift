@@ -332,7 +332,7 @@ final class ModelManager: ObservableObject {
                 .downloadModel(key: key, progressFile: progressFile)
 #else
             switch key {
-            case ModelAsset.upmarketAI.rawValue:
+            case ModelAsset.upmarketAI.rawValue, ModelAsset.lfm25VL.rawValue:
                 return await BackgroundAssetsDownloadService.shared.install(key: key, progressFile: progressFile)
             default:
                 return ModelDownloadResult(success: false, error: "Unknown model key: \(key)")

@@ -30,6 +30,10 @@ dist/
 *.mlpackage/
 *.mlmodel
 
+# LFM2.5-VL is downloaded from its exact pinned model revision. Keep the local
+# developer copy available to the harness without committing generated model files.
+resources/models/lfm25_vl/
+
 # macOS
 .DS_Store
 .AppleDouble

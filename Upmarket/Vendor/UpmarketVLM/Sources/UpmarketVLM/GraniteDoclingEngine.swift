@@ -9,6 +9,16 @@ import Tokenizers
 /// for the Docling enhanced pipeline. Loads the granite-docling-258M MLX weights, runs page
 /// inference on Apple Silicon (Metal/ANE), and parses the DocTags output to Markdown.
 public actor GraniteDoclingEngine {
+    public static let generationParameters = GenerateParameters(
+        maxTokens: 4096,
+        temperature: 0.0
+    )
+
+    public nonisolated static func completedDocTags(in text: String) -> String? {
+        guard let end = text.range(of: "</doctag>") else { return nil }
+        return String(text[..<end.upperBound])
+    }
+
     public enum Source: Sendable {
         case modelDirectory(URL)     // the app's downloaded `upmarket_ai` weights
         case huggingFaceID(String)   // e.g. "ibm-granite/granite-docling-258M-mlx"
@@ -43,8 +53,8 @@ public actor GraniteDoclingEngine {
         }
     }
 
-    /// Convert one page image to Markdown. The model is loaded lazily and reused.
-    public func convertToMarkdown(
+    /// Generate raw DocTags for one page using the model card's deterministic recipe.
+    public func convertToDocTags(
         imageURL: URL,
         prompt: String = "Convert this page to docling."
     ) async throws -> String {
@@ -52,8 +62,33 @@ public actor GraniteDoclingEngine {
             await Self.routeToTilingProcessor()
             context = try await #huggingFaceLoadModel(configuration: configuration)
         }
-        let session = ChatSession(context!)
-        let doctags = try await session.respond(to: prompt, image: .url(imageURL))
-        return DocTags.toMarkdown(doctags)
+        let session = ChatSession(
+            context!,
+            generateParameters: Self.generationParameters,
+            processing: .init(resize: nil)
+        )
+        var doctags = ""
+        for try await chunk in session.streamResponse(to: prompt, image: .url(imageURL)) {
+            doctags += chunk
+            if let completed = Self.completedDocTags(in: doctags) {
+                doctags = completed
+                break
+            }
+        }
+        // Breaking a streaming response cancels its producer. Wait until the model cache is no
+        // longer in use before returning so command-line clients cannot tear down Metal while a
+        // command buffer is still active.
+        await session.synchronize()
+        return doctags
+    }
+
+    /// Convert one page image to Markdown. The model is loaded lazily and reused.
+    public func convertToMarkdown(
+        imageURL: URL,
+        prompt: String = "Convert this page to docling."
+    ) async throws -> String {
+        try VLMOutputValidator.validate(
+            DocTags.toMarkdown(try await convertToDocTags(imageURL: imageURL, prompt: prompt))
+        )
     }
 }

@@ -95,6 +95,12 @@ private enum AssetCatalog {
     ///   2. Upload archives to App Store Connect → Additional Resources.
     ///   3. Update the URLs below to the App Store Connect CDN URLs Apple provides.
     ///   4. Bump the app version so applicationDidUpdate fires for existing installs.
+    //
+    // Only the default engine (upmarket_ai) is pre-scheduled here so it is ready at first
+    // launch. The opt-in alternative (lfm25_vl, ~2.1 GB) is NOT pre-scheduled — it downloads
+    // on demand via BackgroundAssetsDownloadService.install(key:) when the user selects it,
+    // so users never pay for weights they didn't choose. It must still be registered in
+    // App Store Connect for the on-demand BADownloadManager schedule to resolve.
     static let aiAssets: [Asset] = [
         Asset(
             downloadID: "com.upmarket.download.upmarket-ai",

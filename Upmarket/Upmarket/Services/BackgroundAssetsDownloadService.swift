@@ -6,7 +6,8 @@ import OSLog
 /// Monitors Background Assets downloads for tier-based runtime and model assets.
 ///
 /// Per TIER_CONTRACT.md, downloads are segmented by tier:
-/// - Max: upmarket_ai (~600MB) — Granite-Docling mlx-swift model weights
+/// - Max: upmarket_ai (~600MB) — Granite-Docling mlx-swift weights (default AI engine)
+/// - Max: lfm25_vl (~2.0GB) — LFM2.5-VL mlx-swift weights (opt-in alternative; on-demand only)
 ///
 /// Background Assets downloads are scheduled by the UpmarketBackgroundAssetsExtension
 /// when the app is installed or updated. This service:
@@ -29,6 +30,7 @@ final class BackgroundAssetsDownloadService: NSObject, ObservableObject {
     // and what is registered in App Store Connect.
     // See docs/TIER_CONTRACT.md for size and tier requirements.
     static let upmarketAIDownloadID = "com.upmarket.download.upmarket-ai"
+    static let lfm25VLDownloadID = "com.upmarket.download.lfm25-vl"
 
     private static let appGroup = "group.com.upmarket.app"
 
@@ -167,6 +169,7 @@ final class BackgroundAssetsDownloadService: NSObject, ObservableObject {
     private func downloadIdentifier(for key: String) -> String {
         switch key {
         case ModelAsset.upmarketAI.rawValue: return Self.upmarketAIDownloadID
+        case ModelAsset.lfm25VL.rawValue:    return Self.lfm25VLDownloadID
         default: return "com.upmarket.download.\(key)"
         }
     }
@@ -192,7 +195,9 @@ final class BackgroundAssetsDownloadService: NSObject, ObservableObject {
     private func estimatedFileSize(for key: String) -> Int {
         switch key {
         case ModelAsset.upmarketAI.rawValue:
-            return 600_000_000  // Model weights (estimate)
+            return 600_000_000   // Model weights (estimate)
+        case ModelAsset.lfm25VL.rawValue:
+            return 2_083_000_000 // 1.6B 8-bit weights (estimate)
         default:
             return 0
         }
@@ -212,6 +217,14 @@ final class BackgroundAssetsDownloadService: NSObject, ObservableObject {
             return ModelSpec(
                 sourceID: "com.upmarket.models.upmarket-ai",
                 revision: "e9939db25d2f296c8678d0491c4609a8c596c50a",
+                displayName: "AI Model",
+                expectedFiles: ["config.json", "model.safetensors"],
+                expectedDirs: []
+            )
+        case ModelAsset.lfm25VL.rawValue:
+            return ModelSpec(
+                sourceID: "com.upmarket.models.lfm25-vl",
+                revision: "051260290c8361562915be1b0292636a6ac8a7a3",
                 displayName: "AI Model",
                 expectedFiles: ["config.json", "model.safetensors"],
                 expectedDirs: []
@@ -289,6 +302,7 @@ extension BackgroundAssetsDownloadService: BADownloadManagerDelegate {
     private func modelKey(for downloadID: String) -> String {
         switch downloadID {
         case Self.upmarketAIDownloadID: return ModelAsset.upmarketAI.rawValue
+        case Self.lfm25VLDownloadID:    return ModelAsset.lfm25VL.rawValue
         default: return downloadID.components(separatedBy: ".").last ?? downloadID
         }
     }

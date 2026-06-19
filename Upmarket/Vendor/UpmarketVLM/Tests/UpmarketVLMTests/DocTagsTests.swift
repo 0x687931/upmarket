@@ -21,4 +21,11 @@ final class DocTagsTests: XCTestCase {
         XCTAssertFalse(md.contains("<fcel>"))
         XCTAssertFalse(md.contains("<otsl>"))
     }
+
+    func testStructuredRowCellIsPreserved() {
+        let dt = "<doctag><otsl><ecel><ched>A<ched>B<nl>"
+            + "<srow>Blend (%):<ecel><ecel><nl></otsl></doctag>"
+        let md = DocTags.toMarkdown(dt)
+        XCTAssertTrue(md.contains("| Blend (%):"), md)
+    }
 }
