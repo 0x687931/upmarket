@@ -77,12 +77,16 @@ final class ModelManagerTests: XCTestCase {
     }
 
     func testDownloadProgressUpdatesBeforeCompletion() async throws {
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ModelManagerProgressTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: workspace) }
         let manager = ModelManager(
             models: [
                 Self.maxModel(isDownloaded: false)
             ],
+            downloadWorkspaceDirectoryURL: workspace,
             downloadModelHandler: { _, progressFile in
-                writeProgress(percent: 25, message: "Downloading", to: progressFile)
+                appendProgress(percent: 25, message: "Downloading", to: progressFile)
                 try? await Task.sleep(nanoseconds: 700_000_000)
                 appendProgress(percent: 80, message: "Validating", to: progressFile)
                 try? await Task.sleep(nanoseconds: 700_000_000)
@@ -105,6 +109,35 @@ final class ModelManagerTests: XCTestCase {
         XCTAssertEqual(manager.downloadProgress, 100)
         XCTAssertNil(manager.downloadError)
         XCTAssertNil(manager.downloadingModelKey)
+    }
+
+    func testDownloadProgressSurvivesAtomicProgressFileReplacement() async throws {
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ModelManagerReplacementTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: workspace) }
+        let manager = ModelManager(
+            models: [Self.maxModel(isDownloaded: false)],
+            downloadWorkspaceDirectoryURL: workspace,
+            downloadModelHandler: { _, progressFile in
+                writeProgress(percent: 35, message: "Downloading", to: progressFile)
+                try? await Task.sleep(nanoseconds: 1_300_000_000)
+                return ModelDownloadResult(success: true, error: nil)
+            }
+        )
+
+        let gate = AppTierGate(tier: .max, downloadedAssets: [], deviceSupportsRuntime: true, aiFeatureEnabled: true, aiFeatureUnavailableReason: nil)
+        manager.downloadAssets(for: .ai, gate: gate)
+
+        try await waitUntil(timeout: 3) {
+            manager.isDownloading && manager.downloadProgress >= 35
+        }
+        XCTAssertEqual(manager.downloadMessage, "Downloading")
+
+        try await waitUntil(timeout: 5) {
+            !manager.isDownloading
+        }
+        XCTAssertEqual(manager.downloadProgress, 100)
+        XCTAssertNil(manager.downloadError)
     }
 
     func testDownloadFailureSetsVisibleErrorAndClearsActiveModel() async throws {

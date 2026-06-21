@@ -44,7 +44,8 @@ final class ConversionQueue: ObservableObject {
     }
 
     func job(id: UUID) -> ConversionJob? {
-        jobs.first { $0.id == id }
+        guard let index = jobIndex[id], jobs.indices.contains(index) else { return nil }
+        return jobs[index]
     }
 
     var lastFailedJob: ConversionJob? {
@@ -215,6 +216,13 @@ final class ConversionQueue: ObservableObject {
         updateOverallProgressCache()
     }
 
+    /// Clears finished jobs (complete/failed/cancelled), leaving anything still running or queued.
+    func clearFinished() {
+        jobs.removeAll { !$0.isRunning }
+        rebuildJobIndex()
+        updateOverallProgressCache()
+    }
+
     private func rebuildJobIndex() {
         jobIndex.removeAll(keepingCapacity: true)
         for (index, job) in jobs.enumerated() {
@@ -257,7 +265,7 @@ final class ConversionQueue: ObservableObject {
     }
 
     private func runJob(_ id: UUID) async {
-        guard let job = jobs.first(where: { $0.id == id }) else { return }
+        guard let job = job(id: id) else { return }
         guard !cancelledJobIDs.contains(id), !Task.isCancelled else { return }
         update(id, stage: .copying)
 
@@ -369,7 +377,7 @@ final class ConversionQueue: ObservableObject {
                 sourceURL: sourceURL,
                 fileExtension: formatted.fileExtension
             ) else { return }
-            if let index = self.jobs.firstIndex(where: { $0.id == jobID }) {
+            if let index = self.jobIndex[jobID], self.jobs.indices.contains(index) {
                 self.jobs[index].savedURL = savedURL
             }
         }

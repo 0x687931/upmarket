@@ -108,12 +108,14 @@ final class ModelManager: ObservableObject {
     private let downloadModelHandler: DownloadModelHandler
     private let offlineModeHandler: OfflineModeHandler
     private let modelsDirectoryURL: URL
+    private let downloadWorkspaceDirectoryURL: URL
     let runtimeDirectoryURL: URL
 
     init(
         models: [ModelStatus] = [],
         modelsDirectoryURL: URL? = nil,
         runtimeDirectoryURL: URL? = nil,
+        downloadWorkspaceDirectoryURL: URL? = nil,
         checkModelsHandler: @escaping CheckModelsHandler = {
             ModelManager.nativeModelStatuses(in: ModelManager.defaultModelsDirectoryURL())
         },
@@ -123,6 +125,7 @@ final class ModelManager: ObservableObject {
         self.models = models
         self.modelsDirectoryURL = modelsDirectoryURL ?? Self.defaultModelsDirectoryURL()
         self.runtimeDirectoryURL = runtimeDirectoryURL ?? Self.defaultRuntimeDirectoryURL()
+        self.downloadWorkspaceDirectoryURL = downloadWorkspaceDirectoryURL ?? AppWorkspace.baseDirectory
         self.checkModelsHandler = checkModelsHandler
         self.downloadModelHandler = downloadModelHandler
         self.offlineModeHandler = offlineModeHandler
@@ -379,118 +382,97 @@ final class ModelManager: ObservableObject {
     }
 
     private func downloadSingleModel(key: String) async {
-        let workspace = try? AppWorkspace.create(prefix: "model-download")
-        if workspace == nil {
-            try? FileManager.default.createDirectory(at: AppWorkspace.baseDirectory, withIntermediateDirectories: true)
-        }
+        let workspace = downloadWorkspaceDirectoryURL
+            .appendingPathComponent("model-download-\(UUID().uuidString)", isDirectory: true)
+        let workspaceCreated = (try? FileManager.default.createDirectory(
+            at: workspace,
+            withIntermediateDirectories: true
+        )) != nil
         defer {
-            if let workspace {
+            if workspaceCreated {
                 AppWorkspace.remove(workspace)
             }
         }
 
-        let progressFile = (workspace ?? AppWorkspace.baseDirectory)
+        let progressFile = (workspaceCreated ? workspace : downloadWorkspaceDirectoryURL)
             .appendingPathComponent("upmarket_\(key)_progress.jsonl")
             .path
 
-        // Clear any existing progress file
         try? FileManager.default.removeItem(atPath: progressFile)
+        FileManager.default.createFile(atPath: progressFile, contents: nil)
 
-        let resultBox = ModelDownloadResultBox()
-
-        // Start download in a separate task so we can monitor progress.
-        let downloadTask = Task.detached {
-            let result = await self.downloadModelHandler(key, progressFile)
-            await resultBox.set(result)
+        let progressSource = makeProgressSource(progressFile: progressFile)
+        // Keep a low-frequency safety poll even when vnode monitoring is active.
+        // The download services append in production, while tests or future writers
+        // may replace the file atomically and detach the inode-based source.
+        let pollingTask = Task.detached(priority: .utility) { [weak self] in
+            while !Task.isCancelled {
+                await self?.applyProgressSnapshot(from: progressFile)
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+            }
         }
 
-        // Monitor progress file for changes (event-driven instead of polling).
-        await monitorDownloadProgress(progressFile: progressFile, downloadTask: downloadTask, resultBox: resultBox)
+        let result = await downloadModelHandler(key, progressFile)
+
+        await applyProgressSnapshot(from: progressFile)
+        pollingTask.cancel()
+        progressSource?.cancel()
+        await applyDownloadResult(result)
 
         try? FileManager.default.removeItem(atPath: progressFile)
     }
 
-    private func monitorDownloadProgress(progressFile: String, downloadTask: Task<Void, Never>, resultBox: ModelDownloadResultBox) async {
+    private func makeProgressSource(progressFile: String) -> DispatchSourceFileSystemObject? {
+        // Production download services append JSONL entries to this pre-created file.
+        // Watching the file inode provides immediate progress updates for those writes.
         let descriptor = open(progressFile, O_EVTONLY)
-        guard descriptor >= 0 else {
-            // Fallback to polling if file monitoring unavailable
-            await pollingDownloadProgress(progressFile: progressFile, downloadTask: downloadTask, resultBox: resultBox)
-            return
-        }
+        guard descriptor >= 0 else { return nil }
 
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: descriptor,
-            eventMask: [.write, .extend],
+            eventMask: [.write, .extend, .attrib, .delete, .rename],
             queue: DispatchQueue.global(qos: .utility)
         )
 
         source.setEventHandler { [weak self] in
-            Task { @MainActor [weak self] in
-                if let line = Self.lastProgressLine(atPath: progressFile),
-                   let data = line.data(using: .utf8),
-                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    let percent = json["percent"] as? Double ?? 0
-                    let message = json["message"] as? String ?? ""
-                    self?.downloadProgress = percent
-                    self?.downloadMessage = message
-                }
+            Task {
+                await self?.applyProgressSnapshot(from: progressFile)
             }
         }
         source.setCancelHandler {
             close(descriptor)
         }
         source.resume()
+        return source
+    }
 
-        // Wait for download to complete
-        while await resultBox.result == nil && !Task.isCancelled {
-            try? await Task.sleep(nanoseconds: 100_000_000)  // Check every 100ms for completion
+    private func applyProgressSnapshot(from progressFile: String) async {
+        guard let line = Self.lastProgressLine(atPath: progressFile),
+              let data = line.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return
         }
-
-        source.cancel()
-
-        // Process final result
-        if let result = await resultBox.result {
-            await downloadTask.value
-            await MainActor.run { [weak self] in
-                if result.success {
-                    self?.downloadProgress = max(self?.downloadProgress ?? 0, 100)
-                    if self?.downloadMessage.isEmpty ?? true {
-                        self?.downloadMessage = "Download complete"
-                    }
-                } else {
-                    self?.downloadError = result.error ?? "Download failed"
-                }
+        let percent = json["percent"] as? Double ?? 0
+        let message = json["message"] as? String ?? ""
+        await MainActor.run { [weak self] in
+            guard let self else { return }
+            self.downloadProgress = max(self.downloadProgress, percent)
+            if !message.isEmpty {
+                self.downloadMessage = message
             }
         }
     }
 
-    private func pollingDownloadProgress(progressFile: String, downloadTask: Task<Void, Never>, resultBox: ModelDownloadResultBox) async {
-        while await resultBox.result == nil && !Task.isCancelled {
-            try? await Task.sleep(nanoseconds: 500_000_000)
-
-            if let line = Self.lastProgressLine(atPath: progressFile),
-               let data = line.data(using: .utf8),
-               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                let percent = json["percent"] as? Double ?? 0
-                let message = json["message"] as? String ?? ""
-                await MainActor.run { [weak self] in
-                    self?.downloadProgress = percent
-                    self?.downloadMessage = message
+    private func applyDownloadResult(_ result: ModelDownloadResult) async {
+        await MainActor.run { [weak self] in
+            guard let self else { return }
+            if result.success {
+                self.downloadProgress = max(self.downloadProgress, 100)
+                if self.downloadMessage.isEmpty {
+                    self.downloadMessage = "Download complete"
                 }
-            }
-        }
-
-        if let result = await resultBox.result {
-            await downloadTask.value
-            await MainActor.run { [weak self] in
-                if result.success {
-                    self?.downloadProgress = max(self?.downloadProgress ?? 0, 100)
-                    if self?.downloadMessage.isEmpty ?? true {
-                        self?.downloadMessage = "Download complete"
-                    }
-                } else {
-                    self?.downloadError = result.error ?? "Download failed"
-                }
+            } else {
+                self.downloadError = result.error ?? "Download failed"
             }
         }
     }
@@ -508,13 +490,5 @@ final class ModelManager: ObservableObject {
             .split(separator: "\n", omittingEmptySubsequences: true)
             .last
             .map(String.init)
-    }
-}
-
-private actor ModelDownloadResultBox {
-    private(set) var result: ModelDownloadResult?
-
-    func set(_ result: ModelDownloadResult) {
-        self.result = result
     }
 }

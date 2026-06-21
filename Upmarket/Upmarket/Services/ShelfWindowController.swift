@@ -34,7 +34,12 @@ final class ShelfWindowController: NSWindowController {
             guard UserDefaults.standard.object(forKey: "upmarket.shelfAnchor") != nil else { return .bottomRight }
             return ShelfAnchor(rawValue: UserDefaults.standard.integer(forKey: "upmarket.shelfAnchor")) ?? .bottomRight
         }
-        set { UserDefaults.standard.set(newValue.rawValue, forKey: "upmarket.shelfAnchor") }
+        // Notify here so every write path (drag-snap, Preferences picker, demo) keeps
+        // ShelfView's layout in sync — not just the drag path.
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: "upmarket.shelfAnchor")
+            NotificationCenter.default.post(name: .upmarketShelfAnchorChanged, object: newValue.rawValue)
+        }
     }
 
     // MARK: - Init
@@ -158,8 +163,7 @@ final class ShelfWindowController: NSWindowController {
         }
 
         if let nearest {
-            anchor = nearest.0
-            NotificationCenter.default.post(name: .upmarketShelfAnchorChanged, object: nearest.0.rawValue)
+            anchor = nearest.0   // setter posts .upmarketShelfAnchorChanged
             NSAnimationContext.runAnimationGroup { ctx in
                 ctx.duration = 0.25
                 ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)

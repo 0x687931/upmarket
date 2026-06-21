@@ -292,19 +292,17 @@ final class WatchedFolderService: ObservableObject {
         case .sameFolder:
             return sourceFolder
         case .chosenFolder:
-            guard let data = folder.outputBookmarkData else { return nil }
-            return resolveBookmark(data)
+            guard let data = folder.outputBookmarkData,
+                  let resolved = resolveBookmark(data) else { return nil }
+            if let refreshed = resolved.refreshed, let i = folders.firstIndex(where: { $0.id == folder.id }) {
+                folders[i].outputBookmarkData = refreshed
+                saveFolders()
+            }
+            return resolved.url
         }
     }
 
     private func write(output: ConversionOutput, sourceURL: URL, destination: URL) async {
-        let scoped = destination.startAccessingSecurityScopedResource()
-        defer {
-            if scoped {
-                destination.stopAccessingSecurityScopedResource()
-            }
-        }
-
         let formatted = OutputFormatter.format(
             output,
             sourceDisplayName: sourceURL.lastPathComponent,
@@ -312,28 +310,16 @@ final class WatchedFolderService: ObservableObject {
         )
         let baseName = output.title.isEmpty ? sourceURL.deletingPathExtension().lastPathComponent : output.title
         let fileName = "\(baseName.sanitisedForFilename).\(formatted.fileExtension)"
-        let outputURL = uniqueURL(in: destination, fileName: fileName)
         do {
-            try await FileWriteService.shared.writeMarkdown(formatted.text, to: outputURL)
+            _ = try await FileWriteService.shared.writeMarkdown(
+                formatted.text,
+                toUniqueFileIn: destination,
+                preferredFileName: fileName,
+                fileManager: fileManager
+            )
         } catch {
             AppLog.fileAccess.error("Watched folder output write failed: \(error.localizedDescription, privacy: .private)")
         }
-    }
-
-    private func uniqueURL(in folder: URL, fileName: String) -> URL {
-        let candidate = folder.appendingPathComponent(fileName)
-        guard !fileManager.fileExists(atPath: candidate.path) else {
-            let baseName = (fileName as NSString).deletingPathExtension
-            let ext = (fileName as NSString).pathExtension
-            for index in 2...999 {
-                let numbered = folder.appendingPathComponent("\(baseName) \(index).\(ext)")
-                if !fileManager.fileExists(atPath: numbered.path) {
-                    return numbered
-                }
-            }
-            return folder.appendingPathComponent("\(baseName) \(UUID().uuidString).\(ext)")
-        }
-        return candidate
     }
 
     private func isStable(_ url: URL, folderID: UUID, firstSignature: FileSignature) async -> Bool {
@@ -376,17 +362,26 @@ final class WatchedFolderService: ObservableObject {
     }
 
     private func resolveFolderURL(_ folder: WatchedFolder) -> URL? {
-        resolveBookmark(folder.bookmarkData)
+        guard let resolved = resolveBookmark(folder.bookmarkData) else { return nil }
+        if let refreshed = resolved.refreshed, let i = folders.firstIndex(where: { $0.id == folder.id }) {
+            folders[i].bookmarkData = refreshed
+            saveFolders()
+        }
+        return resolved.url
     }
 
-    private func resolveBookmark(_ data: Data) -> URL? {
+    /// Resolves a security-scoped bookmark, re-minting it when macOS reports it stale.
+    /// `refreshed` is non-nil only when the bookmark was stale and successfully re-created;
+    /// callers persist it against the owning folder so saved access doesn't eventually expire.
+    private func resolveBookmark(_ data: Data) -> (url: URL, refreshed: Data?)? {
         var isStale = false
-        return try? URL(
+        guard let url = try? URL(
             resolvingBookmarkData: data,
             options: .withSecurityScope,
             relativeTo: nil,
             bookmarkDataIsStale: &isStale
-        )
+        ) else { return nil }
+        return (url, isStale ? Self.makeBookmark(for: url) : nil)
     }
 
     private func saveFolders() {

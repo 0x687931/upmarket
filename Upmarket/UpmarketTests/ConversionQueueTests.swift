@@ -251,6 +251,36 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertFalse(queue.isConverting)
     }
 
+    func testClearFinishedKeepsActiveAndQueuedJobs() async {
+        let queue = ConversionQueue { job, _ in
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            return .success(ConversionOutput(
+                markdown: job.name,
+                pages: 1,
+                format: job.ext,
+                title: job.name,
+                pipeline: .fast
+            ))
+        }
+
+        let active = queue.add(URL(fileURLWithPath: "/tmp/active.pdf"))
+        let queued = queue.add(URL(fileURLWithPath: "/tmp/queued.pdf"))
+        let finished = queue.addRejected(
+            URL(fileURLWithPath: "/tmp/finished.bin"),
+            message: FileAccessError.unsupportedType.errorDescription!
+        )
+
+        await waitUntil { queue.job(id: active)?.stage != .queued }
+        queue.clearFinished()
+
+        XCTAssertNotNil(queue.job(id: active))
+        XCTAssertNotNil(queue.job(id: queued))
+        XCTAssertNil(queue.job(id: finished))
+        XCTAssertEqual(queue.jobs.count, 2)
+
+        queue.cancelAll()
+    }
+
     func testRunningJobCanBeClassifiedAsStalledWithoutCancellingIt() {
         let job = ConversionJob(
             sourceURL: URL(fileURLWithPath: "/tmp/stalled.pdf"),
