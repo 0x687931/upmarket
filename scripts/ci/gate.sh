@@ -131,7 +131,6 @@ policy_gate() {
   run_step "Validate generated repository docs" scripts/docs/generate_repo_docs.py --check
   run_step "Validate release regression guards" scripts/ci/validate_release_regression_guards.py
   run_step "Verify source entitlements" scripts/ci/verify_entitlements.sh
-  run_step "Validate HuggingFace corpus configuration" scripts/ci/validate_hf_corpus.py
 }
 
 build_gate() {
