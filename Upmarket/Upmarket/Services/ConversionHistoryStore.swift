@@ -23,6 +23,10 @@ final class ConversionHistoryStore: ObservableObject {
     private let directoryURL: URL
     private let fileManager: FileManager
     private let userDefaults: UserDefaults
+    private let persistence: ConversionHistoryPersistence
+    private var persistenceGeneration = 0
+    private var pendingPersistenceTasks: [UUID: Task<Void, Never>] = [:]
+    private var persistenceTail = Task<Void, Never> {}
 
     init(
         directoryURL: URL? = nil,
@@ -33,6 +37,10 @@ final class ConversionHistoryStore: ObservableObject {
         self.directoryURL = directoryURL ?? Self.defaultDirectoryURL(fileManager: fileManager)
         self.fileManager = fileManager
         self.userDefaults = userDefaults
+        self.persistence = ConversionHistoryPersistence(
+            directoryURL: self.directoryURL,
+            fileManager: fileManager
+        )
         self.isEnabled = userDefaults.object(forKey: Self.enabledDefaultsKey) as? Bool ?? true
         if loadImmediately {
             load()
@@ -46,8 +54,20 @@ final class ConversionHistoryStore: ObservableObject {
         records.insert(record, at: 0)
         records.sort { $0.createdAt > $1.createdAt }
 
-        Task.detached(priority: .utility) { [weak self, record] in
-            await self?.saveRecordAsync(record)
+        let data: Data
+        do {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            data = try encoder.encode(record)
+        } catch {
+            AppLog.fileAccess.error("Failed to encode conversion history: \(error.localizedDescription, privacy: .private)")
+            return
+        }
+
+        let generation = persistenceGeneration
+        trackPersistenceTask { [persistence] in
+            await persistence.save(data, id: record.id, generation: generation)
         }
     }
 
@@ -78,13 +98,11 @@ final class ConversionHistoryStore: ObservableObject {
     }
 
     func clear() {
-        do {
-            if fileManager.fileExists(atPath: directoryURL.path) {
-                try fileManager.removeItem(at: directoryURL)
-            }
-            records = []
-        } catch {
-            AppLog.fileAccess.error("Failed to clear conversion history: \(error.localizedDescription, privacy: .private)")
+        persistenceGeneration += 1
+        let generation = persistenceGeneration
+        records = []
+        trackPersistenceTask { [persistence] in
+            await persistence.clear(generation: generation)
         }
     }
 
@@ -92,12 +110,12 @@ final class ConversionHistoryStore: ObservableObject {
         records.filter { $0.matches(query: query) }
     }
 
-    // Test helper: wait for pending async writes to complete
-    nonisolated func waitForPendingWrites(timeout: TimeInterval = 2.0) async {
-        let deadline = Date().addingTimeInterval(timeout)
-        while !FileManager.default.fileExists(atPath: directoryURL.path) {
-            if Date() > deadline { break }
-            try? await Task.sleep(nanoseconds: 10_000_000)  // 10ms
+    func waitForPendingWrites() async {
+        while !pendingPersistenceTasks.isEmpty {
+            let tasks = Array(pendingPersistenceTasks.values)
+            for task in tasks {
+                await task.value
+            }
         }
     }
 
@@ -109,19 +127,20 @@ final class ConversionHistoryStore: ObservableObject {
             .appendingPathComponent("History", isDirectory: true)
     }
 
-    private func saveRecordAsync(_ record: ConversionHistoryRecord) async {
-        guard isEnabled else { return }
-        do {
-            try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let data = try encoder.encode(record)
-            let url = directoryURL.appendingPathComponent(record.id.uuidString).appendingPathExtension("json")
-            try data.write(to: url, options: .atomic)
-        } catch {
-            AppLog.fileAccess.error("Failed to save conversion history: \(error.localizedDescription, privacy: .private)")
+    private func trackPersistenceTask(
+        _ operation: @escaping @Sendable () async -> Void
+    ) {
+        let id = UUID()
+        let previous = persistenceTail
+        let task = Task(priority: .utility) { [weak self] in
+            await previous.value
+            await operation()
+            await MainActor.run {
+                _ = self?.pendingPersistenceTasks.removeValue(forKey: id)
+            }
         }
+        persistenceTail = task
+        pendingPersistenceTasks[id] = task
     }
 
     nonisolated private static func loadRecords(from directoryURL: URL, fileManager: FileManager) -> [ConversionHistoryRecord] {
@@ -163,5 +182,41 @@ final class ConversionHistoryStore: ObservableObject {
             uniqueKeysWithValues: (currentRecords + loadedRecords).map { ($0.id, $0) }
         )
         return merged.values.sorted { $0.createdAt > $1.createdAt }
+    }
+}
+
+private actor ConversionHistoryPersistence {
+    private let directoryURL: URL
+    private let fileManager: FileManager
+    private var generation = 0
+
+    init(directoryURL: URL, fileManager: FileManager) {
+        self.directoryURL = directoryURL
+        self.fileManager = fileManager
+    }
+
+    func save(_ data: Data, id: UUID, generation requestedGeneration: Int) {
+        guard requestedGeneration == generation else { return }
+        do {
+            try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+            let url = directoryURL
+                .appendingPathComponent(id.uuidString)
+                .appendingPathExtension("json")
+            try data.write(to: url, options: .atomic)
+        } catch {
+            AppLog.fileAccess.error("Failed to save conversion history: \(error.localizedDescription, privacy: .private)")
+        }
+    }
+
+    func clear(generation requestedGeneration: Int) {
+        guard requestedGeneration >= generation else { return }
+        generation = requestedGeneration
+        do {
+            if fileManager.fileExists(atPath: directoryURL.path) {
+                try fileManager.removeItem(at: directoryURL)
+            }
+        } catch {
+            AppLog.fileAccess.error("Failed to clear conversion history: \(error.localizedDescription, privacy: .private)")
+        }
     }
 }

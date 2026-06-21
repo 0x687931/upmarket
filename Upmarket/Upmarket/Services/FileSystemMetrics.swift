@@ -6,8 +6,9 @@ import OSLog
 actor FileSystemMetrics {
     nonisolated static let shared = FileSystemMetrics()
 
-    private var sizeCache: [URL: CacheEntry] = [:]
-    private var signatureCache: [URL: (signature: FileSignature, timestamp: Date)] = [:]
+    private var fileSizeCache: [URL: CacheEntry] = [:]
+    private var directorySizeCache: [URL: CacheEntry] = [:]
+    private var signatureCache: [SignatureCacheKey: (signature: FileSignature, timestamp: Date)] = [:]
 
     private struct CacheEntry {
         let size: Int64
@@ -23,22 +24,24 @@ actor FileSystemMetrics {
 
     /// Read file size asynchronously, optimized by storage location (local vs. iCloud).
     func readFileSize(_ url: URL) async -> Int64 {
-        let cacheKey = url
-        if let entry = sizeCache[cacheKey], !entry.isExpired() {
+        let cacheKey = url.standardizedFileURL
+        if let entry = fileSizeCache[cacheKey], !entry.isExpired() {
             return entry.size
         }
 
         let isICloud = await checkIsICloudFile(url)
         let size = isICloud ? await readICloudFileSize(url) : await readLocalFileSize(url)
-        sizeCache[cacheKey] = CacheEntry(size: size, timestamp: Date(), ttlSeconds: 300)
+        // File sizes affect safety limits, so only coalesce near-simultaneous reads.
+        // A long-lived cache could accept a file that changed after it was selected.
+        fileSizeCache[cacheKey] = CacheEntry(size: size, timestamp: Date(), ttlSeconds: 0.25)
         return size
     }
 
     /// Read file size (local file only, fast sync read).
     private func readLocalFileSize(_ url: URL) async -> Int64 {
         await Task.detached(priority: .userInitiated) {
-            let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
-            return Int64(size)
+            let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
+            return (attributes?[.size] as? NSNumber)?.int64Value ?? 0
         }.value
     }
 
@@ -50,8 +53,8 @@ actor FileSystemMetrics {
             var error: NSError?
 
             coordinator.coordinate(readingItemAt: url, options: [.withoutChanges], error: &error) { coordURL in
-                let bytes = (try? coordURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
-                size = Int64(bytes)
+                let attributes = try? FileManager.default.attributesOfItem(atPath: coordURL.path)
+                size = (attributes?[.size] as? NSNumber)?.int64Value ?? 0
             }
 
             return size
@@ -69,13 +72,13 @@ actor FileSystemMetrics {
     /// Compute directory size asynchronously (enumeration off main thread).
     /// Caches result for 10 minutes.
     func readDirectorySize(_ url: URL) async -> Int64 {
-        let cacheKey = url
-        if let entry = sizeCache[cacheKey], !entry.isExpired() {
+        let cacheKey = url.standardizedFileURL
+        if let entry = directorySizeCache[cacheKey], !entry.isExpired() {
             return entry.size
         }
 
         let size = await enumerateDirectorySize(url)
-        sizeCache[cacheKey] = CacheEntry(size: size, timestamp: Date(), ttlSeconds: 600)
+        directorySizeCache[cacheKey] = CacheEntry(size: size, timestamp: Date(), ttlSeconds: 600)
         return size
     }
 
@@ -122,16 +125,22 @@ actor FileSystemMetrics {
         }
     }
 
+    private struct SignatureCacheKey: Hashable {
+        let url: URL
+        let folderID: UUID
+    }
+
     /// Get or compute file signature asynchronously (used to detect file changes).
     func getFileSignature(for url: URL, folderID: UUID) async -> FileSignature? {
-        if let cached = signatureCache[url],
+        let cacheKey = SignatureCacheKey(url: url.standardizedFileURL, folderID: folderID)
+        if let cached = signatureCache[cacheKey],
            Date().timeIntervalSince(cached.timestamp) < 0.1 {
             return cached.signature
         }
 
         let signature = await readSignature(for: url, folderID: folderID)
         if let signature {
-            signatureCache[url] = (signature, Date())
+            signatureCache[cacheKey] = (signature, Date())
         }
         return signature
     }
@@ -143,32 +152,30 @@ actor FileSystemMetrics {
     }
 
     private nonisolated func readSignatureSync(for url: URL, folderID: UUID) -> FileSignature? {
-        guard let values = try? url.resourceValues(forKeys: [
-            .isDirectoryKey,
-            .isRegularFileKey,
-            .fileSizeKey,
-            .contentModificationDateKey
-        ]) else { return nil }
-
-        guard values.isDirectory != true, values.isRegularFile != false else { return nil }
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+              let fileType = attributes[.type] as? FileAttributeType,
+              fileType == .typeRegular else { return nil }
 
         return FileSignature(
             folderID: folderID,
             name: url.lastPathComponent,
-            size: values.fileSize ?? 0,
-            modified: values.contentModificationDate?.timeIntervalSince1970 ?? 0
+            size: (attributes[.size] as? NSNumber)?.intValue ?? 0,
+            modified: (attributes[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
         )
     }
 
     // MARK: - Cache Invalidation
 
     func invalidate(_ url: URL) {
-        sizeCache.removeValue(forKey: url)
-        signatureCache.removeValue(forKey: url)
+        let standardizedURL = url.standardizedFileURL
+        fileSizeCache.removeValue(forKey: standardizedURL)
+        directorySizeCache.removeValue(forKey: standardizedURL)
+        signatureCache = signatureCache.filter { $0.key.url != standardizedURL }
     }
 
     func invalidateAll() {
-        sizeCache.removeAll(keepingCapacity: true)
+        fileSizeCache.removeAll(keepingCapacity: true)
+        directorySizeCache.removeAll(keepingCapacity: true)
         signatureCache.removeAll(keepingCapacity: true)
     }
 }

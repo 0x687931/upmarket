@@ -45,8 +45,7 @@ final class ConversionHistoryStoreTests: XCTestCase {
 
         XCTAssertEqual(store.records.count, 1)
 
-        // Wait for async file write to complete
-        await store.waitForPendingWrites(timeout: 2.0)
+        await store.waitForPendingWrites()
 
         let savedFiles = try FileManager.default.contentsOfDirectory(atPath: tempDirectory.path)
         XCTAssertEqual(savedFiles.filter { $0.hasSuffix(".json") }.count, 1)
@@ -72,7 +71,7 @@ final class ConversionHistoryStoreTests: XCTestCase {
         XCTAssertEqual(store.records, [])
     }
 
-    func testClearHistoryRemovesRecords() throws {
+    func testClearHistoryRemovesRecords() async throws {
         let store = makeStore(loadImmediately: false)
         let output = ConversionOutput(
             markdown: "saved body",
@@ -86,12 +85,13 @@ final class ConversionHistoryStoreTests: XCTestCase {
         XCTAssertEqual(store.records.count, 1)
 
         store.clear()
+        await store.waitForPendingWrites()
 
         XCTAssertEqual(store.records, [])
         XCTAssertFalse(FileManager.default.fileExists(atPath: tempDirectory.path))
     }
 
-    func testDisablingHistoryClearsRecordsAndStopsWrites() throws {
+    func testDisablingHistoryClearsRecordsAndStopsWrites() async throws {
         let store = makeStore(loadImmediately: false)
         let output = ConversionOutput(
             markdown: "private body",
@@ -107,6 +107,7 @@ final class ConversionHistoryStoreTests: XCTestCase {
 
         store.isEnabled = false
         store.record(job: job, output: output)
+        await store.waitForPendingWrites()
 
         XCTAssertEqual(store.records, [])
         XCTAssertFalse(FileManager.default.fileExists(atPath: tempDirectory.path))

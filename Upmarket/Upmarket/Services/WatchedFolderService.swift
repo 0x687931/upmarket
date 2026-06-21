@@ -303,13 +303,6 @@ final class WatchedFolderService: ObservableObject {
     }
 
     private func write(output: ConversionOutput, sourceURL: URL, destination: URL) async {
-        let scoped = destination.startAccessingSecurityScopedResource()
-        defer {
-            if scoped {
-                destination.stopAccessingSecurityScopedResource()
-            }
-        }
-
         let formatted = OutputFormatter.format(
             output,
             sourceDisplayName: sourceURL.lastPathComponent,
@@ -317,28 +310,16 @@ final class WatchedFolderService: ObservableObject {
         )
         let baseName = output.title.isEmpty ? sourceURL.deletingPathExtension().lastPathComponent : output.title
         let fileName = "\(baseName.sanitisedForFilename).\(formatted.fileExtension)"
-        let outputURL = uniqueURL(in: destination, fileName: fileName)
         do {
-            try await FileWriteService.shared.writeMarkdown(formatted.text, to: outputURL)
+            _ = try await FileWriteService.shared.writeMarkdown(
+                formatted.text,
+                toUniqueFileIn: destination,
+                preferredFileName: fileName,
+                fileManager: fileManager
+            )
         } catch {
             AppLog.fileAccess.error("Watched folder output write failed: \(error.localizedDescription, privacy: .private)")
         }
-    }
-
-    private func uniqueURL(in folder: URL, fileName: String) -> URL {
-        let candidate = folder.appendingPathComponent(fileName)
-        guard !fileManager.fileExists(atPath: candidate.path) else {
-            let baseName = (fileName as NSString).deletingPathExtension
-            let ext = (fileName as NSString).pathExtension
-            for index in 2...999 {
-                let numbered = folder.appendingPathComponent("\(baseName) \(index).\(ext)")
-                if !fileManager.fileExists(atPath: numbered.path) {
-                    return numbered
-                }
-            }
-            return folder.appendingPathComponent("\(baseName) \(UUID().uuidString).\(ext)")
-        }
-        return candidate
     }
 
     private func isStable(_ url: URL, folderID: UUID, firstSignature: FileSignature) async -> Bool {

@@ -98,16 +98,12 @@ final class SavePreference {
                 return await showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
             }
             let folder = sourceURL.deletingLastPathComponent()
-            let scoped = folder.startAccessingSecurityScopedResource()
-            defer {
-                if scoped {
-                    folder.stopAccessingSecurityScopedResource()
-                }
-            }
             do {
-                let saveURL = uniqueMarkdownURL(in: folder, fileName: fileName)
-                try await FileWriteService.shared.writeMarkdown(markdown, to: saveURL)
-                return saveURL
+                return try await FileWriteService.shared.writeMarkdown(
+                    markdown,
+                    toUniqueFileIn: folder,
+                    preferredFileName: fileName
+                )
             } catch {
                 return await showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
             }
@@ -119,32 +115,16 @@ final class SavePreference {
             guard let folder = chosenFolderURL else {
                 return await showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
             }
-            _ = folder.startAccessingSecurityScopedResource()
-            defer { folder.stopAccessingSecurityScopedResource() }
             do {
-                let saveURL = uniqueMarkdownURL(in: folder, fileName: fileName)
-                try await FileWriteService.shared.writeMarkdown(markdown, to: saveURL)
-                return saveURL
+                return try await FileWriteService.shared.writeMarkdown(
+                    markdown,
+                    toUniqueFileIn: folder,
+                    preferredFileName: fileName
+                )
             } catch {
                 return await showSavePanel(defaultName: fileName, markdown: markdown, fileExtension: normalisedExtension)
             }
         }
-    }
-
-    private func uniqueMarkdownURL(in folder: URL, fileName: String) -> URL {
-        let candidate = folder.appendingPathComponent(fileName)
-        guard FileManager.default.fileExists(atPath: candidate.path) else { return candidate }
-
-        let baseName = (fileName as NSString).deletingPathExtension
-        let pathExtension = (fileName as NSString).pathExtension
-        for index in 2...999 {
-            let numberedName = "\(baseName) \(index).\(pathExtension)"
-            let numberedURL = folder.appendingPathComponent(numberedName)
-            if !FileManager.default.fileExists(atPath: numberedURL.path) {
-                return numberedURL
-            }
-        }
-        return folder.appendingPathComponent("\(baseName) \(UUID().uuidString).\(pathExtension)")
     }
 
     @MainActor

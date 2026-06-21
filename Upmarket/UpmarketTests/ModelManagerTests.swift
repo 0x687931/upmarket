@@ -77,10 +77,14 @@ final class ModelManagerTests: XCTestCase {
     }
 
     func testDownloadProgressUpdatesBeforeCompletion() async throws {
+        let workspace = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ModelManagerProgressTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: workspace) }
         let manager = ModelManager(
             models: [
                 Self.maxModel(isDownloaded: false)
             ],
+            downloadWorkspaceDirectoryURL: workspace,
             downloadModelHandler: { _, progressFile in
                 writeProgress(percent: 25, message: "Downloading", to: progressFile)
                 try? await Task.sleep(nanoseconds: 700_000_000)
