@@ -154,11 +154,21 @@ struct ConversionRunner {
         for classification: ContentClassifier.Classification,
         job: ConversionJob
     ) -> ConversionResult? {
-        let downloadedAssets: Set<ModelAsset>
+        var downloadedAssets: Set<ModelAsset>
         if usesInjectedModelReadiness {
             downloadedAssets = modelsReady() ? Set(classification.requiredTier.requiredAssets) : []
         } else {
             downloadedAssets = ModelManager.shared.downloadedAssets
+        }
+        if classification.requiredTier == .ai {
+            let engine = job.aiEngine ?? AIEngine.selected
+            if engine == .lfm2 {
+                if downloadedAssets.contains(engine.asset) {
+                    downloadedAssets.insert(.upmarketAI)
+                } else {
+                    downloadedAssets.remove(.upmarketAI)
+                }
+            }
         }
 
         let gate = AppTierGate(
@@ -196,6 +206,28 @@ struct ConversionRunner {
         guard let classification else {
             // Classifier returned nil — file unreadable
             return .failure(ConversionError.inaccessible.errorDescription ?? "Upmarket couldn't access this file.")
+        }
+
+        // An explicit engine arrives from the CLI evaluation path. It must force that exact
+        // model and fail closed: classifier routing or OCR fallback would otherwise write
+        // non-model output into a file labelled as Granite or LFM2.
+        let sourceExtension = job.sourceURL.pathExtension.lowercased()
+        if job.useAI, let engine = job.aiEngine, sourceExtension == "pdf" {
+            guard #available(macOS 26, *),
+                  shouldUseVLM(engine: engine, evidence: classification.pdfEvidence, force: true) else {
+                return .failure(
+                    ConversionError.modelUnavailable.errorDescription
+                        ?? "The selected AI model is not available."
+                )
+            }
+            return await runVLMConversion(
+                fileURL: tempURL,
+                title: title,
+                password: job.password,
+                workspaceURL: workspaceURL,
+                engine: engine,
+                fallbackOnFailure: false
+            )
         }
 
         switch classification.kind {
@@ -260,9 +292,11 @@ struct ConversionRunner {
                 // weights are present. Granite-Docling is narrow (clean typed Latin/simplified-
                 // Chinese only); LFM2.5-VL is general-purpose so it skips that eligibility gate.
                 // Everything else (and any failure) falls through to Apple Vision native.
-                if #available(macOS 26, *), shouldUseVLM(evidence: evidence) {
+                let engine = job.aiEngine ?? AIEngine.selected
+                if #available(macOS 26, *), shouldUseVLM(engine: engine, evidence: evidence) {
                     return await runVLMConversion(
-                        fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
+                        fileURL: tempURL, title: title, password: job.password,
+                        workspaceURL: workspaceURL, engine: engine
                     )
                 }
                 return await runVisionExtraction(
@@ -283,13 +317,15 @@ struct ConversionRunner {
                 && tier() >= .max
             let evidence = classification.pdfEvidence
             let ext = job.sourceURL.pathExtension.lowercased()
+            let engine = job.aiEngine ?? AIEngine.selected
             // Max+AI on a PDF: the user-selected native VLM (mlx-swift) when its weights are
             // present and (for Granite) the document is eligible; otherwise Apple Vision.
             if useAI, ext == "pdf",
                #available(macOS 26, *),
-               shouldUseVLM(evidence: evidence) {
+               shouldUseVLM(engine: engine, evidence: evidence) {
                 return await runVLMConversion(
-                    fileURL: tempURL, title: title, password: job.password, workspaceURL: workspaceURL
+                    fileURL: tempURL, title: title, password: job.password,
+                    workspaceURL: workspaceURL, engine: engine
                 )
             }
             // Scanned images carry no page structure that PDFKit/PDF-Vision can parse, so they
@@ -426,10 +462,13 @@ struct ConversionRunner {
     /// disk and — for the narrow Granite-Docling engine only — the document is eligible. The
     /// general-purpose LFM2.5-VL engine skips the eligibility gate.
     @available(macOS 26, *)
-    private func shouldUseVLM(evidence: NativeDocumentClassifier.Evidence?) -> Bool {
-        let engine = AIEngine.selected
+    private func shouldUseVLM(
+        engine: AIEngine,
+        evidence: NativeDocumentClassifier.Evidence?,
+        force: Bool = false
+    ) -> Bool {
         guard ModelManager.shared.downloadedAssets.contains(engine.asset) else { return false }
-        return engine == .lfm2 || evidence?.isGraniteDoclingEligible == true
+        return force || engine == .lfm2 || evidence?.isGraniteDoclingEligible == true
     }
 
     /// Native VLM (mlx-swift, no Python) PDF conversion — the no-Python replacement for the
@@ -438,16 +477,23 @@ struct ConversionRunner {
     /// Apple Vision (also Pure-Apple) on any model-load or inference failure.
     @available(macOS 26, *)
     private func runVLMConversion(
-        fileURL: URL, title: String, password: String?, workspaceURL: URL
+        fileURL: URL,
+        title: String,
+        password: String?,
+        workspaceURL: URL,
+        engine: AIEngine,
+        fallbackOnFailure: Bool = true
     ) async -> ConversionResult {
         guard let document = PDFDocument(url: fileURL) else {
+            if !fallbackOnFailure {
+                return .failure("The selected AI engine could not read this PDF.")
+            }
             return await runVisionExtraction(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
         }
         if document.isLocked, let password { _ = document.unlock(withPassword: password) }
 
-        // Pick the engine the user chose; each loads its own weights directory. The per-page
-        // closure hides the engine difference from the page loop below.
-        let engine = AIEngine.selected
+        // Each engine loads its own weights directory. The per-page closure hides the engine
+        // difference from the page loop below.
         let modelDir = ModelManager.shared.modelDirectoryURL(for: engine.asset)
         let convert: @Sendable (URL) async throws -> String
         switch engine {
@@ -473,6 +519,10 @@ struct ConversionRunner {
         } catch is CancellationError {
             return .failure("Conversion cancelled.")
         } catch {
+            if !fallbackOnFailure {
+                AppLog.conversion.error("Explicit AI conversion failed: \(error.localizedDescription, privacy: .public)")
+                return .failure("The selected AI engine could not convert this document.")
+            }
             AppLog.conversion.error("Native AI conversion failed; falling back to OCR: \(error.localizedDescription, privacy: .public)")
             return await runVisionExtraction(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
         }

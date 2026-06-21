@@ -6,8 +6,8 @@ import OSLog
 
 @MainActor
 struct CLIConversionBroker {
-    typealias Authorize = (_ useAI: Bool) async throws -> Void
-    typealias Convert = (_ url: URL, _ useAI: Bool) async -> ConversionResult
+    typealias Authorize = (_ useAI: Bool, _ aiEngine: AIEngine?) async throws -> Void
+    typealias Convert = (_ url: URL, _ useAI: Bool, _ aiEngine: AIEngine?) async -> ConversionResult
 
     let rootURL: URL
     let authorize: Authorize
@@ -31,11 +31,18 @@ struct CLIConversionBroker {
         return CLIConversionBroker(
             rootURL: rootURL,
             fileManager: fileManager,
-            authorize: { useAI in
-                try await ProgrammaticConversionAuthorization.authorize(useAI: useAI)
+            authorize: { useAI, aiEngine in
+                try await ProgrammaticConversionAuthorization.authorize(
+                    useAI: useAI,
+                    aiEngine: aiEngine
+                )
             },
-            convert: { url, useAI in
-                await ConversionQueue.shared.convert(url, useAI: useAI)
+            convert: { url, useAI, aiEngine in
+                await ConversionQueue.shared.convert(
+                    url,
+                    useAI: useAI,
+                    aiEngine: aiEngine
+                )
             }
         )
     }
@@ -54,9 +61,11 @@ struct CLIConversionBroker {
         do {
             let requestURL = directory.appendingPathComponent("request.json")
             let request = try JSONDecoder().decode(CLIConversionRequest.self, from: Data(contentsOf: requestURL))
-            guard request.version == 1,
+            guard (request.version == 1 || request.version == 2),
                   isSafeRelativeFileName(request.inputFile),
-                  let outputMode = OutputMode(rawValue: request.outputMode) else {
+                  let outputMode = OutputMode(rawValue: request.outputMode),
+                  request.aiEngine == nil || request.useAI,
+                  request.aiEngine?.isProductionAvailable != false else {
                 try write(.failure(.inputRejected, message: "The command request could not be read."), to: responseURL)
                 return
             }
@@ -70,7 +79,7 @@ struct CLIConversionBroker {
             }
 
             do {
-                try await authorize(request.useAI)
+                try await authorize(request.useAI, request.aiEngine)
             } catch ProgrammaticConversionAuthorizationError.purchaseRequired {
                 try write(.failure(.purchaseRequired, message: "Open Upmarket to unlock more conversions."), to: responseURL)
                 return
@@ -82,7 +91,7 @@ struct CLIConversionBroker {
                 return
             }
 
-            let result = await convert(inputURL, request.useAI)
+            let result = await convert(inputURL, request.useAI, request.aiEngine)
             guard case .success(let output) = result else {
                 try write(.failure(.conversionFailed, message: result.errorMessage ?? "Upmarket couldn't convert this document."), to: responseURL)
                 return

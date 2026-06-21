@@ -22,10 +22,11 @@ final class CLIConversionBrokerTests: XCTestCase {
 
         let broker = CLIConversionBroker(
             rootURL: root,
-            authorize: { _ in },
-            convert: { url, useAI in
+            authorize: { _, _ in },
+            convert: { url, useAI, aiEngine in
                 XCTAssertEqual(url.lastPathComponent, "input.txt")
                 XCTAssertFalse(useAI)
+                XCTAssertNil(aiEngine)
                 return .success(ConversionOutput(
                     markdown: "# Converted",
                     pages: 1,
@@ -57,8 +58,8 @@ final class CLIConversionBrokerTests: XCTestCase {
 
         let broker = CLIConversionBroker(
             rootURL: root,
-            authorize: { _ in throw ProgrammaticConversionAuthorizationError.purchaseRequired },
-            convert: { _, _ in
+            authorize: { _, _ in throw ProgrammaticConversionAuthorizationError.purchaseRequired },
+            convert: { _, _, _ in
                 XCTFail("Conversion should not run when authorization fails")
                 return .failure("Should not run")
             }
@@ -80,11 +81,11 @@ final class CLIConversionBrokerTests: XCTestCase {
 
         let broker = CLIConversionBroker(
             rootURL: root,
-            authorize: { useAI in
+            authorize: { useAI, _ in
                 XCTAssertTrue(useAI)
                 throw ProgrammaticConversionAuthorizationError.aiUnavailable
             },
-            convert: { _, _ in
+            convert: { _, _, _ in
                 XCTFail("Conversion should not run when AI is unavailable")
                 return .failure("Should not run")
             }
@@ -116,8 +117,8 @@ final class CLIConversionBrokerTests: XCTestCase {
 
         let broker = CLIConversionBroker(
             rootURL: root,
-            authorize: { _ in XCTFail("Authorization should not run for invalid manifests") },
-            convert: { _, _ in
+            authorize: { _, _ in XCTFail("Authorization should not run for invalid manifests") },
+            convert: { _, _, _ in
                 XCTFail("Conversion should not run for invalid manifests")
                 return .failure("Should not run")
             }
@@ -131,16 +132,86 @@ final class CLIConversionBrokerTests: XCTestCase {
         XCTAssertNil(response.outputFile)
     }
 
-    private func makeHandoff(root: URL, id: String, useAI: Bool = false) throws -> URL {
+    func testVersionTwoRequestForwardsExplicitAIEngine() async throws {
+        let root = try makeRoot()
+        let id = UUID().uuidString
+        let directory = try makeHandoff(
+            root: root,
+            id: id,
+            version: 2,
+            useAI: true,
+            aiEngine: .lfm2
+        )
+
+        let broker = CLIConversionBroker(
+            rootURL: root,
+            authorize: { useAI, aiEngine in
+                XCTAssertTrue(useAI)
+                XCTAssertEqual(aiEngine, .lfm2)
+            },
+            convert: { _, useAI, aiEngine in
+                XCTAssertTrue(useAI)
+                XCTAssertEqual(aiEngine, .lfm2)
+                return .success(ConversionOutput(
+                    markdown: "# LFM2",
+                    pages: 1,
+                    format: "PDF",
+                    title: "LFM2",
+                    pipeline: .ai,
+                    selectedPathway: .ai
+                ))
+            }
+        )
+
+        await broker.process(id: id)
+
+        let response = try readResponse(from: directory)
+        XCTAssertEqual(response.status, .success)
+    }
+
+    func testExplicitAIEngineWithoutAIIsRejected() async throws {
+        let root = try makeRoot()
+        let id = UUID().uuidString
+        let directory = try makeHandoff(
+            root: root,
+            id: id,
+            version: 2,
+            useAI: false,
+            aiEngine: .granite
+        )
+
+        let broker = CLIConversionBroker(
+            rootURL: root,
+            authorize: { _, _ in XCTFail("Authorization should not run for invalid manifests") },
+            convert: { _, _, _ in
+                XCTFail("Conversion should not run for invalid manifests")
+                return .failure("Should not run")
+            }
+        )
+
+        await broker.process(id: id)
+
+        let response = try readResponse(from: directory)
+        XCTAssertEqual(response.status, .inputRejected)
+    }
+
+    private func makeHandoff(
+        root: URL,
+        id: String,
+        version: Int = 1,
+        useAI: Bool = false,
+        aiEngine: AIEngine? = nil
+    ) throws -> URL {
         let directory = CLIHandoffPaths.handoffDirectory(id: id, root: root)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try Data("plain input".utf8).write(to: directory.appendingPathComponent("input.txt"))
         try writeRequest(
             CLIConversionRequest(
-                version: 1,
+                version: version,
                 inputFile: "input.txt",
                 sourceDisplayName: "input.txt",
                 useAI: useAI,
+                aiEngine: aiEngine,
                 outputMode: OutputMode.markdown.rawValue
             ),
             to: directory

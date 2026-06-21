@@ -46,6 +46,7 @@ struct ConversionJob: Identifiable, Equatable {
     let id: UUID
     let sourceURL: URL
     let useAI: Bool
+    let aiEngine: AIEngine?
     let password: String?
     let createdAt: Date
 
@@ -63,6 +64,7 @@ struct ConversionJob: Identifiable, Equatable {
         id: UUID = UUID(),
         sourceURL: URL,
         useAI: Bool = false,
+        aiEngine: AIEngine? = nil,
         password: String? = nil,
         createdAt: Date = Date(),
         stage: ConversionStage = .queued,
@@ -74,6 +76,7 @@ struct ConversionJob: Identifiable, Equatable {
         self.id = id
         self.sourceURL = sourceURL
         self.useAI = useAI
+        self.aiEngine = aiEngine
         self.password = password
         self.createdAt = createdAt
         self.stage = stage

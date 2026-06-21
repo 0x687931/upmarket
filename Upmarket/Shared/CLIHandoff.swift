@@ -30,7 +30,24 @@ nonisolated struct CLIConversionRequest: Codable, Equatable, Sendable {
     let inputFile: String
     let sourceDisplayName: String
     let useAI: Bool
+    let aiEngine: AIEngine?
     let outputMode: String
+
+    init(
+        version: Int,
+        inputFile: String,
+        sourceDisplayName: String,
+        useAI: Bool,
+        aiEngine: AIEngine? = nil,
+        outputMode: String
+    ) {
+        self.version = version
+        self.inputFile = inputFile
+        self.sourceDisplayName = sourceDisplayName
+        self.useAI = useAI
+        self.aiEngine = aiEngine
+        self.outputMode = outputMode
+    }
 }
 
 nonisolated enum CLIConversionStatus: String, Codable, Sendable {
