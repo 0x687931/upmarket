@@ -18,23 +18,37 @@ final class SavePreference {
 
     var destination: Destination {
         get { Destination(rawValue: UserDefaults.standard.integer(forKey: "upmarket.saveDestination")) ?? .sameFolder }
-        set { UserDefaults.standard.set(newValue.rawValue, forKey: "upmarket.saveDestination") }
+        // Explicitly choosing a destination (e.g. via Preferences) counts as answering
+        // the first-use prompt, so it never reappears at conversion time.
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: "upmarket.saveDestination")
+            hasPrompted = true
+        }
     }
 
     var chosenFolderURL: URL? {
         get {
             guard let data = UserDefaults.standard.data(forKey: "upmarket.saveFolder") else { return nil }
             var isStale = false
-            return try? URL(resolvingBookmarkData: data, options: .withSecurityScope,
-                            relativeTo: nil, bookmarkDataIsStale: &isStale)
+            guard let url = try? URL(resolvingBookmarkData: data, options: .withSecurityScope,
+                                     relativeTo: nil, bookmarkDataIsStale: &isStale) else { return nil }
+            // Re-mint and persist when macOS marks the bookmark stale, so saved access doesn't expire.
+            if isStale, let refreshed = Self.securityScopedBookmark(for: url) {
+                UserDefaults.standard.set(refreshed, forKey: "upmarket.saveFolder")
+            }
+            return url
         }
         set {
-            guard let url = newValue,
-                  let data = try? url.bookmarkData(options: .withSecurityScope,
-                                                    includingResourceValuesForKeys: nil,
-                                                    relativeTo: nil) else { return }
+            guard let url = newValue, let data = Self.securityScopedBookmark(for: url) else { return }
             UserDefaults.standard.set(data, forKey: "upmarket.saveFolder")
         }
+    }
+
+    private static func securityScopedBookmark(for url: URL) -> Data? {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        return try? url.bookmarkData(options: .withSecurityScope,
+                                     includingResourceValuesForKeys: nil, relativeTo: nil)
     }
 
     func configure(destination: Destination, chosenFolderURL: URL? = nil) {
@@ -157,6 +171,24 @@ final class SavePreference {
     private static func normalisedFileExtension(_ fileExtension: String) -> String {
         let trimmed = fileExtension.trimmingCharacters(in: CharacterSet(charactersIn: ". "))
         return trimmed.isEmpty ? "md" : trimmed
+    }
+
+    /// Presents a folder picker and records the choice. Used when the user selects
+    /// "Choose folder…" in Preferences so saves don't fall back to a save panel each time.
+    @MainActor
+    @discardableResult
+    func promptForChosenFolder() -> Bool {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.prompt = "Choose"
+        panel.message = "Upmarket will save all converted files here."
+        if panel.runModal() == .OK, let url = panel.url {
+            configure(destination: .chosenFolder, chosenFolderURL: url)
+            return true
+        }
+        return false
     }
 
     // MARK: - First-use prompt

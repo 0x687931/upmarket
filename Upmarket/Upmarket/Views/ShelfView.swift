@@ -94,8 +94,25 @@ struct ShelfView: View {
         case .peek:
             return ShelfLayout.controlStripWidth + 1 + ShelfLayout.peekPanelWidth
         case .queue:
-            return ShelfLayout.controlStripWidth + 1 + ShelfLayout.expandedPanelWidth
+            return ShelfLayout.controlStripWidth + 1 + expandedPanelWidth
         }
+    }
+
+    // Fit the queue panel to its cards (clamped peek-width…max) so a single
+    // document doesn't sit in a half-empty 420pt panel.
+    private var expandedPanelWidth: CGFloat {
+        let cardJobs = conversion.jobs.filter { $0.stage != .queued }
+        let queuedCount = conversion.jobs.filter { $0.stage == .queued }.count
+        let visible = cardJobs.prefix(ShelfLayout.maxVisible)
+        let overflow = max(0, cardJobs.count - visible.count)
+
+        var widths = visible.map { $0.isRunning ? ShelfLayout.activeCardWidth : ShelfLayout.passiveCardWidth }
+        if queuedCount > 0 { widths.append(ShelfLayout.passiveCardWidth) }
+        if overflow > 0 { widths.append(ShelfLayout.overflowCardWidth) }
+
+        let gaps = CGFloat(max(0, widths.count - 1)) * ShelfLayout.cardGap
+        let content = widths.reduce(0, +) + gaps + ShelfLayout.panelHorizontalPadding * 2
+        return min(max(content, ShelfLayout.peekPanelWidth), ShelfLayout.expandedPanelWidth)
     }
 
     private var totalHeight: CGFloat {
@@ -109,8 +126,8 @@ struct ShelfView: View {
     @ViewBuilder
     private var contentPanel: some View {
         if effectiveMode == .queue {
-            ExpandedQueue(jobs: conversion.jobs)
-                .frame(width: ShelfLayout.expandedPanelWidth, height: ShelfLayout.closedHeight)
+            ExpandedQueue(jobs: conversion.jobs, width: expandedPanelWidth)
+                .frame(width: expandedPanelWidth, height: ShelfLayout.closedHeight)
         } else if conversion.jobs.isEmpty {
             IdleState()
                 .frame(width: ShelfLayout.peekPanelWidth, height: ShelfLayout.closedHeight)
@@ -360,9 +377,6 @@ struct ControlStrip: View {
             )
         }
         .frame(width: ShelfLayout.controlStripWidth)
-        // Adaptive tint that lifts the strip off the glass in both light and dark mode
-        // (Color.primary inverts with the appearance, unlike a fixed white).
-        .background(Color.primary.opacity(0.06))
     }
 }
 
@@ -393,28 +407,6 @@ struct StripButton: View {
 }
 
 // MARK: - Panel (Peek or Expanded)
-
-fileprivate struct Panel: View {
-    @Binding var displayMode: ShelfDisplayMode
-    let jobs: [ConversionJob]
-
-    var body: some View {
-        ZStack {
-            if jobs.isEmpty {
-                IdleState()
-            } else if displayMode == .peek {
-                PeekRow(job: frontJob, totalCount: jobs.count)
-            } else {
-                ExpandedQueue(jobs: jobs)
-            }
-        }
-        .frame(width: displayMode == .queue ? ShelfLayout.expandedPanelWidth : ShelfLayout.peekPanelWidth)
-    }
-
-    private var frontJob: ConversionJob {
-        jobs.first(where: \.isRunning) ?? jobs.last ?? jobs[0]
-    }
-}
 
 // MARK: - Peek Row (168pt wide, single job summary)
 
@@ -484,26 +476,51 @@ struct PeekRow: View {
 
 struct ExpandedQueue: View {
     let jobs: [ConversionJob]
+    let width: CGFloat
+    @EnvironmentObject private var conversion: ConversionQueue
+
+    // Waiting jobs collapse into one stack; the active conversion and any
+    // finished jobs keep their own cards (they carry per-file actions).
+    private var cardJobs: [ConversionJob] { jobs.filter { $0.stage != .queued } }
+    private var queuedCount: Int { jobs.filter { $0.stage == .queued }.count }
+    private var hasFinished: Bool { jobs.contains { !$0.isRunning } }
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: ShelfLayout.cardGap) {
-                let visible = Array(jobs.prefix(ShelfLayout.maxVisible))
-                let overflow = max(0, jobs.count - visible.count)
+                let visible = Array(cardJobs.prefix(ShelfLayout.maxVisible))
+                let overflow = max(0, cardJobs.count - visible.count)
 
                 ForEach(visible) { job in
                     ShelfCard(job: job)
                 }
 
+                if queuedCount > 0 {
+                    QueuedStack(count: queuedCount)
+                }
+
                 if overflow > 0 {
                     OverflowStack(count: overflow)
                 }
-
-                // ClearDoneButton placeholder for now
             }
             .padding(.horizontal, ShelfLayout.panelHorizontalPadding)
         }
-        .frame(width: ShelfLayout.expandedPanelWidth)
+        .frame(width: width)
+        .overlay(alignment: .topTrailing) {
+            if hasFinished {
+                Button { conversion.clearFinished() } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .padding(5)
+                        .background(.ultraThinMaterial, in: Circle())
+                        .overlay(Circle().stroke(AppTheme.Colour.separator, lineWidth: 0.5))
+                }
+                .buttonStyle(.plain)
+                .help("Clear finished")
+                .padding(6)
+            }
+        }
     }
 }
 
@@ -540,6 +557,11 @@ struct ShelfCard: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .frame(maxWidth: .infinity)
+
+            Text(job.stageLabel)
+                .font(.system(size: 9))
+                .foregroundStyle(job.stage == .failed ? AppTheme.Status.failed : .secondary)
+                .lineLimit(1)
 
             Spacer()
 
@@ -654,6 +676,33 @@ struct ShelfActionButton: View {
         }
         .buttonStyle(.plain)
         .help(label)
+    }
+}
+
+// MARK: - Queued Stack (waiting files collapsed into one card)
+
+struct QueuedStack: View {
+    let count: Int
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                ForEach(0..<min(3, count), id: \.self) { i in
+                    RoundedRectangle(cornerRadius: ShelfLayout.cardCornerRadius, style: .continuous)
+                        .fill(Color(nsColor: .controlBackgroundColor))
+                        .frame(width: 44, height: 52)
+                        .overlay(RoundedRectangle(cornerRadius: ShelfLayout.cardCornerRadius, style: .continuous).stroke(AppTheme.Colour.separator, lineWidth: 0.5))
+                        .offset(x: CGFloat(i) * 3, y: CGFloat(-i) * 2)
+                }
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 16))
+                    .foregroundStyle(AppTheme.Colour.iconGlyphTint)
+            }
+            Text("\(count) queued")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+        }
+        .frame(width: ShelfLayout.passiveCardWidth, height: ShelfLayout.cardHeight)
     }
 }
 

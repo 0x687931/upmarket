@@ -292,8 +292,13 @@ final class WatchedFolderService: ObservableObject {
         case .sameFolder:
             return sourceFolder
         case .chosenFolder:
-            guard let data = folder.outputBookmarkData else { return nil }
-            return resolveBookmark(data)
+            guard let data = folder.outputBookmarkData,
+                  let resolved = resolveBookmark(data) else { return nil }
+            if let refreshed = resolved.refreshed, let i = folders.firstIndex(where: { $0.id == folder.id }) {
+                folders[i].outputBookmarkData = refreshed
+                saveFolders()
+            }
+            return resolved.url
         }
     }
 
@@ -376,17 +381,26 @@ final class WatchedFolderService: ObservableObject {
     }
 
     private func resolveFolderURL(_ folder: WatchedFolder) -> URL? {
-        resolveBookmark(folder.bookmarkData)
+        guard let resolved = resolveBookmark(folder.bookmarkData) else { return nil }
+        if let refreshed = resolved.refreshed, let i = folders.firstIndex(where: { $0.id == folder.id }) {
+            folders[i].bookmarkData = refreshed
+            saveFolders()
+        }
+        return resolved.url
     }
 
-    private func resolveBookmark(_ data: Data) -> URL? {
+    /// Resolves a security-scoped bookmark, re-minting it when macOS reports it stale.
+    /// `refreshed` is non-nil only when the bookmark was stale and successfully re-created;
+    /// callers persist it against the owning folder so saved access doesn't eventually expire.
+    private func resolveBookmark(_ data: Data) -> (url: URL, refreshed: Data?)? {
         var isStale = false
-        return try? URL(
+        guard let url = try? URL(
             resolvingBookmarkData: data,
             options: .withSecurityScope,
             relativeTo: nil,
             bookmarkDataIsStale: &isStale
-        )
+        ) else { return nil }
+        return (url, isStale ? Self.makeBookmark(for: url) : nil)
     }
 
     private func saveFolders() {
