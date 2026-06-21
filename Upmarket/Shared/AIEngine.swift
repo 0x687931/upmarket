@@ -4,7 +4,7 @@ import Foundation
 /// its own downloadable Max-tier weights asset. The user picks one in Preferences; the choice
 /// persists in `UserDefaults` under `storageKey` (read by `@AppStorage` in the UI and by
 /// `ConversionRunner` via `selected`).
-enum AIEngine: String, CaseIterable, Sendable {
+nonisolated enum AIEngine: String, CaseIterable, Codable, Sendable {
     /// Granite-Docling 258M — smaller, fast, narrow (clean typed Latin/Chinese pages).
     case granite
     /// LFM2.5-VL 1.6B — larger, stronger on tables and complex layout, general-purpose.

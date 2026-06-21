@@ -517,7 +517,11 @@ final class ConversionQueueTests: XCTestCase {
             ))
         }
 
-        let first = queue.add(URL(fileURLWithPath: "/tmp/retry.pdf"))
+        let first = queue.add(
+            URL(fileURLWithPath: "/tmp/retry.pdf"),
+            useAI: true,
+            aiEngine: .lfm2
+        )
         await waitForResult(first, in: queue)
 
         let second = queue.retry(first)
@@ -527,6 +531,7 @@ final class ConversionQueueTests: XCTestCase {
         XCTAssertNotEqual(first, second)
         XCTAssertEqual(queue.jobs.first(where: { $0.id == first })?.stage, .failed)
         XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.stage, .complete)
+        XCTAssertEqual(queue.jobs.first(where: { $0.id == second })?.aiEngine, .lfm2)
     }
 
     // MARK: - Liveness monitor

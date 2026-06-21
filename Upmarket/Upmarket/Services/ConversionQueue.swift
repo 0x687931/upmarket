@@ -100,8 +100,18 @@ final class ConversionQueue: ObservableObject {
     }
 
     @discardableResult
-    func add(_ url: URL, useAI: Bool = false, password: String? = nil) -> UUID {
-        let job = ConversionJob(sourceURL: url, useAI: useAI, password: password)
+    func add(
+        _ url: URL,
+        useAI: Bool = false,
+        aiEngine: AIEngine? = nil,
+        password: String? = nil
+    ) -> UUID {
+        let job = ConversionJob(
+            sourceURL: url,
+            useAI: useAI,
+            aiEngine: aiEngine,
+            password: password
+        )
         jobs.insert(job, at: 0)
         rebuildJobIndex()
         latestResult = nil
@@ -130,9 +140,14 @@ final class ConversionQueue: ObservableObject {
         return job.id
     }
 
-    func convert(_ url: URL, useAI: Bool = false, password: String? = nil) async -> ConversionResult {
+    func convert(
+        _ url: URL,
+        useAI: Bool = false,
+        aiEngine: AIEngine? = nil,
+        password: String? = nil
+    ) async -> ConversionResult {
         await withCheckedContinuation { continuation in
-            let id = add(url, useAI: useAI, password: password)
+            let id = add(url, useAI: useAI, aiEngine: aiEngine, password: password)
             continuations[id] = continuation
         }
     }
@@ -186,7 +201,12 @@ final class ConversionQueue: ObservableObject {
     func retry(_ id: UUID, useAI: Bool? = nil) -> UUID? {
         guard let index = jobIndex[id], jobs.indices.contains(index) else { return nil }
         let job = jobs[index]
-        return add(job.sourceURL, useAI: useAI ?? job.useAI, password: job.password)
+        return add(
+            job.sourceURL,
+            useAI: useAI ?? job.useAI,
+            aiEngine: job.aiEngine,
+            password: job.password
+        )
     }
 
     func remove(_ id: UUID) {

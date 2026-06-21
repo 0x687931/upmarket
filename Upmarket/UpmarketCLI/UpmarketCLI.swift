@@ -50,6 +50,7 @@ private struct Options {
     let inputURLs: [URL]
     let outputURL: URL?
     let engine: Engine
+    let aiEngine: AIEngine?
     let outputFormat: OutputFormat
     let force: Bool
     let debug: Bool
@@ -92,19 +93,41 @@ private enum UpmarketCLI {
         var inputs: [String] = []
         var output: String?
         var engine: Engine = .auto
+        var aiEngine: AIEngine?
+        var routingOption: String?
         var force = false
         var debug = false
         var format: OutputFormat = .markdown
+        let selectRouting: (Engine, String) throws -> Void = { selected, flag in
+            guard routingOption == nil else {
+                throw CommandError(.usage, "Choose only one routing option.")
+            }
+            engine = selected
+            routingOption = flag
+        }
 
         var index = 0
         while index < remaining.count {
             let argument = remaining[index]
             switch argument {
             case "-h", "--help": printUsage(); throw CommandError(.success, "")
-            case "--auto":                       engine = .auto;    index += 1
-            case "--basic", "--native":          engine = .native;  index += 1
-            case "--pro", "--complex":           engine = .complex; index += 1
-            case "--max", "--ai":                engine = .ai;      index += 1
+            case "--auto":
+                try selectRouting(.auto, argument); index += 1
+            case "--basic", "--native":
+                try selectRouting(.native, argument); index += 1
+            case "--pro", "--complex":
+                try selectRouting(.complex, argument); index += 1
+            case "--max", "--ai":
+                try selectRouting(.ai, argument); index += 1
+            case "--ai-engine":
+                guard index + 1 < remaining.count,
+                      let selected = AIEngine(rawValue: remaining[index + 1]),
+                      selected.isProductionAvailable else {
+                    throw CommandError(.usage, "AI engine must be granite or lfm2.")
+                }
+                try selectRouting(.ai, argument)
+                aiEngine = selected
+                index += 2
             case "--debug", "-v", "--verbose":   debug = true;      index += 1
             case "--force":                      force = true;      index += 1
             case "-o", "--output":
@@ -128,6 +151,7 @@ private enum UpmarketCLI {
             inputURLs: inputs.map { URL(fileURLWithPath: $0).standardizedFileURL },
             outputURL: output.map { URL(fileURLWithPath: $0).standardizedFileURL },
             engine: engine,
+            aiEngine: aiEngine,
             outputFormat: format,
             force: force,
             debug: debug
@@ -151,7 +175,7 @@ private enum UpmarketCLI {
             case .broker(let useAI):
                 // AI/Granite, Office, EPUB, HTML — handed to the app, which owns those engines.
                 let text = try await brokerToApp(
-                    inputURL: inputURL, useAI: useAI,
+                    inputURL: inputURL, useAI: useAI, aiEngine: options.aiEngine,
                     outputMode: options.outputFormat.rawValue, debug: options.debug)
                 try write(text, to: outURL, force: options.force)
 
@@ -220,7 +244,13 @@ private enum UpmarketCLI {
 
     /// Hands a conversion to the running app over the shared handoff: write request.json + the
     /// input into CLIHandoffs/<id>/, open upmarket://convert?cli=<id>, poll for response.json.
-    private static func brokerToApp(inputURL: URL, useAI: Bool, outputMode: String, debug: Bool) async throws -> String {
+    private static func brokerToApp(
+        inputURL: URL,
+        useAI: Bool,
+        aiEngine: AIEngine?,
+        outputMode: String,
+        debug: Bool
+    ) async throws -> String {
         let fm = FileManager.default
         guard let root = CLIHandoffPaths.rootURL(fileManager: fm) else {
             throw CommandError(.conversionFailed, "Open the Upmarket app to convert this document.")
@@ -236,12 +266,20 @@ private enum UpmarketCLI {
         let inputName = "input." + (inputURL.pathExtension.isEmpty ? "dat" : inputURL.pathExtension.lowercased())
         try fm.copyItem(at: inputURL, to: stagingDir.appendingPathComponent(inputName))
         let request = CLIConversionRequest(
-            version: 1, inputFile: inputName, sourceDisplayName: inputURL.lastPathComponent,
-            useAI: useAI, outputMode: outputMode)
+            version: 2,
+            inputFile: inputName,
+            sourceDisplayName: inputURL.lastPathComponent,
+            useAI: useAI,
+            aiEngine: aiEngine,
+            outputMode: outputMode
+        )
         try JSONEncoder().encode(request).write(to: stagingDir.appendingPathComponent("request.json"), options: .atomic)
         try fm.moveItem(at: stagingDir, to: finalDir)
 
-        debugLog("brokering to app: id=\(id) useAI=\(useAI)", debug)
+        debugLog(
+            "brokering to app: id=\(id) useAI=\(useAI) aiEngine=\(aiEngine?.rawValue ?? "selected")",
+            debug
+        )
         launchAppIfNeeded()   // any running instance's watcher services the request
 
         let responseURL = finalDir.appendingPathComponent("response.json")
@@ -501,6 +539,7 @@ private enum UpmarketCLI {
           --basic, --native       In-process Apple conversion (PDFKit for text, Vision OCR for scans).
           --pro, --complex        Enhanced conversion (layout + table extraction).
           --max, --ai             AI conversion for scanned/complex documents.
+          --ai-engine <engine>    Select granite or lfm2; implies --ai.
 
         If a requested Enhanced/AI runtime isn't installed, Upmarket falls back to basic
         conversion (with a note) rather than failing — open the app to enable those tiers.
@@ -515,6 +554,8 @@ private enum UpmarketCLI {
         Examples:
           upmarket-cli report.pdf                 # writes report.md beside it
           upmarket-cli *.pdf --pro
+          upmarket-cli invoice.pdf --ai-engine granite
+          upmarket-cli table.pdf --ai-engine lfm2
           upmarket-cli scan.pdf --auto --debug
           upmarket-cli notes.txt --format json
         """)
