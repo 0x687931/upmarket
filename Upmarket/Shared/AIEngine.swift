@@ -32,7 +32,7 @@ nonisolated enum AIEngine: String, CaseIterable, Codable, Sendable {
     var displayName: String {
         switch self {
         case .granite: return "Fast"
-        case .lfm2:    return "Best for tables"
+        case .lfm2:    return "Best for Tables"
         }
     }
 
