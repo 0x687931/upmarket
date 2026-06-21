@@ -402,19 +402,20 @@ final class ModelManager: ObservableObject {
         FileManager.default.createFile(atPath: progressFile, contents: nil)
 
         let progressSource = makeProgressSource(progressFile: progressFile)
-        let pollingTask: Task<Void, Never>? = progressSource == nil
-            ? Task.detached(priority: .utility) { [weak self] in
-                while !Task.isCancelled {
-                    await self?.applyProgressSnapshot(from: progressFile)
-                    try? await Task.sleep(nanoseconds: 500_000_000)
-                }
+        // Keep a low-frequency safety poll even when vnode monitoring is active.
+        // The download services append in production, while tests or future writers
+        // may replace the file atomically and detach the inode-based source.
+        let pollingTask = Task.detached(priority: .utility) { [weak self] in
+            while !Task.isCancelled {
+                await self?.applyProgressSnapshot(from: progressFile)
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
             }
-            : nil
+        }
 
         let result = await downloadModelHandler(key, progressFile)
 
         await applyProgressSnapshot(from: progressFile)
-        pollingTask?.cancel()
+        pollingTask.cancel()
         progressSource?.cancel()
         await applyDownloadResult(result)
 
@@ -422,10 +423,9 @@ final class ModelManager: ObservableObject {
     }
 
     private func makeProgressSource(progressFile: String) -> DispatchSourceFileSystemObject? {
-        // Watch the dedicated workspace directory, not the file inode. Some writers
-        // replace progress files atomically, which would detach an inode-based source.
-        let directory = URL(fileURLWithPath: progressFile).deletingLastPathComponent().path
-        let descriptor = open(directory, O_EVTONLY)
+        // Production download services append JSONL entries to this pre-created file.
+        // Watching the file inode provides immediate progress updates for those writes.
+        let descriptor = open(progressFile, O_EVTONLY)
         guard descriptor >= 0 else { return nil }
 
         let source = DispatchSource.makeFileSystemObjectSource(
