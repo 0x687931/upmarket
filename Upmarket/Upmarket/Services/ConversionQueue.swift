@@ -215,6 +215,13 @@ final class ConversionQueue: ObservableObject {
         updateOverallProgressCache()
     }
 
+    /// Clears finished jobs (complete/failed/cancelled), leaving anything still running or queued.
+    func clearFinished() {
+        jobs.removeAll { !$0.isRunning }
+        rebuildJobIndex()
+        updateOverallProgressCache()
+    }
+
     private func rebuildJobIndex() {
         jobIndex.removeAll(keepingCapacity: true)
         for (index, job) in jobs.enumerated() {

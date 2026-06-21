@@ -671,7 +671,13 @@ struct PreferencesView: View {
 	}
 
 	private var saveDestinationBinding: Binding<SavePreference.Destination> {
-		Binding(get: { SavePreference.shared.destination }, set: { SavePreference.shared.destination = $0 })
+		Binding(get: { SavePreference.shared.destination }, set: { newValue in
+			if newValue == .chosenFolder {
+				SavePreference.shared.promptForChosenFolder()
+			} else {
+				SavePreference.shared.destination = newValue
+			}
+		})
 	}
 
 	private var outputModeBinding: Binding<OutputMode> {

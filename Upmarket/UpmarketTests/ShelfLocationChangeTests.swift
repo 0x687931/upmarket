@@ -18,7 +18,6 @@ final class ShelfLocationChangeTests: XCTestCase {
         let anchors: [ShelfWindowController.ShelfAnchor] = [.bottomLeft, .topRight, .topLeft, .bottomRight]
         for anchor in anchors {
             controller.anchor = anchor
-            NotificationCenter.default.post(name: .upmarketShelfAnchorChanged, object: anchor.rawValue)
             RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.01))
         }
 
@@ -72,7 +71,6 @@ final class ShelfLocationChangeTests: XCTestCase {
         for iteration in 0..<200 {
             let anchor = anchors[iteration % anchors.count]
             controller.anchor = anchor
-            NotificationCenter.default.post(name: .upmarketShelfAnchorChanged, object: anchor.rawValue)
         }
 
         RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.05))
@@ -157,7 +155,6 @@ final class ShelfLocationChangeTests: XCTestCase {
         for iteration in 0..<1000 {
             let anchor = anchors[iteration % anchors.count]
             controller.anchor = anchor
-            NotificationCenter.default.post(name: .upmarketShelfAnchorChanged, object: anchor.rawValue)
 
             // Occasional pause to allow notifications to process
             if iteration % 100 == 0 {
