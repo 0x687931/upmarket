@@ -20,7 +20,7 @@ public actor GraniteDoclingEngine {
     }
 
     public enum Source: Sendable {
-        case modelDirectory(URL)     // the app's downloaded `upmarket_ai` weights
+        case modelDirectory(URL)     // the app's downloaded `granite_docling` weights
         case huggingFaceID(String)   // e.g. "ibm-granite/granite-docling-258M-mlx"
     }
 

@@ -71,9 +71,5 @@
     <string>Upmarket uses Apple Speech to transcribe audio files locally when you choose an audio document.</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
-    <key>UpmarketBAAssetURL_python_runtime_pro</key>
-    <string>file:///Users/am/GitHub/upmarket/build/python_packages/python_runtime_pro.tar.gz</string>
-    <key>UpmarketBAAssetURL_ai_libraries</key>
-    <string>file:///Users/am/GitHub/upmarket/build/python_packages/ai_libraries.tar.gz</string>
 </dict>
 </plist>

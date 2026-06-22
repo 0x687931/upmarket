@@ -116,7 +116,7 @@ cp build/python_packages/*.tar.gz /tmp/upmarket_test/
 4. **Verify Sequential Downloads**
    - [ ] First download: python_runtime_pro (~350MB)
    - [ ] Then download: ai_libraries (~750MB)
-   - [ ] Then download: upmarket_ai (~600MB, if configured)
+   - [ ] Then download: granite_docling (~600MB, if configured)
    - [ ] All download in correct order (Pro before AI)
 
 5. **Verify All Files Extracted**
@@ -165,7 +165,7 @@ cp build/python_packages/*.tar.gz /tmp/upmarket_test/
    - [ ] Preferences → About: Set to "Max"
    - [ ] Download AI
    - [ ] Should NOT re-download Pro (already exists)
-   - [ ] Only downloads ai_libraries (~750MB) + upmarket_ai (~600MB)
+   - [ ] Only downloads ai_libraries (~750MB) + granite_docling (~600MB)
 
 **Verify**:
 - [ ] Pro runtime NOT re-downloaded
@@ -181,7 +181,7 @@ cp build/python_packages/*.tar.gz /tmp/upmarket_test/
    - [ ] Preferences → About: Set to "Pro"
    - [ ] Enhanced conversion still works
    - [ ] AI conversion shows locked (requires Max)
-   - [ ] ai_libraries and upmarket_ai still on disk (can be cleaned up)
+   - [ ] ai_libraries and granite_docling still on disk (can be cleaned up)
 
 **Verify**:
 - [ ] Enhanced pathway works without error

@@ -117,7 +117,7 @@ final class ModelManager: ObservableObject {
         runtimeDirectoryURL: URL? = nil,
         downloadWorkspaceDirectoryURL: URL? = nil,
         checkModelsHandler: @escaping CheckModelsHandler = {
-            ModelManager.nativeModelStatuses(in: ModelManager.defaultModelsDirectoryURL())
+            await ModelManager.nativeModelStatuses(in: ModelManager.defaultModelsDirectoryURL())
         },
         downloadModelHandler: @escaping DownloadModelHandler = ModelManager.makeDownloadHandler(),
         offlineModeHandler: @escaping OfflineModeHandler = { }
@@ -168,25 +168,34 @@ final class ModelManager: ObservableObject {
 
     // MARK: - Size display helpers
 
-    var aiSizeMB: Int  { ModelAsset.upmarketAI.sizeMB }
-    var proSizeMB: Int { ModelAsset.upmarketAI.sizeMB }
+    var aiSizeMB: Int  { ModelAsset.graniteDocling.sizeMB }
+    var proSizeMB: Int { ModelAsset.graniteDocling.sizeMB }
 
     /// Native model inventory: each downloadable asset's on-disk presence. Replaces the
     /// former Python helper's model listing. Only the Max-tier AI weights remain.
-    static func nativeModelStatuses(in modelsDirectoryURL: URL) -> [ModelStatus] {
-        ModelAsset.allCases.map { asset in
+    static func nativeModelStatuses(in modelsDirectoryURL: URL) async -> [ModelStatus] {
+        var statuses: [ModelStatus] = []
+        for asset in ModelAsset.allCases {
+#if DEBUG
+            // Debug: models live in local Application Support directories.
             let dir = modelsDirectoryURL.appendingPathComponent(asset.rawValue, isDirectory: true)
-            return ModelStatus(
+            let isDownloaded = modelDirectoryIsPopulated(dir)
+#else
+            // Release/TestFlight: Apple-managed asset packs own the bits.
+            let isDownloaded = await BackgroundAssetsDownloadService.shared.isAvailableLocally(asset)
+#endif
+            statuses.append(ModelStatus(
                 key: asset.rawValue,
                 name: asset.displayName,
                 description: asset.displayName,
-                isDownloaded: modelDirectoryIsPopulated(dir),
+                isDownloaded: isDownloaded,
                 sizeMB: asset.sizeMB,
                 isRequired: false,
                 tier: asset.requiredTier == .max ? "max" : "pro",
                 storageDirectory: asset.rawValue
-            )
+            ))
         }
+        return statuses
     }
 
     /// An mlx-swift model directory is usable when it has a config and weight shards.
@@ -197,12 +206,29 @@ final class ModelManager: ObservableObject {
 
     func actualInstalledSizeMB(_ asset: ModelAsset) -> Int {
         guard downloadedAssets.contains(asset) else { return 0 }
+#if DEBUG
         let bytes = directorySize(modelDirectoryURL(for: asset))
         return Int(bytes / 1_000_000)
+#else
+        // Managed packs aren't in our container; report the known download size.
+        return asset.sizeMB
+#endif
     }
 
-    /// Filesystem directory of a downloaded model asset — used by native engines
-    /// (e.g. `GraniteDoclingEngine`) to load weights without re-downloading.
+    /// Resolves the on-disk model directory an engine should load weights from. In Debug this
+    /// is the local Application Support directory; in Release it's the Apple-managed asset
+    /// pack's process-lifetime URL (resolved fresh each time — never persisted). Always points
+    /// directly at the directory containing `config.json`.
+    func resolveModelDirectory(for asset: ModelAsset) async throws -> URL {
+#if DEBUG
+        return modelDirectoryURL(for: asset)
+#else
+        return try await BackgroundAssetsDownloadService.shared.managedModelDirectory(for: asset)
+#endif
+    }
+
+    /// Debug-only local directory of a model asset (Application Support). Release resolves
+    /// managed-pack URLs via `resolveModelDirectory(for:)` instead.
     func modelDirectoryURL(for asset: ModelAsset) -> URL {
         let modelDir = models.first { $0.key == asset.rawValue }?.storageDirectory ?? asset.rawValue
         return modelsDirectoryURL.appendingPathComponent(modelDir, isDirectory: true)
@@ -230,10 +256,15 @@ final class ModelManager: ObservableObject {
 
     /// Total disk space used by currently installed, recognized models in bytes.
     var totalStorageUsed: Int64 {
+#if DEBUG
         let directories = Set(models.filter(\.isDownloaded).map(\.storageDirectory))
         return directories.reduce(Int64(0)) { total, directory in
             total + directorySize(modelsDirectoryURL.appendingPathComponent(directory, isDirectory: true))
         }
+#else
+        // Managed packs live outside our container; estimate from known download sizes.
+        return models.filter(\.isDownloaded).reduce(Int64(0)) { $0 + Int64($1.sizeMB) * 1_000_000 }
+#endif
     }
 
     var totalStorageUsedFormatted: String {
@@ -245,17 +276,34 @@ final class ModelManager: ObservableObject {
         if let index = models.firstIndex(where: { $0.key == key }) {
             models[index] = models[index].withDownloadState(isDownloaded: false, error: "not downloaded")
         }
+#if DEBUG
         let directory = models.first { $0.key == key }?.storageDirectory ?? key
         let cacheURL = modelsDirectoryURL.appendingPathComponent(directory, isDirectory: true)
         try? FileManager.default.removeItem(at: cacheURL)
         checkModels()
+#else
+        guard let asset = ModelAsset(rawValue: key) else { checkModels(); return }
+        Task {
+            try? await BackgroundAssetsDownloadService.shared.remove(asset)
+            await checkModelsNow()
+        }
+#endif
     }
 
     /// Remove all downloaded models — app falls back to fast path
     func deleteAllModels() {
         models = models.map { $0.withDownloadState(isDownloaded: false, error: "not downloaded") }
+#if DEBUG
         try? FileManager.default.removeItem(at: modelsDirectoryURL)
         checkModels()
+#else
+        Task {
+            for asset in ModelAsset.allCases {
+                try? await BackgroundAssetsDownloadService.shared.remove(asset)
+            }
+            await checkModelsNow()
+        }
+#endif
     }
 
     private static func defaultModelsDirectoryURL() -> URL {
@@ -308,7 +356,7 @@ final class ModelManager: ObservableObject {
         let missing = gate.missingDownloadableAssets(for: capability)
 
         if missing.isEmpty {
-            if let reason = gate.downloadUnavailableReason(for: capability.requiredAssets.first ?? .upmarketAI) {
+            if let reason = gate.downloadUnavailableReason(for: capability.requiredAssets.first ?? .graniteDocling) {
                 downloadError = reason
             }
             return
@@ -335,7 +383,7 @@ final class ModelManager: ObservableObject {
                 .downloadModel(key: key, progressFile: progressFile)
 #else
             switch key {
-            case ModelAsset.upmarketAI.rawValue, ModelAsset.lfm25VL.rawValue:
+            case ModelAsset.graniteDocling.rawValue, ModelAsset.lfm25VL.rawValue:
                 return await BackgroundAssetsDownloadService.shared.install(key: key, progressFile: progressFile)
             default:
                 return ModelDownloadResult(success: false, error: "Unknown model key: \(key)")

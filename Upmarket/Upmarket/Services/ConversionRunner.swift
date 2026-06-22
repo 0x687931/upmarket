@@ -164,9 +164,9 @@ struct ConversionRunner {
             let engine = job.aiEngine ?? AIEngine.selected
             if engine == .lfm2 {
                 if downloadedAssets.contains(engine.asset) {
-                    downloadedAssets.insert(.upmarketAI)
+                    downloadedAssets.insert(.graniteDocling)
                 } else {
-                    downloadedAssets.remove(.upmarketAI)
+                    downloadedAssets.remove(.graniteDocling)
                 }
             }
         }
@@ -493,8 +493,17 @@ struct ConversionRunner {
         if document.isLocked, let password { _ = document.unlock(withPassword: password) }
 
         // Each engine loads its own weights directory. The per-page closure hides the engine
-        // difference from the page loop below.
-        let modelDir = ModelManager.shared.modelDirectoryURL(for: engine.asset)
+        // difference from the page loop below. Release resolves an Apple-managed asset-pack URL
+        // (process-lifetime, never persisted); Debug resolves a local directory.
+        let modelDir: URL
+        do {
+            modelDir = try await ModelManager.shared.resolveModelDirectory(for: engine.asset)
+        } catch {
+            if !fallbackOnFailure {
+                return .failure("The AI model isn't available. Re-download it from Settings.")
+            }
+            return await runVisionExtraction(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
+        }
         let convert: @Sendable (URL) async throws -> String
         switch engine {
         case .granite:

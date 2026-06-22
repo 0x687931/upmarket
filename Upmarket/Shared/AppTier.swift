@@ -70,13 +70,13 @@ enum AppTier: Int, Comparable, Equatable, Sendable {
 /// Vision, Speech, AVFoundation, SwiftOfficeMarkdown), so Basic and Pro need no assets.
 /// See docs/TIER_CONTRACT.md for what each asset contains and which tier requires it.
 enum ModelAsset: String, CaseIterable, Equatable, Hashable, Sendable {
-    case upmarketAI = "upmarket_ai"   // Max tier: ~600MB (Granite-Docling mlx-swift weights)
+    case graniteDocling = "granite_docling"   // Max tier: ~600MB (Granite-Docling mlx-swift weights)
     case lfm25VL    = "lfm25_vl"      // Max tier: ~2.0GB (LFM2.5-VL 1.6B 8-bit mlx-swift weights)
 
     /// The minimum purchased tier required to download and use this asset.
     var requiredTier: AppTier {
         switch self {
-        case .upmarketAI, .lfm25VL: return .max
+        case .graniteDocling, .lfm25VL: return .max
         }
     }
 
@@ -90,13 +90,22 @@ enum ModelAsset: String, CaseIterable, Equatable, Hashable, Sendable {
 
     var delivery: Delivery {
         switch self {
-        case .upmarketAI, .lfm25VL: return .backgroundAssets
+        case .graniteDocling, .lfm25VL: return .backgroundAssets
+        }
+    }
+
+    /// Apple-hosted managed Background Assets pack identifier (Release/TestFlight delivery).
+    /// Must match the assetPackID in resources/asset-packs/*.json and App Store Connect.
+    var assetPackID: String {
+        switch self {
+        case .graniteDocling: return "com.upmarket.app.models.granite"
+        case .lfm25VL:    return "com.upmarket.app.models.lfm25-vl"
         }
     }
 
     var displayName: String {
         switch self {
-        case .upmarketAI: return "AI for Complex Documents"
+        case .graniteDocling: return "AI for Complex Documents"
         case .lfm25VL:    return "Advanced AI for Tables & Layout"
         }
     }
@@ -104,7 +113,7 @@ enum ModelAsset: String, CaseIterable, Equatable, Hashable, Sendable {
     /// Download size (compressed archive file size users will actually download).
     var sizeMB: Int {
         switch self {
-        case .upmarketAI: return 600    // Model weights (estimate)
+        case .graniteDocling: return 600    // Model weights (estimate)
         case .lfm25VL:    return 2000   // 1.6B 8-bit weights (estimate)
         }
     }
@@ -120,7 +129,7 @@ enum ConversionCapability: Equatable, Sendable {
     /// Native complex-document path (PDFKit + Vision quality selection, SwiftOfficeMarkdown).
     /// Requires Pro tier; no download.
     case enhanced
-    /// Granite-Docling VLM (mlx-swift, native). Requires Max tier + upmarket_ai weights.
+    /// Granite-Docling VLM (mlx-swift, native). Requires Max tier + granite_docling weights.
     case ai
 
     var requiredTier: AppTier {
@@ -136,7 +145,7 @@ enum ConversionCapability: Equatable, Sendable {
         switch self {
         case .native:   return []
         case .enhanced: return []
-        case .ai:       return [.upmarketAI]
+        case .ai:       return [.graniteDocling]
         }
     }
 
@@ -215,7 +224,7 @@ struct AppTierGate: Sendable {
             }
         }
         switch asset {
-        case .upmarketAI, .lfm25VL:
+        case .graniteDocling, .lfm25VL:
             // Both AI engines run on mlx-swift and share the same device/feature gating.
             if !deviceSupportsRuntime { return "Upmarket AI requires Apple Silicon." }
             if !aiFeatureEnabled {

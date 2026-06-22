@@ -128,6 +128,7 @@ policy_gate() {
   run_step "Validate architecture boundaries" scripts/ci/validate_architecture_boundaries.py
   run_step "Validate user-facing copy" scripts/ci/validate_user_facing_copy.py
   run_step "Validate Nova extension" scripts/ci/validate_nova_extension.py
+  run_step "Validate managed asset packs" scripts/ci/validate_asset_packs.py
   run_step "Validate generated repository docs" scripts/docs/generate_repo_docs.py --check
   run_step "Validate release regression guards" scripts/ci/validate_release_regression_guards.py
   run_step "Verify source entitlements" scripts/ci/verify_entitlements.sh

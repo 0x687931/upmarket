@@ -19,7 +19,7 @@ Connect → Additional Resources for the Background Assets path).
 
 Each MODELS entry below MUST match its counterpart in the Swift catalogs — the app rejects any
 manifest whose version/key/source/revision/storage_dir/expected_* differ:
-  - upmarket_ai: FirstPartyModelDownloadService.ModelDownloadCatalog + BackgroundAssetsDownloadService.modelSpec
+  - granite_docling: FirstPartyModelDownloadService.ModelDownloadCatalog + BackgroundAssetsDownloadService.modelSpec
   - lfm25_vl:    same two sites
 """
 from __future__ import annotations
@@ -46,9 +46,9 @@ class ModelSpec:
 
 # --- Must mirror the Swift catalogs (see module docstring) ---
 MODELS: dict[str, ModelSpec] = {
-    "upmarket_ai": ModelSpec(
-        key="upmarket_ai",
-        source_id="com.upmarket.models.upmarket-ai",
+    "granite_docling": ModelSpec(
+        key="granite_docling",
+        source_id="com.upmarket.models.granite-docling",
         revision="e9939db25d2f296c8678d0491c4609a8c596c50a",
         hf_repo="ibm-granite/granite-docling-258M-mlx",
         expected_files=[

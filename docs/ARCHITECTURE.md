@@ -61,7 +61,7 @@ execute within the app and its sandbox.
 |---------------|------------------------------------------|-------------------------------|
 | Basic         | PDFKit / Vision / Office / HTML / text    | native, no download           |
 | Pro           | same native engines (complex PDF, sheets) | tier gate, no download        |
-| AI (Max)      | Granite-Docling-258M via mlx-swift        | `upmarket_ai` model download  |
+| AI (Max)      | Granite-Docling-258M via mlx-swift        | `granite_docling` model download  |
 
 Output is Markdown (`DocTags → Markdown` for the Granite path).
 

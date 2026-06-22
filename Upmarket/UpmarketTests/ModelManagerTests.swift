@@ -42,19 +42,19 @@ final class ModelManagerTests: XCTestCase {
 
         let gateNoTier = AppTierGate(tier: .basic, downloadedAssets: assets,
                                       deviceSupportsRuntime: true, aiFeatureEnabled: true, aiFeatureUnavailableReason: nil)
-        XCTAssertNotNil(gateNoTier.downloadUnavailableReason(for: .upmarketAI))
+        XCTAssertNotNil(gateNoTier.downloadUnavailableReason(for: .graniteDocling))
 
         let gateFeatureOff = AppTierGate(tier: .max, downloadedAssets: assets,
                                           deviceSupportsRuntime: true, aiFeatureEnabled: false,
                                           aiFeatureUnavailableReason: "Upmarket AI is not yet available for Test")
         XCTAssertEqual(
-            gateFeatureOff.downloadUnavailableReason(for: .upmarketAI),
+            gateFeatureOff.downloadUnavailableReason(for: .graniteDocling),
             "Upmarket AI is not yet available for Test"
         )
 
         let gateNoDevice = AppTierGate(tier: .max, downloadedAssets: assets,
                                         deviceSupportsRuntime: false, aiFeatureEnabled: true, aiFeatureUnavailableReason: nil)
-        XCTAssertNotNil(gateNoDevice.downloadUnavailableReason(for: .upmarketAI))
+        XCTAssertNotNil(gateNoDevice.downloadUnavailableReason(for: .graniteDocling))
     }
 
     func testGateBlocksAIUseWhenModelNotDownloaded() {
@@ -72,7 +72,7 @@ final class ModelManagerTests: XCTestCase {
 
         let gate = await manager.gateAfterChecking(tier: .max)
         XCTAssertNil(gate.unavailableReason(for: .ai))
-        XCTAssertTrue(manager.downloadedAssets.contains(.upmarketAI))
+        XCTAssertTrue(manager.downloadedAssets.contains(.graniteDocling))
         XCTAssertTrue(manager.hasCheckedModels)
     }
 
@@ -101,7 +101,7 @@ final class ModelManagerTests: XCTestCase {
             manager.isDownloading && manager.downloadProgress >= 25
         }
         XCTAssertGreaterThanOrEqual(manager.downloadProgress, 25)
-        XCTAssertEqual(manager.downloadingModelKey, "upmarket_ai")
+        XCTAssertEqual(manager.downloadingModelKey, "granite_docling")
 
         try await waitUntil(timeout: 8) {
             !manager.isDownloading
@@ -149,7 +149,7 @@ final class ModelManagerTests: XCTestCase {
         )
 
         let gate = AppTierGate(tier: .max, downloadedAssets: [], deviceSupportsRuntime: true, aiFeatureEnabled: true, aiFeatureUnavailableReason: nil)
-        manager.downloadAsset(.upmarketAI, gate: gate)
+        manager.downloadAsset(.graniteDocling, gate: gate)
 
         try await waitUntil(timeout: 5) {
             !manager.isDownloading && manager.downloadError != nil
@@ -163,7 +163,7 @@ final class ModelManagerTests: XCTestCase {
         let model = Self.maxModel(isDownloaded: true, storageDirectory: "ibm-granite--granite-docling-258M-mlx")
         let manager = ModelManager(models: [model])
 
-        XCTAssertTrue(manager.downloadedAssets.contains(.upmarketAI))
+        XCTAssertTrue(manager.downloadedAssets.contains(.graniteDocling))
         XCTAssertEqual(manager.models[0].storageDirectory, "ibm-granite--granite-docling-258M-mlx")
     }
 
@@ -172,12 +172,12 @@ final class ModelManagerTests: XCTestCase {
             .appendingPathComponent("upmarket-model-storage-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: root) }
 
-        try writeBytes(11, to: root.appendingPathComponent("upmarket_ai/model.bin"))
+        try writeBytes(11, to: root.appendingPathComponent("granite_docling/model.bin"))
         try writeBytes(23, to: root.appendingPathComponent("stale-cache/model.bin"))
 
         let manager = ModelManager(
             models: [
-                Self.maxModel(isDownloaded: true, storageDirectory: "upmarket_ai")
+                Self.maxModel(isDownloaded: true, storageDirectory: "granite_docling")
             ],
             modelsDirectoryURL: root
         )
@@ -195,10 +195,10 @@ final class ModelManagerTests: XCTestCase {
             }
         )
 
-        manager.deleteModel(key: "upmarket_ai")
+        manager.deleteModel(key: "granite_docling")
 
         XCTAssertEqual(manager.models.count, 1)
-        XCTAssertEqual(manager.models[0].key, "upmarket_ai")
+        XCTAssertEqual(manager.models[0].key, "granite_docling")
         XCTAssertFalse(manager.models[0].isDownloaded)
         XCTAssertEqual(manager.models[0].error, "not downloaded")
     }
@@ -294,14 +294,14 @@ final class ModelManagerTests: XCTestCase {
         )
 
         let gate = AppTierGate(tier: .max, downloadedAssets: [], deviceSupportsRuntime: true, aiFeatureEnabled: true, aiFeatureUnavailableReason: nil)
-        manager.downloadAsset(.upmarketAI, gate: gate)
+        manager.downloadAsset(.graniteDocling, gate: gate)
 
         try await waitUntil(timeout: 5) {
             !manager.isDownloading
         }
 
         let keys = await recorder.keys
-        XCTAssertEqual(keys, ["upmarket_ai"])
+        XCTAssertEqual(keys, ["granite_docling"])
         XCTAssertNil(manager.downloadError)
         XCTAssertEqual(manager.models, [Self.maxModel(isDownloaded: true)])
     }
@@ -316,7 +316,7 @@ final class ModelManagerTests: XCTestCase {
 
     private static func maxModel(isDownloaded: Bool, storageDirectory: String? = nil) -> ModelStatus {
         ModelStatus(
-            key: "upmarket_ai",
+            key: "granite_docling",
             name: "Upmarket AI",
             description: "Advanced local conversion",
             isDownloaded: isDownloaded,

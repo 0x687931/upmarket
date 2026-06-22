@@ -29,14 +29,14 @@ final class FirstPartyModelDownloadServiceTests: XCTestCase {
         ]
 
         try FileManager.default.createDirectory(
-            at: sourceRoot.appendingPathComponent("upmarket_ai", isDirectory: true),
+            at: sourceRoot.appendingPathComponent("granite_docling", isDirectory: true),
             withIntermediateDirectories: true
         )
         try FileManager.default.createDirectory(at: downloadRoot, withIntermediateDirectories: true)
 
         var files: [[String: Any]] = []
         for relative in expectedFiles {
-            let url = sourceRoot.appendingPathComponent("upmarket_ai").appendingPathComponent(relative)
+            let url = sourceRoot.appendingPathComponent("granite_docling").appendingPathComponent(relative)
             try FileManager.default.createDirectory(
                 at: url.deletingLastPathComponent(),
                 withIntermediateDirectories: true
@@ -45,7 +45,7 @@ final class FirstPartyModelDownloadServiceTests: XCTestCase {
             try content.write(to: url)
             files.append([
                 "path": relative,
-                "url": "upmarket_ai/\(relative)",
+                "url": "granite_docling/\(relative)",
                 "sha256": Self.sha256Hex(for: content),
                 "bytes": content.count,
             ])
@@ -53,16 +53,16 @@ final class FirstPartyModelDownloadServiceTests: XCTestCase {
 
         let sourceManifest: [String: Any] = [
             "manifest_version": 1,
-            "model_key": "upmarket_ai",
-            "source_id": "com.upmarket.models.upmarket-ai",
+            "model_key": "granite_docling",
+            "source_id": "com.upmarket.models.granite-docling",
             "revision": "e9939db25d2f296c8678d0491c4609a8c596c50a",
-            "storage_dir": "upmarket_ai",
+            "storage_dir": "granite_docling",
             "expected_files": expectedFiles,
             "expected_dirs": [],
             "files": files,
         ]
         let manifestData = try JSONSerialization.data(withJSONObject: sourceManifest, options: [.prettyPrinted])
-        try manifestData.write(to: sourceRoot.appendingPathComponent("upmarket_ai.json"))
+        try manifestData.write(to: sourceRoot.appendingPathComponent("granite_docling.json"))
 
         let service = FirstPartyModelDownloadService(
             modelsDirectoryURL: modelsRoot,
@@ -77,10 +77,10 @@ final class FirstPartyModelDownloadServiceTests: XCTestCase {
             }
         )
 
-        let result = await service.downloadModel(key: "upmarket_ai", progressFile: "")
+        let result = await service.downloadModel(key: "granite_docling", progressFile: "")
         XCTAssertTrue(result.success, result.error ?? "download failed")
 
-        let installed = modelsRoot.appendingPathComponent("upmarket_ai", isDirectory: true)
+        let installed = modelsRoot.appendingPathComponent("granite_docling", isDirectory: true)
         XCTAssertTrue(FileManager.default.isReadableFile(atPath: installed.appendingPathComponent("chat_template.jinja").path))
         XCTAssertTrue(FileManager.default.isReadableFile(atPath: installed.appendingPathComponent("tokenizer_config.json").path))
 
@@ -88,7 +88,7 @@ final class FirstPartyModelDownloadServiceTests: XCTestCase {
         let validationManifest = try JSONSerialization.jsonObject(
             with: Data(contentsOf: validationManifestURL)
         ) as? [String: Any]
-        XCTAssertEqual(validationManifest?["source_id"] as? String, "com.upmarket.models.upmarket-ai")
+        XCTAssertEqual(validationManifest?["source_id"] as? String, "com.upmarket.models.granite-docling")
         XCTAssertEqual(validationManifest?["expected_files"] as? [String], expectedFiles)
 
         let manifestFiles = validationManifest?["files"] as? [String: String]

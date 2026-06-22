@@ -11,7 +11,7 @@ enum ConversionTool: String, CaseIterable, Sendable {
     case nativeText     // in-process .txt/.md/.csv
     case nativeHTML     // in-process libxml2 HTML
     case nativeEPUB     // in-process ZipReader + libxml2 HTML
-    case upmarketAI     // native Granite-Docling (mlx-swift)
+    case graniteDocling     // native Granite-Docling (mlx-swift)
 }
 
 enum ConversionFormat: String, CaseIterable, Sendable {
@@ -112,7 +112,7 @@ enum ToolFormatCapabilityMatrix {
         add(.nativeText, [.md, .txt, .csv], .primary)
         add(.nativeHTML, [.html], .primary)
         add(.nativeEPUB, [.epub], .primary)
-        add(.upmarketAI, [.pdf, .png, .jpg, .jpeg, .tif, .tiff, .webp], .primary, advanced: true)
+        add(.graniteDocling, [.pdf, .png, .jpg, .jpeg, .tif, .tiff, .webp], .primary, advanced: true)
 
         return entries
     }()

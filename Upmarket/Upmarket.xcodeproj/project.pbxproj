@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		81AAFF0A2FDF0512006AEB11 /* SwiftOfficeMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = 81AAFF092FDF0512006AEB11 /* SwiftOfficeMarkdown */; };
+		81BF20B12FE8E38F00BB38F0 /* UpmarketVLM in Frameworks */ = {isa = PBXBuildFile; productRef = DD00000000000000000000A2 /* UpmarketVLM */; };
+		81BF22282FE8E62800BB38F0 /* UpmarketBackgroundAssetsExtension.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 81BF22202FE8E62800BB38F0 /* UpmarketBackgroundAssetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		AA00000F00000000000000FA /* UpmarketQuickAction.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = AA000003000000000000003A /* UpmarketQuickAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		EE000015000000000000015E /* upmarket-cli in Embed Command Tools */ = {isa = PBXBuildFile; fileRef = DD000002000000000000002D /* upmarket-cli */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		EE000016000000000000016E /* upmarket-mcp in Embed Command Tools */ = {isa = PBXBuildFile; fileRef = EE000002000000000000002E /* upmarket-mcp */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
@@ -27,6 +29,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 81A3B72A2FCB0F91004A488D;
 			remoteInfo = Upmarket;
+		};
+		81BF22262FE8E62800BB38F0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 81A3B7232FCB0F91004A488D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 81BF221F2FE8E62800BB38F0;
+			remoteInfo = UpmarketBackgroundAssetsExtension;
 		};
 		AA00000B00000000000000BA /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +61,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		81BF22292FE8E62800BB38F0 /* Embed ExtensionKit Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (
+				81BF22282FE8E62800BB38F0 /* UpmarketBackgroundAssetsExtension.appex in Embed ExtensionKit Extensions */,
+			);
+			name = "Embed ExtensionKit Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AA00000E00000000000000EA /* Embed App Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -81,12 +101,20 @@
 		81A3B72B2FCB0F91004A488D /* Upmarket.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Upmarket.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		81A3B7382FCB0F91004A488D /* UpmarketTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UpmarketTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		81A3B7422FCB0F91004A488D /* UpmarketUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UpmarketUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		81BF22202FE8E62800BB38F0 /* UpmarketBackgroundAssetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = UpmarketBackgroundAssetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA000003000000000000003A /* UpmarketQuickAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = UpmarketQuickAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD000002000000000000002D /* upmarket-cli */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "upmarket-cli"; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE000002000000000000002E /* upmarket-mcp */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "upmarket-mcp"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		81BF222D2FE8E62800BB38F0 /* Exceptions for "UpmarketBackgroundAssetsExtension" folder in "UpmarketBackgroundAssetsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 81BF221F2FE8E62800BB38F0 /* UpmarketBackgroundAssetsExtension */;
+		};
 		AA000010000000000000010A /* Exceptions for "Upmarket" folder in "Upmarket" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -113,6 +141,14 @@
 		81A3B7452FCB0F91004A488D /* UpmarketUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = UpmarketUITests;
+			sourceTree = "<group>";
+		};
+		81BF22212FE8E62800BB38F0 /* UpmarketBackgroundAssetsExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				81BF222D2FE8E62800BB38F0 /* Exceptions for "UpmarketBackgroundAssetsExtension" folder in "UpmarketBackgroundAssetsExtension" target */,
+			);
+			path = UpmarketBackgroundAssetsExtension;
 			sourceTree = "<group>";
 		};
 		990000000000000000000001 /* Shared */ = {
@@ -142,6 +178,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				81BF20B12FE8E38F00BB38F0 /* UpmarketVLM in Frameworks */,
 				81AAFF0A2FDF0512006AEB11 /* SwiftOfficeMarkdown in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -154,6 +191,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		81A3B73F2FCB0F91004A488D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		81BF221D2FE8E62800BB38F0 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -194,6 +238,7 @@
 				EE000008000000000000008E /* UpmarketMCP */,
 				81A3B73B2FCB0F91004A488D /* UpmarketTests */,
 				81A3B7452FCB0F91004A488D /* UpmarketUITests */,
+				81BF22212FE8E62800BB38F0 /* UpmarketBackgroundAssetsExtension */,
 				81A3B75E2FCB116B004A488D /* Frameworks */,
 				81A3B72C2FCB0F91004A488D /* Products */,
 			);
@@ -208,6 +253,7 @@
 				AA000003000000000000003A /* UpmarketQuickAction.appex */,
 				81A3B7382FCB0F91004A488D /* UpmarketTests.xctest */,
 				81A3B7422FCB0F91004A488D /* UpmarketUITests.xctest */,
+				81BF22202FE8E62800BB38F0 /* UpmarketBackgroundAssetsExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -232,6 +278,7 @@
 				CC000003000000000000003C /* Stamp Build Metadata */,
 				AA00000E00000000000000EA /* Embed App Extensions */,
 				EE000017000000000000017E /* Embed Command Tools */,
+				81BF22292FE8E62800BB38F0 /* Embed ExtensionKit Extensions */,
 				CC000002000000000000002C /* Validate App Package */,
 			);
 			buildRules = (
@@ -240,6 +287,7 @@
 				AA00000C00000000000000CA /* PBXTargetDependency */,
 				EE000012000000000000012E /* PBXTargetDependency */,
 				EE000014000000000000014E /* PBXTargetDependency */,
+				81BF22272FE8E62800BB38F0 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				81A3B72D2FCB0F91004A488D /* Upmarket */,
@@ -299,6 +347,28 @@
 			productName = UpmarketUITests;
 			productReference = 81A3B7422FCB0F91004A488D /* UpmarketUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		81BF221F2FE8E62800BB38F0 /* UpmarketBackgroundAssetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 81BF222C2FE8E62800BB38F0 /* Build configuration list for PBXNativeTarget "UpmarketBackgroundAssetsExtension" */;
+			buildPhases = (
+				81BF221C2FE8E62800BB38F0 /* Sources */,
+				81BF221D2FE8E62800BB38F0 /* Frameworks */,
+				81BF221E2FE8E62800BB38F0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				81BF22212FE8E62800BB38F0 /* UpmarketBackgroundAssetsExtension */,
+			);
+			name = UpmarketBackgroundAssetsExtension;
+			packageProductDependencies = (
+			);
+			productName = UpmarketBackgroundAssetsExtension;
+			productReference = 81BF22202FE8E62800BB38F0 /* UpmarketBackgroundAssetsExtension.appex */;
+			productType = "com.apple.product-type.extensionkit-extension";
 		};
 		AA000004000000000000004A /* UpmarketQuickAction */ = {
 			isa = PBXNativeTarget;
@@ -385,6 +455,9 @@
 						CreatedOnToolsVersion = 26.5;
 						TestTargetID = 81A3B72A2FCB0F91004A488D;
 					};
+					81BF221F2FE8E62800BB38F0 = {
+						CreatedOnToolsVersion = 26.5;
+					};
 					DD000006000000000000006D = {
 						CreatedOnToolsVersion = 26.5;
 					};
@@ -425,6 +498,7 @@
 				EE000006000000000000006E /* upmarket-mcp */,
 				81A3B7372FCB0F91004A488D /* UpmarketTests */,
 				81A3B7412FCB0F91004A488D /* UpmarketUITests */,
+				81BF221F2FE8E62800BB38F0 /* UpmarketBackgroundAssetsExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -445,6 +519,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		81A3B7402FCB0F91004A488D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		81BF221E2FE8E62800BB38F0 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -533,6 +614,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		81BF221C2FE8E62800BB38F0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AA000005000000000000005A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -567,6 +655,11 @@
 			target = 81A3B72A2FCB0F91004A488D /* Upmarket */;
 			targetProxy = 81A3B7432FCB0F91004A488D /* PBXContainerItemProxy */;
 		};
+		81BF22272FE8E62800BB38F0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 81BF221F2FE8E62800BB38F0 /* UpmarketBackgroundAssetsExtension */;
+			targetProxy = 81BF22262FE8E62800BB38F0 /* PBXContainerItemProxy */;
+		};
 		AA00000C00000000000000CA /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = AA000004000000000000004A /* UpmarketQuickAction */;
@@ -588,8 +681,8 @@
 		81A3B74A2FCB0F91004A488D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = arm64;
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -652,8 +745,8 @@
 		81A3B74B2FCB0F91004A488D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = arm64;
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -901,6 +994,70 @@
 			};
 			name = Release;
 		};
+		81BF222A2FE8E62800BB38F0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = UpmarketBackgroundAssetsExtension/UpmarketBackgroundAssetsExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q54Q5726NT;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = UpmarketBackgroundAssetsExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = UpmarketBackgroundAssetsExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.upmarket.app.background-assets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		81BF222B2FE8E62800BB38F0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = UpmarketBackgroundAssetsExtension/UpmarketBackgroundAssetsExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q54Q5726NT;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = UpmarketBackgroundAssetsExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = UpmarketBackgroundAssetsExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.upmarket.app.background-assets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 		AA000008000000000000008A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1062,6 +1219,15 @@
 			buildConfigurations = (
 				81A3B7532FCB0F91004A488D /* Debug */,
 				81A3B7542FCB0F91004A488D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		81BF222C2FE8E62800BB38F0 /* Build configuration list for PBXNativeTarget "UpmarketBackgroundAssetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				81BF222A2FE8E62800BB38F0 /* Debug */,
+				81BF222B2FE8E62800BB38F0 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

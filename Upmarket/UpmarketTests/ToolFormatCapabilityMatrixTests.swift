@@ -16,7 +16,7 @@ final class ToolFormatCapabilityMatrixTests: XCTestCase {
 
         XCTAssertTrue(tools.contains(.pdfKit))
         XCTAssertTrue(tools.contains(.vision))
-        XCTAssertTrue(tools.contains(.upmarketAI))
+        XCTAssertTrue(tools.contains(.graniteDocling))
     }
 
     func testPlainTextIsAcceptedThroughNativeTextRoute() {

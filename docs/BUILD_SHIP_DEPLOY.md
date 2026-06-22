@@ -90,12 +90,33 @@ UPMARKET_REQUIRE_SIGNED_ENTITLEMENTS=1 scripts/ci/verify_entitlements.sh /path/t
 
 ## Model Asset Hosting
 
-The only downloadable asset is `upmarket_ai` — the Granite-Docling-258M **mlx-swift** weights (~600 MB), delivered as a flat directory (`config.json` + `*.safetensors` + tokenizer files). Basic and Pro are fully native and need no download.
+Max has two downloadable model assets: `granite_docling` (~600 MB) and `lfm25_vl`
+(~2.0 GB). Each is a flat model directory containing `config.json`, weights, tokenizer files,
+and the other files listed by `ModelDownloadCatalog.expectedFiles`. Basic and Pro need no model
+download.
 
 - **Debug / development:** `FirstPartyModelDownloadService` fetches a manifest + per-file archive (resumable, checksum-verified, atomic promote). Point it at a base URL via `UPMARKET_MODEL_MANIFEST_BASE_URL`.
-- **Production / TestFlight:** `BackgroundAssetsDownloadService` + the `UpmarketBackgroundAssetsExtension` deliver the asset via Apple Background Assets.
+- **Production / TestFlight:** Apple hosts managed `.aar` asset packs uploaded through App Store Connect. `BackgroundAssetsDownloadService` requests them with `AssetPackManager`; `UpmarketBackgroundAssetsExtension` is the embedded `StoreDownloaderExtension`.
 
-The Python-based archive-staging scripts were removed with the runtime; a native helper that produces the `upmarket_ai` archive + manifest from the published HF mlx repo is a follow-up. Until then, stage the directory by hand from a local model cache.
+Create the production packs from already-staged model directories:
+
+```sh
+scripts/models/package_asset_packs.py \
+  --model granite_docling \
+  --model-dir /path/to/granite_docling \
+  --out-dir build/asset-packs
+
+scripts/models/package_asset_packs.py \
+  --model lfm25_vl \
+  --model-dir /path/to/lfm25_vl \
+  --out-dir build/asset-packs
+```
+
+Upload both `.aar` files to App Store Connect Background Assets and associate them with the
+build. The pack IDs must remain:
+
+- `com.upmarket.app.models.granite`
+- `com.upmarket.app.models.lfm25-vl`
 
 ### Production / TestFlight archive
 
@@ -122,7 +143,7 @@ UPMARKET_REQUIRE_MODEL_MANIFEST_BASE_URL=1 scripts/ci/verify_release_app.sh "$AP
 The app's download runtime has no host restriction — only the release verification script does. You can exercise the exact same code path against a local HTTP server:
 
 ```sh
-# 1. Stage the upmarket_ai model directory locally (manifest + flat mlx weights).
+# 1. Stage the granite_docling model directory locally (manifest + flat mlx weights).
 
 # 2. Serve the staged directory.
 python3 -m http.server 8765 --directory build/first-party-model-assets
