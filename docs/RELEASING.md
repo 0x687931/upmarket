@@ -26,7 +26,23 @@ Regenerates `Upmarket/Upmarket/Resources/licenses.json` (the About screen) from 
 
 ### 3. Stage the AI model asset
 
-The Max-tier `upmarket_ai` asset (Granite-Docling mlx-swift weights, ~600 MB) is delivered as a flat directory (`config.json` + `*.safetensors`) via Apple Background Assets, downloaded by `BackgroundAssetsDownloadService` (`FirstPartyModelDownloadService` for local/debug). Upload the model archive to the App Store Connect Additional Resources slot registered in `UpmarketBackgroundAssetsExtension`. (A native staging helper that produces the archive from the published HF mlx repo is a follow-up.)
+Package both Max-tier model directories as Apple-hosted managed Background Assets:
+
+```sh
+scripts/models/package_asset_packs.py \
+  --model granite_docling \
+  --model-dir /path/to/granite_docling \
+  --out-dir build/asset-packs
+
+scripts/models/package_asset_packs.py \
+  --model lfm25_vl \
+  --model-dir /path/to/lfm25_vl \
+  --out-dir build/asset-packs
+```
+
+Upload the resulting `.aar` files to App Store Connect Background Assets, associate both packs
+with the app build, and verify delivery through TestFlight. Local/debug builds continue to use
+`FirstPartyModelDownloadService`; Release/TestFlight uses `AssetPackManager`.
 
 ### 4. Test conversion quality
 

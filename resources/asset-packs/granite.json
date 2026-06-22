@@ -1,0 +1,12 @@
+{
+  "assetPackID": "com.upmarket.app.models.granite",
+  "downloadPolicy": {
+    "onDemand": {}
+  },
+  "fileSelectors": [
+    {
+      "directory": "granite_docling"
+    }
+  ],
+  "platforms": ["macOS"]
+}

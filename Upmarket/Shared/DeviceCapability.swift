@@ -86,7 +86,7 @@ final class DeviceCapability {
     }
 
     /// Why Upmarket AI is unavailable, for display in UI.
-    nonisolated var upmarketAIUnavailableReason: String {
+    nonisolated var graniteDoclingUnavailableReason: String {
         "Upmarket AI requires Apple Silicon with Metal support"
     }
 }

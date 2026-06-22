@@ -103,7 +103,7 @@ struct ModelDownloadView: View {
                                 $0.asset.rawValue == model.key
                             })
                     }, id: \.key) { model in
-                        let asset = ModelAsset(rawValue: model.key) ?? .upmarketAI
+                        let asset = ModelAsset(rawValue: model.key) ?? .graniteDocling
                         let gateReason = modelManager.gate(tier: store.tier).downloadUnavailableReason(for: asset)
                         modelRow(
                             key: model.key,
@@ -162,7 +162,7 @@ struct ModelDownloadView: View {
                         .controlSize(.small)
                     } else if available {
                         Button("Download") {
-                            modelManager.downloadAsset(ModelAsset(rawValue: key) ?? .upmarketAI, gate: modelManager.gate(tier: store.tier))
+                            modelManager.downloadAsset(ModelAsset(rawValue: key) ?? .graniteDocling, gate: modelManager.gate(tier: store.tier))
                         }
                         .buttonStyle(AppActionButtonStyle())
                         .controlSize(.small)
@@ -179,7 +179,7 @@ struct ModelDownloadView: View {
         AppSectionCard(title: "Downloads") {
             VStack(spacing: AppTheme.Spacing.sm) {
             // Max tier: AI model weights — the only downloadable asset
-            if modelManager.gate(tier: store.tier).downloadUnavailableReason(for: .upmarketAI) == nil {
+            if modelManager.gate(tier: store.tier).downloadUnavailableReason(for: .graniteDocling) == nil {
                 let proReady = modelManager.models.filter { $0.tier == "max" }.allSatisfy(\.isDownloaded)
                 if !proReady {
                     Button {
@@ -290,7 +290,7 @@ struct ModelDownloadView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                 Button("Try Again") {
-                    if modelManager.gate(tier: store.tier).downloadUnavailableReason(for: .upmarketAI) == nil {
+                    if modelManager.gate(tier: store.tier).downloadUnavailableReason(for: .graniteDocling) == nil {
                         modelManager.downloadAssets(for: .ai, gate: modelManager.gate(tier: store.tier))
                     } else {
                         modelManager.checkModels()

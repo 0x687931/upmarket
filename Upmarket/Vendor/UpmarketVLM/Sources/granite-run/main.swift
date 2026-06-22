@@ -40,7 +40,7 @@ guard let imagePath = positional.first else {
 }
 let url = URL(fileURLWithPath: imagePath)
 let modelDir = positional.count >= 2 ? positional[1]
-    : "/Users/am/GitHub/upmarket-idl-eval/resources/models/upmarket_ai"
+    : "/Users/am/GitHub/upmarket-idl-eval/resources/models/granite_docling"
 
 let sem = DispatchSemaphore(value: 0)
 Task {

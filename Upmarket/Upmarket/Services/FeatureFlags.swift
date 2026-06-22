@@ -172,7 +172,7 @@ final class FeatureFlags: ObservableObject {
     var aiUnavailableReason: String? {
         let device = DeviceCapability.shared
         if !device.isAppleSilicon {
-            return device.upmarketAIUnavailableReason
+            return device.graniteDoclingUnavailableReason
         }
         if !aiSupportedForCurrentLocale {
             if aiComingSoonForCurrentLocale {

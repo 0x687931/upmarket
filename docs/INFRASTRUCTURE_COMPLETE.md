@@ -1,207 +1,82 @@
-# Tier Infrastructure: Complete Implementation ✅
+# Tier and Model Delivery Infrastructure
 
-**Status**: All infrastructure for tier-based downloads is now implemented and tested.
+**Status:** Native tier infrastructure is implemented. Production model delivery is wired for
+Apple-hosted managed Background Assets and still requires App Store Connect upload plus
+TestFlight verification for each release.
 
----
+## Runtime architecture
 
-## What's Done
+- Basic and Pro conversion paths are native Swift and require no downloaded runtime.
+- Max adds two local vision-language model choices:
+  - `granite_docling` — approximately 600 MB.
+  - `lfm25_vl` — approximately 2.0 GB.
+- There is no embedded Python runtime, helper process, or downloadable Python package.
+- Model inference remains local; only model delivery requires network access.
 
-### 1. **Build System Restructure** ✅
-- `build_python_env.sh` now bundles only Basic tier (~136MB)
-- ML frameworks removed from app bundle (was 1.3GB)
-- Created `scripts/build_python_packages.sh` to build:
-  - `python_runtime_pro.tar.gz` (~350MB) from requirements-pro.txt
-  - `ai_libraries.tar.gz` (~750MB) from requirements-ai.txt
+## Delivery paths
 
-### 2. **Download Service Updated** ✅
-- `BackgroundAssetsDownloadService.swift` now handles:
-  - `python_runtime_pro` (Pro tier, ~350MB)
-  - `ai_libraries` (Max tier, ~750MB) 
-  - `upmarket_ai` (Max tier model weights, ~600MB)
-- Asset URLs configurable per tier
-- Proper extraction and validation for each package
+### Debug and local development
 
-### 3. **Runtime Configuration** ✅
-- `UpmarketRuntimeHelper/main.swift` now:
-  - Adds Pro runtime to PYTHONPATH if downloaded
-  - Adds AI libraries to PYTHONPATH if downloaded
-  - Maintains proper load order: Basic → Pro → Max
+`FirstPartyModelDownloadService` downloads checksum-verified archives into:
 
-### 4. **Code Integrated** ✅
-- ModelAsset enum updated (aiLibraries added)
-- AppTierGate enforces tier requirements
-- UI shows accurate tier-specific descriptions
-- Menu bar shows download commitments
-
----
-
-## How It Works (User Flow)
-
-### Pro User (Downloads Enhanced)
-1. Opens Preferences → Conversion
-2. Sees "Enhanced Conversions · 350 MB (one-time download)"
-3. Clicks Download
-4. BackgroundAssetsDownloadService schedules download of `python_runtime_pro.tar.gz`
-5. Download completes, extracts to `~/Library/Application Support/Upmarket/runtime/python_runtime_pro/`
-6. UpmarketRuntimeHelper detects it, adds to PYTHONPATH
-7. Docling conversion now available
-
-### Max User (Downloads Enhanced + AI)
-1. Opens Preferences → Conversion
-2. Sees both models available
-3. Clicks Download for AI
-4. BackgroundAssetsDownloadService schedules:
-   - `python_runtime_pro.tar.gz` (if not present)
-   - `ai_libraries.tar.gz` (~750MB)
-   - `upmarket_ai` model weights (~600MB, if configured)
-5. Downloads extract sequentially
-6. UpmarketRuntimeHelper adds both to PYTHONPATH
-7. Granite Docling MLX conversion available
-
----
-
-## Files Changed
-
-### Build Scripts
-- `scripts/build_python_env.sh` — Modified to use requirements-basic.txt
-- `scripts/build_python_packages.sh` — **NEW**: Builds Pro and AI packages
-
-### Services
-- `BackgroundAssetsDownloadService.swift`:
-  - Added aiLibrariesDownloadID
-  - Updated estimatedFileSize (Pro: 350MB, AI: 750MB, Model: 600MB)
-  - Added modelSpec for aiLibraries
-  - Added destinationURL handling for python_runtime_pro
-
-- `UpmarketRuntimeHelper/main.swift`:
-  - Enhanced configureRuntime() to add downloaded packages to PYTHONPATH
-  - Fixed appSupport path resolution
-
-### Models
-- `AppTier.swift` — ModelAsset enum extended with aiLibraries
-- `PreferencesView.swift` — Updated with tier-accurate descriptions
-- `MenuBarDropdown.swift` — Updated with download size messaging
-
----
-
-## Next Steps to Ship
-
-### Immediate (Before Release)
-- [ ] Run `scripts/build_python_packages.sh --pro --ai` to generate packages
-- [ ] Upload packages to CDN or GitHub Releases
-- [ ] Register asset URLs in App Store Connect Background Assets
-- [ ] Test full download flow for Pro and Max users
-
-### Testing Checklist
-- [ ] Basic tier: App works, no downloads available ✅
-- [ ] Pro tier: Download 350MB, Docling works
-- [ ] Max tier: Download 350MB + 750MB + 600MB, AI works
-- [ ] Verify PYTHONPATH includes both packages
-- [ ] Verify tier gating prevents misuse (Max without aiLibraries = error)
-
-### Configuration (App Store Connect)
-```
-Background Asset: com.upmarket.download.python-runtime-pro
-  URL: <your-cdn>/python_runtime_pro.tar.gz
-  Size: ~350MB
-
-Background Asset: com.upmarket.download.ai-libraries
-  URL: <your-cdn>/ai_libraries.tar.gz
-  Size: ~750MB
-
-Background Asset: com.upmarket.download.upmarket-ai
-  URL: <your-cdn>/upmarket_ai.tar.gz (existing)
-  Size: ~600MB
+```text
+~/Library/Application Support/Upmarket/models/<model-key>/
 ```
 
-Or for local testing, add to Info.plist:
-```
-UpmarketBAAssetURL_python_runtime_pro: https://your-cdn.com/python_runtime_pro.tar.gz
-UpmarketBAAssetURL_ai_libraries: https://your-cdn.com/ai_libraries.tar.gz
-```
+This path is selected by the existing `#if DEBUG` split in `ModelManager`.
 
----
+### Release and TestFlight
 
-## Size Summary (Final)
+Apple hosts managed `.aar` packs through App Store Connect:
 
-| Component | Size | Tier | Type |
-|-----------|------|------|------|
-| App Bundle Python | 136MB | Basic | Bundled |
-| Pro Runtime | 350MB | Pro | Download |
-| AI Libraries | 750MB | Max | Download |
-| Model Weights | 600MB | Max | Download |
+| Model key | Asset-pack ID |
+| --- | --- |
+| `granite_docling` | `com.upmarket.app.models.granite` |
+| `lfm25_vl` | `com.upmarket.app.models.lfm25-vl` |
 
-**Total app**: 136MB (no downloads)
-**Pro user**: 136MB + 350MB = 486MB
-**Max user**: 136MB + 350MB + 750MB + 600MB = 1,836MB
+The app uses `AssetPackManager` to request, resolve, report progress for, and remove packs.
+`UpmarketBackgroundAssetsExtension` is embedded in `Upmarket.app` and conforms to
+`StoreDownloaderExtension`.
 
-Previous: 1.3GB bundled + 600MB model = 1.9GB minimum
+Resolved managed-pack URLs are process-lifetime values. Engines request the URL from
+`ModelManager.resolveModelDirectory(for:)` when needed; the URL is never persisted.
 
----
+## Packaging
 
-## Architecture Diagram
+The packager reuses the model file catalog in `stage_model_assets.py`:
 
-```
-User Opens App
-    ↓
-[Upmarket.app] 136MB
-├─ Python 3.12 core
-├─ ocrmac (Vision OCR)
-└─ basic utilities
-    ↓
-├─→ Tier Check: Basic / Pro / Max
-    ├─ Basic: Done, can use native conversion
-    ├─ Pro: Check for python_runtime_pro
-    │   ├─ Not found → Show "Download (350 MB)"
-    │   └─ Found → Add to PYTHONPATH, enable Docling
-    └─ Max: Check for python_runtime_pro + ai_libraries + upmarket_ai
-        ├─ Missing pro → Download (350MB)
-        ├─ Missing ai libs → Download (750MB)
-        └─ Missing model → Download (600MB)
-    ↓
-Runtime Helper Adds to PYTHONPATH:
-    1. Basic: /usr/lib/pythonX.X/
-    2. Pro: ~/Library/Application Support/Upmarket/runtime/python_runtime_pro/lib/...
-    3. Max: (2) + ~/Library/Application Support/Upmarket/runtime/ai_libraries/lib/...
-    ↓
-Conversion Runs:
-    - Fast: Apple frameworks only (always)
-    - Enhanced: Basic + Docling (if Pro downloaded)
-    - AI: Basic + Docling + MLX (if Max downloaded)
+```sh
+scripts/models/package_asset_packs.py \
+  --model granite_docling \
+  --model-dir /path/to/granite_docling \
+  --out-dir build/asset-packs
+
+scripts/models/package_asset_packs.py \
+  --model lfm25_vl \
+  --model-dir /path/to/lfm25_vl \
+  --out-dir build/asset-packs
 ```
 
----
+It validates the required files, stages the expected top-level model directory, and invokes
+`xcrun ba-package` to create each `.aar`.
 
-## Validation: Before Shipping
+## Release validation
 
-```bash
-# 1. Build packages
-scripts/build_python_packages.sh --pro --ai
+Repository validation:
 
-# 2. Verify app bundle size
-du -sh build/DerivedData/Build/Products/Debug/Upmarket.app/Contents/Frameworks/Python.framework
-# Expected: ~130-150MB
-
-# 3. Verify package sizes
-ls -lh build/python_packages/
-# python_runtime_pro.tar.gz: ~350MB
-# ai_libraries.tar.gz: ~750MB
-
-# 4. Test local download (update Info.plist with file:// URLs)
-# 5. Full tier testing with DEBUG override controls
-# 6. Verify PYTHONPATH includes all three tiers
+```sh
+scripts/ci/gate.sh quick
+scripts/models/package_asset_packs.py --selftest
 ```
 
----
+Manual release validation:
 
-## Important Notes
+1. Upload both `.aar` packs to App Store Connect Background Assets.
+2. Associate both packs with the candidate app build.
+3. Install through TestFlight on a clean Mac.
+4. Download each model, verify progress reporting, convert a representative document, relaunch,
+   and verify the model remains available.
+5. Delete each model in Preferences and verify its managed pack is removed.
 
-- **PYTHONPATH construction is robust**: Non-existent directories are skipped silently
-- **Extraction validation**: Each package must have expectedFiles/expectedDirs or installation fails
-- **AppStore readiness**: Background Assets framework handles all network delivery
-- **Fallback**: If download fails, error is clear and actionable (not silent)
-- **Offline support**: All packages are cached locally after first download
-
----
-
-**Infrastructure is production-ready. Ready to build packages and release.**
+The repository build cannot prove App Store-hosted delivery. TestFlight is the release gate for
+that final integration.

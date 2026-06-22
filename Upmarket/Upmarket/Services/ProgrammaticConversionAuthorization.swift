@@ -22,9 +22,9 @@ enum ProgrammaticConversionAuthorization {
             var downloadedAssets = ModelManager.shared.downloadedAssets
             if engine == .lfm2 {
                 if downloadedAssets.contains(engine.asset) {
-                    downloadedAssets.insert(.upmarketAI)
+                    downloadedAssets.insert(.graniteDocling)
                 } else {
-                    downloadedAssets.remove(.upmarketAI)
+                    downloadedAssets.remove(.graniteDocling)
                 }
             }
             let gate = AppTierGate(

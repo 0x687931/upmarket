@@ -751,7 +751,7 @@ private struct ModelManagementRow: View {
 			? "\(modelManager.actualInstalledSizeMB(asset)) MB installed"
 			: "\(asset.sizeMB) MB (one-time download)"
 		switch asset {
-		case .upmarketAI:
+		case .graniteDocling:
 			return "Understands scanned pages and complex documents · \(sizeString)"
 		case .lfm25VL:
 			return "Stronger on tables and complex layout · \(sizeString)"

@@ -472,11 +472,11 @@ private enum ModelDownloadCatalog {
 
     private static let specs = [
         ModelDownloadSpec(
-            key: "upmarket_ai",
+            key: "granite_docling",
             displayName: "Upmarket AI",
-            sourceID: "com.upmarket.models.upmarket-ai",
+            sourceID: "com.upmarket.models.granite-docling",
             revision: "e9939db25d2f296c8678d0491c4609a8c596c50a",
-            storageDirectory: "upmarket_ai",
+            storageDirectory: "granite_docling",
             expectedFiles: [
                 "added_tokens.json",
                 "chat_template.jinja",

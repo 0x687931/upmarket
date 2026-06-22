@@ -72,13 +72,15 @@ PDF classification (`NativeDocumentClassifier`) decides digital-text → PDFKit,
 - **No Python runtime.** Conversion is native Swift end-to-end; the embedded CPython + Docling/MarkItDown runtime and the `UpmarketRuntimeHelper` process were removed. Do not reintroduce them (enforced by `scripts/ci/validate_architecture_boundaries.py`).
 - **Granite-Docling runs via mlx-swift** (`UpmarketVLM`), not Python MLX.
 - **No cloud inference, no Ollama, no Hugging Face at runtime** (`HF_HUB_OFFLINE=1` after model cache). Model download is the only network-dependent setup path.
-- App ships lean; only the Max-tier Granite model weights (`upmarket_ai`, ~600 MB) are a gated post-purchase download.
+- App ships lean; only the Max-tier Granite model weights (`granite_docling`, ~600 MB) are a gated post-purchase download.
 
 ## Key Constraints
 
 - **App Sandbox is always on.** Do not add temporary exceptions or broad filesystem access without a P0 implementation-plan item. Network entitlement (`com.apple.security.network.client`) is only for model download.
 - Bundle ID `com.upmarket.app`; App Group `group.com.upmarket.app`. Minimum deployment target macOS 26.0.
-- Models stored in `~/Library/Application Support/Upmarket/models/upmarket_ai/` (flat mlx-swift layout); validate before enabling model-backed conversion.
+- Debug models are stored in `~/Library/Application Support/Upmarket/models/<model-key>/`.
+  Release/TestFlight models are Apple-hosted managed asset packs; resolve their process-lifetime
+  URLs through `AssetPackManager` and never persist those URLs.
 - **Swift package dependencies are pinned in `Package.resolved`** (committed). The app's only local packages are first-party (`UpmarketVLM`, `SwiftOfficeMarkdown`).
 - Conversion runs off the main thread; progress flows via async streams to SwiftUI. Target: 10-page PDF < 30s on M1.
 - **Diagnostics are privacy-redacted by default.** Never commit model weights, generated runtimes, private documents, credentials, or unredacted diagnostics.

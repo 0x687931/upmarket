@@ -23,7 +23,7 @@ nonisolated enum AIEngine: String, CaseIterable, Codable, Sendable {
     /// The weights asset this engine loads from disk.
     var asset: ModelAsset {
         switch self {
-        case .granite: return .upmarketAI
+        case .granite: return .graniteDocling
         case .lfm2:    return .lfm25VL
         }
     }

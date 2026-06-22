@@ -1,0 +1,12 @@
+{
+  "assetPackID": "com.upmarket.app.models.lfm25-vl",
+  "downloadPolicy": {
+    "onDemand": {}
+  },
+  "fileSelectors": [
+    {
+      "directory": "lfm25_vl"
+    }
+  ],
+  "platforms": ["macOS"]
+}
