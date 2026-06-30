@@ -23,8 +23,9 @@ final class CLIConversionBrokerTests: XCTestCase {
         let broker = CLIConversionBroker(
             rootURL: root,
             authorize: { _, _ in },
-            convert: { url, useAI, aiEngine in
+            convert: { url, displayName, useAI, aiEngine in
                 XCTAssertEqual(url.lastPathComponent, "input.txt")
+                XCTAssertEqual(displayName, "/Users/alice/Documents/private.txt")
                 XCTAssertFalse(useAI)
                 XCTAssertNil(aiEngine)
                 return .success(ConversionOutput(
@@ -59,7 +60,7 @@ final class CLIConversionBrokerTests: XCTestCase {
         let broker = CLIConversionBroker(
             rootURL: root,
             authorize: { _, _ in throw ProgrammaticConversionAuthorizationError.purchaseRequired },
-            convert: { _, _, _ in
+            convert: { _, _, _, _ in
                 XCTFail("Conversion should not run when authorization fails")
                 return .failure("Should not run")
             }
@@ -85,7 +86,7 @@ final class CLIConversionBrokerTests: XCTestCase {
                 XCTAssertTrue(useAI)
                 throw ProgrammaticConversionAuthorizationError.aiUnavailable
             },
-            convert: { _, _, _ in
+            convert: { _, _, _, _ in
                 XCTFail("Conversion should not run when AI is unavailable")
                 return .failure("Should not run")
             }
@@ -118,7 +119,7 @@ final class CLIConversionBrokerTests: XCTestCase {
         let broker = CLIConversionBroker(
             rootURL: root,
             authorize: { _, _ in XCTFail("Authorization should not run for invalid manifests") },
-            convert: { _, _, _ in
+            convert: { _, _, _, _ in
                 XCTFail("Conversion should not run for invalid manifests")
                 return .failure("Should not run")
             }
@@ -149,7 +150,7 @@ final class CLIConversionBrokerTests: XCTestCase {
                 XCTAssertTrue(useAI)
                 XCTAssertEqual(aiEngine, .lfm2)
             },
-            convert: { _, useAI, aiEngine in
+            convert: { _, _, useAI, aiEngine in
                 XCTAssertTrue(useAI)
                 XCTAssertEqual(aiEngine, .lfm2)
                 return .success(ConversionOutput(
@@ -167,6 +168,31 @@ final class CLIConversionBrokerTests: XCTestCase {
 
         let response = try readResponse(from: directory)
         XCTAssertEqual(response.status, .success)
+        XCTAssertNil(response.message, "AI ran, so no fallback note should be attached")
+    }
+
+    func testAIRequestThatFallsBackToNonAIIncludesNote() async throws {
+        let root = try makeRoot()
+        let id = UUID().uuidString
+        let directory = try makeHandoff(root: root, id: id, version: 2, useAI: true, aiEngine: .granite)
+
+        let broker = CLIConversionBroker(
+            rootURL: root,
+            authorize: { _, _ in },
+            convert: { _, _, _, _ in
+                // AI was requested but the document wasn't eligible, so a non-AI engine ran.
+                .success(ConversionOutput(
+                    markdown: "# Text", pages: 1, format: "PNG", title: "Text",
+                    pipeline: .enhanced, selectedPathway: .enhanced))
+            }
+        )
+
+        await broker.process(id: id)
+
+        let response = try readResponse(from: directory)
+        XCTAssertEqual(response.status, .success)
+        let note = try XCTUnwrap(response.message, "AI requested but not used — expected a fallback note")
+        XCTAssertTrue(note.contains("AI conversion wasn't available"))
     }
 
     func testExplicitAIEngineWithoutAIIsRejected() async throws {
@@ -183,7 +209,7 @@ final class CLIConversionBrokerTests: XCTestCase {
         let broker = CLIConversionBroker(
             rootURL: root,
             authorize: { _, _ in XCTFail("Authorization should not run for invalid manifests") },
-            convert: { _, _, _ in
+            convert: { _, _, _, _ in
                 XCTFail("Conversion should not run for invalid manifests")
                 return .failure("Should not run")
             }
