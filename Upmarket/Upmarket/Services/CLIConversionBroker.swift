@@ -7,7 +7,7 @@ import OSLog
 @MainActor
 struct CLIConversionBroker {
     typealias Authorize = (_ useAI: Bool, _ aiEngine: AIEngine?) async throws -> Void
-    typealias Convert = (_ url: URL, _ useAI: Bool, _ aiEngine: AIEngine?) async -> ConversionResult
+    typealias Convert = (_ url: URL, _ displayName: String?, _ useAI: Bool, _ aiEngine: AIEngine?) async -> ConversionResult
 
     let rootURL: URL
     let authorize: Authorize
@@ -37,9 +37,10 @@ struct CLIConversionBroker {
                     aiEngine: aiEngine
                 )
             },
-            convert: { url, useAI, aiEngine in
+            convert: { url, displayName, useAI, aiEngine in
                 await ConversionQueue.shared.convert(
                     url,
+                    displayName: displayName,
                     useAI: useAI,
                     aiEngine: aiEngine
                 )
@@ -91,7 +92,7 @@ struct CLIConversionBroker {
                 return
             }
 
-            let result = await convert(inputURL, request.useAI, request.aiEngine)
+            let result = await convert(inputURL, request.sourceDisplayName, request.useAI, request.aiEngine)
             guard case .success(let output) = result else {
                 try write(.failure(.conversionFailed, message: result.errorMessage ?? "Upmarket couldn't convert this document."), to: responseURL)
                 return
@@ -106,7 +107,12 @@ struct CLIConversionBroker {
             let outputFile = "output.\(formatted.fileExtension)"
             let outputURL = directory.appendingPathComponent(outputFile, isDirectory: false)
             try Data(formatted.text.utf8).write(to: outputURL, options: .atomic)
-            try write(.success(outputFile: outputFile, fileExtension: formatted.fileExtension), to: responseURL)
+            // AI was requested but the document wasn't eligible (or the model couldn't run), so a
+            // non-AI engine produced this output. Tell the caller rather than failing silently.
+            let note = request.useAI && !output.usedAI
+                ? "AI conversion wasn't available for this document; Upmarket used standard text recognition instead."
+                : nil
+            try write(.success(outputFile: outputFile, fileExtension: formatted.fileExtension, message: note), to: responseURL)
         } catch {
             AppLog.conversion.error("CLI conversion request failed: \(error.localizedDescription, privacy: .private)")
             try? write(.failure(.conversionFailed, message: "Upmarket couldn't convert this document."), to: responseURL)

@@ -103,12 +103,14 @@ final class ConversionQueue: ObservableObject {
     @discardableResult
     func add(
         _ url: URL,
+        displayName: String? = nil,
         useAI: Bool = false,
         aiEngine: AIEngine? = nil,
         password: String? = nil
     ) -> UUID {
         let job = ConversionJob(
             sourceURL: url,
+            displayName: displayName,
             useAI: useAI,
             aiEngine: aiEngine,
             password: password
@@ -143,12 +145,13 @@ final class ConversionQueue: ObservableObject {
 
     func convert(
         _ url: URL,
+        displayName: String? = nil,
         useAI: Bool = false,
         aiEngine: AIEngine? = nil,
         password: String? = nil
     ) async -> ConversionResult {
         await withCheckedContinuation { continuation in
-            let id = add(url, useAI: useAI, aiEngine: aiEngine, password: password)
+            let id = add(url, displayName: displayName, useAI: useAI, aiEngine: aiEngine, password: password)
             continuations[id] = continuation
         }
     }
@@ -204,6 +207,7 @@ final class ConversionQueue: ObservableObject {
         let job = jobs[index]
         return add(
             job.sourceURL,
+            displayName: job.displayName,
             useAI: useAI ?? job.useAI,
             aiEngine: job.aiEngine,
             password: job.password
@@ -351,19 +355,19 @@ final class ConversionQueue: ObservableObject {
         latestResult = result
         if stage == .complete, let output = result.output {
             historyStore?.record(job: jobs[index], output: output)
-            autoSaveConverted(output, jobID: jobs[index].id, sourceURL: jobs[index].sourceURL)
+            autoSaveConverted(output, jobID: jobs[index].id, sourceURL: jobs[index].sourceURL, displayName: jobs[index].displayName)
         }
         AppLog.conversion.info("Finished conversion correlationID=\(id.uuidString, privacy: .public) stage=\(stage.rawValue, privacy: .public)")
         continuations.removeValue(forKey: id)?.resume(returning: result)
     }
 
-    private func autoSaveConverted(_ output: ConversionOutput, jobID: UUID, sourceURL: URL) {
+    private func autoSaveConverted(_ output: ConversionOutput, jobID: UUID, sourceURL: URL, displayName: String?) {
         // SavePreference can present a modal (first-use prompt / save panel); never do
         // that under unit or UI tests, where it would hang with no one to dismiss it.
         guard !AppRuntime.isRunningTests else { return }
         let formatted = OutputFormatter.format(
             output,
-            sourceDisplayName: sourceURL.lastPathComponent,
+            sourceDisplayName: displayName ?? sourceURL.lastPathComponent,
             mode: OutputPreference.shared.mode
         )
         // Route through SavePreference: prompts once for a destination (same folder /

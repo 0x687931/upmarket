@@ -297,6 +297,7 @@ private enum UpmarketCLI {
             guard let outputFile = response.outputFile else {
                 throw CommandError(.conversionFailed, "Upmarket returned no output.")
             }
+            if let note = response.message, !note.isEmpty { notice(note) }
             return try String(contentsOf: finalDir.appendingPathComponent(outputFile), encoding: .utf8)
         case .purchaseRequired:
             throw CommandError(.purchaseRequired, response.message ?? "Open Upmarket to unlock more conversions.")

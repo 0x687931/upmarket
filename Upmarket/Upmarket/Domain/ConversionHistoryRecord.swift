@@ -47,8 +47,8 @@ struct ConversionHistoryRecord: Codable, Equatable, Identifiable {
     init(job: ConversionJob, output: ConversionOutput, createdAt: Date = Date()) {
         self.init(
             createdAt: createdAt,
-            sourceDisplayName: job.sourceURL.lastPathComponent,
-            sourceExtension: job.sourceURL.pathExtension.uppercased(),
+            sourceDisplayName: job.displayName ?? job.sourceURL.lastPathComponent,
+            sourceExtension: job.ext,
             title: output.title,
             format: output.format,
             pages: output.pages,

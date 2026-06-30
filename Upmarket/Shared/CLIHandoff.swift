@@ -66,8 +66,8 @@ nonisolated struct CLIConversionResponse: Codable, Equatable, Sendable {
     let outputFile: String?
     let fileExtension: String?
 
-    static func success(outputFile: String, fileExtension: String) -> CLIConversionResponse {
-        CLIConversionResponse(version: 1, status: .success, message: nil, output: nil, outputFile: outputFile, fileExtension: fileExtension)
+    static func success(outputFile: String, fileExtension: String, message: String? = nil) -> CLIConversionResponse {
+        CLIConversionResponse(version: 1, status: .success, message: message, output: nil, outputFile: outputFile, fileExtension: fileExtension)
     }
 
     static func failure(_ status: CLIConversionStatus, message: String) -> CLIConversionResponse {

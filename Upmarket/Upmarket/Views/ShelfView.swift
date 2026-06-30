@@ -619,7 +619,7 @@ struct ShelfCard: View {
         Task { @MainActor in
             if let url = await SavePreference.shared.save(
                 markdown: formatted.text,
-                title: job.sourceURL.deletingPathExtension().lastPathComponent,
+                title: job.name,
                 sourceURL: job.sourceURL,
                 fileExtension: formatted.fileExtension
             ) {
@@ -631,7 +631,7 @@ struct ShelfCard: View {
     private func formattedOutput(_ output: ConversionOutput) -> FormattedConversionOutput {
         OutputFormatter.format(
             output,
-            sourceDisplayName: job.sourceURL.lastPathComponent,
+            sourceDisplayName: job.displayName ?? job.sourceURL.lastPathComponent,
             mode: OutputPreference.shared.mode
         )
     }

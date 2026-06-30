@@ -45,6 +45,10 @@ nonisolated struct ConversionProgress: Equatable, Sendable {
 struct ConversionJob: Identifiable, Equatable {
     let id: UUID
     let sourceURL: URL
+    /// Real source name for jobs whose `sourceURL` is a staged temp file: the CLI/MCP handoff
+    /// stages the input as `CLIHandoffs/<id>/input.<ext>`, so the path basename is "input".
+    /// nil for normal drops/picks, where `sourceURL` already carries the user's filename.
+    let displayName: String?
     let useAI: Bool
     let aiEngine: AIEngine?
     let password: String?
@@ -63,6 +67,7 @@ struct ConversionJob: Identifiable, Equatable {
     init(
         id: UUID = UUID(),
         sourceURL: URL,
+        displayName: String? = nil,
         useAI: Bool = false,
         aiEngine: AIEngine? = nil,
         password: String? = nil,
@@ -75,6 +80,7 @@ struct ConversionJob: Identifiable, Equatable {
     ) {
         self.id = id
         self.sourceURL = sourceURL
+        self.displayName = displayName
         self.useAI = useAI
         self.aiEngine = aiEngine
         self.password = password
@@ -86,8 +92,11 @@ struct ConversionJob: Identifiable, Equatable {
         self.progressFraction = progressFraction
     }
 
-    var name: String { sourceURL.deletingPathExtension().lastPathComponent }
-    var filename: String { sourceURL.deletingPathExtension().lastPathComponent }
+    var name: String {
+        displayName.map { URL(fileURLWithPath: $0).deletingPathExtension().lastPathComponent }
+            ?? sourceURL.deletingPathExtension().lastPathComponent
+    }
+    var filename: String { name }
     var ext: String { sourceURL.pathExtension.uppercased() }
     var correlationID: String { id.uuidString }
     var isRunning: Bool { stage.isRunning }

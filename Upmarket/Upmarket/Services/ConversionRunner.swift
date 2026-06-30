@@ -201,7 +201,8 @@ struct ConversionRunner {
         classification: ContentClassifier.Classification?,
         progress: ProgressHandler?
     ) async -> ConversionResult {
-        let title = job.sourceURL.deletingPathExtension().lastPathComponent
+        // job.name prefers the real source name (CLI/MCP stage the input as input.<ext>).
+        let title = job.name
 
         guard let classification else {
             // Classifier returned nil — file unreadable
@@ -212,7 +213,8 @@ struct ConversionRunner {
         // model and fail closed: classifier routing or OCR fallback would otherwise write
         // non-model output into a file labelled as Granite or LFM2.
         let sourceExtension = job.sourceURL.pathExtension.lowercased()
-        if job.useAI, let engine = job.aiEngine, sourceExtension == "pdf" {
+        if job.useAI, let engine = job.aiEngine,
+           sourceExtension == "pdf" || Self.imageExtensions.contains(sourceExtension) {
             guard #available(macOS 26, *),
                   shouldUseVLM(engine: engine, evidence: classification.pdfEvidence, force: true) else {
                 return .failure(
@@ -318,9 +320,10 @@ struct ConversionRunner {
             let evidence = classification.pdfEvidence
             let ext = job.sourceURL.pathExtension.lowercased()
             let engine = job.aiEngine ?? AIEngine.selected
-            // Max+AI on a PDF: the user-selected native VLM (mlx-swift) when its weights are
-            // present and (for Granite) the document is eligible; otherwise Apple Vision.
-            if useAI, ext == "pdf",
+            // Max+AI on a PDF or image: the user-selected native VLM (mlx-swift) when its weights
+            // are present and (for Granite) the document is eligible; otherwise Apple Vision.
+            // Images feed the VLM directly; runVLMConversion falls back to image OCR on failure.
+            if useAI, ext == "pdf" || Self.imageExtensions.contains(ext),
                #available(macOS 26, *),
                shouldUseVLM(engine: engine, evidence: evidence) {
                 return await runVLMConversion(
@@ -484,16 +487,8 @@ struct ConversionRunner {
         engine: AIEngine,
         fallbackOnFailure: Bool = true
     ) async -> ConversionResult {
-        guard let document = PDFDocument(url: fileURL) else {
-            if !fallbackOnFailure {
-                return .failure("The selected AI engine could not read this PDF.")
-            }
-            return await runVisionExtraction(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
-        }
-        if document.isLocked, let password { _ = document.unlock(withPassword: password) }
-
-        // Each engine loads its own weights directory. The per-page closure hides the engine
-        // difference from the page loop below.
+        // Each engine loads its own weights directory. The per-image closure hides the engine
+        // difference from the call sites below.
         let modelDir = ModelManager.shared.modelDirectoryURL(for: engine.asset)
         let convert: @Sendable (URL) async throws -> String
         switch engine {
@@ -504,6 +499,36 @@ struct ConversionRunner {
             let e = LFM2VLEngine(source: .modelDirectory(modelDir))
             convert = { try await e.convertToMarkdown(imageURL: $0) }
         }
+
+        // A bare image feeds the VLM directly — no PDF page rendering. PDFDocument can't open an
+        // image, so this must precede the PDF path. Fallback is image OCR, not the PDF OCR path.
+        if Self.imageExtensions.contains(fileURL.pathExtension.lowercased()) {
+            do {
+                try Task.checkCancellation()
+                let markdown = try await convert(fileURL)
+                return .success(ConversionOutput(
+                    markdown: markdown, pages: 1, format: fileURL.pathExtension.uppercased(),
+                    title: title, pipeline: .ai, selectedPathway: .ai,
+                    metadata: DocumentMetadata.visionDocuments(elementType: nil), originalTables: []))
+            } catch is CancellationError {
+                return .failure("Conversion cancelled.")
+            } catch {
+                if !fallbackOnFailure {
+                    AppLog.conversion.error("Explicit AI conversion failed: \(error.localizedDescription, privacy: .public)")
+                    return .failure("The selected AI engine could not convert this document.")
+                }
+                AppLog.conversion.error("Native AI conversion failed; falling back to OCR: \(error.localizedDescription, privacy: .public)")
+                return await runVisionImageExtraction(fileURL: fileURL, title: title)
+            }
+        }
+
+        guard let document = PDFDocument(url: fileURL) else {
+            if !fallbackOnFailure {
+                return .failure("The selected AI engine could not read this PDF.")
+            }
+            return await runVisionExtraction(fileURL: fileURL, title: title, password: password, workspaceURL: workspaceURL)
+        }
+        if document.isLocked, let password { _ = document.unlock(withPassword: password) }
 
         let tmp = FileManager.default.temporaryDirectory
         var pages: [String] = []

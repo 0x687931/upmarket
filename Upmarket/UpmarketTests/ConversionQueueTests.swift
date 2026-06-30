@@ -281,6 +281,21 @@ final class ConversionQueueTests: XCTestCase {
         queue.cancelAll()
     }
 
+    func testDisplayNameOverridesStagedSourcePathForName() {
+        // CLI/MCP handoff stages the input as input.<ext>; the real name rides in displayName.
+        let staged = ConversionJob(
+            sourceURL: URL(fileURLWithPath: "/tmp/CLIHandoffs/abc/input.png"),
+            displayName: "IMG_4783.PNG"
+        )
+        XCTAssertEqual(staged.name, "IMG_4783")
+        XCTAssertEqual(staged.filename, "IMG_4783")
+        XCTAssertEqual(staged.ext, "PNG")
+
+        // A normal drop has no displayName and derives the name from the real path.
+        let dropped = ConversionJob(sourceURL: URL(fileURLWithPath: "/Users/a/report.pdf"))
+        XCTAssertEqual(dropped.name, "report")
+    }
+
     func testRunningJobCanBeClassifiedAsStalledWithoutCancellingIt() {
         let job = ConversionJob(
             sourceURL: URL(fileURLWithPath: "/tmp/stalled.pdf"),
