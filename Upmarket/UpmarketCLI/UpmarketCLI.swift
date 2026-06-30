@@ -174,10 +174,10 @@ private enum UpmarketCLI {
             switch try await route(for: inputURL, engine: options.engine, debug: options.debug) {
             case .broker(let useAI):
                 // AI/Granite, Office, EPUB, HTML — handed to the app, which owns those engines.
-                let text = try await brokerToApp(
+                try await brokerToApp(
                     inputURL: inputURL, useAI: useAI, aiEngine: options.aiEngine,
-                    outputMode: options.outputFormat.rawValue, debug: options.debug)
-                try write(text, to: outURL, force: options.force)
+                    outputMode: options.outputFormat.rawValue, outputURL: outURL,
+                    force: options.force, debug: options.debug)
 
             case .inProcess(let pathway):
                 debugLog("file=\(inputURL.lastPathComponent) engine=\(pathway.rawValue)", options.debug)
@@ -249,8 +249,10 @@ private enum UpmarketCLI {
         useAI: Bool,
         aiEngine: AIEngine?,
         outputMode: String,
+        outputURL: URL,
+        force: Bool,
         debug: Bool
-    ) async throws -> String {
+    ) async throws {
         let fm = FileManager.default
         guard let root = CLIHandoffPaths.rootURL(fileManager: fm) else {
             throw CommandError(.conversionFailed, "Open the Upmarket app to convert this document.")
@@ -280,7 +282,7 @@ private enum UpmarketCLI {
             "brokering to app: id=\(id) useAI=\(useAI) aiEngine=\(aiEngine?.rawValue ?? "selected")",
             debug
         )
-        launchAppIfNeeded()   // any running instance's watcher services the request
+        launchAppIfNeeded(id: id, rootURL: root)   // any running instance's watcher services the request
 
         let responseURL = finalDir.appendingPathComponent("response.json")
         let deadline = Date().addingTimeInterval(600)   // VLM over many pages is slow
@@ -297,7 +299,11 @@ private enum UpmarketCLI {
             guard let outputFile = response.outputFile else {
                 throw CommandError(.conversionFailed, "Upmarket returned no output.")
             }
-            return try String(contentsOf: finalDir.appendingPathComponent(outputFile), encoding: .utf8)
+            try copyWithoutLoading(
+                outputURL: finalDir.appendingPathComponent(outputFile),
+                to: outputURL,
+                force: force
+            )
         case .purchaseRequired:
             throw CommandError(.purchaseRequired, response.message ?? "Open Upmarket to unlock more conversions.")
         case .aiUnavailable:
@@ -309,14 +315,45 @@ private enum UpmarketCLI {
         }
     }
 
-    /// Launch Upmarket in the background by bundle id (no-op if already running) so its handoff
-    /// watcher can service the request. No URL scheme → no LaunchServices routing fragility.
-    private static func launchAppIfNeeded() {
+    /// Launch Upmarket in the background by URL-scheme handoff so its watcher services the request.
+    /// Keep the handoff root explicit so CLI sandbox/fallback locations remain discoverable.
+    private static func launchAppIfNeeded(id: String, rootURL: URL) {
+        var components = URLComponents()
+        components.scheme = "upmarket"
+        components.host = "convert"
+        components.queryItems = [
+            .init(name: "cli", value: id),
+            .init(name: "root", value: rootURL.path)
+        ]
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        process.arguments = ["-g", "-b", "com.upmarket.app"]
+        process.arguments = ["-g", "-b", "com.upmarket.app", components.url?.absoluteString ?? "upmarket://convert"]
         try? process.run()
         process.waitUntilExit()
+    }
+
+    private static func copyWithoutLoading(outputURL sourceURL: URL, to destinationURL: URL, force: Bool) throws {
+        let directory = destinationURL.deletingLastPathComponent()
+        let temporaryURL = directory.appendingPathComponent(".\(destinationURL.lastPathComponent).\(UUID().uuidString).tmp")
+
+        do {
+            try validateOutputDestination(destinationURL, force: force)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try FileManager.default.copyItem(at: sourceURL, to: temporaryURL)
+            if FileManager.default.fileExists(atPath: destinationURL.path) {
+                guard force else { throw CommandError(.outputWriteFailed, "Output file already exists. Pass --force to replace it.") }
+                _ = try FileManager.default.replaceItemAt(destinationURL, withItemAt: temporaryURL)
+            } else {
+                try FileManager.default.moveItem(at: temporaryURL, to: destinationURL)
+            }
+        } catch let error as CommandError {
+            try? FileManager.default.removeItem(at: temporaryURL)
+            throw error
+        } catch {
+            try? FileManager.default.removeItem(at: temporaryURL)
+            throw CommandError(.outputWriteFailed, "Could not write output file.")
+        }
     }
 
     private static func execute(pathway: Pathway, inputURL: URL, debug: Bool) async throws -> ConvertedDocument {

@@ -10,6 +10,12 @@ final class SavePreference {
     static let shared = SavePreference()
     private init() {}
 
+    private enum Keys {
+        static let saveDestination = "upmarket.saveDestination"
+        static let saveFolder = "upmarket.saveFolder"
+        static let savePreferenceSet = "upmarket.savePreferenceSet"
+    }
+
     enum Destination: Int, CaseIterable {
         case sameFolder = 0     // next to the original file (default)
         case askEachTime = 1    // NSSavePanel every time
@@ -17,30 +23,34 @@ final class SavePreference {
     }
 
     var destination: Destination {
-        get { Destination(rawValue: UserDefaults.standard.integer(forKey: "upmarket.saveDestination")) ?? .sameFolder }
+        get { Destination(rawValue: UserDefaults.standard.integer(forKey: Keys.saveDestination)) ?? .sameFolder }
         // Explicitly choosing a destination (e.g. via Preferences) counts as answering
         // the first-use prompt, so it never reappears at conversion time.
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: "upmarket.saveDestination")
+            guard newValue != .chosenFolder || chosenFolderURL != nil else { return }
+            UserDefaults.standard.set(newValue.rawValue, forKey: Keys.saveDestination)
             hasPrompted = true
         }
     }
 
     var chosenFolderURL: URL? {
         get {
-            guard let data = UserDefaults.standard.data(forKey: "upmarket.saveFolder") else { return nil }
+            guard let data = UserDefaults.standard.data(forKey: Keys.saveFolder) else { return nil }
             var isStale = false
             guard let url = try? URL(resolvingBookmarkData: data, options: .withSecurityScope,
                                      relativeTo: nil, bookmarkDataIsStale: &isStale) else { return nil }
             // Re-mint and persist when macOS marks the bookmark stale, so saved access doesn't expire.
             if isStale, let refreshed = Self.securityScopedBookmark(for: url) {
-                UserDefaults.standard.set(refreshed, forKey: "upmarket.saveFolder")
+                UserDefaults.standard.set(refreshed, forKey: Keys.saveFolder)
             }
             return url
         }
         set {
-            guard let url = newValue, let data = Self.securityScopedBookmark(for: url) else { return }
-            UserDefaults.standard.set(data, forKey: "upmarket.saveFolder")
+            guard let url = newValue else {
+                UserDefaults.standard.removeObject(forKey: Keys.saveFolder)
+                return
+            }
+            _ = storeChosenFolderURL(url)
         }
     }
 
@@ -52,16 +62,35 @@ final class SavePreference {
     }
 
     func configure(destination: Destination, chosenFolderURL: URL? = nil) {
-        self.destination = destination
-        if destination == .chosenFolder {
+        if destination == .chosenFolder, let chosenFolderURL {
             self.chosenFolderURL = chosenFolderURL
+            self.destination = destination
+            hasPrompted = true
+            return
         }
-        hasPrompted = true
+
+        if destination != .chosenFolder {
+            self.destination = destination
+            hasPrompted = true
+        }
     }
 
     private var hasPrompted: Bool {
-        get { UserDefaults.standard.bool(forKey: "upmarket.savePreferenceSet") }
-        set { UserDefaults.standard.set(newValue, forKey: "upmarket.savePreferenceSet") }
+        get {
+            if let explicit = UserDefaults.standard.object(forKey: Keys.savePreferenceSet) as? NSNumber {
+                return explicit.boolValue
+            }
+
+            let destinationExists = UserDefaults.standard.object(forKey: Keys.saveDestination) != nil
+            guard destinationExists else { return false }
+            if destination == .chosenFolder {
+                return UserDefaults.standard.object(forKey: Keys.saveFolder) != nil
+            }
+            return true
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: Keys.savePreferenceSet)
+        }
     }
 
     // MARK: - Main save function
@@ -208,6 +237,13 @@ final class SavePreference {
         default:
             return false
         }
+    }
+
+    @discardableResult
+    private func storeChosenFolderURL(_ url: URL) -> Bool {
+        guard let data = Self.securityScopedBookmark(for: url) else { return false }
+        UserDefaults.standard.set(data, forKey: Keys.saveFolder)
+        return true
     }
 }
 

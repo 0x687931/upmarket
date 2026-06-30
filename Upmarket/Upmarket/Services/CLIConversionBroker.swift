@@ -26,8 +26,8 @@ struct CLIConversionBroker {
         self.convert = convert
     }
 
-    static func live(fileManager: FileManager = .default) -> CLIConversionBroker? {
-        guard let rootURL = CLIHandoffPaths.rootURL(fileManager: fileManager) else { return nil }
+    static func live(fileManager: FileManager = .default, rootURL: URL? = nil) -> CLIConversionBroker? {
+        guard let rootURL = rootURL ?? CLIHandoffPaths.rootURL(fileManager: fileManager) else { return nil }
         return CLIConversionBroker(
             rootURL: rootURL,
             fileManager: fileManager,

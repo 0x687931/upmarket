@@ -186,8 +186,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                   let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
             else { continue }
 
+            let rootURL = components.queryItems?.first(where: { $0.name == "root" })?.value.flatMap {
+                CLIHandoffPaths.parsedRootURL(from: $0)
+            }
+
             if let cliID = components.queryItems?.first(where: { $0.name == "cli" })?.value {
-                CLIConversionBroker.live()?.handle(id: cliID)
+                CLIHandoffWatcher.shared.handle(id: cliID, rootURL: rootURL)
             } else if let handoffID = components.queryItems?.first(where: { $0.name == "handoff" })?.value {
                 openQuickActionHandoff(id: handoffID)
             }
@@ -543,4 +547,3 @@ final class MenuBarStatusController: NSObject, NSMenuDelegate {
         NSApp.terminate(nil)
     }
 }
-

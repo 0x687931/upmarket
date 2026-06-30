@@ -44,6 +44,12 @@ final class CLIHandoffWatcher {
             .appendingPathComponent(CLIHandoffPaths.requestsDirectoryName, isDirectory: true)
     }
 
+    func handle(id: String, rootURL: URL? = nil) {
+        Task { @MainActor in
+            await processRequest(id: id, rootURL: rootURL)
+        }
+    }
+
     /// Process every complete request that hasn't been answered or started yet (idempotent —
     /// the URL-scheme handler may also fire; whichever runs first wins, the other is skipped).
     private func scan(_ directory: URL) {
@@ -54,9 +60,15 @@ final class CLIHandoffWatcher {
                   !fileManager.fileExists(atPath: requestDir.appendingPathComponent("response.json").path) else { continue }
             inFlight.insert(id)
             Task { @MainActor in
-                await CLIConversionBroker.live()?.process(id: id)
+                await processRequest(id: id, rootURL: nil)
                 self.inFlight.remove(id)
             }
         }
+    }
+
+    private func processRequest(id: String, rootURL: URL?) async {
+        let effectiveRootURL = rootURL ?? CLIHandoffPaths.rootURL(fileManager: fileManager)
+        guard let broker = CLIConversionBroker.live(fileManager: fileManager, rootURL: effectiveRootURL) else { return }
+        await broker.process(id: id)
     }
 }

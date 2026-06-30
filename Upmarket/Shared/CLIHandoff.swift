@@ -9,19 +9,53 @@ import Foundation
 nonisolated enum CLIHandoffPaths {
     private static let appGroupID = "group.com.upmarket.app"
     static let requestsDirectoryName = "CLIHandoffs"
+    private static let fallbackDirectory = "Upmarket/AppGroupFallback"
 
     static func rootURL(fileManager: FileManager = .default) -> URL? {
-        if let container = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
-            return container
+        for candidate in candidateRootURLs(fileManager: fileManager) {
+            if ensureDirectoryExists(candidate.appendingPathComponent(requestsDirectoryName, isDirectory: true), fileManager: fileManager) {
+                return candidate
+            }
         }
-        return fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
-            .appendingPathComponent("Upmarket/AppGroupFallback", isDirectory: true)
+        return nil
+    }
+
+    static func parsedRootURL(from queryValue: String?, fileManager: FileManager = .default) -> URL? {
+        guard let value = queryValue else { return nil }
+        let path = value.removingPercentEncoding ?? value
+        guard !path.isEmpty else { return nil }
+        let candidate = URL(fileURLWithPath: path)
+        return ensureDirectoryExists(
+            candidate.appendingPathComponent(requestsDirectoryName, isDirectory: true),
+            fileManager: fileManager
+        ) ? candidate : nil
     }
 
     static func handoffDirectory(id: String, root: URL) -> URL {
         root
             .appendingPathComponent(requestsDirectoryName, isDirectory: true)
             .appendingPathComponent(id, isDirectory: true)
+    }
+
+    private static func candidateRootURLs(fileManager: FileManager) -> [URL] {
+        var urls: [URL] = []
+        if let container = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
+            urls.append(container)
+        }
+        if let fallback = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+            .appendingPathComponent(fallbackDirectory, isDirectory: true) {
+            urls.append(fallback)
+        }
+        return urls
+    }
+
+    private static func ensureDirectoryExists(_ url: URL, fileManager: FileManager = .default) -> Bool {
+        do {
+            try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
+            return fileManager.isWritableFile(atPath: url.path)
+        } catch {
+            return false
+        }
     }
 }
 
